@@ -1,0 +1,18 @@
+.classpath
+.project
+.metadata
+*.tmp
+*.bak
+*.swp
+local.properties
+.classpath
+.loadpath
+.settings/
+target/
+bin/**
+tmp/**
+tmp/**/*
+/Users
+Users/
+# Locally stored "Eclipse launch configurations"
+*.launch

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/security"
+    xmlns:beans="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+	http://www.springframework.org/schema/security
+	http://www.springframework.org/schema/security/spring-security-3.1.xsd">
+ 
+	<http auto-config="false" use-expressions="true" entry-point-ref="restAuthenticationEntryPoint">
+		<intercept-url pattern="/user/create" access="permitAll" requires-channel="https" />
+		<intercept-url pattern="/user/resetPassword/**" access="permitAll" requires-channel="https" />
+		<intercept-url pattern="/user/resetPasswordRequest" access="permitAll" requires-channel="https" />
+		<intercept-url pattern="/user/verify/**" access="permitAll" requires-channel="https" />
+		<intercept-url pattern="/transaction/exchange-rate" access="permitAll" requires-channel="https" />
+		<intercept-url pattern="/**" access="isFullyAuthenticated()" requires-channel="https" />
+		
+		<logout invalidate-session="true" 
+				logout-success-url="/"
+				delete-cookies="JSESSIONID"
+				logout-url="/spring_security_logout"/>
+		
+		<custom-filter ref="concurrencyFilter" position="CONCURRENT_SESSION_FILTER" />
+		<custom-filter ref="authenticationFilter" position="FORM_LOGIN_FILTER" />
+	
+		<session-management session-authentication-strategy-ref="sas"/>
+	</http>
+	
+	<!-- Concurrent Session Settings -->
+	<beans:bean id="concurrencyFilter" class="org.springframework.security.web.session.ConcurrentSessionFilter">
+	    <beans:property name="sessionRegistry" ref="sessionRegistry" />
+	    <beans:property name="expiredUrl" value="/" />
+	</beans:bean>
+	<beans:bean id="sas" class="org.springframework.security.web.authentication.session.ConcurrentSessionControlStrategy">
+	    <beans:constructor-arg name="sessionRegistry" ref="sessionRegistry" />
+	    <beans:property name="maximumSessions" value="1" />
+	</beans:bean>
+	<beans:bean id="sessionRegistry" class="org.springframework.security.core.session.SessionRegistryImpl" />
+
+ 	<!-- Custom filter for username and password. The real customization is done in the customAthenticationManager -->
+ 	<beans:bean id="authenticationFilter" class="org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter">
+ 	    <beans:property name="authenticationManager" ref="customAuthenticationManager" />
+ 	    <beans:property name="authenticationFailureHandler" ref="customAuthenticationFailureHandler" />
+ 	    <beans:property name="authenticationSuccessHandler" ref="customAuthenticationSuccessHandler" />
+ 	    <beans:property name="sessionAuthenticationStrategy" ref="sas" />
+	</beans:bean>
+  		
+	<!-- Custom authentication manager. In order to authenticate, username and password must not be the same -->
+	<beans:bean id="customAuthenticationManager" class="ch.uzh.csg.mbps.server.auth.CustomAuthenticationManager" />
+ 	
+ 	<!-- We just actually need to set the default failure url here -->
+ 	<beans:bean id="customAuthenticationFailureHandler" class="org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler" />
+ 		
+ 	 <!-- We just actually need to set the default target url here -->
+ 	<beans:bean id="customAuthenticationSuccessHandler" class="ch.uzh.csg.mbps.server.auth.CustomAuthenticationSuccessHandler" />
+ 	
+ 	<beans:bean id="restAuthenticationEntryPoint"  class="ch.uzh.csg.mbps.server.auth.RestAuthenticationEntryPoint" />
+
+	<!-- The tag below has no use but Spring Security needs it to autowire the parent property of 
+			org.springframework.security.authentication.ProviderManager. Otherwise we get an error 
+			A probable bug. This is still under investigation-->
+	<authentication-manager/>
+ 
+</beans:beans>

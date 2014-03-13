@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE hibernate-configuration PUBLIC
+   "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+   "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+<hibernate-configuration>
+	<session-factory>
+	    
+	    <!-- Database connection settings -->
+		<property name="connection.driver_class">org.postgresql.Driver</property>
+		<property name="connection.url">jdbc:postgresql://localhost:5433/mbps</property>
+		<property name="connection.username">postgres</property>
+		<property name="connection.password">jxGf61Y3DhTP</property>
+		<!--  jxGf61Y3DhTP -->
+		
+		<!-- Hibernate c3po Connection Settings -->
+		<property name="hibernate.c3p0.min_size">5</property>
+  		<property name="hibernate.c3p0.max_size">20</property>
+		<property name="hibernate.c3p0.timeout">3000</property>
+		<property name="hibernate.c3p0.max_statements">50</property>
+		<property name="hibernate.c3p0.idle_test_period">300</property>
+		
+		<!-- SQL dialect -->
+		<property name="dialect">org.hibernate.dialect.PostgreSQLDialect</property>
+		
+		<!-- Disable the second-level cache -->
+		<property name="cache.provider_class">org.hibernate.cache.NoCacheProvider</property>
+		
+		<!-- Echo all execudes SQL to stdout -->
+		<!-- <property name="show_sql">true</property> -->
+		
+		<!-- Drop and recreate the database schema on startup -->
+		<property name="hibernate.hbm2ddl.auto">create</property>
+		
+		<!-- Names the annotated entity classes -->
+		<mapping class="ch.uzh.csg.mbps.server.domain.UserAccount" />
+		<mapping class="ch.uzh.csg.mbps.server.domain.DbTransaction"/>
+		<mapping class="ch.uzh.csg.mbps.server.domain.EmailVerification"/>
+		<mapping class="ch.uzh.csg.mbps.server.domain.PayInTransaction"/>
+		<mapping class="ch.uzh.csg.mbps.server.domain.PayOutTransaction"/>
+		<mapping class="ch.uzh.csg.mbps.server.domain.ResetPassword"/>
+		<mapping class="ch.uzh.csg.mbps.server.domain.PayOutRule"/>
+	</session-factory>
+</hibernate-configuration>

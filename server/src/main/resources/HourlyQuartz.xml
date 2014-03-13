@@ -1,0 +1,39 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans-3.2.xsd">
+ 
+	<bean id="HourlyTask" class="ch.uzh.csg.mbps.server.util.HourlyTask" />
+ 
+	<!-- Spring Quartz -->
+	<bean id="hourlyJob" 
+            class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean"> 
+		<property name="targetObject" ref="HourlyTask" /> 
+		<property name="targetMethod" value="update" /> 
+	</bean> 
+	
+	<!-- Cron Trigger, run every hour -->
+	<bean id="simpleTrigger"
+		class="org.springframework.scheduling.quartz.CronTriggerBean">
+ 
+		<property name="jobDetail" ref="hourlyJob" />
+		<!-- Execute Task every Full Hour 0 0 0/1 1/1 * ? * (0 0/1 * 1/1 * ? * every minute)-->
+		
+		<property name="cronExpression" value="0 0 0/1 1/1 * ? *" />
+	</bean>
+ 
+	<bean class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+		<property name="jobDetails">
+			<list>
+				<ref bean="hourlyJob" />
+			</list>
+		</property>
+ 
+		<property name="triggers">
+			<list>
+				<ref bean="simpleTrigger" />
+			</list>
+		</property>
+	</bean>
+ 
+</beans>
