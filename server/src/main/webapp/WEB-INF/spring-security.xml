@@ -8,12 +8,12 @@
 	http://www.springframework.org/schema/security/spring-security-3.1.xsd">
  
 	<http auto-config="false" use-expressions="true" entry-point-ref="restAuthenticationEntryPoint">
-		<intercept-url pattern="/user/create" access="permitAll" requires-channel="https" />
-		<intercept-url pattern="/user/resetPassword/**" access="permitAll" requires-channel="https" />
-		<intercept-url pattern="/user/resetPasswordRequest" access="permitAll" requires-channel="https" />
-		<intercept-url pattern="/user/verify/**" access="permitAll" requires-channel="https" />
-		<intercept-url pattern="/transaction/exchange-rate" access="permitAll" requires-channel="https" />
-		<intercept-url pattern="/**" access="isFullyAuthenticated()" requires-channel="https" />
+		<intercept-url pattern="/user/create" access="permitAll" requires-channel="http" />
+		<intercept-url pattern="/user/resetPassword/**" access="permitAll" requires-channel="http" />
+		<intercept-url pattern="/user/resetPasswordRequest" access="permitAll" requires-channel="http" />
+		<intercept-url pattern="/user/verify/**" access="permitAll" requires-channel="http" />
+		<intercept-url pattern="/transaction/exchange-rate" access="permitAll" requires-channel="http" />
+		<intercept-url pattern="/**" access="isFullyAuthenticated()" requires-channel="http" />
 		
 		<logout invalidate-session="true" 
 				logout-success-url="/"

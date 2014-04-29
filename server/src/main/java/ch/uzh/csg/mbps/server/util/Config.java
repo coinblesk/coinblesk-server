@@ -12,16 +12,15 @@ public class Config {
 	public static final BigDecimal TRANSACTION_FEE = new BigDecimal("0.0001");
 	
 	//Email Configuration
-	protected static final String FROM = "****";
-	protected static final String EMAIL_USER = "****";
-	protected static final String EMAIL_PASSWORD = "****";
-	protected static final String BASE_URL = "****";
+	protected static final String FROM = "bitcoin-no-reply@ifi.uzh.ch";
+	protected static final String EMAIL_USER = "mbps-notification";
+	protected static final String EMAIL_PASSWORD = "***";
+	protected static final String BASE_URL = "http://bitcoin-clone.csg.uzh.ch/server";
 
 	//Bitcoin Controller Configuration
-	
-	public static final String ACCOUNT = "****";
-	public static final String RPC_USER = "****";
-	public static final String BITCOIND_PASSWORD = "****";
+	public static final String ACCOUNT = "bitcoinrpc";
+	public static final String RPC_USER = "bitcoinrpc";
+	public static final String BITCOIND_PASSWORD = "***";
 	public static final String HOST = "localhost";
 
 	//BITSTAMP Controller configuration
@@ -29,12 +28,12 @@ public class Config {
 	public static final String BITSTAMP_APIKEY = "****";
 	public static final String BITSTAMP_SECRETKEY = "****";
 	
-	public static final String PORT = "8332";//18332 for testnet, 8332 for production
-	public static final String ENCRYPTION_PASSWORD = "****";
-	public static final String BACKUP_DESTINATION = "walletBackup";
+	public static final String PORT = "18332";//18332 for testnet, 8332 for production
+	public static final String ENCRYPTION_PASSWORD = "***";
+	public static final String BACKUP_DESTINATION = "/home/simon/walletBackup/walletBackup";
 	
-	public static final int MIN_CONFIRMATIONS_SMALL_TRANSACTIONS = 6; // recommended: 6
-	public static final int MIN_CONFIRMATIONS_BIG_TRANSACTIONS = 12; //recommended: 12
+	public static final int MIN_CONFIRMATIONS_SMALL_TRANSACTIONS = 0; // recommended: 6
+	public static final int MIN_CONFIRMATIONS_BIG_TRANSACTIONS = 0; //recommended: 12
 	protected static final double SMALL_TRANSACTION_LIMIT = 0.5;
 	
 	public static final int TRANSACTIONS_MAX_RESULTS = 50;
