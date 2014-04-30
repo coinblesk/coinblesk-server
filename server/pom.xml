@@ -231,19 +231,45 @@
                     <webXml>src/main/webapp/WEB-INF/web.xml</webXml>
                 </configuration>
             </plugin>
-			<plugin>
-       		   <groupId>org.apache.tomcat.maven</groupId>
-      		    <artifactId>tomcat7-maven-plugin</artifactId>
-     		    <version>2.2</version>
-     		    <configuration>
-					<url>http://localhost:80/manager/text</url>
-					<server>TomcatServer</server>
-					<path>/server</path>
-					<username>admin</username>
-					<password>***</password>
-					<skipTests>true</skipTests>
+            
+     		 <plugin>
+  			<groupId>org.codehaus.cargo</groupId>
+  			<artifactId>cargo-maven2-plugin</artifactId>
+  			<version>1.2.0</version>
+  			<configuration>
+
+  				<container>
+					<containerId>tomcat7x</containerId>
+					<type>remote</type>
+				</container>
+
+				<configuration>
+					<type>runtime</type>
+					<properties>
+						<cargo.hostname>${remote.hostname}</cargo.hostname>
+						<cargo.protocol>${remote.protocol}</cargo.protocol>
+						<cargo.servlet.port>${remote.port}</cargo.servlet.port>
+						<cargo.remote.username>${remote.user}</cargo.remote.username>
+						<cargo.remote.password>${remote.pass}</cargo.remote.password>
+					</properties>
 				</configuration>
-     		</plugin>
+
+				<deployer>
+					<type>remote</type>
+					<deployables>
+						<deployable>
+							<groupId>${project.groupId}</groupId>
+							<artifactId>${project.artifactId}</artifactId>
+							<type>war</type>
+							<properties>
+								<context>${remote.context}</context>
+							</properties>
+						</deployable>
+					</deployables>
+				</deployer>
+
+  			</configuration>
+  		</plugin>
 		</plugins>
 	</build>
 
