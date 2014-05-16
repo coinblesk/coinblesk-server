@@ -22,7 +22,6 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
  */
 public class PayOutTransactionService {
 	private static PayOutTransactionService payOutTransactionService;
-
 	private PayOutTransactionService() {
 	}
 	
@@ -77,7 +76,19 @@ public class PayOutTransactionService {
 		//make sure pot.id == user.id
 		pot.setUserID(user.getId());
 		
-		if(user.getBalance().compareTo(pot.getAmount().add(Config.TRANSACTION_FEE)) >= 0){
+		BigDecimal userBalance = user.getBalance();
+		
+		//check if user wants to pay out complete amount
+		if(userBalance.compareTo(pot.getAmount()) == 0){
+			BigDecimal payOutAmount = pot.getAmount().subtract(Config.TRANSACTION_FEE);
+			if (payOutAmount.compareTo(BigDecimal.ZERO) > 0){
+				pot.setAmount(payOutAmount);
+			} else {
+				return new CustomResponseObject(false, "Couldn't pay out the desired amount. Your balance is too low.");
+			}
+		}
+		
+		if(userBalance.compareTo(pot.getAmount().add(Config.TRANSACTION_FEE)) >= 0){
 			if (BitcoindController.validateAddress(pot.getBtcAddress())) {
 				//do payOut in BitcoindController
 				String transactionID = BitcoindController.sendCoins(pot.getBtcAddress(), pot.getAmount());
