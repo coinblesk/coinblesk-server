@@ -147,7 +147,7 @@ public class PayOutTransactionDAO {
 		session.close();
 
 		if(existingPOT == null){
-			throw new TransactionException("The transaction does not exists.");
+			throw new TransactionException("Problem verifying PayOutTransaction. This transaction does not exists.");
 		}
 				
 		if(!existingPOT.isVerified()){
@@ -159,7 +159,7 @@ public class PayOutTransactionDAO {
 				transaction = session2.beginTransaction();
 				session2.update(existingPOT);
 				transaction.commit();
-				LOGGER.info("Successfully verifyed PayOutTransaction with ID: " + existingPOT.getId());
+				LOGGER.info("Successfully verified PayOutTransaction with ID: " + existingPOT.getId());
 			} catch (HibernateException e) {
 				LOGGER.error("Problem verifying PayOutTransaction with TransactionID: " + pot.getTransactionID());
 				 if (transaction != null)
