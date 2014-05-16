@@ -53,7 +53,7 @@ public class PayInTransactionDAO {
 			session.update(userAccount);
 			
 			transaction.commit();
-			LOGGER.info("PayTransaction created and balance for user with ID " + tx.getUserID() + " updated: " + tx.toString());
+			LOGGER.info("PayInTransaction created and balance for user with ID " + tx.getUserID() + " updated: " + tx.toString());
 		} catch (HibernateException e) {
 			LOGGER.error("Problem creating PayInTransaction: " + tx.toString() + "ErrorMessage: " + e.getMessage());
 			if (transaction != null)
