@@ -87,6 +87,8 @@ public class UserAccountController {
 		try {
 			UserAccount userAccount = UserAccountService.getInstance().getByUsername(AuthenticationInfo.getPrincipalUsername());
 			CustomResponseObject responseObject = new CustomResponseObject(true, READ_SUCCESS);
+			
+			//TODO: do not send server pub key on each get useraccount!! create method login'
 			responseObject.setEncodedServerPublicKey(KeyHandler.encodePublicKey(Constants.PUBLICKEY));
 			responseObject.setReadAccountTO(new ReadAccountTransferObject(transform(userAccount)));
 			return responseObject;
