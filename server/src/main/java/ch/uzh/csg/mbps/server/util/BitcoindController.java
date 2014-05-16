@@ -146,7 +146,7 @@ public class BitcoindController {
             @Override
             public void confirmed(Bitcoin.Transaction transaction) {
 				 if (transaction.category().equals("send")){
-						LOGGER.info("Outoging transaction: amount: " + transaction.amount() + ", account: " + transaction.account() + ", address: " +  transaction.address());
+						LOGGER.info("Outgoing transaction: amount: " + transaction.amount() + ", account: " + transaction.account() + ", address: " +  transaction.address());
 						PayOutTransactionService.check(transaction);
 					}
             }
