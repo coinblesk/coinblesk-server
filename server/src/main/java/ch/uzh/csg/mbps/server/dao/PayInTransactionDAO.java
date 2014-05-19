@@ -146,4 +146,31 @@ public class PayInTransactionDAO {
 		
 		return nofResults;
 	}
+
+	//TODO simon: create javadoc
+	public static ArrayList<HistoryPayInTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
+		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
+		Session session = openSession();
+		session.beginTransaction();
+				
+		@SuppressWarnings("unchecked")
+		List<HistoryPayInTransaction> resultWithAliasedBean = session.createSQLQuery(
+				  "SELECT pit.timestamp, pit.amount " +
+				  "FROM pay_in_transaction pit " +
+				  "WHERE pit.user_id = :userid " +
+				  "ORDER BY pit.timestamp DESC")
+				  .addScalar("timestamp")
+				  .addScalar("amount")
+				  .setLong("userid",  userAccount.getId())
+//				  .setFirstResult(page * Config.PAY_INS_MAX_RESULTS)
+				  .setMaxResults(5)
+				  .setFetchSize(5)
+				  .setResultTransformer(Transformers.aliasToBean(HistoryPayInTransaction.class))
+				  .list();
+		
+		List<HistoryPayInTransaction> results = resultWithAliasedBean;
+		session.close();
+		
+		return new ArrayList<HistoryPayInTransaction>(results);
+	}
 }

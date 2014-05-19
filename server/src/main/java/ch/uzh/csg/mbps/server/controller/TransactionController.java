@@ -208,4 +208,32 @@ public class TransactionController {
 			return new CustomResponseObject(false, "UserAccount not found.");
 		}
 	}
+	
+//TODO simon:create javadoc
+	@RequestMapping(value = "/mainActivityRequests", method = RequestMethod.GET, produces = "application/json")
+	@ResponseBody
+	public CustomResponseObject mainActivityRequests() {
+		try {
+			String username = AuthenticationInfo.getPrincipalUsername();
+			CustomResponseObject response = new CustomResponseObject();
+			response.setSuccessful(true);
+			response.setMessage(ExchangeRates.getExchangeRate().toString());
+			response.setType(Type.OTHER);
+			
+			GetHistoryTransferObject ghto = new GetHistoryTransferObject();
+			ghto.setTransactionHistory(TransactionService.getInstance().getLast5Transactions(username));
+			ghto.setPayInTransactionHistory(PayInTransactionService.getInstance().getLast5Transactions(username));
+			ghto.setPayOutTransactionHistory(PayOutTransactionService.getInstance().getLast5Transactions(username));
+			response.setGetHistoryTO(ghto);
+			
+			ReadAccountTransferObject rato = new ReadAccountTransferObject(UserAccountController.transform(UserAccountService.getInstance().getByUsername(username)));
+			response.setReadAccountTO(rato);
+			
+			return response;
+		} catch (ParseException | IOException | UserAccountNotFoundException e) {
+			LOGGER.error("Couldn't get account information. Response: " + e.getMessage());
+			return new CustomResponseObject(false, "0.0", Type.OTHER);
+		}
+	}
+	
 }

@@ -121,5 +121,10 @@ public class PayOutTransactionService {
 		} catch (TransactionException e) {
 		}	
 	}
+
+	//TODO simon: create Javadoc
+	public ArrayList<HistoryPayOutTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
+		return PayOutTransactionDAO.getLast5Transactions(username);
+	}
 	
 }

@@ -137,5 +137,36 @@ public class TransactionDAO {
 			session.close();
 		}
 	}
+
+//	TODO simon: create Javadoc
+	@SuppressWarnings("unchecked")
+	public static ArrayList<HistoryTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
+		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
+		Session session = openSession();
+		session.beginTransaction();
+		
+		List<HistoryTransaction> resultWithAliasedBean = session.createSQLQuery(
+				  "SELECT transaction.timestamp, u2.username as buyer, u1.username as seller, transaction.amount " +
+				  "FROM DB_TRANSACTION transaction " +
+				  "INNER JOIN user_account u1 on transaction.seller_id = u1.id " +
+				  "INNER JOIN user_account u2 on transaction.buyer_id = u2.id " +
+				  "WHERE transaction.buyer_id = :userid OR transaction.seller_id = :userid " +
+				  "ORDER BY transaction.timestamp DESC")
+				  .addScalar("timestamp")
+				  .addScalar("buyer")
+				  .addScalar("seller")
+				  .addScalar("amount")
+				  .setLong("userid", userAccount.getId())
+//				  .setFirstResult(5)
+				  .setMaxResults(5)
+				  .setFetchSize(5)
+				  .setResultTransformer(Transformers.aliasToBean(HistoryTransaction.class))
+				  .list();
+
+		List<HistoryTransaction> results = resultWithAliasedBean;
+		session.close();
+		
+		return new ArrayList<HistoryTransaction>(results);
+	}
 	
 }

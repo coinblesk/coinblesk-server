@@ -51,5 +51,9 @@ public interface ITransaction {
 	 *             {@link Transaction} objects cannot be found.
 	 */
 	public SignedObject createTransaction(Pair<SignedObject> toVerify) throws TransactionException, UserAccountNotFoundException;
+
+	
+	//TODO simon: create JavaDoc
+	public ArrayList<HistoryTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException;
 	
 }

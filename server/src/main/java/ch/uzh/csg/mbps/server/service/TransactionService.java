@@ -56,6 +56,13 @@ public class TransactionService implements ITransaction {
 		return TransactionDAO.getHistory(username, page);
 	}
 	
+	//TODO Simon: create Javadoc
+	@Override
+	public ArrayList<HistoryTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
+		 return  TransactionDAO.getLast5Transactions(username);
+	}
+	
+	
 	/**
 	 * Counts and returns number of {@link DbTransaction}s which are saved in the DB for
 	 * {@link UserAccount} with username.
