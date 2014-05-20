@@ -56,7 +56,6 @@ public class TransactionService implements ITransaction {
 		return TransactionDAO.getHistory(username, page);
 	}
 	
-	//TODO Simon: create Javadoc
 	@Override
 	public ArrayList<HistoryTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
 		 return  TransactionDAO.getLast5Transactions(username);

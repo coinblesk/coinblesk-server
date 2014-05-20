@@ -138,7 +138,14 @@ public class TransactionDAO {
 		}
 	}
 
-//	TODO simon: create Javadoc
+	/**
+	 * Returns 5 newest {@link Transaction}s as {@link HistoryTransaction}s in
+	 * descending order.
+	 * 
+	 * @param username
+	 * @return ArrayList<HistoryTransaction>
+	 * @throws UserAccountNotFoundException
+	 */
 	@SuppressWarnings("unchecked")
 	public static ArrayList<HistoryTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
 		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
@@ -157,7 +164,6 @@ public class TransactionDAO {
 				  .addScalar("seller")
 				  .addScalar("amount")
 				  .setLong("userid", userAccount.getId())
-//				  .setFirstResult(5)
 				  .setMaxResults(5)
 				  .setFetchSize(5)
 				  .setResultTransformer(Transformers.aliasToBean(HistoryTransaction.class))

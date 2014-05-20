@@ -146,8 +146,15 @@ public class PayInTransactionDAO {
 		
 		return nofResults;
 	}
-
-	//TODO simon: create javadoc
+	
+	/**
+	 * Returns five newest {@link PayInTransaction}s assigned to the given
+	 * username as an ArrayList.
+	 * 
+	 * @param username
+	 * @return ArrayList<HistoryPayInTransaction>
+	 * @throws UserAccountNotFoundException
+	 */
 	public static ArrayList<HistoryPayInTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
 		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
 		Session session = openSession();
@@ -162,7 +169,6 @@ public class PayInTransactionDAO {
 				  .addScalar("timestamp")
 				  .addScalar("amount")
 				  .setLong("userid",  userAccount.getId())
-//				  .setFirstResult(page * Config.PAY_INS_MAX_RESULTS)
 				  .setMaxResults(5)
 				  .setFetchSize(5)
 				  .setResultTransformer(Transformers.aliasToBean(HistoryPayInTransaction.class))

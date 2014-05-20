@@ -44,16 +44,23 @@ public interface ITransaction {
 	 *         executed.
 	 * @throws TransactionException
 	 *             If the {@link Transaction} objects received from buyer and
-	 *             seller are not identic, if the signatures are not valid, or
-	 *             if any other transaction specific problem occures.
+	 *             seller are not identical, if the signatures are not valid, or
+	 *             if any other transaction specific problem occurs.
 	 * @throws UserAccountNotFoundException
 	 *             If the a {@link UserAccount} contained in one or both
 	 *             {@link Transaction} objects cannot be found.
 	 */
 	public SignedObject createTransaction(Pair<SignedObject> toVerify) throws TransactionException, UserAccountNotFoundException;
 
-	
-	//TODO simon: create JavaDoc
+	/**
+	 * Returns the five last {@link Transaction}s of a given {@link UserAccount}.
+	 * The returned lists are ordered by the item's time stamp in descending
+	 * order.
+	 * 
+	 * @param username
+	 * @return ArrayList<HistoryTransaction>
+	 * @throws UserAccountNotFoundException
+	 */
 	public ArrayList<HistoryTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException;
 	
 }

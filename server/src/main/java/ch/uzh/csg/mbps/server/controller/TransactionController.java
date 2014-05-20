@@ -209,7 +209,14 @@ public class TransactionController {
 		}
 	}
 	
-//TODO simon:create javadoc
+	/**
+	 * Request returns necessary information for updating the mainscreen of the MBPS
+	 * application.
+	 * 
+	 * @return {@link CustomResponseObject} with information about
+	 *         successful/non successful request, balance, exchangerate and last
+	 *         5 transactions
+	 */
 	@RequestMapping(value = "/mainActivityRequests", method = RequestMethod.GET, produces = "application/json")
 	@ResponseBody
 	public CustomResponseObject mainActivityRequests() {
@@ -226,7 +233,8 @@ public class TransactionController {
 			ghto.setPayOutTransactionHistory(PayOutTransactionService.getInstance().getLast5Transactions(username));
 			response.setGetHistoryTO(ghto);
 			
-			ReadAccountTransferObject rato = new ReadAccountTransferObject(UserAccountController.transform(UserAccountService.getInstance().getByUsername(username)));
+			ReadAccountTransferObject rato = new ReadAccountTransferObject(new ch.uzh.csg.mbps.model.UserAccount());
+			rato.getUserAccount().setBalance(UserAccountService.getInstance().getByUsername(username).getBalance());
 			response.setReadAccountTO(rato);
 			
 			return response;

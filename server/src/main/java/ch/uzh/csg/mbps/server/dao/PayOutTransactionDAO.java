@@ -171,13 +171,21 @@ public class PayOutTransactionDAO {
 		}
 	}
 	
-	//TODO simon: create Javadoc
-	public static ArrayList<HistoryPayOutTransaction> getLast5Transactions(
-			String username) throws UserAccountNotFoundException {
+	/**
+	 * Returns history of 5 newest {@link PayOutTransaction}s assigned to the
+	 * given username as an ArrayList.
+	 * 
+	 * @param username
+	 *            for which UserAccount history is requested
+	 * @return ArrayList<HistoryPayOutTransaction> (an array list with the last
+	 *         5 PayOutTransactions)
+	 * @throws UserAccountNotFoundException
+	 */
+	public static ArrayList<HistoryPayOutTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
 		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
 		Session session = openSession();
 		session.beginTransaction();
-				//TODO simon: test!
+
 		@SuppressWarnings("unchecked")
 		List<HistoryPayOutTransaction> resultWithAliasedBean = session.createSQLQuery(
 				  "SELECT pot.timestamp, pot.amount, pot.btc_address as btcAddress " +
@@ -188,7 +196,6 @@ public class PayOutTransactionDAO {
 				  .addScalar("amount")
 				  .addScalar("btcAddress")
 				  .setLong("userid",  userAccount.getId())
-//				  .setFirstResult(page * Config.PAY_OUTS_MAX_RESULTS)
 				  .setMaxResults(5)
 				  .setFetchSize(5)
 				  .setResultTransformer(Transformers.aliasToBean(HistoryPayOutTransaction.class))

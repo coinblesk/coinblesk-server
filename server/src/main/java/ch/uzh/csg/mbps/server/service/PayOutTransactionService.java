@@ -122,7 +122,14 @@ public class PayOutTransactionService {
 		}	
 	}
 
-	//TODO simon: create Javadoc
+	/**
+	 * Returns five last {@link PayOutTransaction}s for {@link UserAccount}
+	 * specified by given username.
+	 * 
+	 * @param username
+	 * @return ArrayListy<PayOutTransaction>
+	 * @throws UserAccountNotFoundException
+	 */
 	public ArrayList<HistoryPayOutTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
 		return PayOutTransactionDAO.getLast5Transactions(username);
 	}

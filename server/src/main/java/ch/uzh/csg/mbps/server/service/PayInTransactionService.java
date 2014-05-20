@@ -80,9 +80,14 @@ public class PayInTransactionService {
 		return new CustomResponseObject(true, "Pay in address is send to your email address.");
 	}
 
-	//TODO simon: create javadoc
+	/**
+	 * Returns 5 newest {@link PayInTransaction}s for specified username in descending order.
+	 * 
+	 * @param username
+	 * @return ArrayList<{@link HistoryPayInTransaction>
+	 * @throws UserAccountNotFoundException
+	 */
 	public ArrayList<HistoryPayInTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
-		// TODO simon: Test
 		return PayInTransactionDAO.getLast5Transactions(username);
 	}
 
