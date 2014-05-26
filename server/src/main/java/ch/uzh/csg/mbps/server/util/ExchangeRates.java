@@ -21,9 +21,9 @@ public class ExchangeRates {
 	private final static String MTGOX_URL = "http://data.mtgox.com/api/2/BTCCHF/money/ticker_fast";
 	private final static String BITSTAMP_URL = "https://www.bitstamp.net/api/ticker/";
 	private final static String USD_CHF_URL = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.xchange%20where%20pair%20in%20%28%22USDCHF%22%29&format=json&diagnostics=true&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys&";
-	private static BigDecimal exchangeRate;
-	private static Date exchangeRateTimestamp;
-	private static BigDecimal exchangeRateUsdChf;
+	private static BigDecimal exchangeRate = BigDecimal.ZERO;
+	private static Date exchangeRateTimestamp = new Date(0);
+	private static BigDecimal exchangeRateUsdChf = BigDecimal.ZERO;
 	
 	/**
 	 * Constructor for exchangerates. Initializes exchangeRate, exchangeRateUsdChf and exchangerateTimestamp.

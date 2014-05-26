@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 
 import javax.servlet.http.HttpSession;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -70,6 +71,11 @@ public class AuthenticatonTest {
 
 			initialized = true;
 		}
+	}
+	
+	@After
+	public void tearDown(){
+		UserAccountService.disableTestingMode();
 	}
 	
 	@Test

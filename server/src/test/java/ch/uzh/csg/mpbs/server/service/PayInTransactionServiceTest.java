@@ -9,6 +9,7 @@ import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.Date;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -40,9 +41,9 @@ public class PayInTransactionServiceTest {
 
 	@Before
 	public void setUp() throws Exception {
-		if (!initialized) {
-			UserAccountService.disableTestingMode();
+		UserAccountService.enableTestingMode();
 
+		if (!initialized) {
 			test61 = new UserAccount("test61", "test61@bitcoin.csg.uzh.chs", "asdf");
 			test62 = new UserAccount("test62", "test62@bitcoin.csg.uzh.ch", "asdf");
 
@@ -53,6 +54,11 @@ public class PayInTransactionServiceTest {
 
 			initialized = true;
 		}
+	}
+	
+	@After
+	public void tearDown(){
+		UserAccountService.disableTestingMode();
 	}
 
 	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
@@ -156,7 +162,6 @@ public class PayInTransactionServiceTest {
 	
 	@Test
 	public void testGetHistory() throws Exception {
-		UserAccountService.enableTestingMode();
 		createAccountAndVerifyAndReload(test62, BigDecimal.ZERO); 
 		
 		UserAccount fromDB = UserAccountService.getInstance().getByUsername(test62.getUsername());

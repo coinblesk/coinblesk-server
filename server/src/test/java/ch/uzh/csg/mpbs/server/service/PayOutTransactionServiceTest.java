@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -33,7 +34,13 @@ public class PayOutTransactionServiceTest {
 
 	@Before
 	public void setUp() throws Exception {
+		UserAccountService.enableTestingMode();
 		test71 = new UserAccount("test71", "test71@bitcoin.csg.uzh.ch", "asdf");
+	}
+	
+	@After
+	public void tearDown(){
+		UserAccountService.disableTestingMode();
 	}
 
 	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
@@ -46,7 +53,6 @@ public class PayOutTransactionServiceTest {
 
 	@Test
 	public void testGetHistory() throws Exception {
-		UserAccountService.enableTestingMode();
 		createAccountAndVerifyAndReload(test71, BigDecimal.ZERO); 
 		
 		UserAccount fromDB = UserAccountService.getInstance().getByUsername(test71.getUsername());

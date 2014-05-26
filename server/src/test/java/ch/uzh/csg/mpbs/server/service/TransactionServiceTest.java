@@ -45,8 +45,8 @@ public class TransactionServiceTest {
 	
 	@Before
 	public void setUp() throws Exception {
+		UserAccountService.enableTestingMode();
 		if (!initialized) {
-			UserAccountService.enableTestingMode();
 			KeyPair keypair = KeyHandler.generateKeys();
 			
 			Constants.PRIVATEKEY = keypair.getPrivate();
@@ -403,7 +403,6 @@ public class TransactionServiceTest {
 	
 	@Test
 	public void testGetHistory_testMaximumResult() throws Exception {
-		UserAccountService.enableTestingMode();
 		UserAccount fromDB = createAccountAndVerifyAndReload("TDAOT_30", "TDAOT_30@bitcoin.csg.uzh.ch", "my-password", new BigDecimal("0.0"));
 		UserAccount fromDB2 = createAccountAndVerifyAndReload("TDAOT_31", "TDAOT_31@bitcoin.csg.uzh.ch", "my-password", new BigDecimal("0.0"));
 		

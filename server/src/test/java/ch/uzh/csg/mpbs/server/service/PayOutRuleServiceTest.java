@@ -63,7 +63,6 @@ public class PayOutRuleServiceTest {
 		UserAccountService.enableTestingMode();
 		
 		if (!initialized) {
-
 			test51 = new UserAccount("test51", "chuck51@bitcoin.csg.uzh.ch", "asdf");
 			test52 = new UserAccount("test52", "chuck52@bitcoin.csg.uzh.ch", "asdf");
 			test53 = new UserAccount("test53", "chuck53@bitcoin.csg.uzh.ch", "asdf");
