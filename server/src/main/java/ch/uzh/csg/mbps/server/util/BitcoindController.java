@@ -39,7 +39,7 @@ public class BitcoindController {
 		try {
 			BITCOIN.unlockWallet(Config.ENCRYPTION_PASSWORD, 2);
 		} catch (Exception e) {
-			if(e.getMessage().equals("{\"result\":null,\"error\":{\"code\":-17,\"message\":\"Error: Wallet is already unlocked.\"},\"id\":\"1\"}")){
+			if(e.getMessage().contains("Error: Wallet is already unlocked.")){
 				//do nothing --> wallet is already unlocked
 			} else
 				throw e;
