@@ -222,10 +222,11 @@ public class TransactionController {
 	public CustomResponseObject mainActivityRequests() {
 		try {
 			String username = AuthenticationInfo.getPrincipalUsername();
+			
 			CustomResponseObject response = new CustomResponseObject();
+			response.setType(Type.OTHER);
 			response.setSuccessful(true);
 			response.setMessage(ExchangeRates.getExchangeRate().toString());
-			response.setType(Type.OTHER);
 			
 			GetHistoryTransferObject ghto = new GetHistoryTransferObject();
 			ghto.setTransactionHistory(TransactionService.getInstance().getLast5Transactions(username));

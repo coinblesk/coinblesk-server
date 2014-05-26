@@ -113,7 +113,7 @@ public class UserAccountControllerTest {
 		ObjectMapper mapper = new ObjectMapper();
 		String asString = mapper.writeValueAsString(test22);
 
-		MvcResult mvcResult = mockMvc.perform(post("/user/create").secure(true).contentType(MediaType.APPLICATION_JSON).content(asString))
+		MvcResult mvcResult = mockMvc.perform(post("/user/create").secure(false).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isOk()).andReturn();
 
 		String contentAsString = mvcResult.getResponse().getContentAsString();
@@ -131,7 +131,7 @@ public class UserAccountControllerTest {
 		String asString = mapper.writeValueAsString(test23_2);
 
 		//this will fail since the username is not unique
-		MvcResult mvcResult = mockMvc.perform(post("/user/create").secure(true).contentType(MediaType.APPLICATION_JSON).content(asString)).andReturn();
+		MvcResult mvcResult = mockMvc.perform(post("/user/create").secure(false).contentType(MediaType.APPLICATION_JSON).content(asString)).andReturn();
 
 		String contentAsString = mvcResult.getResponse().getContentAsString();
 		CustomResponseObject receivedObject = mapper.readValue(contentAsString, CustomResponseObject.class);
@@ -154,17 +154,17 @@ public class UserAccountControllerTest {
 		UserAccount fromDB = UserAccountService.getInstance().getByUsername(test29.getUsername());
 		String token = getTokenForUser(fromDB.getId());
 
-		MvcResult mvcResult = mockMvc.perform(get("/user/verify/"+token).secure(true))
+		MvcResult mvcResult = mockMvc.perform(get("/user/verify/"+token).secure(false))
 				.andExpect(status().isOk())
 				.andReturn();
 
-		mvcResult = mockMvc.perform(get("/user/verify/"+token).secure(true))
+		mvcResult = mockMvc.perform(get("/user/verify/"+token).secure(false))
 				.andExpect(status().isOk()).andExpect(view().name("FailedEmailVerification"))
 				.andReturn();
 
 		HttpSession session = loginAndGetSession(test29.getUsername(), plainTextPassword);
 
-		mvcResult = mockMvc.perform(get("/user/read").secure(true).session((MockHttpSession) session))
+		mvcResult = mockMvc.perform(get("/user/read").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andExpect(content().contentType(TestUtil.APPLICATION_JSON_UTF8))
 				.andReturn();
@@ -188,7 +188,7 @@ public class UserAccountControllerTest {
 
 	@Test
 	public void testReadUserAccount_FailNotAuthorized() throws Exception {
-		mockMvc.perform(get("/user/read").secure(true)).andExpect(status().isUnauthorized());
+		mockMvc.perform(get("/user/read").secure(false)).andExpect(status().isUnauthorized());
 	}
 
 	@Test
@@ -197,7 +197,7 @@ public class UserAccountControllerTest {
 		createAccountAndVerifyAndReload(test24, new BigDecimal(0.0));
 		HttpSession session = loginAndGetSession(test24.getUsername(), plainTextPassword);
 
-		MvcResult mvcResult = mockMvc.perform(get("/user/read").secure(true).session((MockHttpSession) session))
+		MvcResult mvcResult = mockMvc.perform(get("/user/read").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andExpect(content().contentType(TestUtil.APPLICATION_JSON_UTF8))
 				.andReturn();
@@ -224,7 +224,7 @@ public class UserAccountControllerTest {
 		ObjectMapper mapper = new ObjectMapper();
 		String asString = mapper.writeValueAsString(new UserAccount("test99", "email99", "password99"));
 
-		mockMvc.perform(post("/user/update").secure(true).contentType(MediaType.APPLICATION_JSON).content(asString))
+		mockMvc.perform(post("/user/update").secure(false).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isUnauthorized());
 	}
 
@@ -238,10 +238,10 @@ public class UserAccountControllerTest {
 		ObjectMapper mapper = new ObjectMapper();
 		String asString = mapper.writeValueAsString(new UserAccount("newname", newEmail, test25.getPassword()));
 
-		mockMvc.perform(post("/user/update").secure(true).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
+		mockMvc.perform(post("/user/update").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isOk());
 
-		MvcResult mvcResult = mockMvc.perform(get("/user/read").secure(true).session((MockHttpSession) session))
+		MvcResult mvcResult = mockMvc.perform(get("/user/read").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andExpect(content().contentType(TestUtil.APPLICATION_JSON_UTF8))
 				.andReturn();
@@ -261,7 +261,7 @@ public class UserAccountControllerTest {
 
 		UserAccountService.getInstance().delete(test25.getUsername());
 
-		mvcResult = mockMvc.perform(post("/user/update").secure(true).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
+		mvcResult = mockMvc.perform(post("/user/update").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isOk())
 				.andReturn();
 
@@ -274,7 +274,7 @@ public class UserAccountControllerTest {
 
 	@Test
 	public void testDeleteUserAccountFailNotAuthorized() throws Exception {
-		mockMvc.perform(post("/user/update").secure(true).contentType(MediaType.APPLICATION_JSON))
+		mockMvc.perform(post("/user/update").secure(false).contentType(MediaType.APPLICATION_JSON))
 				.andExpect(status().isUnauthorized());
 	}
 
@@ -284,10 +284,10 @@ public class UserAccountControllerTest {
 		createAccountAndVerifyAndReload(test26, new BigDecimal(0.0));
 		HttpSession session = loginAndGetSession(test26.getUsername(), plainTextPassword);
 
-		mockMvc.perform(post("/user/delete").secure(true).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON))
+		mockMvc.perform(post("/user/delete").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON))
 				.andExpect(status().isOk());
 
-		MvcResult mvcResult = mockMvc.perform(get("/user/read").secure(true).session((MockHttpSession) session)).andReturn();
+		MvcResult mvcResult = mockMvc.perform(get("/user/read").secure(false).session((MockHttpSession) session)).andReturn();
 
 		String contentAsString = mvcResult.getResponse().getContentAsString();
 
@@ -301,7 +301,7 @@ public class UserAccountControllerTest {
 		assertEquals(false, cro.isSuccessful());
 		assertEquals("UserAccount not found.", cro.getMessage());
 
-		mvcResult = mockMvc.perform(post("/user/delete").secure(true).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON))
+		mvcResult = mockMvc.perform(post("/user/delete").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON))
 				.andExpect(status().isOk())
 				.andReturn();
 
@@ -317,7 +317,7 @@ public class UserAccountControllerTest {
 		createAccountAndVerifyAndReload(test26_1, BigDecimal.ONE);
 		HttpSession session = loginAndGetSession(test26_1.getUsername(), plainTextPassword);
 
-		MvcResult mvcResult = mockMvc.perform(post("/user/delete").secure(true).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON))
+		MvcResult mvcResult = mockMvc.perform(post("/user/delete").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON))
 				.andExpect(status().isOk())
 				.andReturn();
 
@@ -342,7 +342,7 @@ public class UserAccountControllerTest {
 	}
 
 	private HttpSession loginAndGetSession(String username, String plainTextPassword) throws Exception {
-		HttpSession session = mockMvc.perform(post("/j_spring_security_check").secure(true).param("j_username", username).param("j_password", plainTextPassword))
+		HttpSession session = mockMvc.perform(post("/j_spring_security_check").secure(false).param("j_username", username).param("j_password", plainTextPassword))
 				.andExpect(status().isOk())
 				.andReturn()
 				.getRequest()
@@ -361,7 +361,7 @@ public class UserAccountControllerTest {
 		String emailAddress = fromDB.getEmail();
 		String mappedString = mapper.writeValueAsString(emailAddress);
 
-		MvcResult result = mockMvc.perform(post("/user/resetPasswordRequest").secure(true).contentType(MediaType.APPLICATION_JSON).content(mappedString))
+		MvcResult result = mockMvc.perform(post("/user/resetPasswordRequest").secure(false).contentType(MediaType.APPLICATION_JSON).content(mappedString))
 				.andExpect(status().isOk())
 				.andReturn();
 
@@ -370,7 +370,7 @@ public class UserAccountControllerTest {
 		assertTrue(transferObject.isSuccessful());
 
 		mappedString = mapper.writeValueAsString("wrong-email@noemail.com");
-		result = mockMvc.perform(post("/user/resetPasswordRequest").secure(true).contentType(MediaType.APPLICATION_JSON).content(mappedString))
+		result = mockMvc.perform(post("/user/resetPasswordRequest").secure(false).contentType(MediaType.APPLICATION_JSON).content(mappedString))
 				.andExpect(status().isOk())
 				.andReturn();
 		resultAsString = result.getResponse().getContentAsString();
@@ -385,17 +385,17 @@ public class UserAccountControllerTest {
 			}
 		}
 
-		mockMvc.perform(get("/user/resetPassword/"+token).secure(true)).andExpect(status().isOk());
+		mockMvc.perform(get("/user/resetPassword/"+token).secure(false)).andExpect(status().isOk());
 
-		mockMvc.perform(post("/user/resetPassword/setPassword").secure(true).param("token", token).param("pw1", "test").param("pw2", "test")).andExpect(status().isOk());
+		mockMvc.perform(post("/user/resetPassword/setPassword").secure(false).param("token", token).param("pw1", "test").param("pw2", "test")).andExpect(status().isOk());
 
-		mockMvc.perform(get("/user/resetPassword/" + token).secure(true))
+		mockMvc.perform(get("/user/resetPassword/" + token).secure(false))
 				.andExpect(status().isOk())
 				.andExpect(view().name("WrongToken"));
 
 		HttpSession session = loginAndGetSession(test30.getUsername(), "test");
 
-		MvcResult mvcResult3 = mockMvc.perform(get("/user/read").secure(true).session((MockHttpSession) session))
+		MvcResult mvcResult3 = mockMvc.perform(get("/user/read").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andExpect(content().contentType(TestUtil.APPLICATION_JSON_UTF8))
 				.andReturn();

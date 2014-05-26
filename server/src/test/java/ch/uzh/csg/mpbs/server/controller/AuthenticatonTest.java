@@ -38,7 +38,7 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 @ContextConfiguration(locations = {
 		"file:src/main/webapp/WEB-INF/applicationContext.xml",
 		"file:src/main/webapp/WEB-INF/mvc-dispatcher-servlet.xml",
-		"file:src/main/webapp/WEB-INF/spring-security.xml" })
+		"file:src/main/webapp/WEB-INF/spring-security.xml"})
 @WebAppConfiguration
 public class AuthenticatonTest {
 	
@@ -74,20 +74,20 @@ public class AuthenticatonTest {
 	
 	@Test
 	public void testLoginLogout() throws Exception {
-		mockMvc.perform(get("/user/read").secure(true)).andExpect(status().isUnauthorized());
+		mockMvc.perform(get("/user/read").secure(false)).andExpect(status().isUnauthorized());
 
 		String plainTextPassword = test60.getPassword();
 		createAccountAndVerifyAndReload(test60, new BigDecimal(0.0));
 
 		HttpSession session = loginAndGetSession(test60.getUsername(), plainTextPassword);
 
-		MvcResult result = mockMvc.perform(get("/user/read").secure(true).session((MockHttpSession) session))
+		MvcResult result = mockMvc.perform(get("/user/read").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andReturn();
 
 		logout(result);
 
-		mockMvc.perform(get("/user/read").secure(true)).andExpect(status().isUnauthorized());
+		mockMvc.perform(get("/user/read").secure(false)).andExpect(status().isUnauthorized());
 	}
 	
 	@Test
@@ -95,7 +95,7 @@ public class AuthenticatonTest {
 		String plainTextPassword = test61.getPassword();
 		assertTrue(UserAccountService.getInstance().createAccount(test61));
 
-		mockMvc.perform(post("/j_spring_security_check").secure(true).param("j_username", test61.getUsername()).param("j_password", plainTextPassword))
+		mockMvc.perform(post("/j_spring_security_check").secure(false).param("j_username", test61.getUsername()).param("j_password", plainTextPassword))
 				.andExpect(status().isUnauthorized())
 				.andReturn();
 	}
@@ -105,30 +105,30 @@ public class AuthenticatonTest {
 		String plainTextPassword = test61.getPassword();
 		createAccountAndVerifyAndReload(test62, new BigDecimal(0.0));
 		
-		mockMvc.perform(post("/j_spring_security_check").secure(true).param("j_username", test62.getUsername()).param("j_password", "wrongPassword"))
+		mockMvc.perform(post("/j_spring_security_check").secure(false).param("j_username", test62.getUsername()).param("j_password", "wrongPassword"))
 				.andExpect(status().isUnauthorized())
 				.andReturn();
 		
-		mockMvc.perform(post("/j_spring_security_check").secure(true).param("j_username", "wrongUsername").param("j_password", plainTextPassword))
+		mockMvc.perform(post("/j_spring_security_check").secure(false).param("j_username", "wrongUsername").param("j_password", plainTextPassword))
 				.andExpect(status().isUnauthorized())
 				.andReturn();
 	}
 
 	@Test
 	public void testSessionTimeout() throws Exception {
-		mockMvc.perform(get("/user/read").secure(true)).andExpect(status().isUnauthorized());
+		mockMvc.perform(get("/user/read").secure(false)).andExpect(status().isUnauthorized());
 
 		String plainTextPassword = test63.getPassword();
 		createAccountAndVerifyAndReload(test63, new BigDecimal(0.0));
 
 		HttpSession session = loginAndGetSession(test63.getUsername(), plainTextPassword);
 
-		mockMvc.perform(get("/user/read").secure(true).session((MockHttpSession) session)).andExpect(status().isOk());
+		mockMvc.perform(get("/user/read").secure(false).session((MockHttpSession) session)).andExpect(status().isOk());
 
 		session.setMaxInactiveInterval(5);
 		Thread.sleep(6);
 
-		mockMvc.perform(get("/user/read").secure(true)).andExpect(status().isUnauthorized());
+		mockMvc.perform(get("/user/read").secure(false)).andExpect(status().isUnauthorized());
 	}
 	
 	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
@@ -140,7 +140,7 @@ public class AuthenticatonTest {
 	}
 
 	private HttpSession loginAndGetSession(String username, String plainTextPassword) throws Exception {
-		HttpSession session = mockMvc.perform(post("/j_spring_security_check").secure(true).param("j_username", username).param("j_password", plainTextPassword))
+		HttpSession session = mockMvc.perform(post("/j_spring_security_check").secure(false).param("j_username", username).param("j_password", plainTextPassword))
 				.andExpect(status().isOk())
 				.andReturn()
 				.getRequest()

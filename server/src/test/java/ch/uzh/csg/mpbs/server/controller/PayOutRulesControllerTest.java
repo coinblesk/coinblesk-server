@@ -110,7 +110,7 @@ public class PayOutRulesControllerTest {
 		HttpSession session = loginAndGetSession(test41.getUsername(), plainTextPw);
 		ObjectMapper mapper = new ObjectMapper();
 
-		MvcResult mvcResult = mockMvc.perform(get("/rules/get").secure(true).session((MockHttpSession) session))
+		MvcResult mvcResult = mockMvc.perform(get("/rules/get").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andReturn();
 
@@ -147,11 +147,11 @@ public class PayOutRulesControllerTest {
 		ObjectMapper mapper = new ObjectMapper();
 		String asString = mapper.writeValueAsString(porto);
 
-		MvcResult mvcResult = mockMvc.perform(post("/rules/create").secure(true).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
+		MvcResult mvcResult = mockMvc.perform(post("/rules/create").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isOk())
 				.andReturn();	
 
-		mvcResult = mockMvc.perform(get("/rules/get").secure(true).session((MockHttpSession) session))
+		mvcResult = mockMvc.perform(get("/rules/get").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andReturn();
 
@@ -190,11 +190,11 @@ public class PayOutRulesControllerTest {
 		ObjectMapper mapper = new ObjectMapper();
 		String asString = mapper.writeValueAsString(porto);
 
-		MvcResult mvcResult = mockMvc.perform(post("/rules/create").secure(true).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
+		MvcResult mvcResult = mockMvc.perform(post("/rules/create").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isOk())
 				.andReturn();	
 
-		mvcResult = mockMvc.perform(get("/rules/get").secure(true).session((MockHttpSession) session))
+		mvcResult = mockMvc.perform(get("/rules/get").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andReturn();
 
@@ -206,11 +206,11 @@ public class PayOutRulesControllerTest {
 
 		assertEquals(porto2.getPayOutRulesList().get(0).toString(),por.toString());
 
-		mvcResult = mockMvc.perform(get("/rules/reset").secure(true).session((MockHttpSession) session))
+		mvcResult = mockMvc.perform(post("/rules/reset").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andReturn();
 
-		MvcResult mvcResult3 = mockMvc.perform(get("/rules/get").secure(true).session((MockHttpSession) session))
+		MvcResult mvcResult3 = mockMvc.perform(get("/rules/get").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andReturn();
 
@@ -265,7 +265,7 @@ public class PayOutRulesControllerTest {
 	}
 
 	private HttpSession loginAndGetSession(String username, String plainTextPassword) throws Exception {
-		HttpSession session = mockMvc.perform(post("/j_spring_security_check").secure(true).param("j_username", username).param("j_password", plainTextPassword))
+		HttpSession session = mockMvc.perform(post("/j_spring_security_check").secure(false).param("j_username", username).param("j_password", plainTextPassword))
 				.andExpect(status().isOk())
 				.andReturn()
 				.getRequest()

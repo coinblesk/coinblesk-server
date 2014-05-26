@@ -137,7 +137,7 @@ public class TransactionControllerTest {
 		ObjectMapper mapper = new ObjectMapper();
 		String asString = mapper.writeValueAsString(new Pair<SignedObject>(signedTransactionBuyer, signedTransactionSeller));
 		
-		mockMvc.perform(post("/transaction/create").secure(true).contentType(MediaType.APPLICATION_JSON).content(asString))
+		mockMvc.perform(post("/transaction/create").secure(false).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isUnauthorized());
 	}
 	
@@ -168,7 +168,7 @@ public class TransactionControllerTest {
 		
 		HttpSession session = loginAndGetSession(test4.getUsername(), plainTextPw);
 		
-		MvcResult mvcResult = mockMvc.perform(post("/transaction/create").secure(true).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
+		MvcResult mvcResult = mockMvc.perform(post("/transaction/create").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isOk())
 				.andReturn();
 		
@@ -256,7 +256,7 @@ public class TransactionControllerTest {
 		
 		HttpSession session = loginAndGetSession(test9.getUsername(), plainTextPw);
 		
-		MvcResult mvcResult = mockMvc.perform(post("/transaction/create").secure(true).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
+		MvcResult mvcResult = mockMvc.perform(post("/transaction/create").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isOk())
 				.andReturn();
 		
@@ -313,7 +313,7 @@ public class TransactionControllerTest {
 		test5.setBalance(TRANSACTION_AMOUNT.multiply(new BigDecimal(3)));
 		UserAccountDAO.updateAccount(test5);
 		
-		mockMvc.perform(get("/transaction/history").secure(true)).andExpect(status().isUnauthorized());
+		mockMvc.perform(get("/transaction/history").secure(false)).andExpect(status().isUnauthorized());
 	}
 	
 	@Test
@@ -343,7 +343,7 @@ public class TransactionControllerTest {
 		
 		HttpSession session = loginAndGetSession(test7.getUsername(), plainTextPw);
 		
-		MvcResult mvcResult = mockMvc.perform(post("/transaction/create").secure(true).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
+		MvcResult mvcResult = mockMvc.perform(post("/transaction/create").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isOk())
 				.andReturn();
 		
@@ -354,7 +354,7 @@ public class TransactionControllerTest {
 				.param("txPage", "0")
 				.param("txPayInPage", "0")
 				.param("txPayOutPage", "0")
-				.secure(true).session((MockHttpSession) session))
+				.secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andReturn();
 		
@@ -367,7 +367,7 @@ public class TransactionControllerTest {
 		
 		logout(mvcResult);
 		
-		mvcResult = mockMvc.perform(get("/transaction/history").secure(true).session((MockHttpSession) session))
+		mvcResult = mockMvc.perform(get("/transaction/history").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isUnauthorized())
 				.andReturn();
 	}
@@ -377,7 +377,7 @@ public class TransactionControllerTest {
 	}
 	
 	private HttpSession loginAndGetSession(String username, String plainTextPassword) throws Exception {
-		HttpSession session = mockMvc.perform(post("/j_spring_security_check").secure(true).param("j_username", username).param("j_password", plainTextPassword))
+		HttpSession session = mockMvc.perform(post("/j_spring_security_check").secure(false).param("j_username", username).param("j_password", plainTextPassword))
 				.andExpect(status().isOk())
 				.andReturn()
 				.getRequest()
@@ -404,7 +404,7 @@ public class TransactionControllerTest {
 		
 		HttpSession session = loginAndGetSession(test6_1.getUsername(), plainTextPw);
 		
-		MvcResult mvcResult = mockMvc.perform(get("/transaction/exchange-rate").secure(true).session((MockHttpSession) session))
+		MvcResult mvcResult = mockMvc.perform(get("/transaction/exchange-rate").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andReturn();
 		
@@ -434,7 +434,7 @@ public class TransactionControllerTest {
 		
 		HttpSession session = loginAndGetSession(test9_1.getUsername(), plainTextPw);
 		
-		MvcResult mvcResult = mockMvc.perform(post("/transaction/payOut").secure(true).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
+		MvcResult mvcResult = mockMvc.perform(post("/transaction/payOut").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isOk())
 				.andReturn();
 		
