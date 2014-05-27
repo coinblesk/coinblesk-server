@@ -72,6 +72,9 @@ public class PayInTransactionServiceTest {
 	@Test
 	public void testCheck() throws Exception{
 		createAccountAndVerifyAndReload(test61,BigDecimal.ZERO);
+		UserAccount userAccount = UserAccountService.getInstance().getByUsername(test61.getUsername());
+		userAccount.setPaymentAddress("asdfjklqwertuiopyxcvb");
+		UserAccountDAO.updateAccount(userAccount);
 		UserAccount fromDB = UserAccountService.getInstance().getByUsername(test61.getUsername());
 		final String paymentAddress = fromDB.getPaymentAddress();
 		Transaction transaction = new Transaction() {

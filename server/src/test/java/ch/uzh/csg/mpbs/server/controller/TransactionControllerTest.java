@@ -80,7 +80,9 @@ public class TransactionControllerTest {
 	private static UserAccount test5;
 	private static UserAccount test6;
 	private static UserAccount test6_1;
+	private static UserAccount test6_2;
 	private static UserAccount test7;
+	private static UserAccount test7_1;
 	private static UserAccount test8;
 	private static UserAccount test9;
 	private static UserAccount test9_1;
@@ -100,7 +102,9 @@ public class TransactionControllerTest {
 			test5 = new UserAccount("test5", "test5@bitcoin.csg.uzh.ch", "i-don't-need-one");
 			test6 = new UserAccount("test6", "test6@bitcoin.csg.uzh.ch", "i-don't-need-one");
 			test6_1 = new UserAccount("test6_1", "test6_1@bitcoin.csg.uzh.ch", "i-don't-need-one");
+			test6_2 = new UserAccount("test6_2", "test6_2@bitcoin.csg.uzh.ch", "i-don't-need-one");
 			test7 = new UserAccount("test7", "test7@bitcoin.csg.uzh.ch", "i-don't-need-one");
+			test7_1 = new UserAccount("test7_1", "test7_1@bitcoin.csg.uzh.ch", "i-don't-need-one");
 			test8 = new UserAccount("test8", "test8@bitcoin.csg.uzh.ch", "i-don't-need-one");
 			test9 = new UserAccount("test9", "test9@bitcoin.csg.uzh.ch", "i-don't-need-one");
 			test9_1 = new UserAccount("test9_1", "test9_+@bitcoin.csg.uzh.ch", "i-don't-need-one");
@@ -368,6 +372,72 @@ public class TransactionControllerTest {
 		logout(mvcResult);
 		
 		mvcResult = mockMvc.perform(get("/transaction/history").secure(false).session((MockHttpSession) session))
+				.andExpect(status().isUnauthorized())
+				.andReturn();
+	}
+	
+	@Test
+	public void testGetMainActivityRequests() throws Exception {
+		assertTrue(UserAccountService.getInstance().createAccount(test6_2));
+		test6_2 = UserAccountService.getInstance().getByUsername(test6_2.getUsername());
+		test6_2.setEmailVerified(true);
+		test6_2.setBalance(new BigDecimal("100"));
+		UserAccountDAO.updateAccount(test6_2);
+		
+		String plainTextPw = test7_1.getPassword();
+		assertTrue(UserAccountService.getInstance().createAccount(test7_1));
+		test7_1 = UserAccountService.getInstance().getByUsername(test7_1.getUsername());
+		test7_1.setEmailVerified(true);
+		UserAccountDAO.updateAccount(test7_1);
+		ObjectMapper mapper = null;
+		
+		HttpSession session = loginAndGetSession(test7_1.getUsername(), plainTextPw);
+		MvcResult mvcResult = null;
+		for(int i = 0; i<8;i++){
+			test6_2 = UserAccountService.getInstance().getByUsername(test6_2.getUsername());
+			test7_1 = UserAccountService.getInstance().getByUsername(test7_1.getUsername());
+			
+			Transaction buyerTransaction = new Transaction(test6_2.getTransactionNumber(), test7_1.getTransactionNumber(), test6_2.getUsername(), test7_1.getUsername(), TRANSACTION_AMOUNT, "", BigDecimal.ZERO);
+			Transaction sellerTransaction = new Transaction(test6_2.getTransactionNumber(), test7_1.getTransactionNumber(), test6_2.getUsername(), test7_1.getUsername(), TRANSACTION_AMOUNT, "", BigDecimal.ZERO);
+			
+			SignedObject signedTransactionBuyer = KeyHandler.signTransaction(buyerTransaction, test6_2.getPrivateKey());
+			SignedObject signedTransactionSeller = KeyHandler.signTransaction(sellerTransaction, test7_1.getPrivateKey());
+			
+			CreateTransactionTransferObject transferObject = new CreateTransactionTransferObject(signedTransactionBuyer, signedTransactionSeller);
+			
+			mapper = new ObjectMapper();
+			String asString = mapper.writeValueAsString(transferObject);
+			mvcResult = mockMvc.perform(post("/transaction/create").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
+					.andExpect(status().isOk())
+					.andReturn();
+			
+			CustomResponseObject cro = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
+			assertTrue(cro.isSuccessful());
+		}
+		
+		
+		
+		mvcResult = mockMvc.perform(get("/transaction/mainActivityRequests")
+				.secure(false).session((MockHttpSession) session))
+				.andExpect(status().isOk())
+				.andReturn();
+		
+		CustomResponseObject cro2 = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
+		assertTrue(cro2.isSuccessful());
+		BigDecimal exchangeRate = new BigDecimal(cro2.getMessage());
+		assertTrue(exchangeRate.compareTo(BigDecimal.ZERO) >= 0);
+		
+		assertNotNull(cro2.getReadAccountTO().getUserAccount().getBalance());
+		
+		GetHistoryTransferObject ghto = cro2.getGetHistoryTO();
+		assertNotNull(ghto);
+		assertEquals(5, ghto.getTransactionHistory().size());
+		assertEquals(0, ghto.getPayInTransactionHistory().size());
+		assertEquals(0, ghto.getPayOutTransactionHistory().size());
+		
+		logout(mvcResult);
+		
+		mvcResult = mockMvc.perform(get("/transaction/mainActivityRequests").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isUnauthorized())
 				.andReturn();
 	}
