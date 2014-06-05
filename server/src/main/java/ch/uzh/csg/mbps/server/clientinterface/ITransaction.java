@@ -53,7 +53,7 @@ public interface ITransaction {
 	public SignedObject createTransaction(Pair<SignedObject> toVerify) throws TransactionException, UserAccountNotFoundException;
 
 	/**
-	 * Returns the five last {@link Transaction}s of a given {@link UserAccount}.
+	 * Returns the three last {@link Transaction}s of a given {@link UserAccount}.
 	 * The returned lists are ordered by the item's time stamp in descending
 	 * order.
 	 * 
@@ -61,6 +61,6 @@ public interface ITransaction {
 	 * @return ArrayList<HistoryTransaction>
 	 * @throws UserAccountNotFoundException
 	 */
-	public ArrayList<HistoryTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException;
+	public ArrayList<HistoryTransaction> getLast3Transactions(String username) throws UserAccountNotFoundException;
 	
 }
