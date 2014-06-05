@@ -72,7 +72,7 @@ public class PayOutRulesController {
 			PayOutRulesTransferObject porto = new PayOutRulesTransferObject();
 			porto.setPayOutRulesList(transform(list));
 			CustomResponseObject cro = new CustomResponseObject(true, "", Type.PAYOUT_RULE);
-			cro.setPorto(porto);
+			cro.setPayOutRulesTO(porto);
 			return cro;
 		} catch (UserAccountNotFoundException e) {
 			return new CustomResponseObject(false, ACCOUNT_NOT_FOUND);

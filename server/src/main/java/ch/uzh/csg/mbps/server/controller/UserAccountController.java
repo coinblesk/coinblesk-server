@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
+import ch.uzh.csg.mbps.customserialization.security.KeyHandler;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
@@ -22,7 +23,6 @@ import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
-import ch.uzh.csg.mbps.util.KeyHandler;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 

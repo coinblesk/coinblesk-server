@@ -1,7 +1,6 @@
 package ch.uzh.csg.mbps.server.controller;
 
 import java.io.IOException;
-import java.security.SignedObject;
 import java.util.ArrayList;
 
 import net.minidev.json.parser.ParseException;
@@ -14,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
 import ch.uzh.csg.mbps.model.HistoryPayOutTransaction;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
@@ -34,7 +34,6 @@ import ch.uzh.csg.mbps.server.util.ExchangeRates;
 import ch.uzh.csg.mbps.server.util.HistoryEmailHandler;
 import ch.uzh.csg.mbps.server.util.exceptions.TransactionException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
-import ch.uzh.csg.mbps.util.Pair;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
@@ -63,9 +62,9 @@ public class TransactionController {
 	@ResponseBody
 	public CustomResponseObject createTransaction(@RequestBody CreateTransactionTransferObject requestObject) {
 		try {
-			SignedObject signedTransaction = TransactionService.getInstance().createTransaction(new Pair<SignedObject>(requestObject.getSellerSignedObject(), requestObject.getBuyerSignedObject()));
+			ServerPaymentResponse serverPaymentResponse = TransactionService.getInstance().createTransaction(requestObject.getServerPaymentRequest());
 			CustomResponseObject responseObject = new CustomResponseObject(true, SUCCESS);
-			responseObject.setCreateTransactionTO(new CreateTransactionTransferObject(signedTransaction, signedTransaction));
+			responseObject.setCreateTransactionTO(new CreateTransactionTransferObject(serverPaymentResponse));
 			return responseObject;
 		} catch (TransactionException e) {
 			return new CustomResponseObject(false, e.getMessage());

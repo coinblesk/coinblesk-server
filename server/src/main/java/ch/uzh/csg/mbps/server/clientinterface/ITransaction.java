@@ -1,13 +1,15 @@
 package ch.uzh.csg.mbps.server.clientinterface;
 
-import java.security.SignedObject;
 import java.util.ArrayList;
 
+import ch.uzh.csg.mbps.customserialization.PaymentRequest;
+import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
+import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
 import ch.uzh.csg.mbps.model.Transaction;
+import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.exceptions.TransactionException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
-import ch.uzh.csg.mbps.util.Pair;
 
 public interface ITransaction {
 	
@@ -32,12 +34,8 @@ public interface ITransaction {
 	 * Creates a new Transaction on the server/database.
 	 * 
 	 * @param toVerify
-	 *            contains a Pair of SignedObject. The first item is the
-	 *            SignedObject of the buyer, which is a {@link Transaction}
-	 *            signed with the buyer's private key. The second item is the
-	 *            seller's SignedObject, which is signed with the seller's
-	 *            private key. The two signed {@link Transaction} objects must
-	 *            be identical in order to be accepted.
+	 *            the {@link ServerPaymentRequest} containing one or thow
+	 *            {@link PaymentRequest}
 	 * @return If the server has accepted and executed this given
 	 *         {@link Transaction}, than it signs the object with his private
 	 *         key. The callers can then verify the Transaction which has been
@@ -50,7 +48,7 @@ public interface ITransaction {
 	 *             If the a {@link UserAccount} contained in one or both
 	 *             {@link Transaction} objects cannot be found.
 	 */
-	public SignedObject createTransaction(Pair<SignedObject> toVerify) throws TransactionException, UserAccountNotFoundException;
+	public ServerPaymentResponse createTransaction(ServerPaymentRequest toVerify) throws TransactionException, UserAccountNotFoundException;
 
 	/**
 	 * Returns the five last {@link Transaction}s of a given {@link UserAccount}.

@@ -13,6 +13,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import ch.uzh.csg.mbps.customserialization.SignatureAlgorithm;
+import ch.uzh.csg.mbps.customserialization.security.KeyHandler;
 import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
 import ch.uzh.csg.mbps.server.dao.PayInTransactionDAO;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
@@ -27,7 +29,6 @@ import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
-import ch.uzh.csg.mbps.util.KeyHandler;
 
 import com.azazar.bitcoin.jsonrpcclient.Bitcoin.RawTransaction;
 import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
@@ -47,7 +48,7 @@ public class PayInTransactionServiceTest {
 			test61 = new UserAccount("test61", "test61@bitcoin.csg.uzh.chs", "asdf");
 			test62 = new UserAccount("test62", "test62@bitcoin.csg.uzh.ch", "asdf");
 
-			KeyPair keypair = KeyHandler.generateKeys();
+			KeyPair keypair = KeyHandler.generateECCKeyPair(SignatureAlgorithm.SHA256withECDSA);
 
 			Constants.PRIVATEKEY = keypair.getPrivate();
 			Constants.PUBLICKEY = keypair.getPublic();

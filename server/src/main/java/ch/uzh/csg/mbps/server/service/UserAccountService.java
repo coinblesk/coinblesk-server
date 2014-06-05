@@ -7,6 +7,8 @@ import java.util.List;
 
 import org.hibernate.HibernateException;
 
+import ch.uzh.csg.mbps.customserialization.SignatureAlgorithm;
+import ch.uzh.csg.mbps.customserialization.security.KeyHandler;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.ResetPassword;
@@ -23,7 +25,6 @@ import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.VerificationTokenNotFoundException;
-import ch.uzh.csg.mbps.util.KeyHandler;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
@@ -131,7 +132,7 @@ public class UserAccountService implements IUserAccount {
 		
 		KeyPair keyPair = null;
 		try {
-			keyPair = KeyHandler.generateKeys();
+			keyPair = KeyHandler.generateECCKeyPair(SignatureAlgorithm.SHA256withECDSA);
 		} catch (Exception e) {
 			return false;
 		}

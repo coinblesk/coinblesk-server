@@ -20,6 +20,8 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.web.context.WebApplicationContext;
 
+import ch.uzh.csg.mbps.customserialization.SignatureAlgorithm;
+import ch.uzh.csg.mbps.customserialization.security.KeyHandler;
 import ch.uzh.csg.mbps.responseobject.PayOutRulesTransferObject;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.PayOutRule;
@@ -34,7 +36,6 @@ import ch.uzh.csg.mbps.server.util.exceptions.PayOutRuleNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.PayOutRulesAlreadyDefinedException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
-import ch.uzh.csg.mbps.util.KeyHandler;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
@@ -68,7 +69,7 @@ public class PayOutRuleServiceTest {
 			test53 = new UserAccount("test53", "chuck53@bitcoin.csg.uzh.ch", "asdf");
 			test54 = new UserAccount("test54", "chuck54@bitcoin.csg.uzh.ch", "asdf");
 
-			KeyPair keypair = KeyHandler.generateKeys();
+			KeyPair keypair = KeyHandler.generateECCKeyPair(SignatureAlgorithm.SHA256withECDSA);
 
 			Constants.PRIVATEKEY = keypair.getPrivate();
 			Constants.PUBLICKEY = keypair.getPublic();

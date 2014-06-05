@@ -6,6 +6,8 @@ import java.util.ArrayList;
 
 import org.hibernate.HibernateException;
 
+import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
+import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
 import ch.uzh.csg.mbps.model.Transaction;
 import ch.uzh.csg.mbps.server.clientinterface.ITransaction;
@@ -16,7 +18,6 @@ import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.exceptions.PayOutRuleNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.TransactionException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
-import ch.uzh.csg.mbps.util.KeyHandler;
 import ch.uzh.csg.mbps.util.Pair;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
@@ -76,80 +77,84 @@ public class TransactionService implements ITransaction {
 	}
 	
 	@Override
-	public SignedObject createTransaction(Pair<SignedObject> signedObjectPair) throws TransactionException, UserAccountNotFoundException {
-		if (signedObjectPair == null || signedObjectPair.getFirst() == null || signedObjectPair.getSecond() == null)
-			throw new TransactionException(PAYMENT_REFUSE);
+	public ServerPaymentResponse createTransaction(ServerPaymentRequest serverPaymentRequest) throws TransactionException, UserAccountNotFoundException {
+		//TODO jeton: refactor
 		
-		Transaction buyerTransaction = null;
-		Transaction sellerTransaction = null;
-		try {
-			buyerTransaction = KeyHandler.retrieveTransaction(signedObjectPair.getFirst());
-			sellerTransaction = KeyHandler.retrieveTransaction(signedObjectPair.getSecond());;
-		} catch (Exception e) {
-			throw new TransactionException(INTERNAL_ERROR);
-		}
+//		if (serverPaymentRequest == null)
+//			throw new TransactionException(PAYMENT_REFUSE);
+//		
+//		Transaction buyerTransaction = null;
+//		Transaction sellerTransaction = null;
+//		try {
+//			buyerTransaction = KeyHandler.retrieveTransaction(serverPaymentRequest.getFirst());
+//			sellerTransaction = KeyHandler.retrieveTransaction(serverPaymentRequest.getSecond());;
+//		} catch (Exception e) {
+//			throw new TransactionException(INTERNAL_ERROR);
+//		}
+//		
+//		if (buyerTransaction == null || sellerTransaction == null)
+//			throw new TransactionException(PAYMENT_REFUSE);
+//		
+//		if (buyerTransaction.getAmount().compareTo(BigDecimal.ZERO) <= 0)
+//			throw new TransactionException(NEGATIVE_AMOUNT);
+//		
+//		String buyerUsername = buyerTransaction.getBuyerUsername();
+//		String sellerUsername = buyerTransaction.getSellerUsername();
+//		
+//		if (buyerUsername == sellerUsername)
+//			throw new TransactionException(PAYMENT_REFUSE);
+//			
+//		UserAccount buyerAccount = null;
+//		UserAccount sellerAccount = null;
+//		try {
+//			buyerAccount = UserAccountService.getInstance().getByUsername(buyerUsername);
+//			sellerAccount = UserAccountService.getInstance().getByUsername(sellerUsername);
+//		} catch (UserAccountNotFoundException e) {
+//			throw new TransactionException(PAYMENT_REFUSE);
+//		}
+//		
+//		if (!transactionNumbersValid(buyerTransaction, buyerAccount.getTransactionNumber(), sellerTransaction, sellerAccount.getTransactionNumber()))
+//			throw new TransactionException(PAYMENT_REFUSE);
+//		
+//		if (!transactionRequestsIdentic(buyerTransaction, sellerTransaction))
+//			throw new TransactionException(PAYMENT_REFUSE);
+//		
+//		boolean signaturesNotValid;
+//		try {
+//			signaturesNotValid = !userRequestValid(buyerAccount, serverPaymentRequest.getFirst()) || !userRequestValid(sellerAccount, serverPaymentRequest.getSecond());
+//		} catch (Exception e) {
+//			throw new TransactionException(INTERNAL_ERROR);
+//		}
+//		if (signaturesNotValid)
+//			throw new TransactionException(PAYMENT_REFUSE);
+//		
+//		if ((buyerAccount.getBalance().subtract(buyerTransaction.getAmount())).compareTo(BigDecimal.ZERO) < 0)
+//			throw new TransactionException(BALANCE);
+//		
+//		try {
+//			DbTransaction dbTransaction = new DbTransaction(buyerTransaction);
+//			TransactionDAO.createTransaction(dbTransaction, buyerAccount, sellerAccount);
+//		} catch (HibernateException e) {
+//			throw new TransactionException(HIBERNATE_ERROR);
+//		}
+//		
+//		//check if user account balance limit has been exceeded (according to PayOutRules)
+//		try {
+//			PayOutRuleService.getInstance().checkBalanceLimitRules(sellerAccount);
+//		} catch (PayOutRuleNotFoundException | BitcoinException e) {
+//			// do nothing as user requests actually a transaction and not a payout
+//		}
+//		
+//		SignedObject signedTransaction = null;
+//		try {
+//			signedTransaction = KeyHandler.signTransaction(sellerTransaction, Constants.PRIVATEKEY);
+//		} catch (Exception e) {
+//			throw new TransactionException(INTERNAL_ERROR);
+//		}
+//		
+//		return signedTransaction;
 		
-		if (buyerTransaction == null || sellerTransaction == null)
-			throw new TransactionException(PAYMENT_REFUSE);
-		
-		if (buyerTransaction.getAmount().compareTo(BigDecimal.ZERO) <= 0)
-			throw new TransactionException(NEGATIVE_AMOUNT);
-		
-		String buyerUsername = buyerTransaction.getBuyerUsername();
-		String sellerUsername = buyerTransaction.getSellerUsername();
-		
-		if (buyerUsername == sellerUsername)
-			throw new TransactionException(PAYMENT_REFUSE);
-			
-		UserAccount buyerAccount = null;
-		UserAccount sellerAccount = null;
-		try {
-			buyerAccount = UserAccountService.getInstance().getByUsername(buyerUsername);
-			sellerAccount = UserAccountService.getInstance().getByUsername(sellerUsername);
-		} catch (UserAccountNotFoundException e) {
-			throw new TransactionException(PAYMENT_REFUSE);
-		}
-		
-		if (!transactionNumbersValid(buyerTransaction, buyerAccount.getTransactionNumber(), sellerTransaction, sellerAccount.getTransactionNumber()))
-			throw new TransactionException(PAYMENT_REFUSE);
-		
-		if (!transactionRequestsIdentic(buyerTransaction, sellerTransaction))
-			throw new TransactionException(PAYMENT_REFUSE);
-		
-		boolean signaturesNotValid;
-		try {
-			signaturesNotValid = !userRequestValid(buyerAccount, signedObjectPair.getFirst()) || !userRequestValid(sellerAccount, signedObjectPair.getSecond());
-		} catch (Exception e) {
-			throw new TransactionException(INTERNAL_ERROR);
-		}
-		if (signaturesNotValid)
-			throw new TransactionException(PAYMENT_REFUSE);
-		
-		if ((buyerAccount.getBalance().subtract(buyerTransaction.getAmount())).compareTo(BigDecimal.ZERO) < 0)
-			throw new TransactionException(BALANCE);
-		
-		try {
-			DbTransaction dbTransaction = new DbTransaction(buyerTransaction);
-			TransactionDAO.createTransaction(dbTransaction, buyerAccount, sellerAccount);
-		} catch (HibernateException e) {
-			throw new TransactionException(HIBERNATE_ERROR);
-		}
-		
-		//check if user account balance limit has been exceeded (according to PayOutRules)
-		try {
-			PayOutRuleService.getInstance().checkBalanceLimitRules(sellerAccount);
-		} catch (PayOutRuleNotFoundException | BitcoinException e) {
-			// do nothing as user requests actually a transaction and not a payout
-		}
-		
-		SignedObject signedTransaction = null;
-		try {
-			signedTransaction = KeyHandler.signTransaction(sellerTransaction, Constants.PRIVATEKEY);
-		} catch (Exception e) {
-			throw new TransactionException(INTERNAL_ERROR);
-		}
-		
-		return signedTransaction;
+		return null;
 	}
 	
 	private boolean transactionNumbersValid(Transaction buyerTx, long buyerTxNr, Transaction sellerTx, long sellerTxNr) {
@@ -168,7 +173,9 @@ public class TransactionService implements ITransaction {
 	}
 	
 	private boolean userRequestValid(UserAccount userAccount, SignedObject signedObject) throws Exception {
-		return KeyHandler.verifyObject(signedObject, userAccount.getPublicKey());
+		//TODO jeton: refactor
+//		return KeyHandler.verifyObject(signedObject, userAccount.getPublicKey());
+		return false;
 	}
 	
 }

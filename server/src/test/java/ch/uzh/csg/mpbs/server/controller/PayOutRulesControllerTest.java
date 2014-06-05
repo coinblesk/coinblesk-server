@@ -33,6 +33,8 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import ch.uzh.csg.mbps.customserialization.SignatureAlgorithm;
+import ch.uzh.csg.mbps.customserialization.security.KeyHandler;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.responseobject.PayOutRulesTransferObject;
 import ch.uzh.csg.mbps.server.controller.PayOutRulesController;
@@ -45,7 +47,6 @@ import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
-import ch.uzh.csg.mbps.util.KeyHandler;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
@@ -79,7 +80,7 @@ public class PayOutRulesControllerTest {
 			test42 = new UserAccount("test42", "test42@bitcoin.csg.uzh.ch", "asdf");
 			test43 = new UserAccount("test43", "test43@bitcoin.csg.uzh.ch", "asdf");
 
-			KeyPair keypair = KeyHandler.generateKeys();
+			KeyPair keypair = KeyHandler.generateECCKeyPair(SignatureAlgorithm.SHA256withECDSA);
 
 			Constants.PRIVATEKEY = keypair.getPrivate();
 			Constants.PUBLICKEY = keypair.getPublic();
@@ -117,7 +118,7 @@ public class PayOutRulesControllerTest {
 		CustomResponseObject cro = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
 		assertFalse(cro.isSuccessful());
 
-		PayOutRulesTransferObject por = cro.getPorto();
+		PayOutRulesTransferObject por = cro.getPayOutRulesTO();
 
 		assertNull(por);
 
@@ -158,7 +159,7 @@ public class PayOutRulesControllerTest {
 		CustomResponseObject cro = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
 		assertTrue(cro.isSuccessful());
 
-		PayOutRulesTransferObject porto2 = cro.getPorto();
+		PayOutRulesTransferObject porto2 = cro.getPayOutRulesTO();
 		assertNotNull(porto2.getPayOutRulesList().get(0));
 
 		assertEquals(porto2.getPayOutRulesList().get(0).toString(),por.toString());
@@ -201,7 +202,7 @@ public class PayOutRulesControllerTest {
 		CustomResponseObject cro = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
 		assertTrue(cro.isSuccessful());
 
-		PayOutRulesTransferObject porto2 = cro.getPorto();
+		PayOutRulesTransferObject porto2 = cro.getPayOutRulesTO();
 		assertNotNull(porto2.getPayOutRulesList().get(0));
 
 		assertEquals(porto2.getPayOutRulesList().get(0).toString(),por.toString());
@@ -217,7 +218,7 @@ public class PayOutRulesControllerTest {
 		CustomResponseObject cro2 = mapper.readValue(mvcResult3.getResponse().getContentAsString(), CustomResponseObject.class);
 		assertFalse(cro2.isSuccessful());
 
-		PayOutRulesTransferObject por2 = cro2.getPorto();
+		PayOutRulesTransferObject por2 = cro2.getPayOutRulesTO();
 
 		assertNull(por2);
 
