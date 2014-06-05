@@ -38,7 +38,6 @@ import org.springframework.web.context.WebApplicationContext;
 
 import ch.uzh.csg.mbps.customserialization.SignatureAlgorithm;
 import ch.uzh.csg.mbps.customserialization.security.KeyHandler;
-import ch.uzh.csg.mbps.model.Transaction;
 import ch.uzh.csg.mbps.responseobject.CreateTransactionTransferObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.responseobject.GetHistoryTransferObject;
@@ -299,18 +298,18 @@ public class TransactionControllerTest {
 //		assertEquals(sellerTransaction.getTransactionNrSeller(), tx.getTransactionNrSeller());
 	}
 
-	private byte[] serialize(Transaction sellerTransaction) throws IOException {
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-	    ObjectOutputStream oos = new ObjectOutputStream(baos);
-	    oos.writeObject(sellerTransaction);
-	    return baos.toByteArray();
-	}
-	
-	private Transaction deserialize(byte[] bytes) throws IOException, ClassNotFoundException {
-		ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
-		ObjectInputStream ois = new ObjectInputStream(bais);
-		return (Transaction) ois.readObject();
-	}
+//	private byte[] serialize(Transaction sellerTransaction) throws IOException {
+//		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//	    ObjectOutputStream oos = new ObjectOutputStream(baos);
+//	    oos.writeObject(sellerTransaction);
+//	    return baos.toByteArray();
+//	}
+//	
+//	private Transaction deserialize(byte[] bytes) throws IOException, ClassNotFoundException {
+//		ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+//		ObjectInputStream ois = new ObjectInputStream(bais);
+//		return (Transaction) ois.readObject();
+//	}
 
 	@Test
 	public void testGetHistory_failNotAuthenticated() throws Exception {

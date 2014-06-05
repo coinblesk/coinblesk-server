@@ -6,7 +6,6 @@ import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
-import ch.uzh.csg.mbps.model.Transaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.exceptions.TransactionException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
@@ -34,16 +33,17 @@ public interface ITransaction {
 	 * Creates a new Transaction on the server/database.
 	 * 
 	 * @param toVerify
-	 *            the {@link ServerPaymentRequest} containing one or thow
+	 *            the {@link ServerPaymentRequest} containing one or two
 	 *            {@link PaymentRequest}
 	 * @return If the server has accepted and executed this given
 	 *         {@link Transaction}, than it signs the object with his private
 	 *         key. The callers can then verify the Transaction which has been
 	 *         executed.
 	 * @throws TransactionException
-	 *             If the {@link Transaction} objects received from buyer and
-	 *             seller are not identical, if the signatures are not valid, or
-	 *             if any other transaction specific problem occurs.
+	 *             If the {@link PaymentRequest} objects (contained in the
+	 *             object {@link ServerPaymentRequest}) received are not
+	 *             identical, if the signatures are not valid, or if any other
+	 *             transaction specific problem occurs.
 	 * @throws UserAccountNotFoundException
 	 *             If the a {@link UserAccount} contained in one or both
 	 *             {@link Transaction} objects cannot be found.

@@ -9,7 +9,6 @@ import org.hibernate.HibernateException;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
-import ch.uzh.csg.mbps.model.Transaction;
 import ch.uzh.csg.mbps.server.clientinterface.ITransaction;
 import ch.uzh.csg.mbps.server.dao.TransactionDAO;
 import ch.uzh.csg.mbps.server.domain.DbTransaction;
@@ -157,20 +156,20 @@ public class TransactionService implements ITransaction {
 		return null;
 	}
 	
-	private boolean transactionNumbersValid(Transaction buyerTx, long buyerTxNr, Transaction sellerTx, long sellerTxNr) {
-		return ((buyerTx.getTransactionNrBuyer() == buyerTxNr)
-				&& (sellerTx.getTransactionNrBuyer() == buyerTxNr))
-				&& (buyerTx.getTransactionNrSeller() == sellerTxNr)
-				&& (sellerTx.getTransactionNrSeller() == sellerTxNr);
-	}
-	
-	private boolean transactionRequestsIdentic(Transaction buyerTransaction, Transaction sellerTransaction) {
-		return ((buyerTransaction.getBuyerUsername().equals(sellerTransaction.getBuyerUsername())) 
-				&& (buyerTransaction.getSellerUsername().equals(sellerTransaction.getSellerUsername()))
-				&& (buyerTransaction.getTransactionNrBuyer() == sellerTransaction.getTransactionNrBuyer())
-				&& (buyerTransaction.getTransactionNrSeller() == sellerTransaction.getTransactionNrSeller())
-				&& (buyerTransaction.getAmount().equals(sellerTransaction.getAmount())));
-	}
+//	private boolean transactionNumbersValid(Transaction buyerTx, long buyerTxNr, Transaction sellerTx, long sellerTxNr) {
+//		return ((buyerTx.getTransactionNrBuyer() == buyerTxNr)
+//				&& (sellerTx.getTransactionNrBuyer() == buyerTxNr))
+//				&& (buyerTx.getTransactionNrSeller() == sellerTxNr)
+//				&& (sellerTx.getTransactionNrSeller() == sellerTxNr);
+//	}
+//	
+//	private boolean transactionRequestsIdentic(Transaction buyerTransaction, Transaction sellerTransaction) {
+//		return ((buyerTransaction.getBuyerUsername().equals(sellerTransaction.getBuyerUsername())) 
+//				&& (buyerTransaction.getSellerUsername().equals(sellerTransaction.getSellerUsername()))
+//				&& (buyerTransaction.getTransactionNrBuyer() == sellerTransaction.getTransactionNrBuyer())
+//				&& (buyerTransaction.getTransactionNrSeller() == sellerTransaction.getTransactionNrSeller())
+//				&& (buyerTransaction.getAmount().equals(sellerTransaction.getAmount())));
+//	}
 	
 	private boolean userRequestValid(UserAccount userAccount, SignedObject signedObject) throws Exception {
 		//TODO jeton: refactor

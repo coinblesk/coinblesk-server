@@ -25,7 +25,6 @@ import org.junit.Test;
 import ch.uzh.csg.mbps.customserialization.SignatureAlgorithm;
 import ch.uzh.csg.mbps.customserialization.security.KeyHandler;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
-import ch.uzh.csg.mbps.model.Transaction;
 import ch.uzh.csg.mbps.server.dao.TransactionDAO;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.DbTransaction;
@@ -66,10 +65,10 @@ public class TransactionServiceTest {
 		UserAccount buyerAccount = createAccountAndVerifyAndReload("TDAOT_1", "TDAOT_1@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.add(new BigDecimal("1.00000000")));
 		UserAccount sellerAccount = createAccountAndVerifyAndReload("TDAOT_2", "TDAOT_2@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
 		
-		Transaction buyerTransaction = new Transaction(buyerAccount.getTransactionNumber(), sellerAccount.getTransactionNumber(), buyerAccount.getUsername(), sellerAccount.getUsername(), TRANSACTION_AMOUNT, "", BigDecimal.ZERO);
-		Transaction sellerTransaction = new Transaction(buyerAccount.getTransactionNumber(), sellerAccount.getTransactionNumber(), buyerAccount.getUsername(), sellerAccount.getUsername(), TRANSACTION_AMOUNT, "", BigDecimal.ZERO);
-		
 		//TODO jeton: adopt to new stuff!
+//		Transaction buyerTransaction = new Transaction(buyerAccount.getTransactionNumber(), sellerAccount.getTransactionNumber(), buyerAccount.getUsername(), sellerAccount.getUsername(), TRANSACTION_AMOUNT, "", BigDecimal.ZERO);
+//		Transaction sellerTransaction = new Transaction(buyerAccount.getTransactionNumber(), sellerAccount.getTransactionNumber(), buyerAccount.getUsername(), sellerAccount.getUsername(), TRANSACTION_AMOUNT, "", BigDecimal.ZERO);
+//		
 //		SignedObject signedTransactionBuyer = KeyHandler.signTransaction(buyerTransaction, buyerAccount.getPrivateKey());
 //		SignedObject signedTransactionSeller = KeyHandler.signTransaction(sellerTransaction, sellerAccount.getPrivateKey());
 //
@@ -113,14 +112,14 @@ public class TransactionServiceTest {
 		UserAccount buyerAccount = createAccountAndVerifyAndReload("TDAOT_20", "TDAOT_20@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.add(new BigDecimal("1.00000000")));
 		UserAccount sellerAccount = createAccountAndVerifyAndReload("TDAOT_21", "TDAOT_21@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
 		
-		//create transaction object from seller
-		Transaction sellerTransaction = new Transaction();
-		sellerTransaction.setAmount(TRANSACTION_AMOUNT);
-		sellerTransaction.setSellerUsername(sellerAccount.getUsername());
-		sellerTransaction.setTransactionNrSeller(sellerAccount.getTransactionNumber());
-		byte[] serializedSellerTransaction = serialize(sellerTransaction);
-		
 		//TODO jeton: adopt to new stuff!
+//		//create transaction object from seller
+//		Transaction sellerTransaction = new Transaction();
+//		sellerTransaction.setAmount(TRANSACTION_AMOUNT);
+//		sellerTransaction.setSellerUsername(sellerAccount.getUsername());
+//		sellerTransaction.setTransactionNrSeller(sellerAccount.getTransactionNumber());
+//		byte[] serializedSellerTransaction = serialize(sellerTransaction);
+//		
 //		//buyer receives the serialized seller transaction object
 //		Transaction buyerTransaction = deserialize(serializedSellerTransaction);
 //		//buyer adds his information to the tx object
@@ -182,18 +181,18 @@ public class TransactionServiceTest {
 //		assertEquals(sellerTransaction.getTransactionNrSeller(), tx.getTransactionNrSeller());
 	}
 	
-	private byte[] serialize(Transaction sellerTransaction) throws IOException {
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-	    ObjectOutputStream oos = new ObjectOutputStream(baos);
-	    oos.writeObject(sellerTransaction);
-	    return baos.toByteArray();
-	}
-	
-	private Transaction deserialize(byte[] bytes) throws IOException, ClassNotFoundException {
-		ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
-		ObjectInputStream ois = new ObjectInputStream(bais);
-		return (Transaction) ois.readObject();
-	}
+//	private byte[] serialize(Transaction sellerTransaction) throws IOException {
+//		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//	    ObjectOutputStream oos = new ObjectOutputStream(baos);
+//	    oos.writeObject(sellerTransaction);
+//	    return baos.toByteArray();
+//	}
+//	
+//	private Transaction deserialize(byte[] bytes) throws IOException, ClassNotFoundException {
+//		ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+//		ObjectInputStream ois = new ObjectInputStream(bais);
+//		return (Transaction) ois.readObject();
+//	}
 	
 	@Test
 	public void testCreateTransaction_FailNegativeBalance() throws Exception {
@@ -487,15 +486,15 @@ public class TransactionServiceTest {
 		return buyerAccount;
 	}
 
-	@SuppressWarnings("unchecked")
-	private List<Transaction> getAllTransactions() {
-		SessionFactory sessionFactory = HibernateUtil.getSessionFactory();
-		Session session = sessionFactory.openSession();
-		session.beginTransaction();
-		List<Transaction> list = session.createQuery("from DB_TRANSACTION").list();
-		
-		session.close();
-		return list;
-	}
+//	@SuppressWarnings("unchecked")
+//	private List<Transaction> getAllTransactions() {
+//		SessionFactory sessionFactory = HibernateUtil.getSessionFactory();
+//		Session session = sessionFactory.openSession();
+//		session.beginTransaction();
+//		List<Transaction> list = session.createQuery("from DB_TRANSACTION").list();
+//		
+//		session.close();
+//		return list;
+//	}
 	
 }
