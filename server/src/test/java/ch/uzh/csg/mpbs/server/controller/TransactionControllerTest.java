@@ -436,7 +436,7 @@ public class TransactionControllerTest {
 //		
 //		GetHistoryTransferObject ghto = cro2.getGetHistoryTO();
 //		assertNotNull(ghto);
-//		assertEquals(5, ghto.getTransactionHistory().size());
+//		assertEquals(3, ghto.getTransactionHistory().size());
 //		assertEquals(0, ghto.getPayInTransactionHistory().size());
 //		assertEquals(0, ghto.getPayOutTransactionHistory().size());
 //		

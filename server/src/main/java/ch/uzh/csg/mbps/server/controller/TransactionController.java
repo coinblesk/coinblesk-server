@@ -214,7 +214,7 @@ public class TransactionController {
 	 * 
 	 * @return {@link CustomResponseObject} with information about
 	 *         successful/non successful request, balance, exchangerate and last
-	 *         5 transactions
+	 *         3 transactions
 	 */
 	@RequestMapping(value = "/mainActivityRequests", method = RequestMethod.GET, produces = "application/json")
 	@ResponseBody
@@ -228,9 +228,9 @@ public class TransactionController {
 			response.setMessage(ExchangeRates.getExchangeRate().toString());
 			
 			GetHistoryTransferObject ghto = new GetHistoryTransferObject();
-			ghto.setTransactionHistory(TransactionService.getInstance().getLast5Transactions(username));
-			ghto.setPayInTransactionHistory(PayInTransactionService.getInstance().getLast5Transactions(username));
-			ghto.setPayOutTransactionHistory(PayOutTransactionService.getInstance().getLast5Transactions(username));
+			ghto.setTransactionHistory(TransactionService.getInstance().getLast3Transactions(username));
+			ghto.setPayInTransactionHistory(PayInTransactionService.getInstance().getLast3Transactions(username));
+			ghto.setPayOutTransactionHistory(PayOutTransactionService.getInstance().getLast3Transactions(username));
 			response.setGetHistoryTO(ghto);
 			
 			ReadAccountTransferObject rato = new ReadAccountTransferObject(new ch.uzh.csg.mbps.model.UserAccount());

@@ -123,15 +123,15 @@ public class PayOutTransactionService {
 	}
 
 	/**
-	 * Returns five last {@link PayOutTransaction}s for {@link UserAccount}
+	 * Returns three last {@link PayOutTransaction}s for {@link UserAccount}
 	 * specified by given username.
 	 * 
 	 * @param username
 	 * @return ArrayListy<PayOutTransaction>
 	 * @throws UserAccountNotFoundException
 	 */
-	public ArrayList<HistoryPayOutTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
-		return PayOutTransactionDAO.getLast5Transactions(username);
+	public ArrayList<HistoryPayOutTransaction> getLast3Transactions(String username) throws UserAccountNotFoundException {
+		return PayOutTransactionDAO.getLast3Transactions(username);
 	}
 	
 }

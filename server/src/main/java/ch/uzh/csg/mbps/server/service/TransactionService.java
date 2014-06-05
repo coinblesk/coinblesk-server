@@ -58,8 +58,8 @@ public class TransactionService implements ITransaction {
 	}
 	
 	@Override
-	public ArrayList<HistoryTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
-		 return  TransactionDAO.getLast5Transactions(username);
+	public ArrayList<HistoryTransaction> getLast3Transactions(String username) throws UserAccountNotFoundException {
+		 return  TransactionDAO.getLast3Transactions(username);
 	}
 	
 	
