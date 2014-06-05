@@ -427,10 +427,8 @@ public class TransactionServiceTest {
 			dates.add(d);
 			tx.setTimestamp(d);
 			tx.setAmount(new BigDecimal("0.00001"));
-			tx.setBuyerId(fromDB.getId());
-			tx.setSellerId(fromDB2.getId());
-			tx.setTransactionNrBuyer(fromDB.getTransactionNumber());
-			tx.setTransactionNrSeller(fromDB2.getTransactionNumber());
+			tx.setUsernamePayer(fromDB.getUsername());
+			tx.setUsernamePayee(fromDB2.getUsername());
 			
 			TransactionDAO.createTransaction(tx, fromDB, fromDB2);
 		

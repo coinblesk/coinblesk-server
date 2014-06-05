@@ -17,8 +17,8 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.hibernate.annotations.Index;
 
-import ch.uzh.csg.mbps.model.Transaction;
-import ch.uzh.csg.mbps.server.service.UserAccountService;
+import ch.uzh.csg.mbps.customserialization.PaymentRequest;
+import ch.uzh.csg.mbps.server.util.Converter;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 
 @Entity(name = "DB_TRANSACTION")
@@ -33,34 +33,33 @@ public class DbTransaction implements Serializable {
 	@Column(name="TIMESTAMP")
 	@Temporal(TemporalType.TIMESTAMP)
 	private Date timestamp;
-	@Column(name="TRANSACTION_NR_BUYER")
-	private long transactionNrBuyer;
-	@Column(name="TRANSACTION_NR_SELLER")
-	private long transactionNrSeller;
-	@Column(name="BUYER_ID")
-	@Index(name = "BUYER_ID_INDEX")
-	private long buyerID;
-	@Column(name="SELLER_ID")
-	@Index(name = "SELLER_ID_INDEX")
-	private long sellerID;
+	@Column(name="USERNAME_PAYER")
+	@Index(name = "USERNAME_PAYER_INDEX")
+	private String usernamePayer;
+	@Column(name="USERNAME_PAYEE")
+	@Index(name = "USERNAME_PAYEE_INDEX")
+	private String usernamePayee;
 	@Column(name="AMOUNT", precision = 25, scale=8)
 	private BigDecimal amount;
 	@Column(name="INPUT_CURRENCY")
 	private String inputCurrency;
 	@Column(name="INPUT_CURRENCY_AMOUNT", precision = 25, scale=2)
 	private BigDecimal inputCurrencyAmount;
+	@Column(name="CURRENCY")
+	private String currency;
+	@Column(name="SIGNATURE")
+	private String signature;
 	
 	public DbTransaction() {
 	}
 	
-	public DbTransaction(Transaction transaction) throws UserAccountNotFoundException {
-		this.amount = transaction.getAmount();
-		this.buyerID = UserAccountService.getInstance().getByUsername(transaction.getBuyerUsername()).getId();
-		this.sellerID = UserAccountService.getInstance().getByUsername(transaction.getSellerUsername()).getId();
-		this.transactionNrBuyer = transaction.getTransactionNrBuyer();
-		this.transactionNrSeller = transaction.getTransactionNrSeller();
-		this.inputCurrency = transaction.getInputCurrency();
-		this.inputCurrencyAmount = transaction.getAmountInputCurrency();
+	public DbTransaction(PaymentRequest paymentRequest) throws UserAccountNotFoundException {
+		this.amount = Converter.getTransactionLongInBigDecimal(paymentRequest.getAmount());
+		this.usernamePayer = paymentRequest.getUsernamePayer();
+		this.usernamePayee = paymentRequest.getUsernamePayee();
+		//TODO Jeton: add inputCurrency & inputCurrencyAmount to PaymentRequest
+		//		this.inputCurrency = paymentRequest.getInputCurrency();
+//		this.inputCurrencyAmount = transaction.getAmountInputCurrency();
 		this.timestamp = new Date();
 	}
 	
@@ -78,37 +77,6 @@ public class DbTransaction implements Serializable {
 
 	public void setTimestamp(Date timestamp) {
 		this.timestamp = timestamp;
-	}
-
-	public long getTransactionNrBuyer() {
-		return transactionNrBuyer;
-	}
-
-	public void setTransactionNrBuyer(long transactionNr) {
-		this.transactionNrBuyer = transactionNr;
-	}
-	
-	public long getTransactionNrSeller() {
-		return transactionNrSeller;
-	}
-
-	public void setTransactionNrSeller(long transactionNr) {
-		this.transactionNrSeller = transactionNr;
-	}
-	public long getBuyerId() {
-		return buyerID;
-	}
-	
-	public void setBuyerId(long buyerId) {
-		this.buyerID = buyerId;
-	}
-
-	public long getSellerId() {
-		return sellerID;
-	}
-
-	public void setSellerId(long sellerId) {
-		this.sellerID = sellerId;
 	}
 
 	public BigDecimal getAmount() {
@@ -135,6 +103,38 @@ public class DbTransaction implements Serializable {
 		this.inputCurrencyAmount = inputCurrencyAmount;
 	}
 
+	public String getUsernamePayer() {
+		return usernamePayer;
+	}
+
+	public void setUsernamePayer(String usernamePayer) {
+		this.usernamePayer = usernamePayer;
+	}
+
+	public String getUsernamePayee() {
+		return usernamePayee;
+	}
+
+	public void setUsernamePayee(String usernamePayee) {
+		this.usernamePayee = usernamePayee;
+	}
+
+	public String getCurrency() {
+		return currency;
+	}
+
+	public void setCurrency(String currency) {
+		this.currency = currency;
+	}
+
+	public String getSignature() {
+		return signature;
+	}
+
+	public void setSignature(String signature) {
+		this.signature = signature;
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
@@ -142,14 +142,10 @@ public class DbTransaction implements Serializable {
 		sb.append(getId());
 		sb.append(", date:");
 		sb.append(getTimestamp());
-		sb.append(", transaction number of buyer: ");
-		sb.append(getTransactionNrBuyer());
-		sb.append(", transaction number of seller: ");
-		sb.append(getTransactionNrSeller());
-		sb.append(", buyer: ");
-		sb.append(getBuyerId());
-		sb.append(", seller: ");
-		sb.append(getSellerId());
+		sb.append(", payer: ");
+		sb.append(getUsernamePayer());
+		sb.append(", payee: ");
+		sb.append(getUsernamePayee());
 		sb.append(", amount: ");
 		sb.append(getAmount());
 		if (inputCurrency != null && !inputCurrency.isEmpty() && inputCurrencyAmount != null && inputCurrencyAmount.compareTo(BigDecimal.ZERO) >  0) {
@@ -171,16 +167,14 @@ public class DbTransaction implements Serializable {
 		if (o == this)
 			return true;
 
-		if (!(o instanceof Transaction))
+		if (!(o instanceof PaymentRequest))
 			return false;
 
 		DbTransaction other = (DbTransaction) o;
 		return new EqualsBuilder().append(getId(), other.getId())
 				.append(getTimestamp(), other.getTimestamp())
-				.append(getTransactionNrBuyer(), other.getTransactionNrBuyer())
-				.append(getTransactionNrSeller(), other.getTransactionNrSeller())
-				.append(getBuyerId(), other.getBuyerId())
-				.append(getSellerId(), other.getSellerId())
+				.append(getUsernamePayer(), other.getUsernamePayer())
+				.append(getUsernamePayee(), other.getUsernamePayee())
 				.append(getAmount(), other.getAmount())
 				.append(getInputCurrency(), other.getInputCurrency())
 				.append(getInputCurrencyAmount(), other.getInputCurrencyAmount())
@@ -191,10 +185,8 @@ public class DbTransaction implements Serializable {
 	public int hashCode() {
 		return new HashCodeBuilder(47, 83).append(getId())
 				.append(getTimestamp())
-				.append(getTransactionNrBuyer())
-				.append(getTransactionNrSeller())
-				.append(getBuyerId())
-				.append(getSellerId())
+				.append(getUsernamePayer())
+				.append(getUsernamePayee())
 				.append(getAmount())
 				.append(getInputCurrency())
 				.append(getInputCurrencyAmount())

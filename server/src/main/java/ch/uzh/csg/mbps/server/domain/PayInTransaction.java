@@ -37,6 +37,8 @@ public class PayInTransaction implements Serializable {
 	@Column(name="TX_ID")
 	@Index(name = "TX_ID_INDEX")
 	private String transactionID;
+	@Column(name="BTC_ADDRESS")
+	private String btcAddress;
 	
 	public PayInTransaction() {
 	}
@@ -46,6 +48,7 @@ public class PayInTransaction implements Serializable {
 		this.timestamp = transaction.timeReceived();
 		this.amount = BigDecimal.valueOf(transaction.amount());
 		this.transactionID = transaction.txId();
+		this.btcAddress = transaction.address();
 	}
 
 	public long getId() {
@@ -88,6 +91,14 @@ public class PayInTransaction implements Serializable {
 		this.transactionID = transactionID;
 	}
 	
+	public String getBtcAddress() {
+		return btcAddress;
+	}
+
+	public void setBtcAddress(String btcAddress) {
+		this.btcAddress = btcAddress;
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
