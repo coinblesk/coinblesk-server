@@ -7,7 +7,6 @@ import java.util.List;
 
 import org.hibernate.HibernateException;
 
-import ch.uzh.csg.mbps.customserialization.SignatureAlgorithm;
 import ch.uzh.csg.mbps.customserialization.security.KeyHandler;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
@@ -131,8 +130,9 @@ public class UserAccountService implements IUserAccount {
 
 		
 		KeyPair keyPair = null;
+		//TODO move to client!
 		try {
-			keyPair = KeyHandler.generateECCKeyPair(SignatureAlgorithm.SHA256withECDSA);
+			keyPair = KeyHandler.generateKeyPair();
 		} catch (Exception e) {
 			return false;
 		}

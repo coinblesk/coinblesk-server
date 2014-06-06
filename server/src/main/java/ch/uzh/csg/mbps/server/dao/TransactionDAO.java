@@ -47,21 +47,21 @@ public class TransactionDAO {
 		
 		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
 		Session session = openSession();
-		session.beginTransaction();
-		
+		session.beginTransaction();	
+		//TODO simon: fix!
 		List<HistoryTransaction> resultWithAliasedBean = session.createSQLQuery(
 				  "SELECT transaction.timestamp, u2.username as buyer, u1.username as seller, transaction.amount " +
 				  "FROM DB_TRANSACTION transaction " +
-				  "INNER JOIN user_account u1 on transaction.seller_id = u1.id " +
-				  "INNER JOIN user_account u2 on transaction.buyer_id = u2.id " +
-				  "WHERE transaction.buyer_id = :userid OR transaction.seller_id = :userid " +
+				  "INNER JOIN user_account u1 on transaction.username_payee = u1.username " +
+				  "INNER JOIN user_account u2 on transaction.username_payer = u2.username " +
+				  "WHERE transaction.username_payer = :username OR transaction.username_payee = :username " +
 				  "ORDER BY transaction.timestamp DESC")
 				  .addScalar("timestamp")
 				  .addScalar("buyer")
 				  .addScalar("seller")
 				  .addScalar("amount")
-				  .setLong("userid", userAccount.getId())
-				  .setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
+				  .setString("username", userAccount.getUsername())
+				 .setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
 				  .setMaxResults(Config.TRANSACTIONS_MAX_RESULTS)
 				  .setFetchSize(Config.TRANSACTIONS_MAX_RESULTS)
 				  .setResultTransformer(Transformers.aliasToBean(HistoryTransaction.class))
@@ -85,14 +85,14 @@ public class TransactionDAO {
 		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
 		Session session = openSession();
 		session.beginTransaction();
-		
+		//TODO simon: fix!
 		long nofResults = ((Number) session.createSQLQuery(
 				  "SELECT COUNT(*) " +
 				  "FROM DB_TRANSACTION transaction " +
-				  "INNER JOIN user_account u1 on transaction.seller_id = u1.id " +
-				  "INNER JOIN user_account u2 on transaction.buyer_id = u2.id " +
-				  "WHERE transaction.buyer_id = :userid OR transaction.seller_id = :userid")
-				  .setLong("userid", userAccount.getId())
+				  "INNER JOIN user_account u1 on transaction.username_payee = u1.username " +
+				  "INNER JOIN user_account u2 on transaction.username_payer = u2.username " +
+				  "WHERE transaction.username_payer = :username OR transaction.username_payee = :username")
+				  .setString("username",userAccount.getUsername())
 				  .uniqueResult())
 				  .longValue();
 
@@ -155,15 +155,15 @@ public class TransactionDAO {
 		List<HistoryTransaction> resultWithAliasedBean = session.createSQLQuery(
 				  "SELECT transaction.timestamp, u2.username as buyer, u1.username as seller, transaction.amount " +
 				  "FROM DB_TRANSACTION transaction " +
-				  "INNER JOIN user_account u1 on transaction.seller_id = u1.id " +
-				  "INNER JOIN user_account u2 on transaction.buyer_id = u2.id " +
-				  "WHERE transaction.buyer_id = :userid OR transaction.seller_id = :userid " +
+				  "INNER JOIN user_account u1 on transaction.username_payee = u1.username " +
+				  "INNER JOIN user_account u2 on transaction.username_payer = u2.username " +
+				  "WHERE transaction.username_payer = :username OR transaction.username_payee = :username " +
 				  "ORDER BY transaction.timestamp DESC")
 				  .addScalar("timestamp")
 				  .addScalar("buyer")
 				  .addScalar("seller")
 				  .addScalar("amount")
-				  .setLong("userid", userAccount.getId())
+				  .setString("username", userAccount.getUsername())
 				  .setMaxResults(3)
 				  .setFetchSize(3)
 				  .setResultTransformer(Transformers.aliasToBean(HistoryTransaction.class))
