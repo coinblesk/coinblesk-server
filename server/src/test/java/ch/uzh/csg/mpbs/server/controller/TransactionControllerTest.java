@@ -36,7 +36,6 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import ch.uzh.csg.mbps.customserialization.SignatureAlgorithm;
 import ch.uzh.csg.mbps.customserialization.security.KeyHandler;
 import ch.uzh.csg.mbps.responseobject.CreateTransactionTransferObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
@@ -109,7 +108,7 @@ public class TransactionControllerTest {
 			test9_1 = new UserAccount("test9_1", "test9_+@bitcoin.csg.uzh.ch", "i-don't-need-one");
 			
 			
-			KeyPair keypair = KeyHandler.generateECCKeyPair(SignatureAlgorithm.SHA256withECDSA);
+			KeyPair keypair = KeyHandler.generateKeyPair();
 			
 			Constants.PRIVATEKEY = keypair.getPrivate();
 			Constants.PUBLICKEY = keypair.getPublic();

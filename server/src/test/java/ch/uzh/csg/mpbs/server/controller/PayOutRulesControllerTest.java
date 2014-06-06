@@ -33,7 +33,6 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import ch.uzh.csg.mbps.customserialization.SignatureAlgorithm;
 import ch.uzh.csg.mbps.customserialization.security.KeyHandler;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.responseobject.PayOutRulesTransferObject;
@@ -80,7 +79,7 @@ public class PayOutRulesControllerTest {
 			test42 = new UserAccount("test42", "test42@bitcoin.csg.uzh.ch", "asdf");
 			test43 = new UserAccount("test43", "test43@bitcoin.csg.uzh.ch", "asdf");
 
-			KeyPair keypair = KeyHandler.generateECCKeyPair(SignatureAlgorithm.SHA256withECDSA);
+			KeyPair keypair = KeyHandler.generateKeyPair();
 
 			Constants.PRIVATEKEY = keypair.getPrivate();
 			Constants.PUBLICKEY = keypair.getPublic();

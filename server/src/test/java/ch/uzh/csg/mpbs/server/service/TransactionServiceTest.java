@@ -22,7 +22,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import ch.uzh.csg.mbps.customserialization.SignatureAlgorithm;
 import ch.uzh.csg.mbps.customserialization.security.KeyHandler;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
 import ch.uzh.csg.mbps.server.dao.TransactionDAO;
@@ -46,7 +45,7 @@ public class TransactionServiceTest {
 	public void setUp() throws Exception {
 		UserAccountService.enableTestingMode();
 		if (!initialized) {
-			KeyPair keypair = KeyHandler.generateECCKeyPair(SignatureAlgorithm.SHA256withECDSA);
+			KeyPair keypair = KeyHandler.generateKeyPair();
 			
 			Constants.PRIVATEKEY = keypair.getPrivate();
 			Constants.PUBLICKEY = keypair.getPublic();

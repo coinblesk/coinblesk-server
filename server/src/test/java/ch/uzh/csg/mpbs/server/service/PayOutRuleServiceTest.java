@@ -20,7 +20,6 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.web.context.WebApplicationContext;
 
-import ch.uzh.csg.mbps.customserialization.SignatureAlgorithm;
 import ch.uzh.csg.mbps.customserialization.security.KeyHandler;
 import ch.uzh.csg.mbps.responseobject.PayOutRulesTransferObject;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
@@ -69,7 +68,7 @@ public class PayOutRuleServiceTest {
 			test53 = new UserAccount("test53", "chuck53@bitcoin.csg.uzh.ch", "asdf");
 			test54 = new UserAccount("test54", "chuck54@bitcoin.csg.uzh.ch", "asdf");
 
-			KeyPair keypair = KeyHandler.generateECCKeyPair(SignatureAlgorithm.SHA256withECDSA);
+			KeyPair keypair = KeyHandler.generateKeyPair();
 
 			Constants.PRIVATEKEY = keypair.getPrivate();
 			Constants.PUBLICKEY = keypair.getPublic();
