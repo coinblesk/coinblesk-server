@@ -49,7 +49,7 @@ import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
-import ch.uzh.csg.mbps.server.util.Config;
+import ch.uzh.csg.mbps.server.util.SecurityConfig;
 
 import com.azazar.biz.source_code.base64Coder.Base64Coder;
 import com.azazar.krotjson.JSON;
@@ -87,10 +87,10 @@ public class BitcoinJSONRPCClient implements Bitcoin {
     public static final URL DEFAULT_JSONRPC_TESTNET_URL;
     
     static {
-        String user = Config.RPC_USER;
-        String password = Config.BITCOIND_PASSWORD;
-        String host = Config.HOST;
-        String port = Config.PORT;
+        String user = SecurityConfig.RPC_USER;
+        String password = SecurityConfig.BITCOIND_PASSWORD;
+        String host = SecurityConfig.HOST;
+        String port = SecurityConfig.PORT;
 
         try {
             File f;

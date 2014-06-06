@@ -37,7 +37,7 @@ public class BitcoindController {
 	 */
 	public static String sendCoins(String address, BigDecimal amount)throws BitcoinException {
 		try {
-			BITCOIN.unlockWallet(Config.ENCRYPTION_PASSWORD, 2);
+			BITCOIN.unlockWallet(SecurityConfig.ENCRYPTION_PASSWORD, 2);
 		} catch (Exception e) {
 			if(e.getMessage().contains("Error: Wallet is already unlocked.")){
 				//do nothing --> wallet is already unlocked
@@ -45,7 +45,7 @@ public class BitcoindController {
 				throw e;
 		}
 		keyPoolCheck();
-		return BITCOIN.sendFrom(Config.ACCOUNT, address, amount.doubleValue());
+		return BITCOIN.sendFrom(SecurityConfig.ACCOUNT, address, amount.doubleValue());
 	}
 	
 	/**
@@ -66,7 +66,7 @@ public class BitcoindController {
 	 */
 	public static String getNewAddress() throws BitcoinException {
 		keyPoolCheck();
-		String newAddress = BITCOIN.getNewAddress(Config.ACCOUNT);
+		String newAddress = BITCOIN.getNewAddress(SecurityConfig.ACCOUNT);
 		return newAddress;
 	}
 	
@@ -165,7 +165,7 @@ public class BitcoindController {
 	public static void backupWallet() {
 		try {
 			Date date = new Date();
-			BITCOIN.backupWallet(Config.BACKUP_DESTINATION + "_" + date.toString());
+			BITCOIN.backupWallet(SecurityConfig.BACKUP_DESTINATION + "_" + date.toString());
 			LOGGER.info("Successfully saved wallet backup.");
 		} catch (BitcoinException e) {
 			LOGGER.error("Saving wallet backup failed. ErrorMessage: " + e.getMessage());
@@ -176,7 +176,7 @@ public class BitcoindController {
 		keyPoolCounter++;
 		if (keyPoolCounter % 90 == 0){
 			try {
-				BITCOIN.unlockWallet(Config.ENCRYPTION_PASSWORD, 2);
+				BITCOIN.unlockWallet(SecurityConfig.ENCRYPTION_PASSWORD, 2);
 			} catch (Exception e) {
 				if(e.getMessage().equals("{\"result\":null,\"error\":{\"code\":-17,\"message\":\"Error: Wallet is already unlocked.\"},\"id\":\"1\"}")){
 					//do nothing --> wallet is already unlocked
