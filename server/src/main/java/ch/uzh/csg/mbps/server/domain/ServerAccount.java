@@ -33,8 +33,8 @@ public class ServerAccount {
 	private Date creationDate;
 	@Column(name = "EMAIL", nullable = false)
 	private String email;
-	@Column(name = "PAYMENET_ADDRESS")
-	private String paymentAddress;
+	@Column(name = "PAYIN_ADDRESS")
+	private String payinAddress;
 	@Column(name = "TRUST_LEVEL", nullable = false)
 	private int trustLevel;
 	@Column(name = "PUBLIC_KEY", length = 1024, nullable = false)
@@ -102,12 +102,12 @@ public class ServerAccount {
 		this.email = email;
 	}
 
-	public String getPaymentAddress() {
-		return paymentAddress;
+	public String getPayinAddress() {
+		return payinAddress;
 	}
 
-	public void setPAymentAddress(String btcAddress) {
-		this.paymentAddress = btcAddress;
+	public void setPayinAddress(String btcAddress) {
+		this.payinAddress = btcAddress;
 	}
 
 	public int getTrustLevel() {
