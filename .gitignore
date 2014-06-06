@@ -17,4 +17,4 @@ Users/
 # Locally stored "Eclipse launch configurations"
 *.launch
 **/SecurityConfig.java
-mbps_server/server/src/main/java/ch/uzh/csg/mbps/server/util/SecurityConfig.java
+SecurityConfig.java
