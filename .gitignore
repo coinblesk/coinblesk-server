@@ -16,3 +16,4 @@ tmp/**/*
 Users/
 # Locally stored "Eclipse launch configurations"
 *.launch
+**/SecurityConfig.java
