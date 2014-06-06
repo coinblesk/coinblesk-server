@@ -18,7 +18,6 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import ch.uzh.csg.mbps.customserialization.SignatureAlgorithm;
 import ch.uzh.csg.mbps.customserialization.security.KeyHandler;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
@@ -83,7 +82,7 @@ public class Initializer implements InitializingBean{
 
 	private void createServerKeys(File serverKeys){
 		try {
-			KeyPair keypair = KeyHandler.generateECCKeyPair(SignatureAlgorithm.SHA256withECDSA);
+			KeyPair keypair = KeyHandler.generateKeyPair();
 			FileWriter fileWriter = new FileWriter(serverKeys);
 			fileWriter.write(KeyHandler.encodePrivateKey(keypair.getPrivate()) + "\n");
 			fileWriter.write(KeyHandler.encodePublicKey(keypair.getPublic()));
