@@ -6,8 +6,6 @@ package ch.uzh.csg.mbps.server.util;
  */
 public class SecurityConfig {
 	
-	//TODO: test test
-	
 	//Email Configuration
 	protected static final String FROM = "bitcoin-no-reply@ifi.uzh.ch";
 	protected static final String EMAIL_USER = "mbps-notification";
