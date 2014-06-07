@@ -12,7 +12,6 @@ import javax.persistence.SequenceGenerator;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
-import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.hibernate.annotations.Index;
 
@@ -31,9 +30,9 @@ public class ServerTransaction {
 	private Date timestamp;
 	@Column(name="AMOUNT", precision = 25, scale=8)
 	private BigDecimal amount;
-	@Column(name="BTC_ADDRESS")
-	@Index(name = "BTC_ADDRESS_INDEX")
-	private String btcAddress;
+	@Column(name="PAYIN_ADDRESS")
+	@Index(name = "PAYIN_ADDRESS_INDEX")
+	private String payinAddress;
 	@Column(name="TRANSACTION_ID")
 	@Index(name = "TRANSACTION_ID_INDEX")
 	private String transactionID;
@@ -45,13 +44,13 @@ public class ServerTransaction {
 	public ServerTransaction(){
 	}
 	
-	public ServerTransaction(Transaction tx) {
+	public ServerTransaction(Transaction tx, boolean received) {
 		this.timestamp = tx.time();
 		this.amount = new BigDecimal(tx.amount());
-		this.btcAddress = tx.address();
+		this.payinAddress = tx.address();
 		this.verified = false;
 		this.transactionID = tx.txId();
-//		this.received = ;
+		this.received = received;
 	}
 	
 	public long getId() {
@@ -78,12 +77,12 @@ public class ServerTransaction {
 		this.amount = amount;
 	}
 
-	public String getBtcAddress() {
-		return btcAddress;
+	public String getPayinAddress() {
+		return payinAddress;
 	}
 
-	public void setBtcAddress(String btcAddress) {
-		this.btcAddress = btcAddress;
+	public void setPayinAddress(String address) {
+		this.payinAddress = address;
 	}
 
 	public String getTransactionID() {
@@ -122,33 +121,17 @@ public class ServerTransaction {
 		sb.append(" verified: ");
 		sb.append(isVerified());
 		sb.append(" address: ");
-		sb.append(getBtcAddress());
+		sb.append(getPayinAddress());
 		sb.append(" received: ");
 		sb.append(isReceived());
 		return sb.toString();
-	}
-	
-	@Override
-	public boolean equals(Object o) {
-		//TODO: mehmet is this needed??
-		if (o == null)
-			return false;
-
-		if (o == this)
-			return true;
-
-//		if (!(o instanceof ))
-//			return false;
-
-		ServerTransaction other = (ServerTransaction) o;
-		return new EqualsBuilder().append(getId(), other.getId()).isEquals();
 	}
 
 	@Override
 	public int hashCode() {
 		return new HashCodeBuilder(47, 83).append(getId())
 				.append(getTimestamp())
-				.append(getBtcAddress())
+				.append(getPayinAddress())
 				.append(isVerified())
 				.append(getAmount())
 				.append(isReceived())
