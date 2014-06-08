@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 import java.math.BigDecimal;
+import java.security.KeyPair;
 import java.util.List;
 
 import javax.servlet.http.HttpSession;
@@ -37,12 +38,16 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
+import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
 import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.EmailVerification;
 import ch.uzh.csg.mbps.server.domain.ResetPassword;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.domain.UserPublicKey;
+import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.HibernateUtil;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
@@ -80,6 +85,7 @@ public class UserAccountControllerTest {
 	private static UserAccount test27;
 	private static UserAccount test29;
 	private static UserAccount test30;
+	private static UserAccount test31;
 
 	@Before
 	public void setUp() {
@@ -98,6 +104,7 @@ public class UserAccountControllerTest {
 			test27 = new UserAccount("test27", null, "i-don't-need-one");
 			test29 = new UserAccount("test29", "chuck29@bitcoin.csg.uzh.ch", "i-don't-need-one");
 			test30 = new UserAccount("test30", "dandeliox@gmail.com", "i-don't-need-one");
+			test31 = new UserAccount("test31", "test31@gmail.com", "i-don't-need-one");
 
 			initialized = true;
 		}
@@ -414,6 +421,32 @@ public class UserAccountControllerTest {
 		assertEquals(test30.getEmail(), readAccountTO.getUserAccount().getEmail());
 
 		logout(mvcResult3);
+	}
+	
+	@Test
+	public void testSaveUserPublicKey() throws Exception {
+		String plainTextPassword = test31.getPassword();
+		createAccountAndVerifyAndReload(test31, new BigDecimal(0.0));
+		HttpSession session = loginAndGetSession(test31.getUsername(), plainTextPassword);
+		
+		KeyPair keyPair = KeyHandler.generateKeyPair();
+		String encodedPublicKey = KeyHandler.encodePublicKey(keyPair.getPublic());
+		UserPublicKey upk = new UserPublicKey(test31.getId(), (byte) 0x00, PKIAlgorithm.DEFAULT.getCode(), encodedPublicKey);
+		
+		ObjectMapper mapper = new ObjectMapper();
+		String mappedString = mapper.writeValueAsString(upk);
+		
+		MvcResult result = mockMvc.perform(post("/user/savePublicKey").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(mappedString))
+				.andExpect(status().isOk())
+				.andReturn();
+
+		String asString = result.getResponse().getContentAsString();
+
+		CustomResponseObject transferObject = mapper.readValue(asString, CustomResponseObject.class);
+
+		assertEquals(true, transferObject.isSuccessful());
+		assertEquals(Type.PUBLIC_KEY_SAVED, transferObject.getType());
+		assertEquals(1, Byte.parseByte(transferObject.getMessage()));
 	}
 
 	private void logout(MvcResult result) {

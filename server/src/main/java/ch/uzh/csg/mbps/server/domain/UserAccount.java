@@ -48,7 +48,9 @@ public class UserAccount implements Serializable {
 	private String paymentAddress;
 	@Column(name = "ROLES")
 	private byte roles;
-
+	@Column(name = "NOF_KEYS")
+	private int nofKeys;
+	
 	public UserAccount() {
 	}
 
@@ -72,6 +74,7 @@ public class UserAccount implements Serializable {
 		this.creationDate = new Date();
 		this.emailVerified = false;
 		this.roles = Role.USER.getCode();
+		this.nofKeys = 0;
 	}
 
 	public boolean isDeleted() {
@@ -152,6 +155,14 @@ public class UserAccount implements Serializable {
 	
 	public void setRoles(byte roles) {
 		this.roles = roles;
+	}
+	
+	public int getNofKeys() {
+		return nofKeys;
+	}
+	
+	public void setNofKeys(int nofKeys) {
+		this.nofKeys = nofKeys;
 	}
 	
 	@Override

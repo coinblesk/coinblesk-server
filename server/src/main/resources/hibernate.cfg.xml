@@ -38,5 +38,6 @@
 		<mapping class="ch.uzh.csg.mbps.server.domain.PayOutTransaction"/>
 		<mapping class="ch.uzh.csg.mbps.server.domain.ResetPassword"/>
 		<mapping class="ch.uzh.csg.mbps.server.domain.PayOutRule"/>
+		<mapping class="ch.uzh.csg.mbps.server.domain.UserPublicKey"/>
 	</session-factory>
 </hibernate-configuration>

@@ -5,8 +5,10 @@ import java.util.List;
 
 import org.hibernate.HibernateException;
 
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
+import ch.uzh.csg.mbps.server.dao.UserPublicKeyDAO;
 import ch.uzh.csg.mbps.server.domain.ResetPassword;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.BitcoindController;
@@ -306,6 +308,11 @@ public class UserAccountService implements IUserAccount {
 		} else {
 			return false;
 		}
+	}
+	
+	//TODO jeton: javadoc
+	public byte saveUserPublicKey(long userId, PKIAlgorithm algorithm, String publicKey) throws UserAccountNotFoundException {
+		return UserPublicKeyDAO.saveUserPublicKey(userId, algorithm, publicKey);
 	}
 
 }

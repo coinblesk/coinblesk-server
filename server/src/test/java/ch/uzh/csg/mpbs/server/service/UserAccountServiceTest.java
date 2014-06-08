@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.math.BigDecimal;
+import java.security.KeyPair;
 import java.util.Date;
 import java.util.List;
 
@@ -15,8 +16,12 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
+import ch.uzh.csg.mbps.server.dao.UserPublicKeyDAO;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.domain.UserPublicKey;
+import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.CustomPasswordEncoder;
 import ch.uzh.csg.mbps.server.util.HibernateUtil;
@@ -40,6 +45,8 @@ public class UserAccountServiceTest {
 	private static UserAccount accountToUpdate2;
 	private static UserAccount accountFour;
 	private static UserAccount accountFive;
+	private static UserAccount accountSix;
+	private static UserAccount accountSeven;
 
 	@Before
 	public void setUp() throws InvalidEmailException, EmailAlreadyExistsException {
@@ -54,6 +61,8 @@ public class UserAccountServiceTest {
 			accountToUpdate2 = new UserAccount("hans3-2", "hans3-2@bitcoin.csg.uzh.ch", "my-password-wurst");
 			accountFour = new UserAccount("hans4", "hans4@bitcoin.csg.uzh.ch", "my-password-wurst");
 			accountFive = new UserAccount("hans5", "hans5@bitcoin.csg.uzh.ch", "my-password-wurst");
+			accountSix = new UserAccount("hans6", "hans6@bitcoin.csg.uzh.ch", "my-password-wurst");
+			accountSeven = new UserAccount("hans7", "hans7@bitcoin.csg.uzh.ch", "my-password-wurst");
 			
 			try {
 				UserAccountService.getInstance().createAccount(accountOne);
@@ -61,6 +70,8 @@ public class UserAccountServiceTest {
 				UserAccountService.getInstance().createAccount(accountToDelete);
 				UserAccountService.getInstance().createAccount(accountToUpdate);
 				UserAccountService.getInstance().createAccount(accountToUpdate2);
+				UserAccountService.getInstance().createAccount(accountSix);
+				UserAccountService.getInstance().createAccount(accountSeven);
 			} catch (UsernameAlreadyExistsException | BitcoinException e) {
 				//do nothing
 			} catch (InvalidUsernameException e) {
@@ -218,6 +229,39 @@ public class UserAccountServiceTest {
 		UserAccountService.getInstance().delete(accountToDelete.getUsername());
 		assertEquals(nofUsers, getAllUserAccounts().size());
 		UserAccountService.getInstance().getByUsername(accountToDelete.getUsername());
+	}
+	
+	@Test
+	public void testSavePublicKeys() throws Exception {
+		UserAccount loadedSix = UserAccountService.getInstance().getByUsername(accountSix.getUsername());
+		
+		List<UserPublicKey> userPublicKeys = UserPublicKeyDAO.getUserPublicKeys(loadedSix.getId());
+		assertEquals(0, userPublicKeys.size());
+		
+		KeyPair keyPair = KeyHandler.generateKeyPair();
+		String encodedPublicKey = KeyHandler.encodePublicKey(keyPair.getPublic());
+		
+		byte keyNumber = UserAccountService.getInstance().saveUserPublicKey(loadedSix.getId(), PKIAlgorithm.DEFAULT, encodedPublicKey);
+		assertEquals(1, keyNumber);
+		
+		
+		UserAccount loadedSeven = UserAccountService.getInstance().getByUsername(accountSeven.getUsername());
+		userPublicKeys = UserPublicKeyDAO.getUserPublicKeys(loadedSeven.getId());
+		assertEquals(0, userPublicKeys.size());
+		
+		keyPair = KeyHandler.generateKeyPair();
+		encodedPublicKey = KeyHandler.encodePublicKey(keyPair.getPublic());
+		
+		keyNumber = UserAccountService.getInstance().saveUserPublicKey(loadedSix.getId(), PKIAlgorithm.DEFAULT, encodedPublicKey);
+		assertEquals(2, keyNumber);
+		
+		userPublicKeys = UserPublicKeyDAO.getUserPublicKeys(loadedSix.getId());
+		assertEquals(2, userPublicKeys.size());
+		userPublicKeys = UserPublicKeyDAO.getUserPublicKeys(loadedSeven.getId());
+		assertEquals(0, userPublicKeys.size());
+		
+		loadedSix = UserAccountService.getInstance().getByUsername(accountSix.getUsername());
+		assertEquals(2, loadedSix.getNofKeys());
 	}
 	
 	@SuppressWarnings("unchecked")

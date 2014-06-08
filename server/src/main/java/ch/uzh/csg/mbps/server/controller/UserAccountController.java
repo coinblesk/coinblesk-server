@@ -9,9 +9,13 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
+import ch.uzh.csg.mbps.customserialization.UnknownPKIAlgorithmException;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
+import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
 import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.domain.UserPublicKey;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
@@ -242,5 +246,22 @@ public class UserAccountController {
 			return new ModelAndView("WrongToken", "command", null);
 		}
 	}
-
+	
+	//TODO jeton: javadoc
+	@RequestMapping(value = "/savePublicKey", method = RequestMethod.POST, consumes = "application/json")
+	@ResponseBody
+	public CustomResponseObject savePublicKey(@RequestBody UserPublicKey userPublicKey) {
+		try {
+			UserAccount userAccount = UserAccountService.getInstance().getByUsername(AuthenticationInfo.getPrincipalUsername());
+			PKIAlgorithm pkiAlgorithm = PKIAlgorithm.getPKIAlgorithm(userPublicKey.getPKIAlgorithm());
+			byte keyNumber = UserAccountService.getInstance().saveUserPublicKey(userAccount.getId(), pkiAlgorithm, userPublicKey.getPublicKey());
+			return new CustomResponseObject(true, Byte.toString(keyNumber), Type.PUBLIC_KEY_SAVED);
+		} catch (UserAccountNotFoundException e) {
+			return new CustomResponseObject(false, ACCOUNT_NOT_FOUND, Type.PUBLIC_KEY_SAVED);
+		} catch (UnknownPKIAlgorithmException e) {
+			//TODO jeton: ?
+			return new CustomResponseObject(false, "unkown pki algorithm", Type.PUBLIC_KEY_SAVED);
+		}
+	}
+	
 }
