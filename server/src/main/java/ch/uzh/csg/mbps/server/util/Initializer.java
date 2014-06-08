@@ -18,7 +18,7 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import ch.uzh.csg.mbps.customserialization.security.KeyHandler;
+import ch.uzh.csg.mbps.server.security.KeyHandler;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 

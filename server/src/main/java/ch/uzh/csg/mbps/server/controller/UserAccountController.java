@@ -9,10 +9,10 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
-import ch.uzh.csg.mbps.customserialization.security.KeyHandler;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.Constants;
@@ -107,6 +107,7 @@ public class UserAccountController {
 	 * @return ch.uzh.csg.mbps.model.UserAccount() client UserAccount object
 	 */
 	protected static ch.uzh.csg.mbps.model.UserAccount transform(UserAccount userAccount) {
+		//TODO jeton: adopt to new model!
 		ch.uzh.csg.mbps.model.UserAccount ua = new ch.uzh.csg.mbps.model.UserAccount();
 		ua.setBalance(userAccount.getBalance());
 		ua.setCreationDate(userAccount.getCreationDate());
@@ -116,9 +117,9 @@ public class UserAccountController {
 		ua.setId(userAccount.getId());
 		ua.setPassword(userAccount.getPassword());
 		ua.setPaymentAddress(userAccount.getPaymentAddress());
-		ua.setPrivateKey(userAccount.getPrivateKey());
-		ua.setPublicKey(userAccount.getPublicKey());
-		ua.setTransactionNumber(userAccount.getTransactionNumber());
+//		ua.setPrivateKey(userAccount.getPrivateKey());
+//		ua.setPublicKey(userAccount.getPublicKey());
+//		ua.setTransactionNumber(userAccount.getTransactionNumber());
 		ua.setUsername(userAccount.getUsername());
 		return ua;
 	}
