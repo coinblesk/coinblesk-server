@@ -117,11 +117,9 @@ public class TransactionDAO {
 			transaction = session.beginTransaction();
 			session.save(tx);
 			buyerAccount.setBalance(buyerAccount.getBalance().subtract(tx.getAmount()));
-			buyerAccount.setTransactionNumber(buyerAccount.getTransactionNumber() + 1);
 			session.update(buyerAccount);
 			
 			sellerAccount.setBalance(sellerAccount.getBalance().add(tx.getAmount()));
-			sellerAccount.setTransactionNumber(sellerAccount.getTransactionNumber() + 1);
 			session.update(sellerAccount);
 			
 			transaction.commit();			

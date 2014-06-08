@@ -133,9 +133,7 @@ public class UserAccountServiceTest {
 		newAccount.setDeleted(true);
 		newAccount.setEmailVerified(true);
 		newAccount.setId(256);
-		newAccount.setPrivateKey("private-key");
-		newAccount.setPublicKey("public-key");
-		newAccount.setTransactionNumber(1201);
+		newAccount.setRoles((byte) 2);
 		
 		assertTrue(UserAccountService.getInstance().createAccount(newAccount));
 		
@@ -146,13 +144,11 @@ public class UserAccountServiceTest {
 		assertFalse(newAccount.getPassword().equals(fromDB.getPassword()));
 		assertTrue(CustomPasswordEncoder.matches(newAccount.getPassword(), fromDB.getPassword()));
 		
-		assertEquals(0,fromDB.getBalance().compareTo(BigDecimal.ZERO));
+		assertEquals(0, fromDB.getBalance().compareTo(BigDecimal.ZERO));
 		assertFalse(fromDB.isDeleted());
 		assertFalse(fromDB.isEmailVerified());
 		assertFalse(newAccount.getId() == fromDB.getId());
-		assertFalse(newAccount.getPrivateKey().equals(fromDB.getPrivateKey()));
-		assertFalse(newAccount.getPublicKey().equals(fromDB.getPublicKey()));
-		assertFalse(newAccount.getTransactionNumber() == fromDB.getTransactionNumber());
+		assertEquals(newAccount.getRoles(), fromDB.getRoles());
 	}
 	
 
@@ -181,20 +177,16 @@ public class UserAccountServiceTest {
 		String email = beforeUpdate.getEmail();
 		long id = beforeUpdate.getId();
 		String password = beforeUpdate.getPassword();
-		String privateKey = beforeUpdate.getPrivateKey();
-		String publicKey = beforeUpdate.getPublicKey();
-		long transactionNumber = beforeUpdate.getTransactionNumber();
 		String username = beforeUpdate.getUsername();
+		byte roles = beforeUpdate.getRoles();
 		
 		beforeUpdate.setBalance(new BigDecimal(1000));
 		beforeUpdate.setCreationDate(new Date());
 		beforeUpdate.setEmail("new email");
 		beforeUpdate.setId(id+100);
 		beforeUpdate.setPassword("new password haha");
-		beforeUpdate.setPrivateKey("private");
-		beforeUpdate.setPublicKey("public");
-		beforeUpdate.setTransactionNumber(152);
 		beforeUpdate.setUsername("useruser");
+		beforeUpdate.setRoles((byte) 3);
 		
 		UserAccountService.getInstance().updateAccount(username, beforeUpdate);
 		UserAccount afterUpdate = UserAccountService.getInstance().getByUsername(username);
@@ -214,14 +206,10 @@ public class UserAccountServiceTest {
 		assertEquals(creationDate, afterUpdate.getCreationDate());
 		//id should not change
 		assertEquals(id, afterUpdate.getId());
-		//private key should not change
-		assertEquals(privateKey, afterUpdate.getPrivateKey());
-		//public key should not change
-		assertEquals(publicKey, afterUpdate.getPublicKey());
-		//transaction number should not change
-		assertEquals(transactionNumber, afterUpdate.getTransactionNumber());
 		//username should not change
 		assertEquals(username, afterUpdate.getUsername());
+		//roles should not change
+		assertEquals(roles, afterUpdate.getRoles());
 	}
 	
 	@Test(expected=UserAccountNotFoundException.class)

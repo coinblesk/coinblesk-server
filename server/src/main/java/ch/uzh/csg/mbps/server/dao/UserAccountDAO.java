@@ -7,6 +7,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
 import org.hibernate.criterion.Restrictions;
 
 import ch.uzh.csg.mbps.server.domain.EmailVerification;
@@ -39,15 +40,13 @@ public class UserAccountDAO {
 	 */
 	public static void createAccount(UserAccount userAccount, String token) throws HibernateException {
 		Session session = null;
-		org.hibernate.Transaction transaction = null;
-		UserAccount fromDb;
-		EmailVerification ev;
+		Transaction transaction = null;
 		try {
 			session = openSession();
 			transaction = session.beginTransaction();
 			session.save(userAccount);
-			fromDb = (UserAccount) session.createCriteria(UserAccount.class).add(Restrictions.eq("username", userAccount.getUsername())).uniqueResult();
-			ev = new EmailVerification(fromDb.getId(), token);
+			UserAccount fromDb = (UserAccount) session.createCriteria(UserAccount.class).add(Restrictions.eq("username", userAccount.getUsername())).uniqueResult();
+			EmailVerification ev = new EmailVerification(fromDb.getId(), token);
 			session.save(ev);
 			transaction.commit();
 			LOGGER.info("UserAccount created: " + fromDb.toString() + " and created EmailVerification: " + ev.toString());
@@ -143,7 +142,7 @@ public class UserAccountDAO {
 		UserAccount userAccount = getByUsername(username);
 		
 		Session session = openSession();
-		org.hibernate.Transaction transaction = null;
+		Transaction transaction = null;
 		
 		if (userAccount.getBalance().compareTo(BigDecimal.ZERO)==0) {
 			try {
@@ -176,7 +175,7 @@ public class UserAccountDAO {
 	 */
 	public static void updateAccount(UserAccount userAccount) throws UserAccountNotFoundException, HibernateException {
 		Session session = openSession();
-		org.hibernate.Transaction transaction = null;
+		Transaction transaction = null;
 		
 		try {
 			transaction = session.beginTransaction();
@@ -205,7 +204,7 @@ public class UserAccountDAO {
 	 */
 	public static void verifyEmail(String verificationToken) throws UserAccountNotFoundException, HibernateException, VerificationTokenNotFoundException {
 		Session session = openSession();
-		org.hibernate.Transaction tx = session.beginTransaction();
+		Transaction tx = session.beginTransaction();
 		
 		EmailVerification ev = (EmailVerification) session.createCriteria(EmailVerification.class).add(Restrictions.eq("verificationToken", verificationToken)).uniqueResult();
 		if (ev == null)
@@ -278,7 +277,7 @@ public class UserAccountDAO {
 	 */
 	public static void createPasswordResetToken(UserAccount user, String token){
 		Session session = null;
-		org.hibernate.Transaction transaction = null;
+		Transaction transaction = null;
 		
 		try {
 			session = openSession();
@@ -350,7 +349,7 @@ public class UserAccountDAO {
 	 */
 	public static void createEmailVerificationToken(long userId, String token) throws HibernateException {
 		Session session = null;
-		org.hibernate.Transaction transaction = null;
+		Transaction transaction = null;
 		
 		try {
 			session = openSession();
@@ -399,7 +398,7 @@ public class UserAccountDAO {
 	 */
 	public static void deleteResetPassword(String resetPasswordToken) throws VerificationTokenNotFoundException {	
 		Session session = openSession();
-		org.hibernate.Transaction tx = session.beginTransaction();
+		Transaction tx = session.beginTransaction();
 		
 		ResetPassword resetPassword = getResetPassword(resetPasswordToken);
 		

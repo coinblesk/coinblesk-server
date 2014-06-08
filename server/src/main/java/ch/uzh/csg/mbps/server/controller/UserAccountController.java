@@ -107,7 +107,6 @@ public class UserAccountController {
 	 * @return ch.uzh.csg.mbps.model.UserAccount() client UserAccount object
 	 */
 	protected static ch.uzh.csg.mbps.model.UserAccount transform(UserAccount userAccount) {
-		//TODO jeton: adopt to new model!
 		ch.uzh.csg.mbps.model.UserAccount ua = new ch.uzh.csg.mbps.model.UserAccount();
 		ua.setBalance(userAccount.getBalance());
 		ua.setCreationDate(userAccount.getCreationDate());
@@ -117,10 +116,8 @@ public class UserAccountController {
 		ua.setId(userAccount.getId());
 		ua.setPassword(userAccount.getPassword());
 		ua.setPaymentAddress(userAccount.getPaymentAddress());
-//		ua.setPrivateKey(userAccount.getPrivateKey());
-//		ua.setPublicKey(userAccount.getPublicKey());
-//		ua.setTransactionNumber(userAccount.getTransactionNumber());
 		ua.setUsername(userAccount.getUsername());
+		ua.setRoles(userAccount.getRoles());
 		return ua;
 	}
 	

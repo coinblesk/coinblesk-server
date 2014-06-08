@@ -1,7 +1,5 @@
 package ch.uzh.csg.mbps.server.service;
 
-import java.math.BigDecimal;
-import java.security.KeyPair;
 import java.util.Date;
 import java.util.List;
 
@@ -11,12 +9,12 @@ import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.ResetPassword;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
-import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.CustomPasswordEncoder;
 import ch.uzh.csg.mbps.server.util.Emailer;
 import ch.uzh.csg.mbps.server.util.PasswordMatcher;
+import ch.uzh.csg.mbps.server.util.UserRoles.Role;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
@@ -83,22 +81,19 @@ public class UserAccountService implements IUserAccount {
 		userAccount.setUsername(userAccount.getUsername().trim());
 		String username = userAccount.getUsername();
 		String email = userAccount.getEmail();
+		byte roles = userAccount.getRoles();
 		
-		if(username==null){
+		if (username == null)
 			throw new InvalidUsernameException();
-		}
-		
-		if(email==null){
+
+		if (email == null)
 			throw new InvalidEmailException();
-		}
+
+		if (!username.matches(Config.USERNAME_REGEX))
+			throw new InvalidUsernameException();
 		
-		
-		if(!username.matches(Config.USERNAME_REGEX)){
-			throw new InvalidUsernameException();			
-		}
-		if(!email.matches(Config.EMAIL_REGEX)){
-			throw new InvalidEmailException();			
-		}
+		if (!email.matches(Config.EMAIL_REGEX))
+			throw new InvalidEmailException();
 		
 		try {
 			//see for matches in db ignoring cases and deletion status
@@ -120,30 +115,15 @@ public class UserAccountService implements IUserAccount {
 		}
 		
 		userAccount = new UserAccount(userAccount.getUsername(), userAccount.getEmail(), userAccount.getPassword());
-		userAccount.setBalance(new BigDecimal(0.0));
-		userAccount.setCreationDate(new Date());
-		userAccount.setDeleted(false);
-		userAccount.setEmailVerified(false);
 		
 		String passwordHash = CustomPasswordEncoder.getEncodedPassword(userAccount.getPassword());
 		userAccount.setPassword(passwordHash);
-
-		
-		KeyPair keyPair = null;
-		//TODO move to client!
-		try {
-			keyPair = KeyHandler.generateKeyPair();
-		} catch (Exception e) {
-			return false;
-		}
-		
-		String privateKeyEncoded = KeyHandler.encodePrivateKey(keyPair.getPrivate());
-		userAccount.setPrivateKey(privateKeyEncoded);
-		String publicKeyEncoded = KeyHandler.encodePublicKey(keyPair.getPublic());
-		userAccount.setPublicKey(publicKeyEncoded);
-		
-		userAccount.setTransactionNumber(0);
 		userAccount.setPaymentAddress(paymentAddress);
+		
+		if (roles < 1 || roles > 3)
+			roles = Role.USER.getCode();
+		
+		userAccount.setRoles(roles);
 		
 		String token = java.util.UUID.randomUUID().toString();
 		try {
@@ -206,6 +186,8 @@ public class UserAccountService implements IUserAccount {
 		if (updatedAccount.getPassword() != null && !updatedAccount.getPassword().isEmpty())
 			userAccount.setPassword(CustomPasswordEncoder.getEncodedPassword(updatedAccount.getPassword()));
 
+		//TODO: role should also be changeable!! adopt UserAccountServiceTest!
+		
 		try {
 			UserAccountDAO.updateAccount(userAccount);
 			return true;

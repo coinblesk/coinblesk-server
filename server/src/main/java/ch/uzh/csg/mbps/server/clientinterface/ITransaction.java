@@ -36,7 +36,7 @@ public interface ITransaction {
 	 *            the {@link ServerPaymentRequest} containing one or two
 	 *            {@link PaymentRequest}
 	 * @return If the server has accepted and executed this given
-	 *         {@link Transaction}, than it signs the object with his private
+	 *         Transaction, than it signs the object with his private
 	 *         key. The callers can then verify the Transaction which has been
 	 *         executed.
 	 * @throws TransactionException
@@ -46,12 +46,12 @@ public interface ITransaction {
 	 *             transaction specific problem occurs.
 	 * @throws UserAccountNotFoundException
 	 *             If the a {@link UserAccount} contained in one or both
-	 *             {@link Transaction} objects cannot be found.
+	 *             Transaction objects cannot be found.
 	 */
 	public ServerPaymentResponse createTransaction(ServerPaymentRequest toVerify) throws TransactionException, UserAccountNotFoundException;
 
 	/**
-	 * Returns the three last {@link Transaction}s of a given {@link UserAccount}.
+	 * Returns the three last Transactions of a given {@link UserAccount}.
 	 * The returned lists are ordered by the item's time stamp in descending
 	 * order.
 	 * 

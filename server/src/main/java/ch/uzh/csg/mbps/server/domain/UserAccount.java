@@ -17,6 +17,8 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.hibernate.annotations.Index;
 
+import ch.uzh.csg.mbps.server.util.UserRoles.Role;
+
 @Entity(name = "USER_ACCOUNT")
 public class UserAccount implements Serializable {
 	private static final long serialVersionUID = 1L;
@@ -38,18 +40,14 @@ public class UserAccount implements Serializable {
 	private String password;
 	@Column(name = "DELETED", nullable = false)
 	private boolean deleted;
-	@Column(name = "PRIVATE_KEY", length = 1024, nullable = false)
-	private String privateKey;
-	@Column(name = "PUBLIC_KEY", length = 1024, nullable = false)
-	private String publicKey;
 	@Column(name = "BALANCE", nullable = false, precision = 25, scale = 8)
 	private BigDecimal balance;
-	@Column(name = "TRANSACTION_NUMBER")
-	private long transactionNumber;
 	@Column(name = "EMAIL_VERIFIED")
 	private boolean emailVerified;
 	@Column(name = "PAYMENT_ADDRESS")
 	private String paymentAddress;
+	@Column(name = "ROLES")
+	private byte roles;
 
 	public UserAccount() {
 	}
@@ -70,9 +68,10 @@ public class UserAccount implements Serializable {
 		this.email = email;
 		this.password = password;
 		this.deleted = false;
-		this.balance = new BigDecimal(0);
+		this.balance = new BigDecimal(0.0);
 		this.creationDate = new Date();
 		this.emailVerified = false;
+		this.roles = Role.USER.getCode();
 	}
 
 	public boolean isDeleted() {
@@ -123,22 +122,6 @@ public class UserAccount implements Serializable {
 		this.balance = balance;
 	}
 
-	public String getPrivateKey() {
-		return privateKey;
-	}
-
-	public void setPrivateKey(String privateKey) {
-		this.privateKey = privateKey;
-	}
-
-	public String getPublicKey() {
-		return publicKey;
-	}
-
-	public void setPublicKey(String publicKey) {
-		this.publicKey = publicKey;
-	}
-
 	public Date getCreationDate() {
 		return creationDate;
 	}
@@ -147,14 +130,6 @@ public class UserAccount implements Serializable {
 		this.creationDate = creationDate;
 	}
 	
-	public long getTransactionNumber() {
-		return transactionNumber;
-	}
-
-	public void setTransactionNumber(long transactionNumber) {
-		this.transactionNumber = transactionNumber;
-	}
-
 	public boolean isEmailVerified() {
 		return emailVerified;
 	}
@@ -169,6 +144,14 @@ public class UserAccount implements Serializable {
 
 	public String getPaymentAddress() {
 		return this.paymentAddress;
+	}
+	
+	public byte getRoles() {
+		return roles;
+	}
+	
+	public void setRoles(byte roles) {
+		this.roles = roles;
 	}
 	
 	@Override
@@ -186,8 +169,6 @@ public class UserAccount implements Serializable {
 		sb.append(getCreationDate());
 		sb.append(", balance: ");
 		sb.append(getBalance());
-		sb.append(", transaction number: ");
-		sb.append(getTransactionNumber());
 		sb.append(", emailVeryfied: ");
 		sb.append(isEmailVerified());
 		return sb.toString();
@@ -211,7 +192,7 @@ public class UserAccount implements Serializable {
 				.append(isDeleted(), other.isDeleted())
 				.append(getCreationDate(), other.getCreationDate())
 				.append(getBalance(), other.getBalance())
-				.append(getTransactionNumber(), other.getTransactionNumber()).isEquals();
+				.append(getRoles(), other.getRoles()).isEquals();
 	}
 
 	@Override
@@ -220,7 +201,7 @@ public class UserAccount implements Serializable {
 				.append(getUsername()).append(getUsername()).append(getEmail())
 				.append(getCreationDate()).append(isDeleted())
 				.append(getBalance())
-				.append(getTransactionNumber()).toHashCode();
+				.append(getRoles()).toHashCode();
 	}
 
 }
