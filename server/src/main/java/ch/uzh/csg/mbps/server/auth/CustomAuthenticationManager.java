@@ -1,21 +1,16 @@
 package ch.uzh.csg.mbps.server.auth;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
+import ch.uzh.csg.mbps.server.util.UserRoles;
 
 /**
  * This is the authentication manager, which decides if the authentication is
@@ -48,13 +43,7 @@ public class CustomAuthenticationManager implements AuthenticationManager {
 			throw new BadCredentialsException(errMsg);
 		}
 		
-		return new UsernamePasswordAuthenticationToken(authentication.getName(), authentication.getCredentials(), getAuthorities());
+		return new UsernamePasswordAuthenticationToken(authentication.getName(), authentication.getCredentials(), UserRoles.getAuthorities(userAccount));
 	}
 	
-	private Collection<GrantedAuthority> getAuthorities() {
-		List<GrantedAuthority> auths = new ArrayList<GrantedAuthority>(2);
-		auths.add(new SimpleGrantedAuthority("ROLE_USER"));
-		return auths;
-	}
-
 }
