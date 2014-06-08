@@ -11,11 +11,11 @@ import org.springframework.web.servlet.ModelAndView;
 
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.customserialization.UnknownPKIAlgorithmException;
+import ch.uzh.csg.mbps.model.UserPublicKey;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
 import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
-import ch.uzh.csg.mbps.server.domain.UserPublicKey;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;

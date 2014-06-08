@@ -39,6 +39,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
+import ch.uzh.csg.mbps.model.UserPublicKey;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
 import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;
@@ -46,7 +47,6 @@ import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.EmailVerification;
 import ch.uzh.csg.mbps.server.domain.ResetPassword;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
-import ch.uzh.csg.mbps.server.domain.UserPublicKey;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.HibernateUtil;
@@ -431,7 +431,7 @@ public class UserAccountControllerTest {
 		
 		KeyPair keyPair = KeyHandler.generateKeyPair();
 		String encodedPublicKey = KeyHandler.encodePublicKey(keyPair.getPublic());
-		UserPublicKey upk = new UserPublicKey(test31.getId(), (byte) 0x00, PKIAlgorithm.DEFAULT.getCode(), encodedPublicKey);
+		UserPublicKey upk = new UserPublicKey(PKIAlgorithm.DEFAULT.getCode(), encodedPublicKey);
 		
 		ObjectMapper mapper = new ObjectMapper();
 		String mappedString = mapper.writeValueAsString(upk);
