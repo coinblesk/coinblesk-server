@@ -31,7 +31,7 @@ public class UserPublicKey implements Serializable {
 	@Column(name = "KEY_ALGORITHM", nullable = false)
 	private byte pkiAlgorithm;
 	@Column(name = "PUBLIC_KEY", nullable = false)
-	public String publicKey;
+	private String publicKey;
 	
 	public UserPublicKey() {
 	}
