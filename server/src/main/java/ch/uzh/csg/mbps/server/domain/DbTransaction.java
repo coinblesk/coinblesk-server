@@ -54,12 +54,11 @@ public class DbTransaction implements Serializable {
 	}
 	
 	public DbTransaction(PaymentRequest paymentRequest) throws UserAccountNotFoundException {
-		this.amount = Converter.getTransactionLongInBigDecimal(paymentRequest.getAmount());
+		this.amount = Converter.getBigDecimalFromLong(paymentRequest.getAmount());
 		this.usernamePayer = paymentRequest.getUsernamePayer();
 		this.usernamePayee = paymentRequest.getUsernamePayee();
-		//TODO Jeton: add inputCurrency & inputCurrencyAmount to PaymentRequest
-		//		this.inputCurrency = paymentRequest.getInputCurrency();
-//		this.inputCurrencyAmount = transaction.getAmountInputCurrency();
+		this.inputCurrency = paymentRequest.getInputCurrency().toString();
+		this.inputCurrencyAmount = Converter.getBigDecimalFromLong(paymentRequest.getInputAmount());
 		this.timestamp = new Date();
 	}
 	
