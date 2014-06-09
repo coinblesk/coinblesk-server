@@ -10,8 +10,10 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.Security;
 import java.util.Arrays;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -41,6 +43,10 @@ public class KeyHandlerTest {
 		assertNotNull(keyPair);
 		keyPair = KeyHandler.generateKeyPair(PKIAlgorithm.DEFAULT);
 		assertNotNull(keyPair);
+	}
+	
+	static {
+		Security.addProvider(new BouncyCastleProvider());
 	}
 	
 	@Test
