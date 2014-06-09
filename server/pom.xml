@@ -199,6 +199,8 @@
 		</dependency>
 		
 		<!-- Bouncy Castle -->
+		<!-- ATTENTION!! any change of the version requires to copy the jars as well to /usr/lib/jvm/java-1.7.0-openjdk-amd64/jre/lib/ext/ 
+			in order to work on the vm -->
 		<dependency>
 			<groupId>org.bouncycastle</groupId>
 			<artifactId>bcprov-jdk15on</artifactId>

@@ -30,6 +30,9 @@ public class KeyHandler {
 	 * The BouncyCastle security provider is added statically, to avoid errors
 	 * when redeploying the war to tomcat. (see
 	 * http://www.bouncycastle.org/wiki/display/JA1/Provider+Installation)
+	 * 
+	 * In order to work, copy the bouncycastle jars to
+	 * /usr/lib/jvm/java-1.7.0-openjdk-amd64/jre/lib/ext/
 	 */
 	
 	//uses the default algorithm
