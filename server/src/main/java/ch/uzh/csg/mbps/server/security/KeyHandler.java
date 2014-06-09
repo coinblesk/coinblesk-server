@@ -9,7 +9,6 @@ import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
-import java.security.Security;
 import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -17,7 +16,6 @@ import java.security.spec.X509EncodedKeySpec;
 
 import org.apache.commons.codec.binary.Base64;
 import org.bouncycastle.jce.ECNamedCurveTable;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jce.spec.ECParameterSpec;
 
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
@@ -28,10 +26,11 @@ public class KeyHandler {
 	
 	private static final String SECURITY_PROVIDER = "BC";
 	
-	//TODO jeton: change to the following http://www.bouncycastle.org/wiki/display/JA1/Provider+Installation
-	static {
-		Security.addProvider(new BouncyCastleProvider());
-	}
+	/*
+	 * The BouncyCastle security provider is added statically, to avoid errors
+	 * when redeploying the war to tomcat. (see
+	 * http://www.bouncycastle.org/wiki/display/JA1/Provider+Installation)
+	 */
 	
 	//uses the default algorithm
 	public static KeyPair generateKeyPair() throws UnknownPKIAlgorithmException, NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException {
