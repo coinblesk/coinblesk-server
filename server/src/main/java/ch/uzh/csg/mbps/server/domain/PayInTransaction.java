@@ -112,6 +112,8 @@ public class PayInTransaction implements Serializable {
 		sb.append(getAmount());
 		sb.append(" transactionID: ");
 		sb.append(getTransactionID());
+		sb.append(" BtcAddress: ");
+		sb.append(getBtcAddress());
 		return sb.toString();
 	}
 }

@@ -156,6 +156,10 @@ public class DbTransaction implements Serializable {
 		} else {
 			sb.append(" BTC");
 		}
+		sb.append(", currency: ");
+		sb.append(getCurrency());
+		sb.append(", signature: ");
+		sb.append(getSignature());
 		return sb.toString();
 	}
 	
@@ -178,6 +182,7 @@ public class DbTransaction implements Serializable {
 				.append(getAmount(), other.getAmount())
 				.append(getInputCurrency(), other.getInputCurrency())
 				.append(getInputCurrencyAmount(), other.getInputCurrencyAmount())
+				.append(getCurrency(), other.getCurrency())
 				.isEquals();
 	}
 
@@ -190,6 +195,8 @@ public class DbTransaction implements Serializable {
 				.append(getAmount())
 				.append(getInputCurrency())
 				.append(getInputCurrencyAmount())
+				.append(getCurrency())
+				.append(getSignature())
 				.toHashCode();
 	}
 	
