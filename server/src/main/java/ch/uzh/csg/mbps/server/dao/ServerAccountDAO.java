@@ -23,6 +23,7 @@ public class ServerAccountDAO {
 	private ServerAccountDAO(){
 	}
 	
+	//TODO: mehmet do comments
 	/**
 	 * 
 	 * @return
@@ -207,7 +208,7 @@ public class ServerAccountDAO {
 	 * @param trustlevel
 	 * @return
 	 */
-	public static List<ServerAccount> getListOfTrustLevel(int trustlevel){
+	public static List<ServerAccount> getByTrustLevel(int trustlevel){
 		Session session = openSession();
 		session.beginTransaction();
 		@SuppressWarnings("unchecked")
