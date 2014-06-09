@@ -7,8 +7,10 @@ import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
+import java.security.Provider;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.Security;
 import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -16,6 +18,7 @@ import java.security.spec.X509EncodedKeySpec;
 
 import org.apache.commons.codec.binary.Base64;
 import org.bouncycastle.jce.ECNamedCurveTable;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jce.spec.ECParameterSpec;
 
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
@@ -25,6 +28,22 @@ import ch.uzh.csg.mbps.customserialization.UnknownPKIAlgorithmException;
 public class KeyHandler {
 	
 	private static final String SECURITY_PROVIDER = "BC";
+	
+	static {
+		Provider[] providers = Security.getProviders();
+		boolean exists = false;
+		for (Provider p : providers) {
+			if (p.getName().equals(SECURITY_PROVIDER)) {
+				exists = true;
+				break;
+			}
+		}
+		if (!exists) {
+			Security.addProvider(new BouncyCastleProvider());
+		}
+	}
+	
+	//TODO jeton: dynamic or static?
 	
 	/*
 	 * The BouncyCastle security provider is added statically, to avoid errors
