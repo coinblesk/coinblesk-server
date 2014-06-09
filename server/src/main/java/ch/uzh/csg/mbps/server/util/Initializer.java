@@ -91,7 +91,7 @@ public class Initializer implements InitializingBean{
 			Constants.PRIVATEKEY = keypair.getPrivate();
 			Constants.PUBLICKEY = keypair.getPublic();
 		} catch (Exception e) {
-			LOGGER.error("Problem creating Serverkeys.");
+			LOGGER.error("Problem creating Serverkeys: " + e.getMessage());
 		}
 	}
 	
