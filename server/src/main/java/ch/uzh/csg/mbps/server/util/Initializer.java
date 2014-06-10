@@ -99,7 +99,7 @@ public class Initializer implements InitializingBean{
 		try {
 			String keyFilePath = "ServerKeys.txt";
 			File f = new File(getClass().getResource("/" + keyFilePath).toURI());
-			if (f.exists()) {
+			if (f != null && f.exists()) {
 				f.delete();
 			}
 		} catch (URISyntaxException e) {
