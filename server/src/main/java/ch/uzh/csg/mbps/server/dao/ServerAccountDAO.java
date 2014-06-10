@@ -52,7 +52,7 @@ public class ServerAccountDAO {
 			transaction.commit();
 			LOGGER.info("ServerAccount created: " + fromDb.toString());
 		} catch(HibernateException e) {
-			LOGGER.error("Problem creating ServerAccount: " + serverAccount.toString());
+			LOGGER.error("Problem creating ServerAccount: " + serverAccount.toString() + " Error: " + e.getMessage());
 			if(transaction != null)
 				transaction.rollback();
 			throw e;

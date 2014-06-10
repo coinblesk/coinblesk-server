@@ -63,7 +63,8 @@ public class ServerAccount {
 		this.url = url;
 		this.email = email;
 		this.deleted = false;
-		this.balanceLimit = new BigDecimal(0);
+		this.balanceLimit = new BigDecimal(0.0);
+		this.activeBalance = new BigDecimal(0.0);
 		this.creationDate = new Date();
 		this.publicKey = publicKey;
 		this.trustLevel = 0;
