@@ -1,30 +1,25 @@
 package ch.uzh.csg.mbps.server.service;
 
 import java.math.BigDecimal;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.SignatureException;
-import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 
 import org.hibernate.HibernateException;
 
+import ch.uzh.csg.mbps.customserialization.Currency;
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
-import ch.uzh.csg.mbps.customserialization.UnknownPKIAlgorithmException;
-import ch.uzh.csg.mbps.customserialization.exceptions.NotSignedException;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
-import ch.uzh.csg.mbps.model.UserPublicKey;
 import ch.uzh.csg.mbps.server.clientinterface.ITransaction;
 import ch.uzh.csg.mbps.server.dao.TransactionDAO;
 import ch.uzh.csg.mbps.server.dao.UserPublicKeyDAO;
 import ch.uzh.csg.mbps.server.domain.DbTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
+import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.Converter;
 import ch.uzh.csg.mbps.server.util.exceptions.PayOutRuleNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.TransactionException;
@@ -73,7 +68,6 @@ public class TransactionService implements ITransaction {
 		return  TransactionDAO.getLast3Transactions(username);
 	}
 
-
 	/**
 	 * Counts and returns number of {@link DbTransaction}s which are saved in the DB for
 	 * {@link UserAccount} with username.
@@ -89,13 +83,12 @@ public class TransactionService implements ITransaction {
 
 	@Override
 	public ServerPaymentResponse createTransaction(ServerPaymentRequest serverPaymentRequest) throws TransactionException, UserAccountNotFoundException {
-		//TODO jeton: refactor
 		//TODO jeton: check timestamp how long is transaction valid!
 		if (serverPaymentRequest == null)
 			throw new TransactionException(PAYMENT_REFUSE);
 
 		int numberOfSignatures = serverPaymentRequest.getNofSignatures();
-
+		
 		PaymentRequest payerRequest = null;
 		PaymentRequest payeeRequest = null;
 
@@ -124,8 +117,7 @@ public class TransactionService implements ITransaction {
 			if(! payerRequest.verify(KeyHandler.decodePublicKey(UserPublicKeyDAO.getUserPublicKey(payerUserAccount.getId(), payerRequest.getKeyNumber()).getPublicKey()))){
 				throw new TransactionException(PAYMENT_REFUSE);
 			}
-		} catch (InvalidKeyException | NotSignedException | NoSuchAlgorithmException | SignatureException
-				| UnknownPKIAlgorithmException | NoSuchProviderException | InvalidKeySpecException e1) {
+		} catch (Exception e) {
 			throw new TransactionException(PAYMENT_REFUSE);
 		}
 
@@ -137,8 +129,7 @@ public class TransactionService implements ITransaction {
 				if(! payeeRequest.verify(KeyHandler.decodePublicKey(UserPublicKeyDAO.getUserPublicKey(payeeUserAccount.getId(), payeeRequest.getKeyNumber()).getPublicKey()))){
 					throw new TransactionException(PAYMENT_REFUSE);
 				}
-			} catch (InvalidKeyException | NotSignedException | NoSuchAlgorithmException | SignatureException
-					| UnknownPKIAlgorithmException | NoSuchProviderException | InvalidKeySpecException e) {
+			} catch (Exception e) {
 				throw new TransactionException(PAYMENT_REFUSE);
 			}
 		}
@@ -161,15 +152,37 @@ public class TransactionService implements ITransaction {
 			// do nothing as user requests actually a transaction and not a payout
 		}
 
-		//TODO jeton: add server pki!
 		ServerPaymentResponse signedResponse = null;
-		if(numberOfSignatures==1){
-//						PaymentResponse paymentResponsePayer = new PaymentResponse(pkiAlgorithm, keyNumber, ServerResponseStatus.SUCCESS, reason, dbTransaction.getUsernamePayer(), dbTransaction.getUsernamePayee(), dbTransaction.getCurrency(), dbTransaction.getAmount(), dbTransaction.getTimestamp());
-			//			signedResponse = new ServerPaymentResponse(paymentResponsePayer);
-		} else{
-//						PaymentResponse paymentResponsePayer = new PaymentResponse(pkiAlgorithm, keyNumber, ServerResponseStatus.SUCCESS, reason, dbTransaction.getUsernamePayer(), dbTransaction.getUsernamePayee(), dbTransaction.getCurrency(), dbTransaction.getAmount(), dbTransaction.getTimestamp());
-//						PaymentResponse paymentResponsePayee = new PaymentResponse(pkiAlgorithm, keyNumber, ServerResponseStatus.SUCCESS, reason, dbTransaction.getUsernamePayer(), dbTransaction.getUsernamePayee(), dbTransaction.getCurrency(), dbTransaction.getAmount(), dbTransaction.getTimestamp());
-			//			signedResponse = new ServerPaymentResponse(paymentResponsePayer, paymentResponsePayee);
+		try {
+			PaymentResponse paymentResponsePayer = new PaymentResponse(
+					PKIAlgorithm.getPKIAlgorithm(Constants.SERVER_KEY_PAIR.getPkiAlgorithm()),
+					Constants.SERVER_KEY_PAIR.getKeyNumber(),
+					ServerResponseStatus.SUCCESS,
+					null,
+					dbTransaction.getUsernamePayer(),
+					dbTransaction.getUsernamePayee(),
+					Currency.getCurrency(dbTransaction.getCurrency()),
+					Converter.getLongFromBigDecimal(dbTransaction.getAmount()),
+					dbTransaction.getTimestamp().getTime());
+			paymentResponsePayer.sign(KeyHandler.decodePrivateKey(Constants.SERVER_KEY_PAIR.getPrivateKey()));
+			
+			if (numberOfSignatures == 1) {
+				signedResponse = new ServerPaymentResponse(paymentResponsePayer);
+			} else {
+				PaymentResponse paymentResponsePayee = new PaymentResponse(
+						PKIAlgorithm.getPKIAlgorithm(Constants.SERVER_KEY_PAIR.getPkiAlgorithm()),
+						Constants.SERVER_KEY_PAIR.getKeyNumber(),
+						ServerResponseStatus.SUCCESS,
+						null,
+						dbTransaction.getUsernamePayer(),
+						dbTransaction.getUsernamePayee(),
+						Currency.getCurrency(dbTransaction.getCurrency()),
+						Converter.getLongFromBigDecimal(dbTransaction.getAmount()),
+						dbTransaction.getTimestamp().getTime());
+				signedResponse = new ServerPaymentResponse(paymentResponsePayer, paymentResponsePayee);
+			}
+		} catch (Exception e) {
+			throw new TransactionException(INTERNAL_ERROR);
 		}
 
 		return signedResponse;

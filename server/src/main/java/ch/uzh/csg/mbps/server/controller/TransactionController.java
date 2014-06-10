@@ -67,8 +67,10 @@ public class TransactionController {
 			responseObject.setCreateTransactionTO(new CreateTransactionTransferObject(serverPaymentResponse));
 			return responseObject;
 		} catch (TransactionException e) {
+			//TODO jeton: if refused, sign response
 			return new CustomResponseObject(false, e.getMessage());
 		} catch (Exception e) {
+			//TODO jeton: if refused, sign response
 			return new CustomResponseObject(false, Constants.INTERNAL_SERVER_ERROR);
 		}
 	}

@@ -54,10 +54,11 @@ public class DbTransaction implements Serializable {
 	}
 	
 	public DbTransaction(PaymentRequest paymentRequest) throws UserAccountNotFoundException {
-		this.amount = Converter.getBigDecimalFromLong(paymentRequest.getAmount());
 		this.usernamePayer = paymentRequest.getUsernamePayer();
 		this.usernamePayee = paymentRequest.getUsernamePayee();
-		this.inputCurrency = paymentRequest.getInputCurrency().toString();
+		this.currency = paymentRequest.getCurrency().getCurrencyCode();
+		this.amount = Converter.getBigDecimalFromLong(paymentRequest.getAmount());
+		this.inputCurrency = paymentRequest.getInputCurrency().getCurrencyCode();
 		this.inputCurrencyAmount = Converter.getBigDecimalFromLong(paymentRequest.getInputAmount());
 		this.timestamp = new Date();
 	}
