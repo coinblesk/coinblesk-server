@@ -37,6 +37,7 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 @Controller
 @RequestMapping("/user")
 public class UserAccountController {
+	//TODO: mehmet move to Constans class
 	private static final String USERNAME_ALREADY_EXISTS = "Username already exists.";
 	private static final String CREATION_ERROR = "Could not create account - internal error.";
 	private static final String CREATION_SUCCESS = "Your Account has successfully been created. Please check your emails to verify your account.";
