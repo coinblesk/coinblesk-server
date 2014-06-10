@@ -19,7 +19,7 @@ import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.jce.spec.ECParameterSpec;
 
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
-import ch.uzh.csg.mbps.customserialization.UnknownPKIAlgorithmException;
+import ch.uzh.csg.mbps.customserialization.exceptions.UnknownPKIAlgorithmException;
 
 //TODO jeton: javadoc
 public class KeyHandler {

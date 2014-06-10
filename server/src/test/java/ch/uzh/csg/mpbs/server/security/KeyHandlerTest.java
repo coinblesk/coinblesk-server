@@ -20,7 +20,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
-import ch.uzh.csg.mbps.customserialization.UnknownPKIAlgorithmException;
+import ch.uzh.csg.mbps.customserialization.exceptions.UnknownPKIAlgorithmException;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
 
 public class KeyHandlerTest {
