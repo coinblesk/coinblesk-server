@@ -16,7 +16,6 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.hibernate.annotations.Index;
 
-
 @Entity(name="SERVER_ACCOUNT")
 public class ServerAccount {
 	
@@ -165,7 +164,7 @@ public class ServerAccount {
 		sb.append(getCreationDate());
 		sb.append(", active balance: ");
 		sb.append(getActiveBalance());
-		sb.append(", tust level: ");
+		sb.append(", trust level: ");
 		sb.append(getTrustLevel());
 		return sb.toString();
 	}
