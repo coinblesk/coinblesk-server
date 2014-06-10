@@ -1,6 +1,7 @@
 package ch.uzh.csg.mbps.server.util;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -51,12 +52,10 @@ public class Initializer implements InitializingBean{
 			//activates Task for checking PayOutRules
 			new ClassPathXmlApplicationContext("HourlyQuartz.xml");
 			
-			deleteOldKeysFile();
-			
 			File serverKeys = null;
 			URI uri = null;
 			try {
-				uri = getClass().getResource(File.separator + KEY_FILE_NAME).toURI();
+				uri = getClass().getClassLoader().getResource("/" + KEY_FILE_NAME).toURI();
 			} catch (URISyntaxException e) {
 				LOGGER.info("Couldnt create server keys", e);
 			}
@@ -64,21 +63,17 @@ public class Initializer implements InitializingBean{
 			serverKeys = new File(uri);
 			
 			try {
-				if (!serverKeys.exists()) {
-					boolean created = serverKeys.createNewFile();
-					if (!created)
-						throw new Exception("could not create file "+uri);
-					
+				CustomKeyPair ckp;
+				FileReader fr = new FileReader(serverKeys);
+				if (fr.read() == -1) {
+					// this means the file is empty
 					KeyPair keyPair = KeyHandler.generateKeyPair();
-					CustomKeyPair ckp = new CustomKeyPair(PKIAlgorithm.DEFAULT.getCode(), (byte) 1, KeyHandler.encodePublicKey(keyPair.getPublic()), KeyHandler.encodePrivateKey(keyPair.getPrivate()));
+					ckp = new CustomKeyPair(PKIAlgorithm.DEFAULT.getCode(), (byte) 1, KeyHandler.encodePublicKey(keyPair.getPublic()), KeyHandler.encodePrivateKey(keyPair.getPrivate()));
 					saveToXml(serverKeys, ckp);
-					
-					Constants.SERVER_KEY_PAIR = ckp;
 				} else {
-					CustomKeyPair ckp = loadFromXml(serverKeys, (byte) 1);
-					
-					Constants.SERVER_KEY_PAIR = ckp;
+					ckp = loadFromXml(serverKeys, (byte) 1);
 				}
+				Constants.SERVER_KEY_PAIR = ckp;
 			} catch (Exception e) {
 				LOGGER.error("Problem reading Serverkeys from Input File", e);
 			}
@@ -95,17 +90,6 @@ public class Initializer implements InitializingBean{
 		updateExchangeRateTask();
 	}
 
-	private void deleteOldKeysFile() {
-		try {
-			String keyFilePath = "ServerKeys.txt";
-			File f = new File(getClass().getResource("/" + keyFilePath).toURI());
-			if (f != null && f.exists()) {
-				f.delete();
-			}
-		} catch (URISyntaxException e) {
-		}
-	}
-	
 	private void saveToXml(File serverKeys, CustomKeyPair ckp) throws Exception {
 		DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
