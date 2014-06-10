@@ -20,6 +20,8 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.web.context.WebApplicationContext;
 
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
+import ch.uzh.csg.mbps.keys.CustomKeyPair;
 import ch.uzh.csg.mbps.responseobject.PayOutRulesTransferObject;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.PayOutRule;
@@ -70,8 +72,7 @@ public class PayOutRuleServiceTest {
 
 			KeyPair keypair = KeyHandler.generateKeyPair();
 
-			Constants.PRIVATEKEY = keypair.getPrivate();
-			Constants.PUBLICKEY = keypair.getPublic();
+			Constants.SERVER_KEY_PAIR = new CustomKeyPair(PKIAlgorithm.DEFAULT.getCode(), (byte) 1, KeyHandler.encodePublicKey(keypair.getPublic()), KeyHandler.encodePrivateKey(keypair.getPrivate()));
 
 			initialized = true;
 		}

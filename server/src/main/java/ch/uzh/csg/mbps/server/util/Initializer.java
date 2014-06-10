@@ -73,13 +73,11 @@ public class Initializer implements InitializingBean{
 					CustomKeyPair ckp = new CustomKeyPair(PKIAlgorithm.DEFAULT.getCode(), (byte) 1, KeyHandler.encodePublicKey(keyPair.getPublic()), KeyHandler.encodePrivateKey(keyPair.getPrivate()));
 					saveToXml(serverKeys, ckp);
 					
-					Constants.PRIVATEKEY = keyPair.getPrivate();
-					Constants.PUBLICKEY = keyPair.getPublic();	
+					Constants.SERVER_KEY_PAIR = ckp;
 				} else {
 					CustomKeyPair ckp = loadFromXml(serverKeys, (byte) 1);
 					
-					Constants.PRIVATEKEY = KeyHandler.decodePrivateKey(ckp.getPrivateKey());
-					Constants.PUBLICKEY = KeyHandler.decodePublicKey(ckp.getPublicKey());
+					Constants.SERVER_KEY_PAIR = ckp;
 				}
 			} catch (Exception e) {
 				LOGGER.error("Problem reading Serverkeys from Input File", e);

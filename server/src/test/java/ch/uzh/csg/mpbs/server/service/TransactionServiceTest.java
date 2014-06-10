@@ -22,6 +22,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
+import ch.uzh.csg.mbps.keys.CustomKeyPair;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
 import ch.uzh.csg.mbps.server.dao.TransactionDAO;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
@@ -47,8 +49,7 @@ public class TransactionServiceTest {
 		if (!initialized) {
 			KeyPair keypair = KeyHandler.generateKeyPair();
 			
-			Constants.PRIVATEKEY = keypair.getPrivate();
-			Constants.PUBLICKEY = keypair.getPublic();
+			Constants.SERVER_KEY_PAIR = new CustomKeyPair(PKIAlgorithm.DEFAULT.getCode(), (byte) 1, KeyHandler.encodePublicKey(keypair.getPublic()), KeyHandler.encodePrivateKey(keypair.getPrivate()));
 			
 			initialized = true;
 		}

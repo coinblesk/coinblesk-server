@@ -36,6 +36,8 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
+import ch.uzh.csg.mbps.keys.CustomKeyPair;
 import ch.uzh.csg.mbps.responseobject.CreateTransactionTransferObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.responseobject.GetHistoryTransferObject;
@@ -110,8 +112,7 @@ public class TransactionControllerTest {
 			
 			KeyPair keypair = KeyHandler.generateKeyPair();
 			
-			Constants.PRIVATEKEY = keypair.getPrivate();
-			Constants.PUBLICKEY = keypair.getPublic();
+			Constants.SERVER_KEY_PAIR = new CustomKeyPair(PKIAlgorithm.DEFAULT.getCode(), (byte) 1, KeyHandler.encodePublicKey(keypair.getPublic()), KeyHandler.encodePrivateKey(keypair.getPrivate()));
 				
 			initialized = true;
 		}

@@ -96,7 +96,7 @@ public class UserAccountController {
 			//TODO: do not send server pub key on each get useraccount!! create method login'
 			
 			//TODO: return key number of server!!
-			responseObject.setEncodedServerPublicKey(KeyHandler.encodePublicKey(Constants.PUBLICKEY));
+			responseObject.setEncodedServerPublicKey(Constants.SERVER_KEY_PAIR.getPublicKey());
 			responseObject.setReadAccountTO(new ReadAccountTransferObject(transform(userAccount)));
 			return responseObject;
 		} catch (UserAccountNotFoundException e) {
