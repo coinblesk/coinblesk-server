@@ -9,7 +9,7 @@ import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 public interface IServerTransaction {
 
 	
-	//TODO: mehmet do comments
+	//TODO: mehmet: javadoc
 	/**
 	 * 
 	 * @param serverTransaction

@@ -28,7 +28,7 @@ public class ServerAccountService implements IServerAccount{
 	private ServerAccountService() {
 	}
 	
-	//TODO: mehmet do comments
+	//TODO: mehmet: javadoc
 	/**
 	 * 
 	 * @return

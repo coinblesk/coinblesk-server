@@ -35,7 +35,7 @@ public class ServerTransactionDAO {
 		return sessionFactory.openSession();
 	}
 	
-	//TODO: mehmet do comments
+	//TODO: mehmet: javadoc
 	/**
 	 * 
 	 * @param serverTransaction

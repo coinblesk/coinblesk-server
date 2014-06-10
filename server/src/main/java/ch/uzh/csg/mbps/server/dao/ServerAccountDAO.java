@@ -23,7 +23,7 @@ public class ServerAccountDAO {
 	private ServerAccountDAO(){
 	}
 	
-	//TODO: mehmet do comments
+	//TODO: mehmet: javadoc
 	/**
 	 * 
 	 * @return

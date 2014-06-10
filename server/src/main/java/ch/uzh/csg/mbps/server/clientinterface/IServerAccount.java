@@ -14,7 +14,7 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
 public interface IServerAccount {
 	
-	//TODO: mehmet do comments
+	//TODO: mehmet: javadoc
 	/**
 	 * 
 	 * @param serverAccount

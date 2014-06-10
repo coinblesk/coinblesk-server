@@ -22,7 +22,7 @@ public class ServerTransactionService implements IServerTransaction{
 	private ServerTransactionService() {
 	}
 	
-	//TODO: mehmet do comments
+	//TODO: mehmet: javadoc
 	/**
 	 * 
 	 * @return

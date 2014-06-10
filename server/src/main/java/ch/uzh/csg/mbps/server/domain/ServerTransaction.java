@@ -44,6 +44,14 @@ public class ServerTransaction {
 	public ServerTransaction(){
 	}
 	
+	/**
+	 * Creates a new server transaction.
+	 * 
+	 * @param tx
+	 *            != NULL
+	 * @param received
+	 *            != NULL
+	 */
 	public ServerTransaction(Transaction tx, boolean received) {
 		this.timestamp = tx.time();
 		this.amount = new BigDecimal(tx.amount());
