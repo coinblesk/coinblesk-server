@@ -18,8 +18,8 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.hibernate.annotations.Index;
 
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
-import ch.uzh.csg.mbps.server.util.Converter;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
+import ch.uzh.csg.mbps.util.Converter;
 
 @Entity(name = "DB_TRANSACTION")
 public class DbTransaction implements Serializable {
