@@ -39,7 +39,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
-import ch.uzh.csg.mbps.model.CustomPublicKey;
+import ch.uzh.csg.mbps.keys.CustomPublicKey;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
 import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;

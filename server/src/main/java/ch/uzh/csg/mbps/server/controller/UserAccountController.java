@@ -11,7 +11,7 @@ import org.springframework.web.servlet.ModelAndView;
 
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.customserialization.exceptions.UnknownPKIAlgorithmException;
-import ch.uzh.csg.mbps.model.CustomPublicKey;
+import ch.uzh.csg.mbps.keys.CustomPublicKey;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
 import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;
