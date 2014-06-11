@@ -39,7 +39,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
-import ch.uzh.csg.mbps.model.UserPublicKey;
+import ch.uzh.csg.mbps.model.CustomPublicKey;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
 import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;
@@ -431,7 +431,7 @@ public class UserAccountControllerTest {
 		
 		KeyPair keyPair = KeyHandler.generateKeyPair();
 		String encodedPublicKey = KeyHandler.encodePublicKey(keyPair.getPublic());
-		UserPublicKey upk = new UserPublicKey(PKIAlgorithm.DEFAULT.getCode(), encodedPublicKey);
+		CustomPublicKey upk = new CustomPublicKey(PKIAlgorithm.DEFAULT.getCode(), encodedPublicKey);
 		
 		ObjectMapper mapper = new ObjectMapper();
 		String mappedString = mapper.writeValueAsString(upk);

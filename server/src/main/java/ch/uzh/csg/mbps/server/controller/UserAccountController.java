@@ -11,7 +11,7 @@ import org.springframework.web.servlet.ModelAndView;
 
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.customserialization.exceptions.UnknownPKIAlgorithmException;
-import ch.uzh.csg.mbps.model.UserPublicKey;
+import ch.uzh.csg.mbps.model.CustomPublicKey;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
 import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;
@@ -252,7 +252,7 @@ public class UserAccountController {
 	//TODO jeton: javadoc
 	@RequestMapping(value = "/savePublicKey", method = RequestMethod.POST, consumes = "application/json")
 	@ResponseBody
-	public CustomResponseObject savePublicKey(@RequestBody UserPublicKey userPublicKey) {
+	public CustomResponseObject savePublicKey(@RequestBody CustomPublicKey userPublicKey) {
 		try {
 			UserAccount userAccount = UserAccountService.getInstance().getByUsername(AuthenticationInfo.getPrincipalUsername());
 			PKIAlgorithm pkiAlgorithm = PKIAlgorithm.getPKIAlgorithm(userPublicKey.getPKIAlgorithm());

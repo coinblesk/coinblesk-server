@@ -195,7 +195,7 @@
 		<dependency>
 			<groupId>ch.uzh.csg</groupId>
 			<artifactId>mbps-shared-resources</artifactId>
-			<version>1.1.5</version>
+			<version>1.1.6</version>
 		</dependency>
 		
 		<!-- Bouncy Castle -->
