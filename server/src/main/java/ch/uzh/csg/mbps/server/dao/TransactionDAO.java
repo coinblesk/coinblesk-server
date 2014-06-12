@@ -48,7 +48,6 @@ public class TransactionDAO {
 		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
 		Session session = openSession();
 		session.beginTransaction();	
-		//TODO simon: fix!
 		List<HistoryTransaction> resultWithAliasedBean = session.createSQLQuery(
 				  "SELECT transaction.timestamp, u2.username as buyer, u1.username as seller, transaction.amount " +
 				  "FROM DB_TRANSACTION transaction " +
@@ -85,7 +84,6 @@ public class TransactionDAO {
 		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
 		Session session = openSession();
 		session.beginTransaction();
-		//TODO simon: fix!
 		long nofResults = ((Number) session.createSQLQuery(
 				  "SELECT COUNT(*) " +
 				  "FROM DB_TRANSACTION transaction " +
