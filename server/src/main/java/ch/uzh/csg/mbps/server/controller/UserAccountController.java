@@ -1,5 +1,9 @@
 package ch.uzh.csg.mbps.server.controller;
 
+import java.io.IOException;
+
+import net.minidev.json.parser.ParseException;
+
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,12 +17,17 @@ import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.customserialization.exceptions.UnknownPKIAlgorithmException;
 import ch.uzh.csg.mbps.keys.CustomPublicKey;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
+import ch.uzh.csg.mbps.responseobject.GetHistoryTransferObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
 import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.service.PayInTransactionService;
+import ch.uzh.csg.mbps.server.service.PayOutTransactionService;
+import ch.uzh.csg.mbps.server.service.TransactionService;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.Constants;
+import ch.uzh.csg.mbps.server.util.ExchangeRates;
 import ch.uzh.csg.mbps.server.util.PasswordMatcher;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
@@ -80,7 +89,7 @@ public class UserAccountController {
 			return new CustomResponseObject(false, EMAIL_ALREADY_EXISTS);
 		}
 	}
-	
+
 	/**
 	 * Returns UserAccount for authenticated user.
 	 * @return CustomResponseObject with UserAccount object.
@@ -91,9 +100,9 @@ public class UserAccountController {
 		try {
 			UserAccount userAccount = UserAccountService.getInstance().getByUsername(AuthenticationInfo.getPrincipalUsername());
 			CustomResponseObject responseObject = new CustomResponseObject(true, READ_SUCCESS);
-			
+
 			//TODO: do not send server pub key on each get useraccount!! create method login'
-			
+
 			//TODO: return key number of server!!
 			responseObject.setEncodedServerPublicKey(Constants.SERVER_KEY_PAIR.getPublicKey());
 			responseObject.setReadAccountTO(new ReadAccountTransferObject(transform(userAccount)));
@@ -102,7 +111,7 @@ public class UserAccountController {
 			return new CustomResponseObject(false, ACCOUNT_NOT_FOUND);
 		}
 	}
-	
+
 	/**
 	 * Transforms server UserAccount (DB-model) into UserAccount for client.
 	 * Does not change any UserAccount variables, creates a copy with the same
@@ -126,7 +135,7 @@ public class UserAccountController {
 		ua.setRoles(userAccount.getRoles());
 		return ua;
 	}
-	
+
 	/**
 	 * Updates a emailaddress or password for a  {@link UserAccount}. Can not update
 	 * other variables.
@@ -148,7 +157,7 @@ public class UserAccountController {
 			return new CustomResponseObject(false, ACCOUNT_NOT_FOUND);
 		}		
 	}
-	
+
 	/**
 	 * Deletes a {@link UserAccount} if balance is equal to zero. DB entry is not
 	 * deleted, instead flag "isDeleted" is set to true. A deleted {@link UserAccount}
@@ -172,7 +181,7 @@ public class UserAccountController {
 			return new CustomResponseObject(false, BALANCE_NOT_ZERO);
 		}
 	}
-	
+
 	/**
 	 * Entry point used to verify a {@link UserAccount}. Link is opened by browser and
 	 * returns a browser page. Not used for access via android client.
@@ -188,7 +197,7 @@ public class UserAccountController {
 		else
 			return "FailedEmailVerification";
 	}
-	
+
 	/**
 	 * Allows a user to reset his password. Creates a unique identification
 	 * token which is sent to the users email address and saved to DB.
@@ -209,7 +218,7 @@ public class UserAccountController {
 			return new CustomResponseObject(false, e.getMessage());
 		}
 	}	
-	
+
 	/**
 	 * Resets {@link UserAccount} password if passwords match. Returns java server page
 	 * with information if password reset was successful or not.
@@ -248,9 +257,51 @@ public class UserAccountController {
 			return new ModelAndView("WrongToken", "command", null);
 		}
 	}
-	
-	//TODO jeton: javadoc
-	@RequestMapping(value = "/savePublicKey", method = RequestMethod.POST, consumes = "application/json")
+
+	/**
+	 * Request returns necessary information for updating the mainscreen of the MBPS
+	 * application.
+	 * 
+	 * @return {@link CustomResponseObject} with information about
+	 *         successful/non successful request, balance, exchangerate and last
+	 *         3 transactions
+	 */
+	@RequestMapping(value = "/mainActivityRequests", method = RequestMethod.GET, produces = "application/json")
+	@ResponseBody
+	public CustomResponseObject mainActivityRequests() {
+		try {
+			String username = AuthenticationInfo.getPrincipalUsername();
+			CustomResponseObject response = new CustomResponseObject();
+			response.setSuccessful(true);
+			response.setType(Type.OTHER);
+
+			// set ExchangeRate
+			response.setMessage(ExchangeRates.getExchangeRate().toString());
+			//set History
+			GetHistoryTransferObject ghto = new GetHistoryTransferObject();
+			ghto.setTransactionHistory(TransactionService.getInstance().getLast3Transactions(username));
+			ghto.setPayInTransactionHistory(PayInTransactionService.getInstance().getLast3Transactions(username));
+			ghto.setPayOutTransactionHistory(PayOutTransactionService.getInstance().getLast3Transactions(username));
+			response.setGetHistoryTO(ghto);
+			//set UserAccount
+			ReadAccountTransferObject rato = new ReadAccountTransferObject(transform(UserAccountService.getInstance().getByUsername(AuthenticationInfo.getPrincipalUsername())));
+			response.setReadAccountTO(rato);
+
+			return response;
+		} catch (ParseException | IOException | UserAccountNotFoundException e) {
+			return new CustomResponseObject(false, "0.0", Type.OTHER);
+		}
+	}
+
+	/**
+	 * Saves a new {@link CustomPublicKey} entry for authenticated user.
+	 * 
+	 * @param userPublicKey
+	 * @return {@link CustomResponseObject} with information about
+	 *         successful/non successful request and assigned keyNumber as
+	 *         message.
+	 */
+	@RequestMapping(value = "/savePublicKey", method = RequestMethod.POST, consumes = "application/json", produces = "application/json")
 	@ResponseBody
 	public CustomResponseObject savePublicKey(@RequestBody CustomPublicKey userPublicKey) {
 		try {
@@ -265,5 +316,5 @@ public class UserAccountController {
 			return new CustomResponseObject(false, "unkown pki algorithm", Type.PUBLIC_KEY_SAVED);
 		}
 	}
-	
+
 }
