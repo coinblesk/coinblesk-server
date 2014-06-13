@@ -52,7 +52,6 @@ import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
-import ch.uzh.csg.mbps.util.Pair;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
