@@ -101,7 +101,7 @@ public class UserAccountController {
 	public CustomResponseObject getUserAccount() {
 		try {
 			UserAccount userAccount = UserAccountService.getInstance().getByUsername(AuthenticationInfo.getPrincipalUsername());
-			CustomResponseObject responseObject = new CustomResponseObject(true, String.valueOf(Constants.SERVER_KEY_PAIR.getKeyNumber()), Type.AFTER_LOGIN);
+			CustomResponseObject responseObject = new CustomResponseObject(true, null, Type.AFTER_LOGIN);
 			CustomPublicKey cpk = new CustomPublicKey(Constants.SERVER_KEY_PAIR.getKeyNumber(), Constants.SERVER_KEY_PAIR.getPkiAlgorithm(), Constants.SERVER_KEY_PAIR.getPublicKey());
 			responseObject.setServerPublicKey(cpk);
 			responseObject.setReadAccountTO(new ReadAccountTransferObject(transform(userAccount)));
