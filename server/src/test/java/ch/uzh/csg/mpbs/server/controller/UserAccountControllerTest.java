@@ -171,7 +171,7 @@ public class UserAccountControllerTest {
 
 		HttpSession session = loginAndGetSession(test29.getUsername(), plainTextPassword);
 
-		mvcResult = mockMvc.perform(get("/user/read").secure(false).session((MockHttpSession) session))
+		mvcResult = mockMvc.perform(get("/user/afterLogin").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andExpect(content().contentType(TestUtil.APPLICATION_JSON_UTF8))
 				.andReturn();
@@ -182,7 +182,7 @@ public class UserAccountControllerTest {
 		CustomResponseObject transferObject = mapper.readValue(asString, CustomResponseObject.class);
 
 		assertEquals(true, transferObject.isSuccessful());
-		assertNotNull(transferObject.getEncodedServerPublicKey());
+		assertNotNull(transferObject.getServerPublicKey());
 		assertNotNull(transferObject.getReadAccountTO());
 
 		ReadAccountTransferObject readAccountTO = transferObject.getReadAccountTO();
@@ -195,7 +195,7 @@ public class UserAccountControllerTest {
 
 	@Test
 	public void testReadUserAccount_FailNotAuthorized() throws Exception {
-		mockMvc.perform(get("/user/read").secure(false)).andExpect(status().isUnauthorized());
+		mockMvc.perform(get("/user/afterLogin").secure(false)).andExpect(status().isUnauthorized());
 	}
 
 	@Test
@@ -204,7 +204,7 @@ public class UserAccountControllerTest {
 		createAccountAndVerifyAndReload(test24, new BigDecimal(0.0));
 		HttpSession session = loginAndGetSession(test24.getUsername(), plainTextPassword);
 
-		MvcResult mvcResult = mockMvc.perform(get("/user/read").secure(false).session((MockHttpSession) session))
+		MvcResult mvcResult = mockMvc.perform(get("/user/afterLogin").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andExpect(content().contentType(TestUtil.APPLICATION_JSON_UTF8))
 				.andReturn();
@@ -215,7 +215,7 @@ public class UserAccountControllerTest {
 		CustomResponseObject transferObject = mapper.readValue(asString, CustomResponseObject.class);
 
 		assertEquals(true, transferObject.isSuccessful());
-		assertNotNull(transferObject.getEncodedServerPublicKey());
+		assertNotNull(transferObject.getServerPublicKey());
 		assertNotNull(transferObject.getReadAccountTO());
 
 		ReadAccountTransferObject readAccountTO = transferObject.getReadAccountTO();
@@ -248,7 +248,7 @@ public class UserAccountControllerTest {
 		mockMvc.perform(post("/user/update").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isOk());
 
-		MvcResult mvcResult = mockMvc.perform(get("/user/read").secure(false).session((MockHttpSession) session))
+		MvcResult mvcResult = mockMvc.perform(get("/user/afterLogin").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andExpect(content().contentType(TestUtil.APPLICATION_JSON_UTF8))
 				.andReturn();
@@ -259,7 +259,7 @@ public class UserAccountControllerTest {
 		CustomResponseObject transferObject = mapper.readValue(response, CustomResponseObject.class);
 
 		assertEquals(true, transferObject.isSuccessful());
-		assertNotNull(transferObject.getEncodedServerPublicKey());
+		assertNotNull(transferObject.getServerPublicKey());
 		assertNotNull(transferObject.getReadAccountTO());
 
 		ReadAccountTransferObject readAccountTO = transferObject.getReadAccountTO();
@@ -294,7 +294,7 @@ public class UserAccountControllerTest {
 		mockMvc.perform(post("/user/delete").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON))
 				.andExpect(status().isOk());
 
-		MvcResult mvcResult = mockMvc.perform(get("/user/read").secure(false).session((MockHttpSession) session)).andReturn();
+		MvcResult mvcResult = mockMvc.perform(get("/user/afterLogin").secure(false).session((MockHttpSession) session)).andReturn();
 
 		String contentAsString = mvcResult.getResponse().getContentAsString();
 
@@ -402,7 +402,7 @@ public class UserAccountControllerTest {
 
 		HttpSession session = loginAndGetSession(test30.getUsername(), "test");
 
-		MvcResult mvcResult3 = mockMvc.perform(get("/user/read").secure(false).session((MockHttpSession) session))
+		MvcResult mvcResult3 = mockMvc.perform(get("/user/afterLogin").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andExpect(content().contentType(TestUtil.APPLICATION_JSON_UTF8))
 				.andReturn();
@@ -412,7 +412,7 @@ public class UserAccountControllerTest {
 		CustomResponseObject transferObject2 = mapper.readValue(asString, CustomResponseObject.class);
 
 		assertEquals(true, transferObject2.isSuccessful());
-		assertNotNull(transferObject2.getEncodedServerPublicKey());
+		assertNotNull(transferObject2.getServerPublicKey());
 		assertNotNull(transferObject2.getReadAccountTO());
 
 		ReadAccountTransferObject readAccountTO = transferObject2.getReadAccountTO();
@@ -431,7 +431,7 @@ public class UserAccountControllerTest {
 		
 		KeyPair keyPair = KeyHandler.generateKeyPair();
 		String encodedPublicKey = KeyHandler.encodePublicKey(keyPair.getPublic());
-		CustomPublicKey upk = new CustomPublicKey(PKIAlgorithm.DEFAULT.getCode(), encodedPublicKey);
+		CustomPublicKey upk = new CustomPublicKey((byte) 1, PKIAlgorithm.DEFAULT.getCode(), encodedPublicKey);
 		
 		ObjectMapper mapper = new ObjectMapper();
 		String mappedString = mapper.writeValueAsString(upk);

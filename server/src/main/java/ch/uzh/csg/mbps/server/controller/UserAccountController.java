@@ -102,8 +102,8 @@ public class UserAccountController {
 		try {
 			UserAccount userAccount = UserAccountService.getInstance().getByUsername(AuthenticationInfo.getPrincipalUsername());
 			CustomResponseObject responseObject = new CustomResponseObject(true, String.valueOf(Constants.SERVER_KEY_PAIR.getKeyNumber()), Type.AFTER_LOGIN);
-			//TODO: return key number of server!!
-			responseObject.setEncodedServerPublicKey(Constants.SERVER_KEY_PAIR.getPublicKey());
+			CustomPublicKey cpk = new CustomPublicKey(Constants.SERVER_KEY_PAIR.getKeyNumber(), Constants.SERVER_KEY_PAIR.getPkiAlgorithm(), Constants.SERVER_KEY_PAIR.getPublicKey());
+			responseObject.setServerPublicKey(cpk);
 			responseObject.setReadAccountTO(new ReadAccountTransferObject(transform(userAccount)));
 			return responseObject;
 		} catch (UserAccountNotFoundException e) {
@@ -305,7 +305,7 @@ public class UserAccountController {
 	public CustomResponseObject savePublicKey(@RequestBody CustomPublicKey userPublicKey) {
 		try {
 			UserAccount userAccount = UserAccountService.getInstance().getByUsername(AuthenticationInfo.getPrincipalUsername());
-			PKIAlgorithm pkiAlgorithm = PKIAlgorithm.getPKIAlgorithm(userPublicKey.getPKIAlgorithm());
+			PKIAlgorithm pkiAlgorithm = PKIAlgorithm.getPKIAlgorithm(userPublicKey.getPkiAlgorithm());
 			byte keyNumber = UserAccountService.getInstance().saveUserPublicKey(userAccount.getId(), pkiAlgorithm, userPublicKey.getPublicKey());
 			return new CustomResponseObject(true, Byte.toString(keyNumber), Type.SAVE_PUBLIC_KEY);
 		} catch (UserAccountNotFoundException e) {
