@@ -55,7 +55,7 @@ public class Initializer implements InitializingBean{
 			File serverKeys = null;
 			URI uri = null;
 			try {
-				uri = getClass().getClassLoader().getResource("/" + KEY_FILE_NAME).toURI();
+				uri = getClass().getResource("/" + KEY_FILE_NAME).toURI();
 			} catch (URISyntaxException e) {
 				LOGGER.info("Couldnt create server keys", e);
 			}
