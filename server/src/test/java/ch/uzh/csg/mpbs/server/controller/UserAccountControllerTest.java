@@ -445,7 +445,7 @@ public class UserAccountControllerTest {
 		CustomResponseObject transferObject = mapper.readValue(asString, CustomResponseObject.class);
 
 		assertEquals(true, transferObject.isSuccessful());
-		assertEquals(Type.PUBLIC_KEY_SAVED, transferObject.getType());
+		assertEquals(Type.SAVE_PUBLIC_KEY, transferObject.getType());
 		assertEquals(1, Byte.parseByte(transferObject.getMessage()));
 	}
 

@@ -17,8 +17,8 @@ import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.customserialization.exceptions.UnknownPKIAlgorithmException;
 import ch.uzh.csg.mbps.keys.CustomPublicKey;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
-import ch.uzh.csg.mbps.responseobject.GetHistoryTransferObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
+import ch.uzh.csg.mbps.responseobject.GetHistoryTransferObject;
 import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.service.PayInTransactionService;
@@ -49,7 +49,6 @@ public class UserAccountController {
 	private static final String USERNAME_ALREADY_EXISTS = "Username already exists.";
 	private static final String CREATION_ERROR = "Could not create account - internal error.";
 	private static final String CREATION_SUCCESS = "Your Account has successfully been created. Please check your emails to verify your account.";
-	private static final String READ_SUCCESS = "Account successfully read.";
 	private static final String ACCOUNT_NOT_FOUND = "UserAccount not found.";
 	private static final String UPDATE_SUCCESS = "Your Account has successfully been updated.";
 	private static final String UPDATE_ERROR = "Could not update your Account due to an internal error.";
@@ -64,6 +63,7 @@ public class UserAccountController {
 
 	/**
 	 * Creates a new UserAccount and saves it to DB.
+	 * 
 	 * @param userAccount
 	 * @return CustomResponseObject with information about successful/non
 	 *         successful transaction.
@@ -91,7 +91,7 @@ public class UserAccountController {
 	}
 
 	/**
-	 * Request executed after successfull Login of Client. Returns {@ling
+	 * Request executed after successful Login of Client. Returns {@link
 	 * ch.uzh.csg.mbps.model.UserAccount} and ServerPublicKey
 	 * 
 	 * @return CustomResponseObject with UserAccount object and ServerPublicKey
@@ -101,7 +101,7 @@ public class UserAccountController {
 	public CustomResponseObject getUserAccount() {
 		try {
 			UserAccount userAccount = UserAccountService.getInstance().getByUsername(AuthenticationInfo.getPrincipalUsername());
-			CustomResponseObject responseObject = new CustomResponseObject(true, READ_SUCCESS, Type.AFTER_LOGIN);
+			CustomResponseObject responseObject = new CustomResponseObject(true, String.valueOf(Constants.SERVER_KEY_PAIR.getKeyNumber()), Type.AFTER_LOGIN);
 			//TODO: return key number of server!!
 			responseObject.setEncodedServerPublicKey(Constants.SERVER_KEY_PAIR.getPublicKey());
 			responseObject.setReadAccountTO(new ReadAccountTransferObject(transform(userAccount)));
@@ -270,6 +270,7 @@ public class UserAccountController {
 	public CustomResponseObject mainActivityRequests() {
 		try {
 			String username = AuthenticationInfo.getPrincipalUsername();
+			UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
 			CustomResponseObject response = new CustomResponseObject();
 			response.setSuccessful(true);
 			response.setType(Type.MAIN_ACTIVITY);
@@ -283,7 +284,7 @@ public class UserAccountController {
 			ghto.setPayOutTransactionHistory(PayOutTransactionService.getInstance().getLast3Transactions(username));
 			response.setGetHistoryTO(ghto);
 			//set Balance
-			response.setBalance(UserAccountService.getInstance().getByUsername(username).getBalance().toString());
+			response.setBalance(userAccount.getBalance().toString());
 
 			return response;
 		} catch (ParseException | IOException | UserAccountNotFoundException e) {
