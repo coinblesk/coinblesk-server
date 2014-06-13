@@ -26,7 +26,7 @@ public class PayOutRule implements Serializable {
 	@Column(name = "DAY")
 	private int day;
 	@Column(name = "USER_ID")
-	@Index(name = "USER_ID_INDEX")
+	@Index(name = "USER_ID_INDEX_PAYOUTRULES")
 	private long userId;
 	@Column(name = "BALANCE_LIMIT", precision = 25, scale = 8)
 	private BigDecimal balanceLimit;
