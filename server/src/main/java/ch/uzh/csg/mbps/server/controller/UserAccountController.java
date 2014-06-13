@@ -91,18 +91,17 @@ public class UserAccountController {
 	}
 
 	/**
-	 * Returns UserAccount for authenticated user.
-	 * @return CustomResponseObject with UserAccount object.
+	 * Request executed after successfull Login of Client. Returns {@ling
+	 * ch.uzh.csg.mbps.model.UserAccount} and ServerPublicKey
+	 * 
+	 * @return CustomResponseObject with UserAccount object and ServerPublicKey
 	 */
-	@RequestMapping(value = "/read", method = RequestMethod.GET, produces = "application/json")
+	@RequestMapping(value = "/afterLogin", method = RequestMethod.GET, produces = "application/json")
 	@ResponseBody
 	public CustomResponseObject getUserAccount() {
 		try {
 			UserAccount userAccount = UserAccountService.getInstance().getByUsername(AuthenticationInfo.getPrincipalUsername());
-			CustomResponseObject responseObject = new CustomResponseObject(true, READ_SUCCESS);
-
-			//TODO: do not send server pub key on each get useraccount!! create method login'
-
+			CustomResponseObject responseObject = new CustomResponseObject(true, READ_SUCCESS, Type.AFTER_LOGIN);
 			//TODO: return key number of server!!
 			responseObject.setEncodedServerPublicKey(Constants.SERVER_KEY_PAIR.getPublicKey());
 			responseObject.setReadAccountTO(new ReadAccountTransferObject(transform(userAccount)));
@@ -273,7 +272,7 @@ public class UserAccountController {
 			String username = AuthenticationInfo.getPrincipalUsername();
 			CustomResponseObject response = new CustomResponseObject();
 			response.setSuccessful(true);
-			response.setType(Type.OTHER);
+			response.setType(Type.MAIN_ACTIVITY);
 
 			// set ExchangeRate
 			response.setMessage(ExchangeRates.getExchangeRate().toString());
@@ -283,13 +282,12 @@ public class UserAccountController {
 			ghto.setPayInTransactionHistory(PayInTransactionService.getInstance().getLast3Transactions(username));
 			ghto.setPayOutTransactionHistory(PayOutTransactionService.getInstance().getLast3Transactions(username));
 			response.setGetHistoryTO(ghto);
-			//set UserAccount
-			ReadAccountTransferObject rato = new ReadAccountTransferObject(transform(UserAccountService.getInstance().getByUsername(AuthenticationInfo.getPrincipalUsername())));
-			response.setReadAccountTO(rato);
+			//set Balance
+			response.setBalance(UserAccountService.getInstance().getByUsername(username).getBalance().toString());
 
 			return response;
 		} catch (ParseException | IOException | UserAccountNotFoundException e) {
-			return new CustomResponseObject(false, "0.0", Type.OTHER);
+			return new CustomResponseObject(false, "0.0", Type.MAIN_ACTIVITY);
 		}
 	}
 
@@ -301,19 +299,19 @@ public class UserAccountController {
 	 *         successful/non successful request and assigned keyNumber as
 	 *         message.
 	 */
-	@RequestMapping(value = "/savePublicKey", method = RequestMethod.POST, consumes = "application/json", produces = "application/json")
+	@RequestMapping(value = "/savePublicKey", method = RequestMethod.POST, produces = "application/json")
 	@ResponseBody
 	public CustomResponseObject savePublicKey(@RequestBody CustomPublicKey userPublicKey) {
 		try {
 			UserAccount userAccount = UserAccountService.getInstance().getByUsername(AuthenticationInfo.getPrincipalUsername());
 			PKIAlgorithm pkiAlgorithm = PKIAlgorithm.getPKIAlgorithm(userPublicKey.getPKIAlgorithm());
 			byte keyNumber = UserAccountService.getInstance().saveUserPublicKey(userAccount.getId(), pkiAlgorithm, userPublicKey.getPublicKey());
-			return new CustomResponseObject(true, Byte.toString(keyNumber), Type.PUBLIC_KEY_SAVED);
+			return new CustomResponseObject(true, Byte.toString(keyNumber), Type.SAVE_PUBLIC_KEY);
 		} catch (UserAccountNotFoundException e) {
-			return new CustomResponseObject(false, ACCOUNT_NOT_FOUND, Type.PUBLIC_KEY_SAVED);
+			return new CustomResponseObject(false, ACCOUNT_NOT_FOUND, Type.SAVE_PUBLIC_KEY);
 		} catch (UnknownPKIAlgorithmException e) {
 			//TODO jeton: ?
-			return new CustomResponseObject(false, "unkown pki algorithm", Type.PUBLIC_KEY_SAVED);
+			return new CustomResponseObject(false, "unkown pki algorithm", Type.SAVE_PUBLIC_KEY);
 		}
 	}
 
