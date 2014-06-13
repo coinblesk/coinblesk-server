@@ -114,7 +114,7 @@ public class TransactionService implements ITransaction {
 		}
 
 		try {
-			if(! payerRequest.verify(KeyHandler.decodePublicKey(UserPublicKeyDAO.getUserPublicKey(payerUserAccount.getId(), payerRequest.getKeyNumber()).getPublicKey()))){
+			if(! payerRequest.verify(KeyHandler.decodePublicKey(UserPublicKeyDAO.getUserPublicKey(payerUserAccount.getId(), (byte) payerRequest.getKeyNumber()).getPublicKey()))){
 				throw new TransactionException(PAYMENT_REFUSE);
 			}
 		} catch (Exception e) {
@@ -126,7 +126,7 @@ public class TransactionService implements ITransaction {
 				throw new TransactionException(PAYMENT_REFUSE);
 			}
 			try {
-				if(! payeeRequest.verify(KeyHandler.decodePublicKey(UserPublicKeyDAO.getUserPublicKey(payeeUserAccount.getId(), payeeRequest.getKeyNumber()).getPublicKey()))){
+				if(! payeeRequest.verify(KeyHandler.decodePublicKey(UserPublicKeyDAO.getUserPublicKey(payeeUserAccount.getId(), (byte) payeeRequest.getKeyNumber()).getPublicKey()))){
 					throw new TransactionException(PAYMENT_REFUSE);
 				}
 			} catch (Exception e) {
@@ -179,6 +179,7 @@ public class TransactionService implements ITransaction {
 						Currency.getCurrency(dbTransaction.getCurrency()),
 						Converter.getLongFromBigDecimal(dbTransaction.getAmount()),
 						dbTransaction.getTimestamp().getTime());
+				paymentResponsePayee.sign(KeyHandler.decodePrivateKey(Constants.SERVER_KEY_PAIR.getPrivateKey()));
 				signedResponse = new ServerPaymentResponse(paymentResponsePayer, paymentResponsePayee);
 			}
 		} catch (Exception e) {

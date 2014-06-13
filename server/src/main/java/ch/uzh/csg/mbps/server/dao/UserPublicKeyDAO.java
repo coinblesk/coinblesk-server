@@ -74,7 +74,7 @@ public class UserPublicKeyDAO {
 			return list;
 	}
 	
-	public static UserPublicKey getUserPublicKey(long userId, int keyNumber) {
+	public static UserPublicKey getUserPublicKey(long userId, byte keyNumber) {
 		Session session = openSession();
 		session.beginTransaction();
 		
