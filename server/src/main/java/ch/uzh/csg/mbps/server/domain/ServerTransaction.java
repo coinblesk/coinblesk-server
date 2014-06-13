@@ -33,8 +33,8 @@ public class ServerTransaction {
 	@Column(name="PAYIN_ADDRESS")
 	@Index(name = "PAYIN_ADDRESS_INDEX")
 	private String payinAddress;
-	@Column(name="TRANSACTION_ID")
-	@Index(name = "TRANSACTION_ID_INDEX")
+	@Column(name="TX_ID")
+	@Index(name = "TX_ID_INDEX_SERVER_TX")
 	private String transactionID;
 	@Column(name="VERIFIED")
 	private boolean verified;

@@ -25,7 +25,7 @@ public class PayOutTransaction implements Serializable {
 	@Column(name="ID")
 	private long id;
 	@Column(name="USER_ID")
-	@Index(name = "USER_ID_INDEX")
+	@Index(name = "USER_ID_INDEX_PAY_OUT_TX")
 	private long userID;
 	@Column(name="TIMESTAMP")
 	private Date timestamp;
@@ -36,7 +36,7 @@ public class PayOutTransaction implements Serializable {
 	@Column(name="VERIFIED")
 	private boolean verified;
 	@Column(name="TRANSACTION_ID")
-	@Index(name = "TRANSACTION_ID_INDEX")
+	@Index(name = "TRANSACTION_ID_INDEX_PAY_OUT_TX")
 	private String transactionID;
 	
 	public PayOutTransaction() {

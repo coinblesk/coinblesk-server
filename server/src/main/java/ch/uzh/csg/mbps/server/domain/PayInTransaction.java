@@ -28,14 +28,14 @@ public class PayInTransaction implements Serializable {
 	@Column(name="ID")
 	private long id;
 	@Column(name="USER_ID")
-	@Index(name = "USER_ID_INDEX")
+	@Index(name = "USER_ID_INDEX_PAY_IN_TX")
 	private long userID;
 	@Column(name="TIMESTAMP")
 	private Date timestamp;
 	@Column(name="AMOUNT", precision = 25, scale=8)
 	private BigDecimal amount;
 	@Column(name="TX_ID")
-	@Index(name = "TX_ID_INDEX")
+	@Index(name = "TX_ID_INDEX_PAY_IN_TX")
 	private String transactionID;
 	@Column(name="BTC_ADDRESS")
 	private String btcAddress;

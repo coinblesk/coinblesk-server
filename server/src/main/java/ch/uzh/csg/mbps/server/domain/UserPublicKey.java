@@ -24,7 +24,7 @@ public class UserPublicKey implements Serializable {
 	@Column(name = "ID", nullable = false)
 	private long id;
 	@Column(name = "USER_ID", nullable = false)
-	@Index(name = "USER_ID_INDEX")
+	@Index(name = "USER_ID_INDEX_PKI")
 	private long userId;
 	@Column(name = "KEY_NUMBER", nullable = false)
 	private byte keyNumber;
