@@ -233,8 +233,6 @@ public class UserAccountServiceTest {
 	
 	@Test
 	public void testSavePublicKeys() throws Exception {
-		//TODO jeton: fix this test case!
-		
 		UserAccount loadedSix = UserAccountService.getInstance().getByUsername(accountSix.getUsername());
 		
 		List<UserPublicKey> userPublicKeys = UserPublicKeyDAO.getUserPublicKeys(loadedSix.getId());
