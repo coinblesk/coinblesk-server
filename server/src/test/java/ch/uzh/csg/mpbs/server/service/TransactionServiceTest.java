@@ -128,6 +128,56 @@ public class TransactionServiceTest {
 
 	}
 	
+	
+	@Test
+	public void testCreateDirectSendTransaction() throws Exception {
+		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_1_1", "TDAOT_1_1@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.add(new BigDecimal("1.00000000")));
+		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_2_1", "TDAOT_2_1@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
+		
+		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
+	
+		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
+		
+		PaymentRequest paymentRequestPayer = new PaymentRequest(
+				PKIAlgorithm.DEFAULT, 
+				keyNumberPayer, 
+				payerAccount.getUsername(), 
+				payeeAccount.getUsername(), 
+				Currency.BTC, 
+				Converter.getLongFromBigDecimal(TRANSACTION_AMOUNT),
+				Currency.CHF, 
+				Converter.getLongFromBigDecimal(new BigDecimal("0.5")), 
+				System.currentTimeMillis());
+
+		paymentRequestPayer.sign(payerKeyPair.getPrivate());
+		
+		ServerPaymentRequest request = new ServerPaymentRequest(paymentRequestPayer);
+		
+		int nofTransaction = getAllTransactions().size();
+		
+		BigDecimal payerBalanceBefore = payerAccount.getBalance();
+		BigDecimal payeeBalanceBefore = payeeAccount.getBalance();
+		
+		ServerPaymentResponse response = TransactionService.getInstance().createTransaction(request);
+	
+		assertEquals(nofTransaction+1, getAllTransactions().size());
+		
+		UserAccount payerAccountUpdated = UserAccountService.getInstance().getById(payerAccount.getId());
+		UserAccount payeeAccountUpdated = UserAccountService.getInstance().getById(payeeAccount.getId());
+		
+		assertEquals(0, payerBalanceBefore.subtract(TRANSACTION_AMOUNT).compareTo(payerAccountUpdated.getBalance()));
+		assertEquals(0, payeeBalanceBefore.add(TRANSACTION_AMOUNT).compareTo(payeeAccountUpdated.getBalance()));
+		
+		assertTrue(response.getPaymentResponsePayer().verify(KeyHandler.decodePublicKey(Constants.SERVER_KEY_PAIR.getPublicKey())));
+		
+		PaymentResponse responsePayer = response.getPaymentResponsePayer();
+		
+		assertEquals(paymentRequestPayer.getAmount(), responsePayer.getAmount());
+		assertEquals(paymentRequestPayer.getUsernamePayer(), responsePayer.getUsernamePayer());
+		assertEquals(paymentRequestPayer.getUsernamePayee(), responsePayer.getUsernamePayee());
+
+	}
+	
 	@Test
 	public void testCreateTransaction_similarToClient() throws Exception {
 		UserAccount buyerAccount = createAccountAndVerifyAndReload("TDAOT_20", "TDAOT_20@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.add(new BigDecimal("1.00000000")));

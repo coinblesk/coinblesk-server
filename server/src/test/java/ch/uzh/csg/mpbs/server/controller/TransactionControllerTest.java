@@ -36,7 +36,12 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import ch.uzh.csg.mbps.customserialization.Currency;
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
+import ch.uzh.csg.mbps.customserialization.PaymentRequest;
+import ch.uzh.csg.mbps.customserialization.PaymentResponse;
+import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
+import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.keys.CustomKeyPair;
 import ch.uzh.csg.mbps.responseobject.CreateTransactionTransferObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
@@ -45,6 +50,7 @@ import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.PayOutTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
+import ch.uzh.csg.mbps.server.service.TransactionService;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
@@ -52,6 +58,7 @@ import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
+import ch.uzh.csg.mbps.util.Converter;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
@@ -72,6 +79,8 @@ public class TransactionControllerTest {
 	private static MockMvc mockMvc;
 	
 	private static boolean initialized = false;
+	private static UserAccount test0;
+	private static UserAccount test0_1;
 	private static UserAccount test1;
 	private static UserAccount test2;
 	private static UserAccount test3;
@@ -85,6 +94,10 @@ public class TransactionControllerTest {
 	private static UserAccount test8;
 	private static UserAccount test9;
 	private static UserAccount test9_1;
+	
+	private String password = "asdf";
+	
+	
 	private static final BigDecimal TRANSACTION_AMOUNT = new BigDecimal(10.1).setScale(8, RoundingMode.HALF_UP);
 	
 	@Before
@@ -93,20 +106,21 @@ public class TransactionControllerTest {
 		
 		if (!initialized) {
 			mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();
-			
-			test1 = new UserAccount("test1", "test1@bitcoin.csg.uzh.ch", "asdf");
-			test2 = new UserAccount("test2", "test2@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test3 = new UserAccount("test3", "test3@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test4 = new UserAccount("test4", "test4@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test5 = new UserAccount("test5", "test5@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test6 = new UserAccount("test6", "test6@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test6_1 = new UserAccount("test6_1", "test6_1@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test6_2 = new UserAccount("test6_2", "test6_2@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test7 = new UserAccount("test7", "test7@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test7_1 = new UserAccount("test7_1", "test7_1@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test8 = new UserAccount("test8", "test8@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test9 = new UserAccount("test9", "test9@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test9_1 = new UserAccount("test9_1", "test9_+@bitcoin.csg.uzh.ch", "i-don't-need-one");
+			test0 = new UserAccount("test0", "test0@bitcoin.csg.uzh.ch", password);
+			test0_1 = new UserAccount("test0_1", "test0_1@bitcoin.csg.uzh.ch", password);
+			test1 = new UserAccount("test1", "test1@bitcoin.csg.uzh.ch", password);
+			test2 = new UserAccount("test2", "test2@bitcoin.csg.uzh.ch", password);
+			test3 = new UserAccount("test3", "test3@bitcoin.csg.uzh.ch", password);
+			test4 = new UserAccount("test4", "test4@bitcoin.csg.uzh.ch", password);
+			test5 = new UserAccount("test5", "test5@bitcoin.csg.uzh.ch", password);
+			test6 = new UserAccount("test6", "test6@bitcoin.csg.uzh.ch", password);
+			test6_1 = new UserAccount("test6_1", "test6_1@bitcoin.csg.uzh.ch", password);
+			test6_2 = new UserAccount("test6_2", "test6_2@bitcoin.csg.uzh.ch", password);
+			test7 = new UserAccount("test7", "test7@bitcoin.csg.uzh.ch", password);
+			test7_1 = new UserAccount("test7_1", "test7_1@bitcoin.csg.uzh.ch", password);
+			test8 = new UserAccount("test8", "test8@bitcoin.csg.uzh.ch", password);
+			test9 = new UserAccount("test9", "test9@bitcoin.csg.uzh.ch", password);
+			test9_1 = new UserAccount("test9_1", "test9_+@bitcoin.csg.uzh.ch", password);
 			
 			
 			KeyPair keypair = KeyHandler.generateKeyPair();
@@ -142,6 +156,74 @@ public class TransactionControllerTest {
 //		
 //		mockMvc.perform(post("/transaction/create").secure(false).contentType(MediaType.APPLICATION_JSON).content(asString))
 //				.andExpect(status().isUnauthorized());
+	}
+	
+	@Test
+	public void testCreateDirectSendTransaction() throws Exception {
+		assertTrue(UserAccountService.getInstance().createAccount(test0));
+		assertTrue(UserAccountService.getInstance().createAccount(test0_1));
+		
+		UserAccount payerAccount = UserAccountService.getInstance().getByUsername(test0.getUsername());
+		UserAccount payeeAccount  = UserAccountService.getInstance().getByUsername(test0_1.getUsername());
+		payerAccount.setEmailVerified(true);
+		payerAccount.setBalance(TRANSACTION_AMOUNT.add(BigDecimal.ONE));
+		UserAccountDAO.updateAccount(payerAccount);
+		payeeAccount.setEmailVerified(true);
+		payeeAccount.setBalance(TRANSACTION_AMOUNT);
+		UserAccountDAO.updateAccount(payeeAccount);
+		
+		
+		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
+	
+		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
+		
+		PaymentRequest paymentRequestPayer = new PaymentRequest(
+				PKIAlgorithm.DEFAULT, 
+				keyNumberPayer, 
+				payerAccount.getUsername(), 
+				payeeAccount.getUsername(), 
+				Currency.BTC, 
+				Converter.getLongFromBigDecimal(TRANSACTION_AMOUNT),
+				Currency.CHF, 
+				Converter.getLongFromBigDecimal(new BigDecimal("0.5")), 
+				System.currentTimeMillis());
+
+		paymentRequestPayer.sign(payerKeyPair.getPrivate());
+		
+		ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer);
+		
+		CreateTransactionTransferObject ctto = new CreateTransactionTransferObject(spr);
+		
+		BigDecimal payerBalanceBefore = payerAccount.getBalance();
+		BigDecimal payeeBalanceBefore = payeeAccount.getBalance();
+		
+		ObjectMapper mapper = new ObjectMapper();
+		String asString = mapper.writeValueAsString(ctto);
+		
+		HttpSession session = loginAndGetSession(test0.getUsername(), password);
+		
+		MvcResult mvcResult = mockMvc.perform(post("/transaction/create").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
+				.andExpect(status().isOk())
+				.andReturn();
+		
+		CustomResponseObject result = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
+		
+		ServerPaymentResponse response = result.getServerPaymentResponse();
+	
+		UserAccount payerAccountUpdated = UserAccountService.getInstance().getById(payerAccount.getId());
+		UserAccount payeeAccountUpdated = UserAccountService.getInstance().getById(payeeAccount.getId());
+		
+		assertEquals(0, payerBalanceBefore.subtract(TRANSACTION_AMOUNT).compareTo(payerAccountUpdated.getBalance()));
+		assertEquals(0, payeeBalanceBefore.add(TRANSACTION_AMOUNT).compareTo(payeeAccountUpdated.getBalance()));
+		
+		assertTrue(response.getPaymentResponsePayer().verify(KeyHandler.decodePublicKey(Constants.SERVER_KEY_PAIR.getPublicKey())));
+		
+		PaymentResponse responsePayer = response.getPaymentResponsePayer();
+		
+		assertEquals(paymentRequestPayer.getAmount(), responsePayer.getAmount());
+		assertEquals(paymentRequestPayer.getUsernamePayer(), responsePayer.getUsernamePayer());
+		assertEquals(paymentRequestPayer.getUsernamePayee(), responsePayer.getUsernamePayee());
+
 	}
 	
 	@Test
