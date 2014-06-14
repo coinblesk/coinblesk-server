@@ -63,15 +63,17 @@ public class TransactionController {
 	public CustomResponseObject createTransaction(@RequestBody CreateTransactionTransferObject requestObject) {
 		try {
 			ServerPaymentResponse serverPaymentResponse = TransactionService.getInstance().createTransaction(requestObject.getServerPaymentRequest());
-			CustomResponseObject responseObject = new CustomResponseObject(true, SUCCESS);
-			responseObject.setCreateTransactionTO(new CreateTransactionTransferObject(serverPaymentResponse));
+			CustomResponseObject responseObject = new CustomResponseObject(true, SUCCESS, Type.CREATE_TRANSACTION);
+			responseObject.setServerPaymentResponse(serverPaymentResponse);
 			return responseObject;
 		} catch (TransactionException e) {
 			//TODO jeton: if refused, sign response
+			LOGGER.error(e.getMessage());
 			return new CustomResponseObject(false, e.getMessage());
 		} catch (Exception e) {
 			//TODO jeton: if refused, sign response
-			return new CustomResponseObject(false, Constants.INTERNAL_SERVER_ERROR);
+			LOGGER.error(e.getMessage());
+			return new CustomResponseObject(false, Constants.INTERNAL_SERVER_ERROR + e.getMessage());
 		}
 	}
 	
