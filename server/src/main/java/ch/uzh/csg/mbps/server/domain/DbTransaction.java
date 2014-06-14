@@ -60,6 +60,7 @@ public class DbTransaction implements Serializable {
 		this.amount = Converter.getBigDecimalFromLong(paymentRequest.getAmount());
 		this.inputCurrency = paymentRequest.getInputCurrency().getCurrencyCode();
 		this.inputCurrencyAmount = Converter.getBigDecimalFromLong(paymentRequest.getInputAmount());
+		this.signature = String.valueOf(paymentRequest.getSignature());
 		this.timestamp = new Date();
 	}
 	
