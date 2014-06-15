@@ -58,8 +58,11 @@ public class DbTransaction implements Serializable {
 		this.usernamePayee = paymentRequest.getUsernamePayee();
 		this.currency = paymentRequest.getCurrency().getCurrencyCode();
 		this.amount = Converter.getBigDecimalFromLong(paymentRequest.getAmount());
+		//TODO simon: paymentRequest.getInputCurrency() might be null!
 		this.inputCurrency = paymentRequest.getInputCurrency().getCurrencyCode();
+		//TODO simon: do not set if inputCurrency is null
 		this.inputCurrencyAmount = Converter.getBigDecimalFromLong(paymentRequest.getInputAmount());
+		//TODO simon: use base64 encoding
 		this.signature = String.valueOf(paymentRequest.getSignature());
 		this.timestamp = new Date();
 	}
