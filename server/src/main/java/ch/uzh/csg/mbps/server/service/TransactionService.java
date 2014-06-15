@@ -169,6 +169,9 @@ public class TransactionService implements ITransaction {
 			if (numberOfSignatures == 1) {
 				signedResponse = new ServerPaymentResponse(paymentResponsePayer);
 			} else {
+				// TODO simon: this server needs to sign the object only once,
+				// even if two payment requests in serverpaymentrequest! only if
+				// two servers involved, then two different objects needed!
 				PaymentResponse paymentResponsePayee = new PaymentResponse(
 						PKIAlgorithm.getPKIAlgorithm(Constants.SERVER_KEY_PAIR.getPkiAlgorithm()),
 						Constants.SERVER_KEY_PAIR.getKeyNumber(),
