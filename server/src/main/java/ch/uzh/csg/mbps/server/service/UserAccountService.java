@@ -16,6 +16,7 @@ import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.CustomPasswordEncoder;
 import ch.uzh.csg.mbps.server.util.Emailer;
 import ch.uzh.csg.mbps.server.util.PasswordMatcher;
+import ch.uzh.csg.mbps.server.util.UserRoles;
 import ch.uzh.csg.mbps.server.util.UserRoles.Role;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
@@ -186,9 +187,10 @@ public class UserAccountService implements IUserAccount {
 
 		if (updatedAccount.getPassword() != null && !updatedAccount.getPassword().isEmpty())
 			userAccount.setPassword(CustomPasswordEncoder.getEncodedPassword(updatedAccount.getPassword()));
-
-		//TODO: role should also be changeable!! adopt UserAccountServiceTest!
 		
+		if (UserRoles.isValidRole(updatedAccount.getRoles()))
+			userAccount.setRoles(updatedAccount.getRoles());
+
 		try {
 			UserAccountDAO.updateAccount(userAccount);
 			return true;

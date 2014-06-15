@@ -35,6 +35,24 @@ public class UserRoles {
 	}
 	
 	/**
+	 * Checks if the given code can be mapped to an existing {@link Role}.
+	 * 
+	 * @param code
+	 *            the code to be checked
+	 * @return true if a {@link Role} with this code exists, false otherwise
+	 */
+	public static boolean isValidRole(byte code) {
+		if (code == Role.USER.getCode())
+			return true;
+		else if (code == Role.ADMIN.getCode())
+			return true;
+		else if (code == Role.BOTH.getCode())
+			return true;
+		else
+			return false;
+	}
+	
+	/**
 	 * Returns the {@link GrantedAuthority}s a user account has.
 	 * 
 	 * @param userAccount

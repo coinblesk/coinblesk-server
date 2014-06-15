@@ -25,6 +25,7 @@ import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.CustomPasswordEncoder;
 import ch.uzh.csg.mbps.server.util.HibernateUtil;
+import ch.uzh.csg.mbps.server.util.UserRoles.Role;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
@@ -197,7 +198,7 @@ public class UserAccountServiceTest {
 		beforeUpdate.setId(id+100);
 		beforeUpdate.setPassword("new password haha");
 		beforeUpdate.setUsername("useruser");
-		beforeUpdate.setRoles((byte) 3);
+		beforeUpdate.setRoles(Role.BOTH.getCode());
 		
 		UserAccountService.getInstance().updateAccount(username, beforeUpdate);
 		UserAccount afterUpdate = UserAccountService.getInstance().getByUsername(username);
@@ -213,14 +214,15 @@ public class UserAccountServiceTest {
 		
 		//balance should not change
 		assertTrue(balance.equals(afterUpdate.getBalance()));
+		//roles should change
+		assertEquals(Role.BOTH.getCode(), afterUpdate.getRoles());
+		assertFalse(roles == afterUpdate.getRoles());
 		//creation date should not change
 		assertEquals(creationDate, afterUpdate.getCreationDate());
 		//id should not change
 		assertEquals(id, afterUpdate.getId());
 		//username should not change
 		assertEquals(username, afterUpdate.getUsername());
-		//roles should not change
-		assertEquals(roles, afterUpdate.getRoles());
 	}
 	
 	@Test(expected=UserAccountNotFoundException.class)
