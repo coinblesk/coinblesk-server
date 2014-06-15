@@ -13,6 +13,7 @@ import javax.persistence.SequenceGenerator;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.hibernate.annotations.Index;
@@ -58,13 +59,12 @@ public class DbTransaction implements Serializable {
 		this.usernamePayee = paymentRequest.getUsernamePayee();
 		this.currency = paymentRequest.getCurrency().getCurrencyCode();
 		this.amount = Converter.getBigDecimalFromLong(paymentRequest.getAmount());
-		//TODO simon: paymentRequest.getInputCurrency() might be null!
-		this.inputCurrency = paymentRequest.getInputCurrency().getCurrencyCode();
-		//TODO simon: do not set if inputCurrency is null
-		this.inputCurrencyAmount = Converter.getBigDecimalFromLong(paymentRequest.getInputAmount());
-		//TODO simon: use base64 encoding
-		this.signature = String.valueOf(paymentRequest.getSignature());
+		this.signature = new String(Base64.encodeBase64(paymentRequest.getSignature()));
 		this.timestamp = new Date();
+		if(paymentRequest.getInputCurrency() != null){
+			this.inputCurrency = paymentRequest.getInputCurrency().getCurrencyCode();
+			this.inputCurrencyAmount = Converter.getBigDecimalFromLong(paymentRequest.getInputAmount());
+		}
 	}
 	
 	public long getId() {
