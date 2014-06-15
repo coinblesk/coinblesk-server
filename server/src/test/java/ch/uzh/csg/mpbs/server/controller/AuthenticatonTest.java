@@ -80,20 +80,20 @@ public class AuthenticatonTest {
 	
 	@Test
 	public void testLoginLogout() throws Exception {
-		mockMvc.perform(get("/user/read").secure(false)).andExpect(status().isUnauthorized());
+		mockMvc.perform(get("/user/afterLogin").secure(false)).andExpect(status().isUnauthorized());
 
 		String plainTextPassword = test60.getPassword();
 		createAccountAndVerifyAndReload(test60, new BigDecimal(0.0));
 
 		HttpSession session = loginAndGetSession(test60.getUsername(), plainTextPassword);
 
-		MvcResult result = mockMvc.perform(get("/user/read").secure(false).session((MockHttpSession) session))
+		MvcResult result = mockMvc.perform(get("/user/afterLogin").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andReturn();
 
 		logout(result);
 
-		mockMvc.perform(get("/user/read").secure(false)).andExpect(status().isUnauthorized());
+		mockMvc.perform(get("/user/afterLogin").secure(false)).andExpect(status().isUnauthorized());
 	}
 	
 	@Test
@@ -122,19 +122,19 @@ public class AuthenticatonTest {
 
 	@Test
 	public void testSessionTimeout() throws Exception {
-		mockMvc.perform(get("/user/read").secure(false)).andExpect(status().isUnauthorized());
+		mockMvc.perform(get("/user/afterLogin").secure(false)).andExpect(status().isUnauthorized());
 
 		String plainTextPassword = test63.getPassword();
 		createAccountAndVerifyAndReload(test63, new BigDecimal(0.0));
 
 		HttpSession session = loginAndGetSession(test63.getUsername(), plainTextPassword);
 
-		mockMvc.perform(get("/user/read").secure(false).session((MockHttpSession) session)).andExpect(status().isOk());
+		mockMvc.perform(get("/user/afterLogin").secure(false).session((MockHttpSession) session)).andExpect(status().isOk());
 
 		session.setMaxInactiveInterval(5);
 		Thread.sleep(6);
 
-		mockMvc.perform(get("/user/read").secure(false)).andExpect(status().isUnauthorized());
+		mockMvc.perform(get("/user/afterLogin").secure(false)).andExpect(status().isUnauthorized());
 	}
 	
 	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
