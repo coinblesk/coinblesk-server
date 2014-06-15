@@ -21,7 +21,13 @@ import org.bouncycastle.jce.spec.ECParameterSpec;
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.customserialization.exceptions.UnknownPKIAlgorithmException;
 
-//TODO jeton: javadoc
+/**
+ * This class handles the PKI key pair generation, encoding into and decoding
+ * from base64.
+ * 
+ * @author Jeton Memeti
+ * 
+ */
 public class KeyHandler {
 	
 	private static final String SECURITY_PROVIDER = "BC";
@@ -31,15 +37,32 @@ public class KeyHandler {
 	 * when redeploying the war to tomcat. (see
 	 * http://www.bouncycastle.org/wiki/display/JA1/Provider+Installation)
 	 * 
-	 * In order to work, copy the bouncycastle jars to
+	 * In order to work, edit java.security and copy the bouncycastle jars to
 	 * /usr/lib/jvm/java-1.7.0-openjdk-amd64/jre/lib/ext/
 	 */
 	
-	//uses the default algorithm
+	/**
+	 * Generates a new PKI key pair using the default {@link PKIAlgorithm}.
+	 * 
+	 * @throws UnknownPKIAlgorithmException
+	 * @throws NoSuchAlgorithmException
+	 * @throws NoSuchProviderException
+	 * @throws InvalidAlgorithmParameterException
+	 */
 	public static KeyPair generateKeyPair() throws UnknownPKIAlgorithmException, NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException {
 		return generateKeyPair(PKIAlgorithm.DEFAULT);
 	}
 	
+	/**
+	 * Generates a new PKI key pair using the {@link PKIAlgorithm} provided.
+	 * 
+	 * @param algorithm
+	 *            the {@link PKIAlgorithm} to be used for key generation
+	 * @throws UnknownPKIAlgorithmException
+	 * @throws NoSuchAlgorithmException
+	 * @throws NoSuchProviderException
+	 * @throws InvalidAlgorithmParameterException
+	 */
 	public static KeyPair generateKeyPair(PKIAlgorithm algorithm) throws UnknownPKIAlgorithmException, NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException {
 		if (algorithm.getCode() != PKIAlgorithm.DEFAULT.getCode())
 			throw new UnknownPKIAlgorithmException();
@@ -50,20 +73,60 @@ public class KeyHandler {
 		return keyGen.generateKeyPair();
 	}
 	
+	/**
+	 * Encodes a private key using Base64 encoding.
+	 * 
+	 * @param privateKey
+	 *            the private key to be encoded
+	 * @return the encoded private key as string
+	 */
 	public static String encodePrivateKey(PrivateKey privateKey) {
 		byte[] privateEncoded = Base64.encodeBase64(privateKey.getEncoded());
 		return new String(privateEncoded);
 	}
 	
+	/**
+	 * Encodes a public key using Base64 encoding.
+	 * 
+	 * @param publicKey
+	 *            the public key to be encoded
+	 * @return the encoded public key as string
+	 */
 	public static String encodePublicKey(PublicKey publicKey) {
 		byte[] publicEncoded = Base64.encodeBase64(publicKey.getEncoded());
 		return new String(publicEncoded);
 	}
 	
+	/**
+	 * Decodes a string to a public key using Base64 encoding using the default
+	 * {@link PKIAlgorithm}.
+	 * 
+	 * @param publicKeyEncoded
+	 *            the encoded public key
+	 * 
+	 * @throws UnknownPKIAlgorithmException
+	 * @throws NoSuchAlgorithmException
+	 * @throws NoSuchProviderException
+	 * @throws InvalidKeySpecException
+	 */
 	public static PublicKey decodePublicKey(String publicKeyEncoded) throws UnknownPKIAlgorithmException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeySpecException {
 		return decodePublicKey(publicKeyEncoded, PKIAlgorithm.DEFAULT);
 	}
 
+	/**
+	 * Decodes a string to a public key using Base64 encoding using the
+	 * {@link PKIAlgorithm} provided.
+	 * 
+	 * @param publicKeyEncoded
+	 *            the encoded public key
+	 * @param algorithm
+	 *            the {@link PKIAlgorithm} to be used for decoding
+	 * 
+	 * @throws UnknownPKIAlgorithmException
+	 * @throws NoSuchAlgorithmException
+	 * @throws NoSuchProviderException
+	 * @throws InvalidKeySpecException
+	 */
 	public static PublicKey decodePublicKey(String publicKeyEncoded, PKIAlgorithm algorithm) throws UnknownPKIAlgorithmException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeySpecException {
 		if (algorithm.getCode() != PKIAlgorithm.DEFAULT.getCode())
 			throw new UnknownPKIAlgorithmException();
@@ -75,10 +138,36 @@ public class KeyHandler {
 		return keyFactory.generatePublic(publicKeySpec);
 	}
 	
+	/**
+	 * Decodes a string to a private key using Base64 encoding and the default
+	 * {@link PKIAlgorithm}.
+	 * 
+	 * @param privateKeyEncoded
+	 *            the encoded private key
+	 * 
+	 * @throws UnknownPKIAlgorithmException
+	 * @throws NoSuchAlgorithmException
+	 * @throws NoSuchProviderException
+	 * @throws InvalidKeySpecException
+	 */
 	public static PrivateKey decodePrivateKey(String privateKeyEncoded) throws UnknownPKIAlgorithmException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeySpecException {
 		return decodePrivateKey(privateKeyEncoded, PKIAlgorithm.DEFAULT);
 	}
 	
+	/**
+	 * Decodes a string to a private key using Base64 encoding and the
+	 * {@link PKIAlgorithm} provided.
+	 * 
+	 * @param privateKeyEncoded
+	 *            the encoded private key
+	 * @param algorithm
+	 *            the {@link PKIAlgorithm} to be used for decoding
+	 * 
+	 * @throws UnknownPKIAlgorithmException
+	 * @throws NoSuchAlgorithmException
+	 * @throws NoSuchProviderException
+	 * @throws InvalidKeySpecException
+	 */
 	public static PrivateKey decodePrivateKey(String privateKeyEncoded, PKIAlgorithm algorithm) throws UnknownPKIAlgorithmException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeySpecException {
 		if (algorithm.getCode() != PKIAlgorithm.DEFAULT.getCode())
 			throw new UnknownPKIAlgorithmException();

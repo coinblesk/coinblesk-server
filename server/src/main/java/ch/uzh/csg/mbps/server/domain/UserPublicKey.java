@@ -13,7 +13,6 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.hibernate.annotations.Index;
 
-//TODO jeton: javadoc
 @Entity(name = "USER_PUBLIC_KEY")
 public class UserPublicKey implements Serializable {
 	private static final long serialVersionUID = -5668060751789666658L;

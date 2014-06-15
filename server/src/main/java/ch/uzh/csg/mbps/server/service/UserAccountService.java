@@ -29,7 +29,6 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
 /**
  * Service class for {@link UserAccount}.
- *
  */
 public class UserAccountService implements IUserAccount {
 	private static UserAccountService userAccountService;
@@ -310,7 +309,20 @@ public class UserAccountService implements IUserAccount {
 		}
 	}
 	
-	//TODO jeton: javadoc
+	/**
+	 * Stores a public key on the database and maps this public key to a user
+	 * account.
+	 * 
+	 * @param userId
+	 *            the id of the user account
+	 * @param algorithm
+	 *            the {@link PKIAlgorithm} used to generate the key
+	 * @param publicKey
+	 *            the base64 encoded public key
+	 * @return the key number, indicating the (incremented) position this public
+	 *         key has in a list of public keys mapped to this user account
+	 * @throws UserAccountNotFoundException
+	 */
 	public byte saveUserPublicKey(long userId, PKIAlgorithm algorithm, String publicKey) throws UserAccountNotFoundException {
 		return UserPublicKeyDAO.saveUserPublicKey(userId, algorithm, publicKey);
 	}

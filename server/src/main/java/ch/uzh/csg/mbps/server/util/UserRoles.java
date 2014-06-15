@@ -9,7 +9,13 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 
-//TODO jeton: javadoc
+/**
+ * Represents the roles a MBPS user can have. Each user must have exactly one
+ * role.
+ * 
+ * @author Jeton Memeti
+ * 
+ */
 public class UserRoles {
 
 	public enum Role {
@@ -28,6 +34,13 @@ public class UserRoles {
 		}
 	}
 	
+	/**
+	 * Returns the {@link GrantedAuthority}s a user account has.
+	 * 
+	 * @param userAccount
+	 *            the {@link UserAccount} to retrieve the GrantedAuthorities
+	 * @return a list of GrantedAuthorities or an empty list
+	 */
 	public static Collection<GrantedAuthority> getAuthorities(UserAccount userAccount) {
 		return getAuthorities(userAccount.getRoles());
 	}

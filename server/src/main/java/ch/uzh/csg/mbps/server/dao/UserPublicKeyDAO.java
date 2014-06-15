@@ -16,7 +16,13 @@ import ch.uzh.csg.mbps.server.domain.UserPublicKey;
 import ch.uzh.csg.mbps.server.util.HibernateUtil;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 
-//TODO jeton: javadoc
+/**
+ * DatabaseAccessObject for {@link UserPublicKey}. Handles all DB operations
+ * regarding UserPublicKeys.
+ * 
+ * @author Jeton Memeti
+ * 
+ */
 public class UserPublicKeyDAO {
 	private static Logger LOGGER = Logger.getLogger(UserPublicKeyDAO.class);
 	
@@ -29,6 +35,20 @@ public class UserPublicKeyDAO {
 		return session;
 	}
 	
+	/**
+	 * Stores a public key on the database and maps this public key to a user
+	 * account.
+	 * 
+	 * @param userId
+	 *            the id of the user account
+	 * @param algorithm
+	 *            the {@link PKIAlgorithm} used to generate the key
+	 * @param publicKey
+	 *            the base64 encoded public key
+	 * @return the key number, indicating the (incremented) position this public
+	 *         key has in a list of public keys mapped to this user account
+	 * @throws UserAccountNotFoundException
+	 */
 	public static byte saveUserPublicKey(long userId, PKIAlgorithm algorithm, String publicKey) throws UserAccountNotFoundException {
 		Session session = null;
 		Transaction transaction = null;
@@ -58,6 +78,14 @@ public class UserPublicKeyDAO {
 		}
 	}
 	
+	/**
+	 * Returns a list of {@link UserPublicKey} mapped to the given user account.
+	 * 
+	 * @param userId
+	 *            the id of the user account
+	 * @return a list with all {@link UserPublicKey} or an empty list, if no key
+	 *         has been stored for this user id
+	 */
 	public static List<UserPublicKey> getUserPublicKeys(long userId) {
 		Session session = openSession();
 		session.beginTransaction();
@@ -74,6 +102,16 @@ public class UserPublicKeyDAO {
 			return list;
 	}
 	
+	/**
+	 * Returns the {@link UserPublicKey} with the given key number mapped to the
+	 * account with the user id provided.
+	 * 
+	 * @param userId
+	 *            the id of the user account
+	 * @param keyNumber
+	 *            the key number of the {@link UserPublicKey} to return
+	 * @return the corresponding {@link UserPublicKey} or null
+	 */
 	public static UserPublicKey getUserPublicKey(long userId, byte keyNumber) {
 		Session session = openSession();
 		session.beginTransaction();

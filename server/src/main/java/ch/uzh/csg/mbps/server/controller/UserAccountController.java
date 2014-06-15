@@ -293,12 +293,13 @@ public class UserAccountController {
 	}
 
 	/**
-	 * Saves a new {@link CustomPublicKey} entry for authenticated user.
+	 * Stores the given {@link CustomPublicKey} and maps it to the authenticated
+	 * user.
 	 * 
 	 * @param userPublicKey
-	 * @return {@link CustomResponseObject} with information about
-	 *         successful/non successful request and assigned keyNumber as
-	 *         message.
+	 *            the public key to store
+	 * @return {@link CustomResponseObject} indicating if the key has been
+	 *         stored and the assigned key number as message.
 	 */
 	@RequestMapping(value = "/savePublicKey", method = RequestMethod.POST, produces = "application/json")
 	@ResponseBody
@@ -311,8 +312,7 @@ public class UserAccountController {
 		} catch (UserAccountNotFoundException e) {
 			return new CustomResponseObject(false, ACCOUNT_NOT_FOUND, Type.SAVE_PUBLIC_KEY);
 		} catch (UnknownPKIAlgorithmException e) {
-			//TODO jeton: ?
-			return new CustomResponseObject(false, "unkown pki algorithm", Type.SAVE_PUBLIC_KEY);
+			return new CustomResponseObject(false, UPDATE_ERROR, Type.SAVE_PUBLIC_KEY);
 		}
 	}
 
