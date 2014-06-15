@@ -64,7 +64,7 @@ public class TransactionController {
 		try {
 			ServerPaymentResponse serverPaymentResponse = TransactionService.getInstance().createTransaction(requestObject.getServerPaymentRequest());
 			CustomResponseObject responseObject = new CustomResponseObject(true, SUCCESS, Type.CREATE_TRANSACTION);
-			responseObject.setServerPaymentResponse(serverPaymentResponse);
+			responseObject.setServerPaymentResponse(serverPaymentResponse.encode());
 			return responseObject;
 		} catch (TransactionException e) {
 			//TODO jeton: if refused, sign response

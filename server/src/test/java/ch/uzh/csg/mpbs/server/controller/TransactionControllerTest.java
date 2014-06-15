@@ -37,6 +37,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import ch.uzh.csg.mbps.customserialization.Currency;
+import ch.uzh.csg.mbps.customserialization.DecoderFactory;
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.customserialization.PaymentResponse;
@@ -172,7 +173,6 @@ public class TransactionControllerTest {
 		payeeAccount.setBalance(TRANSACTION_AMOUNT);
 		UserAccountDAO.updateAccount(payeeAccount);
 		
-		
 		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
 	
 		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
@@ -208,7 +208,8 @@ public class TransactionControllerTest {
 		
 		CustomResponseObject result = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
 		
-		ServerPaymentResponse response = result.getServerPaymentResponse();
+		byte[] serverPaymentResponseEncoded = result.getServerPaymentResponse();
+		ServerPaymentResponse serverPaymentResponse = DecoderFactory.decode(ServerPaymentResponse.class, serverPaymentResponseEncoded);
 	
 		UserAccount payerAccountUpdated = UserAccountService.getInstance().getById(payerAccount.getId());
 		UserAccount payeeAccountUpdated = UserAccountService.getInstance().getById(payeeAccount.getId());
@@ -216,14 +217,13 @@ public class TransactionControllerTest {
 		assertEquals(0, payerBalanceBefore.subtract(TRANSACTION_AMOUNT).compareTo(payerAccountUpdated.getBalance()));
 		assertEquals(0, payeeBalanceBefore.add(TRANSACTION_AMOUNT).compareTo(payeeAccountUpdated.getBalance()));
 		
-		assertTrue(response.getPaymentResponsePayer().verify(KeyHandler.decodePublicKey(Constants.SERVER_KEY_PAIR.getPublicKey())));
+		assertTrue(serverPaymentResponse.getPaymentResponsePayer().verify(KeyHandler.decodePublicKey(Constants.SERVER_KEY_PAIR.getPublicKey())));
 		
-		PaymentResponse responsePayer = response.getPaymentResponsePayer();
+		PaymentResponse responsePayer = serverPaymentResponse.getPaymentResponsePayer();
 		
 		assertEquals(paymentRequestPayer.getAmount(), responsePayer.getAmount());
 		assertEquals(paymentRequestPayer.getUsernamePayer(), responsePayer.getUsernamePayer());
 		assertEquals(paymentRequestPayer.getUsernamePayee(), responsePayer.getUsernamePayee());
-
 	}
 	
 	@Test
