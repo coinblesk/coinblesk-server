@@ -105,6 +105,7 @@ public class UserAccountController {
 			CustomPublicKey cpk = new CustomPublicKey(Constants.SERVER_KEY_PAIR.getKeyNumber(), Constants.SERVER_KEY_PAIR.getPkiAlgorithm(), Constants.SERVER_KEY_PAIR.getPublicKey());
 			responseObject.setServerPublicKey(cpk);
 			responseObject.setReadAccountTO(new ReadAccountTransferObject(transform(userAccount)));
+			responseObject.setClientVersion(Constants.CLIENT_VERSION);
 			return responseObject;
 		} catch (UserAccountNotFoundException e) {
 			return new CustomResponseObject(false, ACCOUNT_NOT_FOUND);
