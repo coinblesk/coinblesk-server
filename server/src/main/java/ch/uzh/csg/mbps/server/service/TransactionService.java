@@ -165,26 +165,7 @@ public class TransactionService implements ITransaction {
 					Converter.getLongFromBigDecimal(dbTransaction.getAmount()),
 					dbTransaction.getTimestamp().getTime());
 			paymentResponsePayer.sign(KeyHandler.decodePrivateKey(Constants.SERVER_KEY_PAIR.getPrivateKey()));
-			
-			if (numberOfSignatures == 1) {
-				signedResponse = new ServerPaymentResponse(paymentResponsePayer);
-			} else {
-				// TODO simon: this server needs to sign the object only once,
-				// even if two payment requests in serverpaymentrequest! only if
-				// two servers involved, then two different objects needed!
-				PaymentResponse paymentResponsePayee = new PaymentResponse(
-						PKIAlgorithm.getPKIAlgorithm(Constants.SERVER_KEY_PAIR.getPkiAlgorithm()),
-						Constants.SERVER_KEY_PAIR.getKeyNumber(),
-						ServerResponseStatus.SUCCESS,
-						null,
-						dbTransaction.getUsernamePayer(),
-						dbTransaction.getUsernamePayee(),
-						Currency.getCurrency(dbTransaction.getCurrency()),
-						Converter.getLongFromBigDecimal(dbTransaction.getAmount()),
-						dbTransaction.getTimestamp().getTime());
-				paymentResponsePayee.sign(KeyHandler.decodePrivateKey(Constants.SERVER_KEY_PAIR.getPrivateKey()));
-				signedResponse = new ServerPaymentResponse(paymentResponsePayer, paymentResponsePayee);
-			}
+			signedResponse = new ServerPaymentResponse(paymentResponsePayer);
 		} catch (Exception e) {
 			throw new TransactionException(INTERNAL_ERROR);
 		}
