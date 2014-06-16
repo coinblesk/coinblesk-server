@@ -2,6 +2,7 @@ package ch.uzh.csg.mpbs.server.service;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.math.BigDecimal;
@@ -34,6 +35,7 @@ import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.HibernateUtil;
+import ch.uzh.csg.mbps.server.util.exceptions.TransactionException;
 import ch.uzh.csg.mbps.util.Converter;
 
 public class TransactionServiceTest {
@@ -113,18 +115,14 @@ public class TransactionServiceTest {
 		assertEquals(0, payeeBalanceBefore.add(TRANSACTION_AMOUNT).compareTo(payeeAccountUpdated.getBalance()));
 		
 		assertTrue(response.getPaymentResponsePayer().verify(KeyHandler.decodePublicKey(Constants.SERVER_KEY_PAIR.getPublicKey())));
-		assertTrue(response.getPaymentResponsePayee().verify(KeyHandler.decodePublicKey(Constants.SERVER_KEY_PAIR.getPublicKey())));
+		
+		assertNull(response.getPaymentResponsePayee());
 		
 		PaymentResponse responsePayer = response.getPaymentResponsePayer();
-		PaymentResponse responsePayee = response.getPaymentResponsePayee();
 		
 		assertEquals(paymentRequestPayer.getAmount(), responsePayer.getAmount());
 		assertEquals(paymentRequestPayer.getUsernamePayer(), responsePayer.getUsernamePayer());
 		assertEquals(paymentRequestPayer.getUsernamePayee(), responsePayer.getUsernamePayee());
-
-		assertEquals(paymentRequestPayee.getAmount(), responsePayee.getAmount());
-		assertEquals(paymentRequestPayee.getUsernamePayer(), responsePayee.getUsernamePayer());
-		assertEquals(paymentRequestPayee.getUsernamePayee(), responsePayee.getUsernamePayee());
 	}
 	
 	@Test
@@ -176,303 +174,192 @@ public class TransactionServiceTest {
 	}
 	
 	@Test
-	public void testCreateTransaction_similarToClient() throws Exception {
-		UserAccount buyerAccount = createAccountAndVerifyAndReload("TDAOT_20", "TDAOT_20@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.add(new BigDecimal("1.00000000")));
-		UserAccount sellerAccount = createAccountAndVerifyAndReload("TDAOT_21", "TDAOT_21@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
-		
-		//TODO jeton: adopt to new stuff!
-//		//create transaction object from seller
-//		Transaction sellerTransaction = new Transaction();
-//		sellerTransaction.setAmount(TRANSACTION_AMOUNT);
-//		sellerTransaction.setSellerUsername(sellerAccount.getUsername());
-//		sellerTransaction.setTransactionNrSeller(sellerAccount.getTransactionNumber());
-//		byte[] serializedSellerTransaction = serialize(sellerTransaction);
-//		
-//		//buyer receives the serialized seller transaction object
-//		Transaction buyerTransaction = deserialize(serializedSellerTransaction);
-//		//buyer adds his information to the tx object
-//		buyerTransaction.setBuyerUsername(buyerAccount.getUsername());
-//		buyerTransaction.setTransactionNrBuyer(buyerAccount.getTransactionNumber());
-//		//buyer signes the object with his private key
-//		SignedObject signTransactionBuyer = KeyHandler.signTransaction(buyerTransaction, buyerAccount.getPrivateKey());
-//		//buyer serializes the signed object before sending to the seller
-//		byte[] serializedBuyerTransaction = Serializer.serialize(signTransactionBuyer);
-//		
-//		//seller receives the serialized buyer transaction object
-//		SignedObject signedObjectFromBuyer = Serializer.deserialize(serializedBuyerTransaction);
-//		Transaction transactionFromBuyer = KeyHandler.retrieveTransaction(signedObjectFromBuyer);
-//		//seller reads the buyer infos and completes his transaction object
-//		sellerTransaction = new Transaction();
-//		sellerTransaction.setAmount(TRANSACTION_AMOUNT);
-//		sellerTransaction.setSellerUsername(sellerAccount.getUsername());
-//		sellerTransaction.setTransactionNrSeller(sellerAccount.getTransactionNumber());
-//		sellerTransaction.setBuyerUsername(transactionFromBuyer.getBuyerUsername());
-//		sellerTransaction.setTransactionNrBuyer(transactionFromBuyer.getTransactionNrBuyer());
-//		//seller signs the transaction object
-//		SignedObject signedObjectSeller = KeyHandler.signTransaction(sellerTransaction, sellerAccount.getPrivateKey());
-//		
-//		//seller creates CreateTransactionTransferObject to send to server
-//		Pair<SignedObject> txRequest = new Pair<SignedObject>(signedObjectFromBuyer, signedObjectSeller);
-//		
-//		int nofTransaction = getAllTransactions().size();
-//		
-//		long buyerTxNrBefore = buyerAccount.getTransactionNumber();
-//		long sellerTxNrBefore = sellerAccount.getTransactionNumber();
-//		BigDecimal buyerBalanceBefore = buyerAccount.getBalance();
-//		BigDecimal sellerBalanceBefore = sellerAccount.getBalance();
-//		
-//		SignedObject txResponse = TransactionService.getInstance().createTransaction(txRequest);
-//		assertEquals(nofTransaction+1, getAllTransactions().size());
-//		
-//		UserAccount buyerAccountUpdated = UserAccountService.getInstance().getById(buyerAccount.getId());
-//		UserAccount sellerAccountUpdated = UserAccountService.getInstance().getById(sellerAccount.getId());
-//		
-//		assertEquals(buyerTxNrBefore+1, buyerAccountUpdated.getTransactionNumber());
-//		assertEquals(sellerTxNrBefore+1, sellerAccountUpdated.getTransactionNumber());
-//		assertEquals(0, buyerBalanceBefore.subtract(TRANSACTION_AMOUNT).compareTo(buyerAccountUpdated.getBalance()));
-//		assertEquals(0, sellerBalanceBefore.add(TRANSACTION_AMOUNT).compareTo(sellerAccountUpdated.getBalance()));
-//		
-//		assertTrue(KeyHandler.verifyObject(txResponse, Constants.PUBLICKEY));
-//		
-//		Transaction tx = KeyHandler.retrieveTransaction(txResponse);
-//		
-//		assertEquals(buyerTransaction.getAmount(), tx.getAmount());
-//		assertEquals(buyerTransaction.getBuyerUsername(), tx.getBuyerUsername());
-//		assertEquals(buyerTransaction.getSellerUsername(), tx.getSellerUsername());
-//		assertEquals(buyerTransaction.getTransactionNrBuyer(), tx.getTransactionNrBuyer());
-//		assertEquals(buyerTransaction.getTransactionNrSeller(), tx.getTransactionNrSeller());
-//		
-//		assertEquals(sellerTransaction.getAmount(), tx.getAmount());
-//		assertEquals(sellerTransaction.getBuyerUsername(), tx.getBuyerUsername());
-//		assertEquals(sellerTransaction.getSellerUsername(), tx.getSellerUsername());
-//		assertEquals(sellerTransaction.getTransactionNrBuyer(), tx.getTransactionNrBuyer());
-//		assertEquals(sellerTransaction.getTransactionNrSeller(), tx.getTransactionNrSeller());
-	}
-	
-//	private byte[] serialize(Transaction sellerTransaction) throws IOException {
-//		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-//	    ObjectOutputStream oos = new ObjectOutputStream(baos);
-//	    oos.writeObject(sellerTransaction);
-//	    return baos.toByteArray();
-//	}
-//	
-//	private Transaction deserialize(byte[] bytes) throws IOException, ClassNotFoundException {
-//		ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
-//		ObjectInputStream ois = new ObjectInputStream(bais);
-//		return (Transaction) ois.readObject();
-//	}
-	
-	@Test
 	public void testCreateTransaction_FailNegativeBalance() throws Exception {
-		UserAccount buyerAccount = createAccountAndVerifyAndReload("TDAOT_3", "TDAOT_3@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.subtract(new BigDecimal(1)));
-		UserAccount sellerAccount = createAccountAndVerifyAndReload("TDAOT_4", "TDAOT_4@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
+		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_3", "TDAOT_3@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.subtract(new BigDecimal(1)));
+		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_4", "TDAOT_4@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
 		
-		//TODO jeton: adopt to new stuff!
-//		Transaction buyerTransaction = new Transaction(buyerAccount.getTransactionNumber(), sellerAccount.getTransactionNumber(), buyerAccount.getUsername(), sellerAccount.getUsername(), TRANSACTION_AMOUNT, "", BigDecimal.ZERO);
-//		Transaction sellerTransaction = new Transaction(buyerAccount.getTransactionNumber(), sellerAccount.getTransactionNumber(), buyerAccount.getUsername(), sellerAccount.getUsername(), TRANSACTION_AMOUNT, "", BigDecimal.ZERO);
-//		
-//		SignedObject signedTransactionBuyer = KeyHandler.signTransaction(buyerTransaction, buyerAccount.getPrivateKey());
-//		SignedObject signedTransactionSeller = KeyHandler.signTransaction(sellerTransaction, sellerAccount.getPrivateKey());
-//
-//		int nofTransactions = getAllTransactions().size();
-//		
-//		long buyerTxNrBefore = buyerAccount.getTransactionNumber();
-//		long sellerTxNrBefore = sellerAccount.getTransactionNumber();
-//		BigDecimal buyerBalanceBefore = buyerAccount.getBalance();
-//		BigDecimal sellerBalanceBefore = sellerAccount.getBalance();
-//		
-//		try {
-//			TransactionService.getInstance().createTransaction(new Pair<SignedObject>(signedTransactionBuyer, signedTransactionSeller));
-//		} catch (TransactionException e) {
-//			assertEquals(TransactionService.BALANCE, e.getMessage());
-//		}
-//		
-//		assertEquals(nofTransactions, getAllTransactions().size());
-//		
-//		UserAccount buyerAccountUpdated = UserAccountService.getInstance().getById(buyerAccount.getId());
-//		UserAccount sellerAccountUpdated = UserAccountService.getInstance().getById(sellerAccount.getId());
-//		
-//		assertEquals(buyerTxNrBefore, buyerAccountUpdated.getTransactionNumber());
-//		assertEquals(sellerTxNrBefore, sellerAccountUpdated.getTransactionNumber());
-//		assertEquals(0, buyerBalanceBefore.compareTo(buyerAccountUpdated.getBalance()));
-//		assertEquals(0, sellerBalanceBefore.compareTo(sellerAccountUpdated.getBalance()));
+		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
+		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
+		
+		PaymentRequest paymentRequestPayer = new PaymentRequest(
+				PKIAlgorithm.DEFAULT, 
+				keyNumberPayer, 
+				payerAccount.getUsername(), 
+				payeeAccount.getUsername(), 
+				Currency.BTC, 
+				Converter.getLongFromBigDecimal(TRANSACTION_AMOUNT),
+				System.currentTimeMillis());
+		
+		paymentRequestPayer.sign(payerKeyPair.getPrivate());
+		
+		ServerPaymentRequest request = new ServerPaymentRequest(paymentRequestPayer);
+		
+		int nofTransaction = getAllTransactions().size();
+		
+		BigDecimal payerBalanceBefore = UserAccountService.getInstance().getById(payerAccount.getId()).getBalance();
+		BigDecimal payeeBalanceBefore = UserAccountService.getInstance().getById(payeeAccount.getId()).getBalance();
+		
+		boolean exceptionThrown = false;
+		try {
+			TransactionService.getInstance().createTransaction(request);
+		} catch (TransactionException e) {
+			exceptionThrown = true;
+			assertEquals(TransactionService.BALANCE, e.getMessage());
+		}
+		
+		assertTrue(exceptionThrown);
+		
+		assertEquals(nofTransaction, getAllTransactions().size());
+		
+		assertEquals(payerBalanceBefore, UserAccountService.getInstance().getById(payerAccount.getId()).getBalance());
+		assertEquals(payeeBalanceBefore, UserAccountService.getInstance().getById(payeeAccount.getId()).getBalance());
 	}
 	
 	@Test
-	public void testCreateTransaction_FailNotIdenticRequests() throws Exception {
-		UserAccount buyerAccount = createAccountAndVerifyAndReload("TDAOT_5", "TDAOT_5@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT);
-		UserAccount sellerAccount = createAccountAndVerifyAndReload("TDAOT_6", "TDAOT_6@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
+	public void testCreateTransaction_FailInvalidSignature() throws Exception {
+		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_7", "TDAOT_7@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT);
+		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_8", "TDAOT_8@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
 		
-		//TODO jeton: adopt to new stuff!
-//		Transaction buyerTransaction = new Transaction(buyerAccount.getTransactionNumber(), sellerAccount.getTransactionNumber(), buyerAccount.getUsername(), sellerAccount.getUsername(), TRANSACTION_AMOUNT, "", BigDecimal.ZERO);
-//		//seller enters more than the buyer agrees to pay
-//		Transaction sellerTransaction = new Transaction(buyerAccount.getTransactionNumber(), sellerAccount.getTransactionNumber(), buyerAccount.getUsername(), sellerAccount.getUsername(), TRANSACTION_AMOUNT.add(new BigDecimal(20)), "", BigDecimal.ZERO);
-//		
-//		SignedObject signedTransactionBuyer = KeyHandler.signTransaction(buyerTransaction, buyerAccount.getPrivateKey());
-//		SignedObject signedTransactionSeller = KeyHandler.signTransaction(sellerTransaction, sellerAccount.getPrivateKey());
-//
-//		int nofTransactions = getAllTransactions().size();
-//		
-//		long buyerTxNrBefore = buyerAccount.getTransactionNumber();
-//		long sellerTxNrBefore = sellerAccount.getTransactionNumber();
-//		BigDecimal buyerBalanceBefore = buyerAccount.getBalance();
-//		BigDecimal sellerBalanceBefore = sellerAccount.getBalance();
-//		
-//		try {
-//			TransactionService.getInstance().createTransaction(new Pair<SignedObject>(signedTransactionBuyer, signedTransactionSeller));
-//		} catch (TransactionException e) {
-//			assertEquals(TransactionService.PAYMENT_REFUSE, e.getMessage());
-//		}
-//		
-//		assertEquals(nofTransactions, getAllTransactions().size());
-//		
-//		UserAccount buyerAccountUpdated = UserAccountService.getInstance().getById(buyerAccount.getId());
-//		UserAccount sellerAccountUpdated = UserAccountService.getInstance().getById(sellerAccount.getId());
-//		
-//		assertEquals(buyerTxNrBefore, buyerAccountUpdated.getTransactionNumber());
-//		assertEquals(sellerTxNrBefore, sellerAccountUpdated.getTransactionNumber());
-//		assertEquals(0,buyerBalanceBefore.compareTo(buyerAccountUpdated.getBalance()));
-//		assertEquals(0,sellerBalanceBefore.compareTo(sellerAccountUpdated.getBalance()));
+		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
+		
+		// payer signs with a key pair which the server does not know - this is equals to a invalid signature
+		PaymentRequest paymentRequestPayer = new PaymentRequest(
+				PKIAlgorithm.DEFAULT, 
+				(byte) 12, 
+				payerAccount.getUsername(), 
+				payeeAccount.getUsername(), 
+				Currency.BTC, 
+				Converter.getLongFromBigDecimal(TRANSACTION_AMOUNT),
+				System.currentTimeMillis());
+		
+		paymentRequestPayer.sign(payerKeyPair.getPrivate());
+		
+		ServerPaymentRequest request = new ServerPaymentRequest(paymentRequestPayer);
+		
+		int nofTransaction = getAllTransactions().size();
+		
+		BigDecimal payerBalanceBefore = UserAccountService.getInstance().getById(payerAccount.getId()).getBalance();
+		BigDecimal payeeBalanceBefore = UserAccountService.getInstance().getById(payeeAccount.getId()).getBalance();
+		
+		boolean exceptionThrown = false;
+		try {
+			TransactionService.getInstance().createTransaction(request);
+		} catch (TransactionException e) {
+			exceptionThrown = true;
+			assertEquals(TransactionService.PAYMENT_REFUSE, e.getMessage());
+		}
+		
+		assertTrue(exceptionThrown);
+		
+		assertEquals(nofTransaction, getAllTransactions().size());
+		
+		assertEquals(payerBalanceBefore, UserAccountService.getInstance().getById(payerAccount.getId()).getBalance());
+		assertEquals(payeeBalanceBefore, UserAccountService.getInstance().getById(payeeAccount.getId()).getBalance());
 	}
 	
-	@Test
-	public void testCreateTransaction_FailBadSignature() throws Exception {
-		UserAccount buyerAccount = createAccountAndVerifyAndReload("TDAOT_7", "TDAOT_7@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT);
-		UserAccount sellerAccount = createAccountAndVerifyAndReload("TDAOT_8", "TDAOT_8@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
-		
-		//TODO jeton: adopt to new stuff!
-//		Transaction sellerTransaction = new Transaction(buyerAccount.getTransactionNumber(), sellerAccount.getTransactionNumber(), buyerAccount.getUsername(), sellerAccount.getUsername(), TRANSACTION_AMOUNT.add(new BigDecimal(20)), "", BigDecimal.ZERO);
-//		
-//		SignedObject signedTransactionSeller = KeyHandler.signTransaction(sellerTransaction, sellerAccount.getPrivateKey());
-//		
-//		int nofTransactions = getAllTransactions().size();
-//		
-//		long buyerTxNrBefore = buyerAccount.getTransactionNumber();
-//		long sellerTxNrBefore = sellerAccount.getTransactionNumber();
-//		BigDecimal buyerBalanceBefore = buyerAccount.getBalance();
-//		BigDecimal sellerBalanceBefore = sellerAccount.getBalance();
-//		
-//		try {
-//			// Seller drops the signed transaction request by the buyer and
-//			// sends only his transaction request, which has an higher amount
-//			// (the seller would steal money from the buyer)
-//			// or signature is simply not valid
-//			TransactionService.getInstance().createTransaction(new Pair<SignedObject>(signedTransactionSeller, signedTransactionSeller));
-//		} catch (TransactionException e) {
-//			assertEquals(TransactionService.PAYMENT_REFUSE, e.getMessage());
-//		}
-//		
-//		assertEquals(nofTransactions, getAllTransactions().size());
-//		
-//		UserAccount buyerAccountUpdated = UserAccountService.getInstance().getById(buyerAccount.getId());
-//		UserAccount sellerAccountUpdated = UserAccountService.getInstance().getById(sellerAccount.getId());
-//		
-//		assertEquals(buyerTxNrBefore, buyerAccountUpdated.getTransactionNumber());
-//		assertEquals(sellerTxNrBefore, sellerAccountUpdated.getTransactionNumber());
-//		assertEquals(0,buyerBalanceBefore.compareTo(buyerAccountUpdated.getBalance()));
-//		assertEquals(0,sellerBalanceBefore.compareTo(sellerAccountUpdated.getBalance()));
-	}
-	
-	@Test
-	public void testCreateTransaction_FailTransactionNumberInconsistency() throws Exception {
-		UserAccount buyerAccount = createAccountAndVerifyAndReload("TDAOT_9", "TDAOT_9@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT);
-		UserAccount sellerAccount = createAccountAndVerifyAndReload("TDAOT_10", "TDAOT_10@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
-		
-		//TODO jeton: adopt to new stuff!
-//		Transaction buyerTransaction = new Transaction(buyerAccount.getTransactionNumber(), sellerAccount.getTransactionNumber(), buyerAccount.getUsername(), sellerAccount.getUsername(), TRANSACTION_AMOUNT, "", BigDecimal.ZERO);
-//		Transaction sellerTransaction = new Transaction(buyerAccount.getTransactionNumber(), sellerAccount.getTransactionNumber(), buyerAccount.getUsername(), sellerAccount.getUsername(), TRANSACTION_AMOUNT, "", BigDecimal.ZERO);
-//		
-//		SignedObject signedTransactionBuyer = KeyHandler.signTransaction(buyerTransaction, buyerAccount.getPrivateKey());
-//		SignedObject signedTransactionSeller = KeyHandler.signTransaction(sellerTransaction, sellerAccount.getPrivateKey());
-//
-//		int nofTransactions = getAllTransactions().size();
-//		
-//		long buyerTxNrBefore = buyerAccount.getTransactionNumber();
-//		long sellerTxNrBefore = sellerAccount.getTransactionNumber();
-//		BigDecimal buyerBalanceBefore = buyerAccount.getBalance();
-//		BigDecimal sellerBalanceBefore = sellerAccount.getBalance();
-//		
-//		TransactionService.getInstance().createTransaction(new Pair<SignedObject>(signedTransactionBuyer, signedTransactionSeller));
-//		
-//		//seller does not receive the conformation and resends the request
-//		try {
-//			TransactionService.getInstance().createTransaction(new Pair<SignedObject>(signedTransactionBuyer, signedTransactionSeller));
-//		} catch (TransactionException e) {
-//			assertEquals(TransactionService.PAYMENT_REFUSE, e.getMessage());
-//		}
-//		
-//		assertEquals(nofTransactions+1, getAllTransactions().size());
-//		
-//		UserAccount buyerAccountUpdated = UserAccountService.getInstance().getById(buyerAccount.getId());
-//		UserAccount sellerAccountUpdated = UserAccountService.getInstance().getById(sellerAccount.getId());
-//		
-//		assertEquals(buyerTxNrBefore+1, buyerAccountUpdated.getTransactionNumber());
-//		assertEquals(sellerTxNrBefore+1, sellerAccountUpdated.getTransactionNumber());
-//		assertEquals(0,buyerBalanceBefore.subtract(TRANSACTION_AMOUNT).compareTo(buyerAccountUpdated.getBalance()));
-//		assertEquals(0,sellerBalanceBefore.add(TRANSACTION_AMOUNT).compareTo(sellerAccountUpdated.getBalance()));
-	}
-
 	@Test
 	public void testGetHistory() throws Exception {
-		UserAccount buyerAccount = createAccountAndVerifyAndReload("TDAOT_11", "TDAOT_11@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.multiply(new BigDecimal(4)));
-		UserAccount sellerAccount = createAccountAndVerifyAndReload("TDAOT_12", "TDAOT_12@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
+		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_11", "TDAOT_11@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.multiply(new BigDecimal(4)));
+		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_12", "TDAOT_12@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
 		
-		//TODO jeton: adopt to new stuff!
-//		//transaction #1 - TDAOT_11 buys from TDAOT_12
-//		Transaction buyerTransaction = new Transaction(buyerAccount.getTransactionNumber(), sellerAccount.getTransactionNumber(), buyerAccount.getUsername(), sellerAccount.getUsername(), TRANSACTION_AMOUNT, "", BigDecimal.ZERO);
-//		Transaction sellerTransaction = new Transaction(buyerAccount.getTransactionNumber(), sellerAccount.getTransactionNumber(), buyerAccount.getUsername(), sellerAccount.getUsername(), TRANSACTION_AMOUNT, "", BigDecimal.ZERO);
-//		SignedObject signedTransactionBuyer = KeyHandler.signTransaction(buyerTransaction, buyerAccount.getPrivateKey());
-//		SignedObject signedTransactionSeller = KeyHandler.signTransaction(sellerTransaction, sellerAccount.getPrivateKey());
-//		TransactionService.getInstance().createTransaction(new Pair<SignedObject>(signedTransactionBuyer, signedTransactionSeller));
-//		
-//		//reload accounts
-//		buyerAccount = UserAccountService.getInstance().getByUsername("TDAOT_12");
-//		sellerAccount = UserAccountService.getInstance().getByUsername("TDAOT_11");
-//		
-//		//transaction #2 - TDAOT_12 buys from TDAOT_11
-//		Transaction buyerTransaction2 = new Transaction(buyerAccount.getTransactionNumber(), sellerAccount.getTransactionNumber(), buyerAccount.getUsername(), sellerAccount.getUsername(), TRANSACTION_AMOUNT, "", BigDecimal.ZERO);
-//		Transaction sellerTransaction2 = new Transaction(buyerAccount.getTransactionNumber(), sellerAccount.getTransactionNumber(), buyerAccount.getUsername(), sellerAccount.getUsername(), TRANSACTION_AMOUNT, "", BigDecimal.ZERO);
-//		SignedObject signedTransactionBuyer2 = KeyHandler.signTransaction(buyerTransaction2, buyerAccount.getPrivateKey());
-//		SignedObject signedTransactionSeller2 = KeyHandler.signTransaction(sellerTransaction2, sellerAccount.getPrivateKey());
-//		TransactionService.getInstance().createTransaction(new Pair<SignedObject>(signedTransactionBuyer2, signedTransactionSeller2));
-//		
-//		//reload accounts
-//		buyerAccount = UserAccountService.getInstance().getByUsername("TDAOT_12");
-//		sellerAccount = UserAccountService.getInstance().getByUsername("TDAOT_11");
-//		
-//		int nofTransactionsBuyer = TransactionService.getInstance().getHistory(buyerAccount.getUsername(), 0).size();
-//		assertEquals(2, nofTransactionsBuyer);
-//		
-//		int nofTransactionsSeller = TransactionService.getInstance().getHistory(sellerAccount.getUsername(), 0).size();
-//		assertEquals(2, nofTransactionsSeller);
-//		
-//		UserAccount account3 = new UserAccount("TDAOT_13", "TDAOT_13@bitcoin.csg.uzh.ch", "my-password");
-//		UserAccountService.getInstance().createAccount(account3);
-//		account3 = UserAccountService.getInstance().getByUsername("TDAOT_13");
-//		
-//		//reload accounts, and change roles, buyer becomes seller and vice versa
-//		buyerAccount = UserAccountService.getInstance().getByUsername("TDAOT_11");
-//		sellerAccount = UserAccountService.getInstance().getByUsername("TDAOT_13");
-//		
-//		//transaction #3 - TDAOT_11 buys from TDAOT_13
-//		Transaction buyerTransaction3 = new Transaction(buyerAccount.getTransactionNumber(), sellerAccount.getTransactionNumber(), buyerAccount.getUsername(), sellerAccount.getUsername(), TRANSACTION_AMOUNT, "", BigDecimal.ZERO);
-//		Transaction sellerTransaction3 = new Transaction(buyerAccount.getTransactionNumber(), sellerAccount.getTransactionNumber(), buyerAccount.getUsername(), sellerAccount.getUsername(), TRANSACTION_AMOUNT, "", BigDecimal.ZERO);
-//		SignedObject signedTransactionBuyer3 = KeyHandler.signTransaction(buyerTransaction3, buyerAccount.getPrivateKey());
-//		SignedObject signedTransactionSeller3 = KeyHandler.signTransaction(sellerTransaction3, sellerAccount.getPrivateKey());
-//		TransactionService.getInstance().createTransaction(new Pair<SignedObject>(signedTransactionBuyer3, signedTransactionSeller3));
-//
-//		//reload accounts, and change roles, buyer becomes seller and vice versa
-//		buyerAccount = UserAccountService.getInstance().getByUsername("TDAOT_11");
-//		sellerAccount = UserAccountService.getInstance().getByUsername("TDAOT_13");
-//
-//		int nofTransactions11 = TransactionService.getInstance().getHistory("TDAOT_11", 0).size();
-//		assertEquals(3, nofTransactions11);
-//		
-//		int nofTransactions12 = TransactionService.getInstance().getHistory("TDAOT_12", 0).size();
-//		assertEquals(2, nofTransactions12);
-//		
-//		int nofTransactions13 = TransactionService.getInstance().getHistory("TDAOT_13", 0).size();
-//		assertEquals(1, nofTransactions13);
+		KeyPair keyPairPayer = KeyHandler.generateKeyPair();
+		KeyPair keyPairPayee = KeyHandler.generateKeyPair();
+	
+		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayer.getPublic()));
+		byte keyNumberPayee = UserAccountService.getInstance().saveUserPublicKey(payeeAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayee.getPublic()));
+		
+		//transaction #1 - TDAOT_11 buys from TDAOT_12
+		PaymentRequest paymentRequestPayer = new PaymentRequest(
+				PKIAlgorithm.DEFAULT, 
+				keyNumberPayer, 
+				payerAccount.getUsername(), 
+				payeeAccount.getUsername(), 
+				Currency.BTC, 
+				Converter.getLongFromBigDecimal(TRANSACTION_AMOUNT),
+				System.currentTimeMillis());
+		paymentRequestPayer.sign(keyPairPayer.getPrivate());
+		
+		PaymentRequest paymentRequestPayee = new PaymentRequest(
+				PKIAlgorithm.DEFAULT, 
+				keyNumberPayee, 
+				payerAccount.getUsername(), 
+				payeeAccount.getUsername(), 
+				Currency.BTC, 
+				Converter.getLongFromBigDecimal(TRANSACTION_AMOUNT),
+				paymentRequestPayer.getTimestamp());
+		paymentRequestPayee.sign(keyPairPayee.getPrivate());
+		
+		ServerPaymentRequest request = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
+		TransactionService.getInstance().createTransaction(request);
+		
+		//transaction #2 - TDAOT_12 buys from TDAOT_11
+		paymentRequestPayer = new PaymentRequest(
+				PKIAlgorithm.DEFAULT, 
+				keyNumberPayee, 
+				payeeAccount.getUsername(), 
+				payerAccount.getUsername(), 
+				Currency.BTC, 
+				Converter.getLongFromBigDecimal(TRANSACTION_AMOUNT),
+				System.currentTimeMillis());
+		paymentRequestPayer.sign(keyPairPayee.getPrivate());
+		
+		paymentRequestPayee = new PaymentRequest(
+				PKIAlgorithm.DEFAULT, 
+				keyNumberPayer, 
+				payeeAccount.getUsername(), 
+				payerAccount.getUsername(), 
+				Currency.BTC, 
+				Converter.getLongFromBigDecimal(TRANSACTION_AMOUNT),
+				paymentRequestPayer.getTimestamp());
+		paymentRequestPayee.sign(keyPairPayer.getPrivate());
+		
+		request = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
+		TransactionService.getInstance().createTransaction(request);
+		
+		int nofTransactionsPayer = TransactionService.getInstance().getHistory(payerAccount.getUsername(), 0).size();
+		assertEquals(2, nofTransactionsPayer);
+		
+		int nofTransactionsPayee = TransactionService.getInstance().getHistory(payeeAccount.getUsername(), 0).size();
+		assertEquals(2, nofTransactionsPayee);
+		
+		
+		UserAccount account3 = createAccountAndVerifyAndReload("TDAOT_13", "TDAOT_13@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
+		KeyPair keyPairAccount3 = KeyHandler.generateKeyPair();
+		
+		byte keyNumberAccount3 = UserAccountService.getInstance().saveUserPublicKey(account3.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairAccount3.getPublic()));
+		
+		//transaction #3 - TDAOT_11 buys from TDAOT_13
+		paymentRequestPayer = new PaymentRequest(
+				PKIAlgorithm.DEFAULT, 
+				keyNumberPayer, 
+				payerAccount.getUsername(), 
+				account3.getUsername(), 
+				Currency.BTC, 
+				Converter.getLongFromBigDecimal(TRANSACTION_AMOUNT),
+				System.currentTimeMillis());
+		paymentRequestPayer.sign(keyPairPayer.getPrivate());
+		
+		paymentRequestPayee = new PaymentRequest(
+				PKIAlgorithm.DEFAULT, 
+				keyNumberAccount3, 
+				payerAccount.getUsername(), 
+				account3.getUsername(), 
+				Currency.BTC, 
+				Converter.getLongFromBigDecimal(TRANSACTION_AMOUNT),
+				paymentRequestPayer.getTimestamp());
+		paymentRequestPayee.sign(keyPairAccount3.getPrivate());
+		
+		request = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
+		TransactionService.getInstance().createTransaction(request);
+		
+		int nofTransactions11 = TransactionService.getInstance().getHistory("TDAOT_11", 0).size();
+		assertEquals(3, nofTransactions11);
+		
+		int nofTransactions12 = TransactionService.getInstance().getHistory("TDAOT_12", 0).size();
+		assertEquals(2, nofTransactions12);
+		
+		int nofTransactions13 = TransactionService.getInstance().getHistory("TDAOT_13", 0).size();
+		assertEquals(1, nofTransactions13);
 	}
 	
 	@Test
