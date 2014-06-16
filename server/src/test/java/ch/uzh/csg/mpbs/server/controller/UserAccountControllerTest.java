@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.security.KeyPair;
 import java.util.List;
 
@@ -38,9 +39,17 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import ch.uzh.csg.mbps.customserialization.Currency;
+import ch.uzh.csg.mbps.customserialization.DecoderFactory;
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
+import ch.uzh.csg.mbps.customserialization.PaymentRequest;
+import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
+import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
+import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
 import ch.uzh.csg.mbps.keys.CustomPublicKey;
+import ch.uzh.csg.mbps.responseobject.CreateTransactionTransferObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
+import ch.uzh.csg.mbps.responseobject.GetHistoryTransferObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
 import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
@@ -55,6 +64,7 @@ import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
+import ch.uzh.csg.mbps.util.Converter;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
@@ -86,6 +96,8 @@ public class UserAccountControllerTest {
 	private static UserAccount test29;
 	private static UserAccount test30;
 	private static UserAccount test31;
+	private static UserAccount test32;
+	private static UserAccount test33;
 
 	@Before
 	public void setUp() {
@@ -105,6 +117,8 @@ public class UserAccountControllerTest {
 			test29 = new UserAccount("test29", "chuck29@bitcoin.csg.uzh.ch", "i-don't-need-one");
 			test30 = new UserAccount("test30", "dandeliox@gmail.com", "i-don't-need-one");
 			test31 = new UserAccount("test31", "test31@gmail.com", "i-don't-need-one");
+			test32 = new UserAccount("test32", "test32@gmail.com", "i-don't-need-one");
+			test33 = new UserAccount("test33", "test33@gmail.com", "i-don't-need-one");
 
 			initialized = true;
 		}
@@ -447,6 +461,84 @@ public class UserAccountControllerTest {
 		assertEquals(true, transferObject.isSuccessful());
 		assertEquals(Type.SAVE_PUBLIC_KEY, transferObject.getType());
 		assertEquals(1, Byte.parseByte(transferObject.getMessage()));
+	}
+	
+	private static final BigDecimal TRANSACTION_AMOUNT = new BigDecimal(10.1).setScale(8, RoundingMode.HALF_UP);
+	
+	@Test
+	public void testGetMainActivityRequests() throws Exception {
+		assertTrue(UserAccountService.getInstance().createAccount(test32));
+		test32 = UserAccountService.getInstance().getByUsername(test32.getUsername());
+		test32.setEmailVerified(true);
+		test32.setBalance(TRANSACTION_AMOUNT.multiply(new BigDecimal(10)));
+		UserAccountDAO.updateAccount(test32);
+		
+		String plainTextPw = test33.getPassword();
+		assertTrue(UserAccountService.getInstance().createAccount(test33));
+		test33 = UserAccountService.getInstance().getByUsername(test33.getUsername());
+		test33.setEmailVerified(true);
+		UserAccountDAO.updateAccount(test33);
+		
+		KeyPair keyPairPayer = KeyHandler.generateKeyPair();
+		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(test32.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayer.getPublic()));
+		
+		ObjectMapper mapper = null;
+		
+		HttpSession session = loginAndGetSession(test32.getUsername(), plainTextPw);
+		MvcResult mvcResult = null;
+		for(int i = 0; i<5;i++){
+			PaymentRequest paymentRequestPayer = new PaymentRequest(
+					PKIAlgorithm.DEFAULT, 
+					keyNumberPayer, 
+					test32.getUsername(), 
+					test33.getUsername(), 
+					Currency.BTC, 
+					Converter.getLongFromBigDecimal(TRANSACTION_AMOUNT),
+					System.currentTimeMillis());
+			paymentRequestPayer.sign(keyPairPayer.getPrivate());
+			
+			ServerPaymentRequest request = new ServerPaymentRequest(paymentRequestPayer);
+			CreateTransactionTransferObject ctto = new CreateTransactionTransferObject(request);
+			
+			mapper = new ObjectMapper();
+			String asString = mapper.writeValueAsString(ctto);
+			
+			mvcResult = mockMvc.perform(post("/transaction/create").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
+					.andExpect(status().isOk())
+					.andReturn();
+			
+			CustomResponseObject cro = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
+			assertTrue(cro.isSuccessful());
+			assertNotNull(cro.getServerPaymentResponse());
+			ServerPaymentResponse response = DecoderFactory.decode(ServerPaymentResponse.class, cro.getServerPaymentResponse());
+			assertNotNull(response);
+			assertNotNull(response.getPaymentResponsePayer());
+			assertEquals(ServerResponseStatus.SUCCESS, response.getPaymentResponsePayer().getStatus());
+		}
+		
+		mvcResult = mockMvc.perform(get("/user/mainActivityRequests")
+				.secure(false).session((MockHttpSession) session))
+				.andExpect(status().isOk())
+				.andReturn();
+		
+		CustomResponseObject cro2 = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
+		assertTrue(cro2.isSuccessful());
+		BigDecimal exchangeRate = new BigDecimal(cro2.getMessage());
+		assertTrue(exchangeRate.compareTo(BigDecimal.ZERO) >= 0);
+		
+		assertNotNull(cro2.getBalance());
+		
+		GetHistoryTransferObject ghto = cro2.getGetHistoryTO();
+		assertNotNull(ghto);
+		assertEquals(3, ghto.getTransactionHistory().size());
+		assertEquals(0, ghto.getPayInTransactionHistory().size());
+		assertEquals(0, ghto.getPayOutTransactionHistory().size());
+		
+		logout(mvcResult);
+		
+		mvcResult = mockMvc.perform(get("/user/mainActivityRequests").secure(false).session((MockHttpSession) session))
+				.andExpect(status().isUnauthorized())
+				.andReturn();
 	}
 
 	private void logout(MvcResult result) {
