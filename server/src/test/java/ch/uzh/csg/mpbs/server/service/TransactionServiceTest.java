@@ -125,9 +125,7 @@ public class TransactionServiceTest {
 		assertEquals(paymentRequestPayee.getAmount(), responsePayee.getAmount());
 		assertEquals(paymentRequestPayee.getUsernamePayer(), responsePayee.getUsernamePayer());
 		assertEquals(paymentRequestPayee.getUsernamePayee(), responsePayee.getUsernamePayee());
-
 	}
-	
 	
 	@Test
 	public void testCreateDirectSendTransaction() throws Exception {
@@ -175,7 +173,6 @@ public class TransactionServiceTest {
 		assertEquals(paymentRequestPayer.getAmount(), responsePayer.getAmount());
 		assertEquals(paymentRequestPayer.getUsernamePayer(), responsePayer.getUsernamePayer());
 		assertEquals(paymentRequestPayer.getUsernamePayee(), responsePayer.getUsernamePayee());
-
 	}
 	
 	@Test

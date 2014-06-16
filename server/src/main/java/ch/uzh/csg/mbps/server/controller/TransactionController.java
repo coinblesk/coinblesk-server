@@ -13,7 +13,11 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
+import ch.uzh.csg.mbps.customserialization.PaymentRequest;
+import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
+import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
 import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
 import ch.uzh.csg.mbps.model.HistoryPayOutTransaction;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
@@ -24,6 +28,7 @@ import ch.uzh.csg.mbps.responseobject.GetHistoryTransferObject;
 import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;
 import ch.uzh.csg.mbps.server.domain.PayOutTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.PayInTransactionService;
 import ch.uzh.csg.mbps.server.service.PayOutTransactionService;
 import ch.uzh.csg.mbps.server.service.TransactionService;
@@ -61,19 +66,36 @@ public class TransactionController {
 	@RequestMapping(value = "/create", method = RequestMethod.POST, consumes = "application/json", produces = "application/json")
 	@ResponseBody
 	public CustomResponseObject createTransaction(@RequestBody CreateTransactionTransferObject requestObject) {
+		CustomResponseObject responseObject;
 		try {
-			ServerPaymentResponse serverPaymentResponse = TransactionService.getInstance().createTransaction(requestObject.getServerPaymentRequest());
-			CustomResponseObject responseObject = new CustomResponseObject(true, SUCCESS, Type.CREATE_TRANSACTION);
-			responseObject.setServerPaymentResponse(serverPaymentResponse.encode());
-			return responseObject;
-		} catch (TransactionException e) {
-			//TODO jeton: if refused, sign response
-			LOGGER.error(e.getMessage());
-			return new CustomResponseObject(false, e.getMessage());
+			try {
+				ServerPaymentResponse serverPaymentResponse = TransactionService.getInstance().createTransaction(requestObject.getServerPaymentRequest());
+				responseObject = new CustomResponseObject(true, SUCCESS, Type.CREATE_TRANSACTION);
+				responseObject.setServerPaymentResponse(serverPaymentResponse.encode());
+				return responseObject;
+			} catch (TransactionException | UserAccountNotFoundException e) {
+				PaymentRequest paymentRequestPayer = requestObject.getServerPaymentRequest().getPaymentRequestPayer();
+				PaymentResponse paymentResponsePayer = new PaymentResponse(
+						PKIAlgorithm.getPKIAlgorithm(Constants.SERVER_KEY_PAIR.getPkiAlgorithm()),
+						Constants.SERVER_KEY_PAIR.getKeyNumber(),
+						ServerResponseStatus.FAILURE,
+						e.getMessage(),
+						paymentRequestPayer.getUsernamePayer(),
+						paymentRequestPayer.getUsernamePayee(),
+						paymentRequestPayer.getCurrency(),
+						paymentRequestPayer.getAmount(),
+						paymentRequestPayer.getTimestamp());
+				paymentResponsePayer.sign(KeyHandler.decodePrivateKey(Constants.SERVER_KEY_PAIR.getPrivateKey()));
+				
+				responseObject = new CustomResponseObject(true, null, Type.CREATE_TRANSACTION);
+				responseObject.setServerPaymentResponse(new ServerPaymentResponse(paymentResponsePayer).encode());
+				
+				LOGGER.error(e.getMessage());
+				return responseObject;
+			}
 		} catch (Exception e) {
-			//TODO jeton: if refused, sign response
 			LOGGER.error(e.getMessage());
-			return new CustomResponseObject(false, Constants.INTERNAL_SERVER_ERROR + e.getMessage());
+			return new CustomResponseObject(false, Constants.INTERNAL_SERVER_ERROR + ": " + e.getMessage(), Type.CREATE_TRANSACTION);
 		}
 	}
 	

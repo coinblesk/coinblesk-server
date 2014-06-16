@@ -43,6 +43,7 @@ import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
+import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
 import ch.uzh.csg.mbps.keys.CustomKeyPair;
 import ch.uzh.csg.mbps.responseobject.CreateTransactionTransferObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
@@ -213,6 +214,9 @@ public class TransactionControllerTest {
 	
 		UserAccount payerAccountUpdated = UserAccountService.getInstance().getById(payerAccount.getId());
 		UserAccount payeeAccountUpdated = UserAccountService.getInstance().getById(payeeAccount.getId());
+		
+		assertTrue(result.isSuccessful());
+		assertEquals(ServerResponseStatus.SUCCESS, serverPaymentResponse.getPaymentResponsePayer().getStatus());
 		
 		assertEquals(0, payerBalanceBefore.subtract(TRANSACTION_AMOUNT).compareTo(payerAccountUpdated.getBalance()));
 		assertEquals(0, payeeBalanceBefore.add(TRANSACTION_AMOUNT).compareTo(payeeAccountUpdated.getBalance()));
