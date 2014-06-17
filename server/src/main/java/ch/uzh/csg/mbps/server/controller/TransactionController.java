@@ -25,7 +25,6 @@ import ch.uzh.csg.mbps.responseobject.CreateTransactionTransferObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
 import ch.uzh.csg.mbps.responseobject.GetHistoryTransferObject;
-import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;
 import ch.uzh.csg.mbps.server.domain.PayOutTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
@@ -137,8 +136,6 @@ public class TransactionController {
 			CustomResponseObject responseObject = new CustomResponseObject(true, "");
 			responseObject.setGetHistoryTO(new GetHistoryTransferObject(history, payInHistory, payOutHistory, nofTx, nofPayInTx, nofPayOutTx));
 			
-			ReadAccountTransferObject rato = new ReadAccountTransferObject(UserAccountController.transform(UserAccountService.getInstance().getByUsername(username)));
-			responseObject.setReadAccountTO(rato);
 			return responseObject;
 		} catch (UserAccountNotFoundException e) {
 			return new CustomResponseObject(false, e.getMessage());
