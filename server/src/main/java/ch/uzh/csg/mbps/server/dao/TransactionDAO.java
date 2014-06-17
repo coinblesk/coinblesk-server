@@ -7,8 +7,10 @@ import org.apache.log4j.Logger;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.criterion.Restrictions;
 import org.hibernate.transform.Transformers;
 
+import ch.uzh.csg.mbps.customserialization.Currency;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
 import ch.uzh.csg.mbps.server.domain.DbTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
@@ -16,6 +18,7 @@ import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.HibernateUtil;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
+import ch.uzh.csg.mbps.util.Converter;
 
 /**
  * DatabaseAccessObject for {@link DbTransaction}. Handles all DB operations regarding
@@ -31,12 +34,15 @@ public class TransactionDAO {
 	}
 
 	/**
-	 * Returns defined amount of {@link DbTransaction}s assigned to the given username as
-	 * an ArrayList. Number of Transactions and selection is defined in the
-	 * Config-File and by the parameter "page".
+	 * Returns defined amount of {@link DbTransaction}s assigned to the given
+	 * username as an ArrayList. Number of Transactions and selection is defined
+	 * in the Config-File and by the parameter "page".
 	 * 
-	 * @param username for which history is requested
-	 * @param page which defines which page of Transactions shall be returned (NrX to NrY)
+	 * @param username
+	 *            for which history is requested
+	 * @param page
+	 *            which defines which page of Transactions shall be returned
+	 *            (NrX to NrY)
 	 * @return ArrayList with requested amount of HistoryTransactions
 	 * @throws UserAccountNotFoundException
 	 */
@@ -48,23 +54,24 @@ public class TransactionDAO {
 		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
 		Session session = openSession();
 		session.beginTransaction();	
-		List<HistoryTransaction> resultWithAliasedBean = session.createSQLQuery(
-				  "SELECT transaction.timestamp, u2.username as buyer, u1.username as seller, transaction.amount " +
-				  "FROM DB_TRANSACTION transaction " +
-				  "INNER JOIN user_account u1 on transaction.username_payee = u1.username " +
-				  "INNER JOIN user_account u2 on transaction.username_payer = u2.username " +
-				  "WHERE transaction.username_payer = :username OR transaction.username_payee = :username " +
-				  "ORDER BY transaction.timestamp DESC")
-				  .addScalar("timestamp")
-				  .addScalar("buyer")
-				  .addScalar("seller")
-				  .addScalar("amount")
-				  .setString("username", userAccount.getUsername())
-				 .setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
-				  .setMaxResults(Config.TRANSACTIONS_MAX_RESULTS)
-				  .setFetchSize(Config.TRANSACTIONS_MAX_RESULTS)
-				  .setResultTransformer(Transformers.aliasToBean(HistoryTransaction.class))
-				  .list();
+		List<HistoryTransaction> resultWithAliasedBean = session
+				.createSQLQuery(
+						"SELECT transaction.timestamp, u2.username as buyer, u1.username as seller, transaction.amount "
+								+ "FROM DB_TRANSACTION transaction "
+								+ "INNER JOIN user_account u1 on transaction.username_payee = u1.username "
+								+ "INNER JOIN user_account u2 on transaction.username_payer = u2.username "
+								+ "WHERE transaction.username_payer = :username OR transaction.username_payee = :username "
+								+ "ORDER BY transaction.timestamp DESC")
+				.addScalar("timestamp")
+				.addScalar("buyer")
+				.addScalar("seller")
+				.addScalar("amount")
+				.setString("username", userAccount.getUsername())
+				.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
+				.setMaxResults(Config.TRANSACTIONS_MAX_RESULTS)
+				.setFetchSize(Config.TRANSACTIONS_MAX_RESULTS)
+				.setResultTransformer(Transformers.aliasToBean(HistoryTransaction.class))
+				.list();
 
 		List<HistoryTransaction> results = resultWithAliasedBean;
 		session.close();
@@ -73,10 +80,11 @@ public class TransactionDAO {
 	}
 
 	/**
-	 * Counts number of {@link DbTransaction}-entries for given username and returns
-	 * number as long.
+	 * Counts number of {@link DbTransaction}-entries for given username and
+	 * returns number as long.
 	 * 
-	 * @param username for which Transactions shall be counted.
+	 * @param username
+	 *            for which Transactions shall be counted.
 	 * @return number of Transactions assigned to username.
 	 * @throws UserAccountNotFoundException
 	 */
@@ -102,9 +110,12 @@ public class TransactionDAO {
 	/**
 	 * Saves a new {@link DbTransaction} in the database.
 	 * 
-	 * @param tx to save in the DB
-	 * @param buyerAccount UserAccount from which transaction-amount is subtracted.
-	 * @param sellerAccount UserAccount to which transaction-amount is added.
+	 * @param tx
+	 *            to save in the DB
+	 * @param buyerAccount
+	 *            UserAccount from which transaction-amount is subtracted.
+	 * @param sellerAccount
+	 *            UserAccount to which transaction-amount is added.
 	 * @throws HibernateException
 	 */
 	public static void createTransaction(DbTransaction tx, UserAccount buyerAccount, UserAccount sellerAccount) throws HibernateException {
@@ -133,9 +144,45 @@ public class TransactionDAO {
 			session.close();
 		}
 	}
+	
+	/**
+	 * Checks if a Transaction with the given parameters does already exist.
+	 * 
+	 * @param usernamePayer
+	 *            the payer's username
+	 * @param usernamePayee
+	 *            the payee's username
+	 * @param currency
+	 *            the currency
+	 * @param amount
+	 *            the amount
+	 * @param timestamp
+	 *            the payer's timestamp
+	 * @return
+	 */
+	public static boolean exists(String usernamePayer, String usernamePayee, Currency currency, long amount, long timestampPayer) {
+		Session session = openSession();
+		session.beginTransaction();
+		
+		DbTransaction tx = (DbTransaction) session.createCriteria(DbTransaction.class)
+				.add(Restrictions.eq("usernamePayer", usernamePayer))
+				.add(Restrictions.eq("usernamePayee", usernamePayee))
+				.add(Restrictions.eq("currency", currency.getCurrencyCode()))
+				.add(Restrictions.eq("amount", Converter.getBigDecimalFromLong(amount)))
+				.add(Restrictions.eq("timestampPayer", timestampPayer))
+				.uniqueResult();
+		
+		session.close();
+		
+		if (tx != null) {
+			return true;
+		} else {
+			return false;
+		}
+	}
 
 	/**
-	 * Returns 3 newest {@link Transaction}s as {@link HistoryTransaction}s in
+	 * Returns 3 newest Transactions as {@link HistoryTransaction}s in
 	 * descending order.
 	 * 
 	 * @param username

@@ -40,14 +40,17 @@ public class DbTransaction implements Serializable {
 	@Column(name="USERNAME_PAYEE")
 	@Index(name = "USERNAME_PAYEE_INDEX")
 	private String usernamePayee;
+	@Column(name="CURRENCY")
+	private String currency;
 	@Column(name="AMOUNT", precision = 25, scale=8)
 	private BigDecimal amount;
 	@Column(name="INPUT_CURRENCY")
 	private String inputCurrency;
 	@Column(name="INPUT_CURRENCY_AMOUNT", precision = 25, scale=2)
 	private BigDecimal inputCurrencyAmount;
-	@Column(name="CURRENCY")
-	private String currency;
+	@Column(name="TIMESTAMP_PAYER")
+	@Index(name="TIMESTAMP_PAYER_INDEX")
+	private long timestampPayer;
 	@Column(name="SIGNATURE")
 	private String signature;
 	
@@ -59,9 +62,10 @@ public class DbTransaction implements Serializable {
 		this.usernamePayee = paymentRequest.getUsernamePayee();
 		this.currency = paymentRequest.getCurrency().getCurrencyCode();
 		this.amount = Converter.getBigDecimalFromLong(paymentRequest.getAmount());
+		this.timestampPayer = paymentRequest.getTimestamp();
 		this.signature = new String(Base64.encodeBase64(paymentRequest.getSignature()));
 		this.timestamp = new Date();
-		if(paymentRequest.getInputCurrency() != null){
+		if (paymentRequest.getInputCurrency() != null) {
 			this.inputCurrency = paymentRequest.getInputCurrency().getCurrencyCode();
 			this.inputCurrencyAmount = Converter.getBigDecimalFromLong(paymentRequest.getInputAmount());
 		}
@@ -81,6 +85,30 @@ public class DbTransaction implements Serializable {
 
 	public void setTimestamp(Date timestamp) {
 		this.timestamp = timestamp;
+	}
+	
+	public String getUsernamePayer() {
+		return usernamePayer;
+	}
+
+	public void setUsernamePayer(String usernamePayer) {
+		this.usernamePayer = usernamePayer;
+	}
+
+	public String getUsernamePayee() {
+		return usernamePayee;
+	}
+
+	public void setUsernamePayee(String usernamePayee) {
+		this.usernamePayee = usernamePayee;
+	}
+	
+	public String getCurrency() {
+		return currency;
+	}
+	
+	public void setCurrency(String currency) {
+		this.currency = currency;
 	}
 
 	public BigDecimal getAmount() {
@@ -107,30 +135,14 @@ public class DbTransaction implements Serializable {
 		this.inputCurrencyAmount = inputCurrencyAmount;
 	}
 
-	public String getUsernamePayer() {
-		return usernamePayer;
+	public long getTimestampPayer() {
+		return timestampPayer;
 	}
 
-	public void setUsernamePayer(String usernamePayer) {
-		this.usernamePayer = usernamePayer;
+	public void setTimestampPayer(long timestamp) {
+		this.timestampPayer = timestamp;
 	}
-
-	public String getUsernamePayee() {
-		return usernamePayee;
-	}
-
-	public void setUsernamePayee(String usernamePayee) {
-		this.usernamePayee = usernamePayee;
-	}
-
-	public String getCurrency() {
-		return currency;
-	}
-
-	public void setCurrency(String currency) {
-		this.currency = currency;
-	}
-
+	
 	public String getSignature() {
 		return signature;
 	}
@@ -150,20 +162,18 @@ public class DbTransaction implements Serializable {
 		sb.append(getUsernamePayer());
 		sb.append(", payee: ");
 		sb.append(getUsernamePayee());
+		sb.append(", currency: ");
+		sb.append(getCurrency());
 		sb.append(", amount: ");
 		sb.append(getAmount());
+		sb.append(" BTC, ");
 		if (inputCurrency != null && !inputCurrency.isEmpty() && inputCurrencyAmount != null && inputCurrencyAmount.compareTo(BigDecimal.ZERO) >  0) {
-			sb.append(" BTC, ");
 			sb.append(getInputCurrencyAmount());
 			sb.append(" ");
 			sb.append(getInputCurrency());
-		} else {
-			sb.append(" BTC");
 		}
-		sb.append(", currency: ");
-		sb.append(getCurrency());
-		sb.append(", signature: ");
-		sb.append(getSignature());
+		sb.append(", timestamp payer: ");
+		sb.append(getTimestampPayer());
 		return sb.toString();
 	}
 	
@@ -184,9 +194,8 @@ public class DbTransaction implements Serializable {
 				.append(getUsernamePayer(), other.getUsernamePayer())
 				.append(getUsernamePayee(), other.getUsernamePayee())
 				.append(getAmount(), other.getAmount())
-				.append(getInputCurrency(), other.getInputCurrency())
-				.append(getInputCurrencyAmount(), other.getInputCurrencyAmount())
 				.append(getCurrency(), other.getCurrency())
+				.append(getTimestampPayer(), other.getTimestampPayer())
 				.isEquals();
 	}
 
@@ -197,10 +206,8 @@ public class DbTransaction implements Serializable {
 				.append(getUsernamePayer())
 				.append(getUsernamePayee())
 				.append(getAmount())
-				.append(getInputCurrency())
-				.append(getInputCurrencyAmount())
 				.append(getCurrency())
-				.append(getSignature())
+				.append(getTimestampPayer())
 				.toHashCode();
 	}
 	

@@ -23,6 +23,7 @@ import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
+import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
 import ch.uzh.csg.mbps.keys.CustomKeyPair;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
 import ch.uzh.csg.mbps.server.dao.TransactionDAO;
@@ -127,8 +128,8 @@ public class TransactionServiceTest {
 	
 	@Test
 	public void testCreateDirectSendTransaction() throws Exception {
-		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_1_1", "TDAOT_1_1@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.add(new BigDecimal("1.00000000")));
-		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_2_1", "TDAOT_2_1@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
+		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_3", "TDAOT_3@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.add(new BigDecimal("1.00000000")));
+		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_4", "TDAOT_4@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
 		
 		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
 	
@@ -174,9 +175,78 @@ public class TransactionServiceTest {
 	}
 	
 	@Test
+	public void testCreateTransaction_FailDuplicateRequest() throws Exception {
+		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_5", "TDAOT_5@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.multiply(new BigDecimal(3)));
+		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_6", "TDAOT_6@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
+		
+		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
+		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
+		
+		PaymentRequest paymentRequestPayer = new PaymentRequest(
+				PKIAlgorithm.DEFAULT, 
+				keyNumberPayer, 
+				payerAccount.getUsername(), 
+				payeeAccount.getUsername(), 
+				Currency.BTC, 
+				Converter.getLongFromBigDecimal(TRANSACTION_AMOUNT),
+				System.currentTimeMillis());
+		paymentRequestPayer.sign(payerKeyPair.getPrivate());
+		
+		ServerPaymentRequest request = new ServerPaymentRequest(paymentRequestPayer);
+		
+		int nofTransaction = getAllTransactions().size();
+		
+		BigDecimal payerBalanceBefore = payerAccount.getBalance();
+		BigDecimal payeeBalanceBefore = payeeAccount.getBalance();
+		
+		ServerPaymentResponse response = TransactionService.getInstance().createTransaction(request);
+	
+		nofTransaction++;
+		assertEquals(nofTransaction, getAllTransactions().size());
+		
+		UserAccount payerAccountUpdated = UserAccountService.getInstance().getById(payerAccount.getId());
+		UserAccount payeeAccountUpdated = UserAccountService.getInstance().getById(payeeAccount.getId());
+		
+		assertEquals(0, payerBalanceBefore.subtract(TRANSACTION_AMOUNT).compareTo(payerAccountUpdated.getBalance()));
+		assertEquals(0, payeeBalanceBefore.add(TRANSACTION_AMOUNT).compareTo(payeeAccountUpdated.getBalance()));
+		
+		assertTrue(response.getPaymentResponsePayer().verify(KeyHandler.decodePublicKey(Constants.SERVER_KEY_PAIR.getPublicKey())));
+		assertNull(response.getPaymentResponsePayee());
+		
+		PaymentResponse responsePayer = response.getPaymentResponsePayer();
+		assertEquals(paymentRequestPayer.getUsernamePayer(), responsePayer.getUsernamePayer());
+		assertEquals(paymentRequestPayer.getUsernamePayee(), responsePayer.getUsernamePayee());
+		assertEquals(paymentRequestPayer.getCurrency().getCode(), responsePayer.getCurrency().getCode());
+		assertEquals(paymentRequestPayer.getAmount(), responsePayer.getAmount());
+		
+		// now launch the same request again - this must fail
+		payerBalanceBefore = UserAccountService.getInstance().getById(payerAccount.getId()).getBalance();
+		payeeBalanceBefore = UserAccountService.getInstance().getById(payeeAccount.getId()).getBalance();
+		response = TransactionService.getInstance().createTransaction(request);
+		
+		// same nofTransaction
+		assertEquals(nofTransaction, getAllTransactions().size());
+		
+		//balance unchanged
+		assertEquals(payerBalanceBefore, UserAccountService.getInstance().getById(payerAccount.getId()).getBalance());
+		assertEquals(payeeBalanceBefore, UserAccountService.getInstance().getById(payeeAccount.getId()).getBalance());
+		
+		assertTrue(response.getPaymentResponsePayer().verify(KeyHandler.decodePublicKey(Constants.SERVER_KEY_PAIR.getPublicKey())));
+		assertNull(response.getPaymentResponsePayee());
+		
+		responsePayer = response.getPaymentResponsePayer();
+		assertEquals(ServerResponseStatus.DUPLICATE_REQUEST, responsePayer.getStatus());
+		
+		assertEquals(paymentRequestPayer.getUsernamePayer(), responsePayer.getUsernamePayer());
+		assertEquals(paymentRequestPayer.getUsernamePayee(), responsePayer.getUsernamePayee());
+		assertEquals(paymentRequestPayer.getCurrency().getCode(), responsePayer.getCurrency().getCode());
+		assertEquals(paymentRequestPayer.getAmount(), responsePayer.getAmount());
+	}
+	
+	@Test
 	public void testCreateTransaction_FailNegativeBalance() throws Exception {
-		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_3", "TDAOT_3@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.subtract(new BigDecimal(1)));
-		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_4", "TDAOT_4@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
+		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_7", "TDAOT_7@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.subtract(new BigDecimal(1)));
+		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_8", "TDAOT_8@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
 		
 		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
 		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
@@ -217,8 +287,8 @@ public class TransactionServiceTest {
 	
 	@Test
 	public void testCreateTransaction_FailInvalidSignature() throws Exception {
-		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_7", "TDAOT_7@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT);
-		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_8", "TDAOT_8@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
+		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_9", "TDAOT_9@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT);
+		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_10", "TDAOT_10@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
 		
 		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
 		
@@ -364,8 +434,8 @@ public class TransactionServiceTest {
 	
 	@Test
 	public void testGetHistory_testMaximumResult() throws Exception {
-		UserAccount fromDB = createAccountAndVerifyAndReload("TDAOT_30", "TDAOT_30@bitcoin.csg.uzh.ch", "my-password", new BigDecimal("0.0"));
-		UserAccount fromDB2 = createAccountAndVerifyAndReload("TDAOT_31", "TDAOT_31@bitcoin.csg.uzh.ch", "my-password", new BigDecimal("0.0"));
+		UserAccount fromDB = createAccountAndVerifyAndReload("TDAOT_14", "TDAOT_14@bitcoin.csg.uzh.ch", "my-password", new BigDecimal("0.0"));
+		UserAccount fromDB2 = createAccountAndVerifyAndReload("TDAOT_15", "TDAOT_15@bitcoin.csg.uzh.ch", "my-password", new BigDecimal("0.0"));
 		
 		assertEquals(0, TransactionService.getInstance().getHistory(fromDB.getUsername(), 0).size());
 		

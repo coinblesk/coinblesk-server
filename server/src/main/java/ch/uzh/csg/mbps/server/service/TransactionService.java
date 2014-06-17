@@ -83,30 +83,22 @@ public class TransactionService implements ITransaction {
 
 	@Override
 	public ServerPaymentResponse createTransaction(ServerPaymentRequest serverPaymentRequest) throws TransactionException, UserAccountNotFoundException {
-		//TODO jeton: check timestamp how long is transaction valid!
-		
-		//TODO jeton: check for duplicate request! user ServerResponseStatus.DUPLICATE_REQUEST
-		
 		if (serverPaymentRequest == null)
 			throw new TransactionException(PAYMENT_REFUSE);
-
-		int numberOfSignatures = serverPaymentRequest.getNofSignatures();
 		
-		PaymentRequest payerRequest = null;
-		PaymentRequest payeeRequest = null;
-
-		payerRequest = serverPaymentRequest.getPaymentRequestPayer();
-		payeeRequest = serverPaymentRequest.getPaymentRequestPayee();
-
+		int numberOfSignatures = serverPaymentRequest.getNofSignatures();
+		PaymentRequest payerRequest = serverPaymentRequest.getPaymentRequestPayer();
+		PaymentRequest payeeRequest = serverPaymentRequest.getPaymentRequestPayee();
+		
 		if (Converter.getBigDecimalFromLong(payerRequest.getAmount()).compareTo(BigDecimal.ZERO) <= 0)
 			throw new TransactionException(NEGATIVE_AMOUNT);
-
+		
 		String payerUsername = payerRequest.getUsernamePayer();
 		String payeeUsername = payerRequest.getUsernamePayee();
-
+		
 		if (payerUsername == payeeUsername)
 			throw new TransactionException(PAYMENT_REFUSE);
-
+		
 		UserAccount payerUserAccount = null;
 		UserAccount payeeUserAccount = null;
 		try {
@@ -115,31 +107,52 @@ public class TransactionService implements ITransaction {
 		} catch (UserAccountNotFoundException e) {
 			throw new TransactionException(PAYMENT_REFUSE);
 		}
-
+		
 		try {
-			if(! payerRequest.verify(KeyHandler.decodePublicKey(UserPublicKeyDAO.getUserPublicKey(payerUserAccount.getId(), (byte) payerRequest.getKeyNumber()).getPublicKey()))){
+			if (!payerRequest.verify(KeyHandler.decodePublicKey(UserPublicKeyDAO.getUserPublicKey(payerUserAccount.getId(), (byte) payerRequest.getKeyNumber()).getPublicKey()))) {
 				throw new TransactionException(PAYMENT_REFUSE);
 			}
 		} catch (Exception e) {
 			throw new TransactionException(PAYMENT_REFUSE);
 		}
-
-		if(numberOfSignatures==2){
-			if(! payerRequest.equals(payeeRequest)){
+		
+		if (numberOfSignatures == 2) {
+			if (!payerRequest.equals(payeeRequest)) {
 				throw new TransactionException(PAYMENT_REFUSE);
 			}
 			try {
-				if(! payeeRequest.verify(KeyHandler.decodePublicKey(UserPublicKeyDAO.getUserPublicKey(payeeUserAccount.getId(), (byte) payeeRequest.getKeyNumber()).getPublicKey()))){
+				if (!payeeRequest.verify(KeyHandler.decodePublicKey(UserPublicKeyDAO.getUserPublicKey(payeeUserAccount.getId(), (byte) payeeRequest.getKeyNumber()).getPublicKey()))) {
 					throw new TransactionException(PAYMENT_REFUSE);
 				}
 			} catch (Exception e) {
 				throw new TransactionException(PAYMENT_REFUSE);
 			}
 		}
-
+		
 		if ((payerUserAccount.getBalance().subtract(Converter.getBigDecimalFromLong(payerRequest.getAmount()))).compareTo(BigDecimal.ZERO) < 0)
 			throw new TransactionException(BALANCE);
-
+		
+		if (TransactionDAO.exists(payerRequest.getUsernamePayer(), payerRequest.getUsernamePayee(), payerRequest.getCurrency(), payerRequest.getAmount(), payerRequest.getTimestamp())) {
+			try {
+				PaymentResponse paymentResponsePayer = new PaymentResponse(
+						PKIAlgorithm.getPKIAlgorithm(Constants.SERVER_KEY_PAIR.getPkiAlgorithm()),
+						Constants.SERVER_KEY_PAIR.getKeyNumber(),
+						ServerResponseStatus.DUPLICATE_REQUEST,
+						null,
+						payerRequest.getUsernamePayer(),
+						payerRequest.getUsernamePayee(),
+						payerRequest.getCurrency(),
+						payerRequest.getAmount(),
+						payerRequest.getTimestamp());
+				paymentResponsePayer.sign(KeyHandler.decodePrivateKey(Constants.SERVER_KEY_PAIR.getPrivateKey()));
+				return new ServerPaymentResponse(paymentResponsePayer);
+			} catch (Exception e) {
+				System.err.println(e);
+				e.printStackTrace();
+				throw new TransactionException(INTERNAL_ERROR);
+			}
+		}
+		
 		DbTransaction dbTransaction = null;
 		try {
 			dbTransaction = new DbTransaction(payerRequest);

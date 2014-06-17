@@ -389,7 +389,7 @@ public class TransactionControllerTest {
 	}
 	
 	@Test
-	public void getExchangeRateTest() throws Exception{
+	public void testGetExchangeRateTest() throws Exception{
 		createAccountAndVerifyAndReload(test6_1, BigDecimal.ONE);
 		String plainTextPw = test6_1.getPassword();
 		
@@ -413,7 +413,7 @@ public class TransactionControllerTest {
 	}
 
 	@Test
-	public void payOut() throws Exception{
+	public void testPayOut() throws Exception{
 		createAccountAndVerifyAndReload(test9_1, BigDecimal.ONE);
 		String plainTextPw = test9_1.getPassword();
 		UserAccount fromDB = UserAccountService.getInstance().getByUsername(test9_1.getUsername());
