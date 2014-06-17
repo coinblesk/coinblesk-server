@@ -84,6 +84,9 @@ public class TransactionService implements ITransaction {
 	@Override
 	public ServerPaymentResponse createTransaction(ServerPaymentRequest serverPaymentRequest) throws TransactionException, UserAccountNotFoundException {
 		//TODO jeton: check timestamp how long is transaction valid!
+		
+		//TODO jeton: check for duplicate request! user ServerResponseStatus.DUPLICATE_REQUEST
+		
 		if (serverPaymentRequest == null)
 			throw new TransactionException(PAYMENT_REFUSE);
 
