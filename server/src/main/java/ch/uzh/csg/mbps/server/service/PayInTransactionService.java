@@ -81,14 +81,14 @@ public class PayInTransactionService {
 	}
 
 	/**
-	 * Returns 3 newest {@link PayInTransaction}s for specified username in descending order.
+	 * Returns 5 newest {@link PayInTransaction}s for specified username in descending order.
 	 * 
 	 * @param username
 	 * @return ArrayList<{@link HistoryPayInTransaction>
 	 * @throws UserAccountNotFoundException
 	 */
-	public ArrayList<HistoryPayInTransaction> getLast3Transactions(String username) throws UserAccountNotFoundException {
-		return PayInTransactionDAO.getLast3Transactions(username);
+	public ArrayList<HistoryPayInTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
+		return PayInTransactionDAO.getLast5Transactions(username);
 	}
 
 }

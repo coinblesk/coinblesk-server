@@ -182,7 +182,7 @@ public class TransactionDAO {
 	}
 
 	/**
-	 * Returns 3 newest Transactions as {@link HistoryTransaction}s in
+	 * Returns 5 newest Transactions as {@link HistoryTransaction}s in
 	 * descending order.
 	 * 
 	 * @param username
@@ -190,7 +190,7 @@ public class TransactionDAO {
 	 * @throws UserAccountNotFoundException
 	 */
 	@SuppressWarnings("unchecked")
-	public static ArrayList<HistoryTransaction> getLast3Transactions(String username) throws UserAccountNotFoundException {
+	public static ArrayList<HistoryTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
 		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
 		Session session = openSession();
 		session.beginTransaction();
@@ -207,8 +207,8 @@ public class TransactionDAO {
 				  .addScalar("seller")
 				  .addScalar("amount")
 				  .setString("username", userAccount.getUsername())
-				  .setMaxResults(3)
-				  .setFetchSize(3)
+				  .setMaxResults(5)
+				  .setFetchSize(5)
 				  .setResultTransformer(Transformers.aliasToBean(HistoryTransaction.class))
 				  .list();
 

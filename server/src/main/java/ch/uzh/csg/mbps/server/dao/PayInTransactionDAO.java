@@ -148,14 +148,14 @@ public class PayInTransactionDAO {
 	}
 	
 	/**
-	 * Returns three newest {@link PayInTransaction}s assigned to the given
+	 * Returns five newest {@link PayInTransaction}s assigned to the given
 	 * username as an ArrayList.
 	 * 
 	 * @param username
 	 * @return ArrayList<HistoryPayInTransaction>
 	 * @throws UserAccountNotFoundException
 	 */
-	public static ArrayList<HistoryPayInTransaction> getLast3Transactions(String username) throws UserAccountNotFoundException {
+	public static ArrayList<HistoryPayInTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
 		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
 		Session session = openSession();
 		session.beginTransaction();
@@ -169,8 +169,8 @@ public class PayInTransactionDAO {
 				  .addScalar("timestamp")
 				  .addScalar("amount")
 				  .setLong("userid",  userAccount.getId())
-				  .setMaxResults(3)
-				  .setFetchSize(3)
+				  .setMaxResults(5)
+				  .setFetchSize(5)
 				  .setResultTransformer(Transformers.aliasToBean(HistoryPayInTransaction.class))
 				  .list();
 		

@@ -51,7 +51,7 @@ public interface ITransaction {
 	public ServerPaymentResponse createTransaction(ServerPaymentRequest toVerify) throws TransactionException, UserAccountNotFoundException;
 
 	/**
-	 * Returns the three last Transactions of a given {@link UserAccount}.
+	 * Returns the five last Transactions of a given {@link UserAccount}.
 	 * The returned lists are ordered by the item's time stamp in descending
 	 * order.
 	 * 
@@ -59,6 +59,6 @@ public interface ITransaction {
 	 * @return ArrayList<HistoryTransaction>
 	 * @throws UserAccountNotFoundException
 	 */
-	public ArrayList<HistoryTransaction> getLast3Transactions(String username) throws UserAccountNotFoundException;
+	public ArrayList<HistoryTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException;
 	
 }

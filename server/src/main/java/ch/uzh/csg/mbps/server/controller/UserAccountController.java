@@ -280,9 +280,9 @@ public class UserAccountController {
 			response.setMessage(ExchangeRates.getExchangeRate().toString());
 			//set History
 			GetHistoryTransferObject ghto = new GetHistoryTransferObject();
-			ghto.setTransactionHistory(TransactionService.getInstance().getLast3Transactions(username));
-			ghto.setPayInTransactionHistory(PayInTransactionService.getInstance().getLast3Transactions(username));
-			ghto.setPayOutTransactionHistory(PayOutTransactionService.getInstance().getLast3Transactions(username));
+			ghto.setTransactionHistory(TransactionService.getInstance().getLast5Transactions(username));
+			ghto.setPayInTransactionHistory(PayInTransactionService.getInstance().getLast5Transactions(username));
+			ghto.setPayOutTransactionHistory(PayOutTransactionService.getInstance().getLast5Transactions(username));
 			response.setGetHistoryTO(ghto);
 			//set Balance
 			response.setBalance(userAccount.getBalance().toString());

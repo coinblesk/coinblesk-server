@@ -172,16 +172,16 @@ public class PayOutTransactionDAO {
 	}
 	
 	/**
-	 * Returns history of 3 newest {@link PayOutTransaction}s assigned to the
+	 * Returns history of 5 newest {@link PayOutTransaction}s assigned to the
 	 * given username as an ArrayList.
 	 * 
 	 * @param username
 	 *            for which UserAccount history is requested
 	 * @return ArrayList<HistoryPayOutTransaction> (an array list with the last
-	 *         3 PayOutTransactions)
+	 *         5 PayOutTransactions)
 	 * @throws UserAccountNotFoundException
 	 */
-	public static ArrayList<HistoryPayOutTransaction> getLast3Transactions(String username) throws UserAccountNotFoundException {
+	public static ArrayList<HistoryPayOutTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
 		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
 		Session session = openSession();
 		session.beginTransaction();
@@ -196,8 +196,8 @@ public class PayOutTransactionDAO {
 				  .addScalar("amount")
 				  .addScalar("btcAddress")
 				  .setLong("userid",  userAccount.getId())
-				  .setMaxResults(3)
-				  .setFetchSize(3)
+				  .setMaxResults(5)
+				  .setFetchSize(5)
 				  .setResultTransformer(Transformers.aliasToBean(HistoryPayOutTransaction.class))
 				  .list();
 		
