@@ -2,6 +2,7 @@ package ch.uzh.csg.mbps.server.service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Date;
 
 import ch.uzh.csg.mbps.model.HistoryPayOutTransaction;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
@@ -90,6 +91,7 @@ public class PayOutTransactionService {
 		
 		if(userBalance.compareTo(pot.getAmount().add(Config.TRANSACTION_FEE)) >= 0){
 			if (BitcoindController.validateAddress(pot.getBtcAddress())) {
+				pot.setTimestamp(new Date());
 				//do payOut in BitcoindController
 				String transactionID = BitcoindController.sendCoins(pot.getBtcAddress(), pot.getAmount());
 				pot.setTransactionID(transactionID);
