@@ -11,6 +11,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/server_account")
 public class ServerAccountController {
 
-	//TODO: method: only a method for trust relations
+	//TODO: method: mehmet use this controller for android communication (read server accounts -> Trust relations)
 	
 }
