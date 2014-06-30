@@ -34,8 +34,9 @@ public class Config {
 	public static final int MIN_PASSWORD_LENGTH = 4;
 	
 	//Valid Url
-	public static final String URL_REGEX = "(@)?(href=')?(HREF=')?(HREF=\")?(href=\")?(http://)?[a-zA-Z_0-9\\-]+(\\.\\w[a-zA-Z_0-9\\-]+)+(/[#&\\n\\-=?\\+\\%/\\.\\w]+)?";
-	
+	public static final String URL_REGEX = "(@)?(href=')?(HREF=')?(HREF=\")?(href=\")?(https?://)?[a-zA-Z_0-9\\-]+(\\.\\w[a-zA-Z_0-9\\-]+)+(/[#&\\n\\-=?\\+\\%/\\.\\w]+)?";
+//	public static final String URL_REGEX = "/^(https?:\\/\\/)?([\\da-z\\.-]+)\\.([a-z\\.]{2,6})([\\/\\w \\.-]*)*\\/?$";
+//	public static final String IP_REGEX ="/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/";
 	// Exchange Rate Provicer Settings
 	// 1 for MtGox, 2 for Bitstamp
 	public static final int EXCHANGE_RATE_PROVIDER = 2;
