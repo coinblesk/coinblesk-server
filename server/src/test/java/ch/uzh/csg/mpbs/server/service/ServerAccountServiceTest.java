@@ -205,9 +205,9 @@ public class ServerAccountServiceTest {
 	}
 	
 	@Test
-	@DatabaseSetup(value="classpath:DbUnitFiles/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	@DatabaseTearDown(value="classpath:DbUnitFiles/serverAccountData.xml", type=DatabaseOperation.DELETE_ALL)
-	@ExpectedDatabase(value="classpath:DbUnitFiles/serverAccountExpectedUpdatedData.xml", table="server_account")
+//	@DatabaseSetup(value="classpath:DbUnitFiles/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
+//	@DatabaseTearDown(value="classpath:DbUnitFiles/serverAccountData.xml", type=DatabaseOperation.DELETE_ALL)
+//	@ExpectedDatabase(value="classpath:DbUnitFiles/serverAccountExpectedUpdatedData.xml", table="server_account")
 	public void deleteAccount(){
 		//TODO: mehmet write test
 	}
