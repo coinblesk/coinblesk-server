@@ -115,7 +115,6 @@ public class ServerAccountServiceTest {
 		newAccount.setTrustLevel(0);
 		newAccount.setCreationDate(date);
 		newAccount.setDeleted(false);
-		newAccount.setId(0);
 		
 		assertTrue(ServerAccountService.getInstance().createAccount(newAccount));
 		ServerAccount fromDB = ServerAccountService.getInstance().getByUrl("www.insert.com");
