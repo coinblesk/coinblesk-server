@@ -1,15 +1,18 @@
 package ch.uzh.csg.mbps.server.dao;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
 import org.hibernate.criterion.Restrictions;
 
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.util.HibernateUtil;
+import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 
 /**
@@ -61,16 +64,32 @@ public class ServerAccountDAO {
 		}
 	}
 
-	public static void delete(String url) throws ServerAccountNotFoundException{
+	public static void delete(String url) throws ServerAccountNotFoundException, BalanceNotZeroException, HibernateException{
 		ServerAccount serverAccount = getByUrl(url);
 		
 		Session session = openSession();
-		org.hibernate.Transaction transaction = null;
+		Transaction transaction = null;
 		
 		//TODO: mehmet: check: TrustLevel -> 
-		// Full: activeBalance has to be zero
 		// Hyprid: escrow account
-		// No: User server account Balance has to be zero
+
+		if(serverAccount.getActiveBalance().compareTo(BigDecimal.ZERO)==0 && serverAccount.getTrustLevel() == 0){
+			try{
+				serverAccount.setDeleted(true);
+				
+				transaction = session.beginTransaction();
+				session.update(serverAccount);
+				transaction.commit();
+				LOGGER.info("Delted ServerAccount: " + serverAccount.toString());
+			} catch(HibernateException e) {
+				LOGGER.error("Problem deleting ServerAccount: " + serverAccount.toString() + " ErrorMessage: " + e.getMessage());
+				 if (transaction != null)
+					 transaction.rollback();
+				 throw e;
+			} finally {
+				session.close();
+			}
+		}
 	}
 	
 	/**
