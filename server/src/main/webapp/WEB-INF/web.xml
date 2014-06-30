@@ -15,7 +15,7 @@
 		<servlet-name>mvc-dispatcher</servlet-name>
 		<url-pattern>/</url-pattern>
 	</servlet-mapping>
-
+	
 	<listener>
 		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
 	</listener>
@@ -23,13 +23,14 @@
 	<listener>
 		<listener-class>org.springframework.security.web.session.HttpSessionEventPublisher</listener-class>
 	</listener>
-
+	
 	<context-param>
 		<param-name>contextConfigLocation</param-name>
 		<param-value>
 		    /WEB-INF/mvc-dispatcher-servlet.xml
 		    /WEB-INF/spring-security.xml
 		    /WEB-INF/applicationContext.xml
+		    /WEB-INF/test-applicationContext.xml
 		</param-value>
 	</context-param>
 
@@ -41,5 +42,19 @@
 		<filter-name>springSecurityFilterChain</filter-name>
 		<url-pattern>/*</url-pattern>
 	</filter-mapping>
+
+	<!-- Enconding helper filter -->
+    <filter>
+        <filter-name>encodingFilter</filter-name>
+        <filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+        <init-param>
+            <param-name>encoding</param-name>
+            <param-value>UTF-8</param-value>
+        </init-param>
+    </filter>
+    <filter-mapping>
+        <filter-name>encodingFilter</filter-name>
+        <servlet-name>dispatcher</servlet-name>
+    </filter-mapping>
 
 </web-app>

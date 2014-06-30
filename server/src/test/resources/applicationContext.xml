@@ -17,17 +17,6 @@
 	<mvc:resources mapping="/resources/**" location="/resources/" />
 	
 	<context:component-scan base-package="ch.uzh.csg.mbps.server" />
-    <!-- <context:component-scan base-package="ch.uzh.csg.mbps.server" >
-    	<context:exclude-filter type="annotation" expression="ch.uzh.csg.mbps.server.domain.DbTransaction.*"/>
-	    <context:exclude-filter type="annotation" expression="ch.uzh.csg.mbps.server.domain.EmailVerification.*"/>
-	    <context:exclude-filter type="annotation" expression="ch.uzh.csg.mbps.server.domain.PayInTransaction.*"/>
-	    <context:exclude-filter type="annotation" expression="ch.uzh.csg.mbps.server.domain.PayOutRule.*"/>
-	    <context:exclude-filter type="annotation" expression="ch.uzh.csg.mbps.server.domain.PayOutTransaction:*"/>
-	    <context:exclude-filter type="annotation" expression="ch.uzh.csg.mbps.server.domain.ResetPassword.*"/>
-	    <context:exclude-filter type="annotation" expression="ch.uzh.csg.mbps.server.domain.ServerTransaction:*"/>
-	    <context:exclude-filter type="annotation" expression="ch.uzh.csg.mbps.server.domain.UserAccount.*"/>
-	    <context:exclude-filter type="annotation" expression="ch.uzh.csg.mbps.server.domain.UserPublicKey"/>
-	</context:component-scan> -->
 	
 	<mvc:annotation-driven /> 
 	
