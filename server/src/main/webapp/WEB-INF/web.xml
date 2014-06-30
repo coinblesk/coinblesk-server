@@ -30,7 +30,6 @@
 		    /WEB-INF/mvc-dispatcher-servlet.xml
 		    /WEB-INF/spring-security.xml
 		    /WEB-INF/applicationContext.xml
-		    /WEB-INF/test-applicationContext.xml
 		</param-value>
 	</context-param>
 
