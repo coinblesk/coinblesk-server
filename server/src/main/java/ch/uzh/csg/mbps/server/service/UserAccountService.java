@@ -1,5 +1,6 @@
 package ch.uzh.csg.mbps.server.service;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
@@ -327,6 +328,20 @@ public class UserAccountService implements IUserAccount {
 	 */
 	public byte saveUserPublicKey(long userId, PKIAlgorithm algorithm, String publicKey) throws UserAccountNotFoundException {
 		return UserPublicKeyDAO.saveUserPublicKey(userId, algorithm, publicKey);
+	}
+	
+	/**
+	 * Returns sum of Balance of each user account in the system.
+	 * @return Sum of each Balance
+	 */
+	public BigDecimal getSumOfAllAccounts(){
+		List<UserAccount> users = UserAccountDAO.getAllUserAccounts();
+		
+		BigDecimal sum = BigDecimal.ZERO;
+		for(UserAccount user: users){
+			sum = sum.add(user.getBalance());
+		}
+		return sum;
 	}
 
 }

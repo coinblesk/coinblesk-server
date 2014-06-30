@@ -442,5 +442,21 @@ public class UserAccountDAO {
 		
 		return userAccount;
 	}
+	
+	/**
+	 * Returns a list with all {@link UserAccount} objects saved in the
+	 * database.
+	 * 
+	 * @return List<UserAccount>
+	 */
+	public static List<UserAccount> getAllUserAccounts() {
+		Session session = openSession();
+		session.beginTransaction();
+		@SuppressWarnings("unchecked")
+		List<UserAccount> list = (List<UserAccount>) session.createCriteria(UserAccount.class).list();
+		session.close();
+		
+		return list;
+	}
 
 }

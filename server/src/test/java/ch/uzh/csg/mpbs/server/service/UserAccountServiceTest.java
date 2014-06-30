@@ -56,15 +56,23 @@ public class UserAccountServiceTest {
 		if (! initialized) {
 			accountOnePassword = "my-password";
 			accountOne = new UserAccount("hans", "hans@bitcoin.csg.uzh.ch", accountOnePassword);
+			accountOne.setBalance(new BigDecimal(2.5));
 			accountTwo = new UserAccount("hans1", "hans1@bitcoin.csg.uzh.ch", "my-password-wurst");
+			accountTwo.setBalance(new BigDecimal(2.5));
 			accountToDelete = new UserAccount("hans2", "hans2@bitcoin.csg.uzh.ch", "my-password-wurst");
+			accountToDelete.setBalance(new BigDecimal(1.0));
 			accountToUpdate = new UserAccount("hans3", "hans3@bitcoin.csg.uzh.ch", "my-password-wurst");
+			accountToUpdate.setBalance(new BigDecimal(1.5));
 			accountToUpdate2 = new UserAccount("hans3-2", "hans3-2@bitcoin.csg.uzh.ch", "my-password-wurst");
+			accountToUpdate2.setBalance(new BigDecimal(0.8));
 			accountFour = new UserAccount("hans4", "hans4@bitcoin.csg.uzh.ch", "my-password-wurst");
+			accountFour.setBalance(new BigDecimal(2.0));
 			accountFive = new UserAccount("hans5", "hans5@bitcoin.csg.uzh.ch", "my-password-wurst");
+			accountFive.setBalance(new BigDecimal(1.3));
 			accountSix = new UserAccount("hans6", "hans6@bitcoin.csg.uzh.ch", "my-password-wurst");
+			accountSix.setBalance(new BigDecimal(0.4));
 			accountSeven = new UserAccount("hans7", "hans7@bitcoin.csg.uzh.ch", "my-password-wurst");
-			
+			accountSeven.setBalance(new BigDecimal(0.4));
 			try {
 				UserAccountService.getInstance().createAccount(accountOne);
 				UserAccountService.getInstance().createAccount(accountTwo);
@@ -264,6 +272,21 @@ public class UserAccountServiceTest {
 		
 		loadedSix = UserAccountService.getInstance().getByUsername(accountSix.getUsername());
 		assertEquals(2, loadedSix.getNofKeys());
+	}
+	
+	@Test
+	public void testGetAllUserAccounts(){
+		BigDecimal balance = UserAccountService.getInstance().getSumOfAllAccounts();
+		
+		assertNotNull(balance);
+		
+		List<UserAccount> userList = getAllUserAccounts();
+		BigDecimal sum = BigDecimal.ZERO;
+		for(UserAccount user: userList){
+			sum = sum.add(user.getBalance());
+		}
+		
+		assertEquals(balance, sum);
 	}
 	
 	@SuppressWarnings("unchecked")
