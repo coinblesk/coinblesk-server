@@ -5,6 +5,7 @@ import java.util.List;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidPublicKeyException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UrlAlreadyExistsException;
@@ -23,8 +24,9 @@ public interface IServerAccount {
 	 * @throws BitcoinException
 	 * @throws InvalidUrlException
 	 * @throws InvalidEmailException
+	 * @throws InvalidPublicKeyException 
 	 */
-	public boolean createAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException;
+	public boolean createAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException;
 
 	/**
 	 * 
