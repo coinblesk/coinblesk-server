@@ -37,7 +37,8 @@ public class Emailer {
 	 * @return Status if email has been sent to the user.
 	 */
 	public static void sendEmailConfirmationLink(String confirmationID, String toEmail){
-		messageText = "Please verify your account by clicking on the following link: " + SecurityConfig.BASE_URL + "/user/verify/" + confirmationID;
+		String link = SecurityConfig.BASE_URL + "/user/verify/" + confirmationID;
+		messageText = "Please verify your account by clicking on the following link: <a href = \"" + link + "\">" + link + "</a>";
 		subject = "MBPS Account Verification";
 		sendEmail(toEmail, null);
 	}
