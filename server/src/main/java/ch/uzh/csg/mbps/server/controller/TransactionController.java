@@ -140,6 +140,10 @@ public class TransactionController {
 		} catch (UserAccountNotFoundException e) {
 			return new CustomResponseObject(false, e.getMessage());
 		}
+		catch (Exception e) {
+			LOGGER.error(e.getMessage());
+			return new CustomResponseObject(false, Constants.INTERNAL_SERVER_ERROR + ": " + e.getMessage());
+		}
 	}
 	
 	/**

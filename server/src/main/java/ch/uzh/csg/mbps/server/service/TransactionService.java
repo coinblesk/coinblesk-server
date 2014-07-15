@@ -59,7 +59,7 @@ public class TransactionService implements ITransaction {
 	}
 
 	@Override
-	public ArrayList<HistoryTransaction> getHistory(String username, int page) throws UserAccountNotFoundException {
+	public ArrayList<HistoryTransaction> getHistory(String username, int page) throws UserAccountNotFoundException, HibernateException {
 		return TransactionDAO.getHistory(username, page);
 	}
 

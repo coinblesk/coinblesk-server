@@ -47,7 +47,7 @@ public class TransactionDAO {
 	 * @throws UserAccountNotFoundException
 	 */
 	@SuppressWarnings("unchecked")
-	public static ArrayList<HistoryTransaction> getHistory(String username, int page) throws UserAccountNotFoundException {
+	public static ArrayList<HistoryTransaction> getHistory(String username, int page) throws UserAccountNotFoundException, HibernateException {
 		if (page < 0)
 			return null;
 		
@@ -56,7 +56,7 @@ public class TransactionDAO {
 		session.beginTransaction();	
 		List<HistoryTransaction> resultWithAliasedBean = session
 				.createSQLQuery(
-						"SELECT transaction.timestamp, u2.username as buyer, u1.username as seller, transaction.amount "
+						"SELECT transaction.timestamp, u2.username as buyer, u1.username as seller, transaction.amount, transaction.input_currency as inputCurrency, transaction.input_currency_amount as inputCurrencyAmount "
 								+ "FROM DB_TRANSACTION transaction "
 								+ "INNER JOIN user_account u1 on transaction.username_payee = u1.username "
 								+ "INNER JOIN user_account u2 on transaction.username_payer = u2.username "
@@ -66,6 +66,8 @@ public class TransactionDAO {
 				.addScalar("buyer")
 				.addScalar("seller")
 				.addScalar("amount")
+				.addScalar("inputCurrency")
+				.addScalar("inputCurrencyAmount")
 				.setString("username", userAccount.getUsername())
 				.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
 				.setMaxResults(Config.TRANSACTIONS_MAX_RESULTS)
@@ -196,7 +198,7 @@ public class TransactionDAO {
 		session.beginTransaction();
 		
 		List<HistoryTransaction> resultWithAliasedBean = session.createSQLQuery(
-				  "SELECT transaction.timestamp, u2.username as buyer, u1.username as seller, transaction.amount " +
+				  "SELECT transaction.timestamp, u2.username as buyer, u1.username as seller, transaction.amount, transaction.input_currency as inputCurrency, transaction.input_currency_amount as inputCurrencyAmount " +
 				  "FROM DB_TRANSACTION transaction " +
 				  "INNER JOIN user_account u1 on transaction.username_payee = u1.username " +
 				  "INNER JOIN user_account u2 on transaction.username_payer = u2.username " +
@@ -206,6 +208,8 @@ public class TransactionDAO {
 				  .addScalar("buyer")
 				  .addScalar("seller")
 				  .addScalar("amount")
+				  .addScalar("inputCurrency")
+				  .addScalar("inputCurrencyAmount")
 				  .setString("username", userAccount.getUsername())
 				  .setMaxResults(5)
 				  .setFetchSize(5)
