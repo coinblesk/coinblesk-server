@@ -68,9 +68,11 @@ public class TransactionController {
 		CustomResponseObject responseObject;
 		try {
 			try {
+				String username = AuthenticationInfo.getPrincipalUsername();
 				ServerPaymentResponse serverPaymentResponse = TransactionService.getInstance().createTransaction(requestObject.getServerPaymentRequest());
 				responseObject = new CustomResponseObject(true, SUCCESS, Type.CREATE_TRANSACTION);
 				responseObject.setServerPaymentResponse(serverPaymentResponse.encode());
+				responseObject.setBalance(UserAccountService.getInstance().getByUsername(username).getBalance().toPlainString());
 				return responseObject;
 			} catch (TransactionException | UserAccountNotFoundException e) {
 				PaymentRequest paymentRequestPayer = requestObject.getServerPaymentRequest().getPaymentRequestPayer();
