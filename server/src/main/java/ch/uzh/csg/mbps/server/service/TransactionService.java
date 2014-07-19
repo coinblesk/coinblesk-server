@@ -156,6 +156,12 @@ public class TransactionService implements ITransaction {
 		DbTransaction dbTransaction = null;
 		try {
 			dbTransaction = new DbTransaction(payerRequest);
+			if (numberOfSignatures == 2) {
+				if (payeeRequest.getInputCurrency() != null) {
+					dbTransaction.setInputCurrency(payeeRequest.getInputCurrency().getCurrencyCode());
+					dbTransaction.setInputCurrencyAmount(Converter.getBigDecimalFromLong(payeeRequest.getInputAmount()));
+				}
+			}
 			TransactionDAO.createTransaction(dbTransaction, payerUserAccount, payeeUserAccount);
 		} catch (HibernateException e) {
 			throw new TransactionException(HIBERNATE_ERROR);
