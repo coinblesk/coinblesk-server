@@ -6,6 +6,7 @@ import java.util.Date;
 
 import ch.uzh.csg.mbps.model.HistoryPayOutTransaction;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
+import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
 import ch.uzh.csg.mbps.server.dao.PayOutTransactionDAO;
 import ch.uzh.csg.mbps.server.domain.PayOutTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
@@ -85,7 +86,7 @@ public class PayOutTransactionService {
 			if (payOutAmount.compareTo(BigDecimal.ZERO) > 0){
 				pot.setAmount(payOutAmount);
 			} else {
-				return new CustomResponseObject(false, "Couldn't pay out the desired amount. Your balance is too low.");
+				return new CustomResponseObject(false, "Couldn't pay out the desired amount. Your balance is too low.", Type.PAYOUT_ERROR_BALANCE);
 			}
 		}
 		
@@ -101,12 +102,12 @@ public class PayOutTransactionService {
 
 				//write payOut to DB
 				PayOutTransactionDAO.createPayOutTransaction(pot);
-				return new CustomResponseObject(true, "Your PayOut Transaction of " + amount  + "BTC " + "(+" + Config.TRANSACTION_FEE + "BTC TxFee)" + " was successfully sent to the Bitcoin Network.");
+				return new CustomResponseObject(true, amount  + "BTC " + "(+" + Config.TRANSACTION_FEE + "BTC TxFee)");
 			} else {
-				return new CustomResponseObject(false, "Couldn't pay out the desired amount. The BTC Address is invalid.");	
+				return new CustomResponseObject(false, "Couldn't pay out the desired amount. The BTC Address is invalid.", Type.PAYOUT_ERROR_ADDRESS);	
 			}
 		} else{
-			return new CustomResponseObject(false, "Couldn't pay out the desired amount. Your balance is lower than your specified PayOut amount.");
+			return new CustomResponseObject(false, "Couldn't pay out the desired amount. Your balance is lower than your specified PayOut amount.", Type.PAYOUT_ERROR_BALANCE);
 		}
 	}
 
