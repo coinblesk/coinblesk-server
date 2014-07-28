@@ -1,0 +1,138 @@
+<div class="masthead">
+    <div class="navbar">
+    	<div class="navbar-inner">
+    		<div class="container">
+    			<ul class="menu">
+    				<li data-ng-class="{ active: isActive('/home')}"><a href="#!/home">Home</a></li>
+    				<li data-ng-class="{ active: isActive('/relation')}"><a href="#!/relation">Trust Relation</a></li>
+    				<li data-ng-class="{ active: isActive('/users')}"><a href="#!/users">Users</a></li>
+    				<li data-ng-class="{ active: isActive('/history')}"><a href="#!/history">History</a></li>
+    			</ul>
+    		</div>
+    	</div>
+	</div>
+</div>
+<div class="container" id="homeController" data-ng-controller="HomeController">
+ 	<div class="col-lg-5">
+		<p></p>
+		<h2 class="title_2">Balance</h2>
+		<div id="balance">{{homeObject.balance}} </div>
+ 	</div>
+ 	<div class="col-lg-5">
+ 		<p></p>
+ 		<h2 class="title_2">Latest Transactions</h2>
+ 		<div class="transaction_list" data-ng-repeat="transaction in lastThreeTransactions">{{transaction.id}}</div>
+ 	</div>
+  	<div class="col-lg-5">
+		<p></p>
+		<h4 class="title_4">Email</h2>
+		<div class="left_side"> <!-- data-ng-controller="ModalEmailController"> -->
+			<script type="text/ng-template" id="modalEmail.html">
+        		<div class="modal-body">
+					<div class="alert alert-danger" ng-show="error">{{errorMessage}}</div>
+          			<form name="emailUpdateForm" data-ng-submit="submit()">
+  						<div class="modal-header">
+    						<h3>Change your Email</h3>
+  						</div>
+  						<div class="modal-body">
+							<p>Please enter your actual Email Address:</p>
+    						<input class="form-control" data-ng-model="user.old_email" type="email" name="old_email" placeholder="actual email address">
+							<p>Please enter your new Email Address:</p>
+							<input class="form-control" data-ng-model="user.new_email" type="email" name="new_email" placeholder="new email address">
+  						</div>
+  						<div class="modal-footer">
+    						<button class="btn btn-primary" type="submit">OK</button>
+    						<button class="btn btn-warning" data-ng-click="cancel()">Cancel</button>
+  						</div>
+					</form>
+				</div>
+    		</script>
+  			<button class="btn btn-default" data-ng-click="openEmailModal()">Change Email</button>
+  		</div>
+  		<div class="clear_side"></div>
+  		<p></p>
+  		<h4 class="title_4">Password</h2>
+  		<div class="left_side"> <!-- data-ng-controller="ModalPasswordController"> -->
+  			<script type="text/ng-template" id="modalPassword.html">
+        		<div class="modal-body">
+					<div class="alert alert-danger" ng-show="error">{{errorMessage}}</div>
+          			<form name="passwordUpdateForm" novalidate ng-submit="submit()">
+  						<div class="modal-header">
+    						<h3>Set a new Password</h3>
+  						</div>
+  						<div class="modal-body">
+							<div class="form-group" data-ng-class="{'has-error':!passwordUpdateForm.oldpassword.$valid}"><label for="oldpassword">Actual Password</label>
+    							<input class="form-control" type="password" name="oldpassword" 
+									placeholder="actual password" data-ng-model="user.old_password" required>
+								<span class="help-block" data-ng-show="passwordUpdateForm.oldpassword.$error.required">Field is required!</span>
+							</div>
+							<div class="form-group" data-ng-class="{'has-error':!passwordUpdateForm.password.$valid}"><label for="password">New Password</label>
+								<input class="form-control" type="password" name="password" 
+									placeholder="new password" data-ng-model="user.password" required>
+								<span class="help-block" data-ng-show="passwordUpdateForm.password.$error.required">Field is required!</span>
+							</div>
+							<div class="form-group" data-ng-class="{'has-error':!passwordUpdateForm.confirm_password.$valid}"><label for="confirm_password">Confirm New Password</label>
+								<input class="form-control" type="password" name="confirm_password" placeholder="confirm new password" 
+									data-ng-model="user.password_confirm" required data-ng-match="user.password">
+								<span class="help-block" data-ng-show="passwordUpdateForm.confirm_password.$error.required">Field is required!</span>
+      							<span class="help-block" data-ng-show="passwordUpdateForm.confirm_password.$error.match">Passwords do not match!</span>
+							</div>
+  						</div>
+  						<div class="modal-footer">
+    						<button class="btn btn-primary" type="submit">OK</button>
+    						<button class="btn btn-warning" ng-click="cancel()">Cancel</button>
+  						</div>
+					</form>
+				</div>
+    		</script>
+  			<button class="btn btn-default" data-ng-click="openPasswordModal()">Change Password</button>
+  		</div>
+  	</div>
+  	<div class="col-lg-5">
+  		<p></p>
+  		<h2 class="title_2">Admins</h2>
+  		<div class="left_side">
+  			<script type="text/ng-template" id="modalInviteAdmin.html">
+        		<div class="modal-body">
+					<div class="alert alert-danger" ng-show="error">{{errorMessage}}</div>
+          			<form name="inviteAdminForm" novalidate ng-submit="submit()">
+  					<div class="modal-header">
+    					<h3>Invite a new User as Admin</h3>
+  					</div>
+  					<div class="modal-body">
+						<p>Please enter Email Address:</p>
+   						<input class="form-control" data-ng-model="user.email" type="email" name="email" placeholder="Email Address" required>
+  					</div>
+  					<div class="modal-footer">
+    					<button class="btn btn-primary" type="submit">OK</button>
+    					<button class="btn btn-warning" ng-click="cancel()">Cancel</button>
+  					</div>
+					</form>
+				</div>
+    		</script>
+  			<button class="btn btn-default" data-ng-click="openAdminsModal()">Invite a new Admin</button>
+  		</div>
+  		<div class="admin_list" data-ng-repeat="admin in allAdmins">{{admin}} </div>
+  	</div>
+</div>
+<div class="row">
+	<p></p>
+	<div class="col-lg-3">
+	<p></p>
+	<h2 id="Overview">Overview</h2><ul><li>Lorem ipsum</li><li>Lorem ipsum</li></ul><p><a href="overview" class="btn btn-primary">View details</a></p>
+	<p></p></div>
+	<div class="col-lg-3">
+	<p></p>
+	<h2 id="AboutMBPS">About MBPS</h2><ul><li>Lorem ipsum</li><li>Lorem ipsum</li></ul><p><a href="aboutmpbs" class="btn btn-primary">View details</a></p>
+	<p></p>
+	</div>
+	<div class="col-lg-3">
+	<p></p>
+	<h2 id="Guidelines">Guidelines</h2><ul><li>Lorem ipsum</li><li>Lorem ipsum</li></ul><p><a href="guidlines" class="btn btn-primary">View details</a></p>
+	<p></p></div>
+	<div class="col-lg-3">
+	<p></p>
+	<h2 id="Help">Help</h2><ul><li>Lorem ipsum</li><li>Lorem ipsum</li></ul><p><a href="help" class="btn btn-primary">View details</a></p>
+	<p></p></div>      
+	<p></p>
+</div>
