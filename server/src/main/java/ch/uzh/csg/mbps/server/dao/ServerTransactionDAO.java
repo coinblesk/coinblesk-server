@@ -5,10 +5,12 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.hibernate.HibernateException;
+import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.transform.Transformers;
+import org.hibernate.type.StandardBasicTypes;
 
 import ch.uzh.csg.mbps.model.HistoryPayOutTransaction;
 import ch.uzh.csg.mbps.model.HistoryServerAccountTransaction;
@@ -163,7 +165,7 @@ public class ServerTransactionDAO {
 		
 		@SuppressWarnings("unchecked")
 		List<HistoryServerAccountTransaction> resultWithAliasedBean = session.createSQLQuery(
-				  "SELECT st.timestamp, st.amount, st.btc_address as btcAddress " +
+				  "SELECT st.timestamp, st.amount, st.payin_address as btcAddress " +
 				  "FROM server_transaction st " +
 				  "ORDER BY st.timestamp DESC")
 				  .addScalar("timestamp")
@@ -198,7 +200,7 @@ public class ServerTransactionDAO {
 		session2.beginTransaction();
 		@SuppressWarnings("unchecked")
 		List<HistoryServerAccountTransaction> resultWithAliasedBean = session.createSQLQuery(
-				  "SELECT st.timestamp, st.amount, st.btc_address as btcAddress " +
+				  "SELECT st.timestamp, st.amount, st.payin_address as btcAddress " +
 				  "FROM server_transaction st " +
 				  "WHERE st.user_id = :userid " +
 				  "ORDER BY st.timestamp DESC")
@@ -231,7 +233,7 @@ public class ServerTransactionDAO {
 				
 		@SuppressWarnings("unchecked")
 		List<HistoryServerAccountTransaction> resultWithAliasedBean = session.createSQLQuery(
-				  "SELECT st.timestamp, st.amount, st.btc_address as btcAddress " +
+				  "SELECT st.timestamp, st.amount, st.payin_address as btcAddress " +
 				  "FROM server_transaction st " +
 				  "ORDER BY pot.timestamp DESC")
 				  .addScalar("timestamp")
@@ -261,20 +263,22 @@ public class ServerTransactionDAO {
 		Session session = openSession();
 		session.beginTransaction();
 				
-		@SuppressWarnings("unchecked")
-		List<HistoryServerAccountTransaction> resultWithAliasedBean = session.createSQLQuery(
-				  "SELECT st.timestamp, st.amount, st.btc_address as btcAddress " +
+		Query query= session.createSQLQuery(
+				  "SELECT st.timestamp, st.amount, st.payin_address as btcAddress " +
 				  "FROM server_transaction st " +
-				  "WHERE st.received = " + true +
-				  "ORDER BY pot.timestamp DESC")
+				  "WHERE st.received = 'TRUE' "+
+				  "AND st.verified = 'TRUE' "+ 
+				  "ORDER BY st.timestamp DESC")
 				  .addScalar("timestamp")
 				  .addScalar("amount")
-				  .addScalar("btcAddress")
+				  .addScalar("btcAddress", StandardBasicTypes.STRING)
 				  .setFirstResult(page * Config.SEREVER_TRANSACTION_MAX_RESULTS)
 				  .setMaxResults(Config.SEREVER_TRANSACTION_MAX_RESULTS)
 				  .setFetchSize(Config.SEREVER_TRANSACTION_MAX_RESULTS)
-				  .setResultTransformer(Transformers.aliasToBean(HistoryServerAccountTransaction.class))
-				  .list();
+				  .setResultTransformer(Transformers.aliasToBean(HistoryServerAccountTransaction.class));
+		
+		@SuppressWarnings("unchecked")
+		List<HistoryServerAccountTransaction> resultWithAliasedBean = query.list();
 		
 		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;
 		session.close();
@@ -291,10 +295,11 @@ public class ServerTransactionDAO {
 				
 		@SuppressWarnings("unchecked")
 		List<HistoryServerAccountTransaction> resultWithAliasedBean = session.createSQLQuery(
-				  "SELECT st.timestamp, st.amount, st.btc_address as btcAddress " +
+				  "SELECT st.timestamp, st.amount, st.payin_address as btcAddress " +
 				  "FROM server_transaction st " +
-				  "WHERE st.received = " + false +
-				  "ORDER BY pot.timestamp DESC")
+				  "WHERE st.received = 'FALSE' "+
+				  "AND st.verified = 'TRUE' "+ 
+				  "ORDER BY st.timestamp DESC")
 				  .addScalar("timestamp")
 				  .addScalar("amount")
 				  .addScalar("btcAddress")

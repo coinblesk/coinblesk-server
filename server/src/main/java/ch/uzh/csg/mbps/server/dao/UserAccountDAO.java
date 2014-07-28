@@ -14,6 +14,7 @@ import ch.uzh.csg.mbps.server.domain.EmailVerification;
 import ch.uzh.csg.mbps.server.domain.ResetPassword;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.HibernateUtil;
+import ch.uzh.csg.mbps.server.util.UserRoles.Role;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.VerificationTokenNotFoundException;
@@ -459,4 +460,22 @@ public class UserAccountDAO {
 		return list;
 	}
 
+	//TODO: mehmet javadoc
+	/**
+	 * 
+	 * @param role
+	 * @return
+	 */
+	public static List<UserAccount> getAllUsersByRoles(Role role){
+		System.out.println();
+		Session session = openSession();
+		session.beginTransaction();
+		@SuppressWarnings("unchecked")
+		List<UserAccount> list = (List<UserAccount>) session.createCriteria(UserAccount.class).add(Restrictions.eq("roles", role.getCode())).list();
+		session.close();
+		
+		return list;
+	}
+	
+	
 }
