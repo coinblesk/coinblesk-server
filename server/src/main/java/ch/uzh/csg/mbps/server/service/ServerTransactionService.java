@@ -2,12 +2,15 @@ package ch.uzh.csg.mbps.server.service;
 
 import java.util.ArrayList;
 
+import org.springframework.stereotype.Service;
+
 import ch.uzh.csg.mbps.model.HistoryServerAccountTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IServerTransaction;
 import ch.uzh.csg.mbps.server.dao.ServerTransactionDAO;
 import ch.uzh.csg.mbps.server.domain.ServerTransaction;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 
+@Service
 public class ServerTransactionService implements IServerTransaction{
 	
 	//TODO: mehmet move to a config file
