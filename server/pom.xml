@@ -257,12 +257,6 @@
 			<artifactId>joda-money</artifactId>
 			<version>0.9.1</version>
 		</dependency>
-
-		<dependency>
-			<groupId>org.apache.velocity</groupId>
-			<artifactId>velocity</artifactId>
-			<version>1.7</version>
-		</dependency>
 		<dependency>
 			<groupId>org.apache.directory.studio</groupId>
 			<artifactId>org.apache.commons.codec</artifactId>
