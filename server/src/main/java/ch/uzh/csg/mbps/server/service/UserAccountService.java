@@ -1,12 +1,14 @@
 package ch.uzh.csg.mbps.server.service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
+
 import org.hibernate.HibernateException;
 
-import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.dao.UserPublicKeyDAO;
@@ -343,5 +345,28 @@ public class UserAccountService implements IUserAccount {
 		}
 		return sum;
 	}
-
+	
+	//TODO: mehmet
+	/**
+	 * Gets all users which have the role as admin
+	 * @return
+	 */
+	public List<UserAccount> getAdmins(){
+		List<UserAccount> users = new ArrayList<UserAccount>(); 
+		users = UserAccountDAO.getAllUsersByRoles(Role.ADMIN);
+		users.addAll(UserAccountDAO.getAllUsersByRoles(Role.BOTH));
+		return users;
+	}
+	
+	//TODO: mehmet
+	/**
+	 * Gets all users which have the role as user
+	 * @return
+	 */
+	public List<UserAccount> getUsers(){
+		List<UserAccount> users = new ArrayList<UserAccount>(); 
+		users = UserAccountDAO.getAllUsersByRoles(Role.USER);
+		users.addAll(UserAccountDAO.getAllUsersByRoles(Role.BOTH));
+		return users;
+	}
 }
