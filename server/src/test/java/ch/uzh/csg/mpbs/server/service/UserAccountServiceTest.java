@@ -10,13 +10,14 @@ import java.security.KeyPair;
 import java.util.Date;
 import java.util.List;
 
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
+
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.dao.UserPublicKeyDAO;
 import ch.uzh.csg.mbps.server.domain.UserAccount;

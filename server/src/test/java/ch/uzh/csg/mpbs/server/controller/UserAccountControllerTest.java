@@ -18,6 +18,14 @@ import java.util.List;
 
 import javax.servlet.http.HttpSession;
 
+import ch.uzh.csg.mbps.customserialization.Currency;
+import ch.uzh.csg.mbps.customserialization.DecoderFactory;
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
+import ch.uzh.csg.mbps.customserialization.PaymentRequest;
+import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
+import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
+import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
+
 import org.codehaus.jackson.map.ObjectMapper;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
@@ -39,18 +47,11 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import ch.uzh.csg.mbps.customserialization.Currency;
-import ch.uzh.csg.mbps.customserialization.DecoderFactory;
-import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
-import ch.uzh.csg.mbps.customserialization.PaymentRequest;
-import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
-import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
-import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
 import ch.uzh.csg.mbps.keys.CustomPublicKey;
 import ch.uzh.csg.mbps.responseobject.CreateTransactionTransferObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
-import ch.uzh.csg.mbps.responseobject.GetHistoryTransferObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
+import ch.uzh.csg.mbps.responseobject.GetHistoryTransferObject;
 import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.EmailVerification;
