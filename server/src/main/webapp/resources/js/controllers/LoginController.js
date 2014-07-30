@@ -5,15 +5,21 @@
  * @constructor
  */
 
-function LoginController($scope, $http, $location, $rootScope) {
-    $scope.login = function (credentials) {
+function LoginController($scope, $http, $location) {
+	
+	$scope.login = function (credentials) {
     	
     	$scope.credentials = {
     		    username: '',
     		    password: ''
     	};
     	
-		$scope.$emit('event:loginRequest', credentials);
-		$location.path('/');
+    	if(credentials.username == '' || credentials.password == '') {
+    		//do nothing
+    	}else {    		
+    		$scope.$emit('event:loginRequest', credentials);
+    		$location.path('/home');
+    	}
+    	
     };
 };
