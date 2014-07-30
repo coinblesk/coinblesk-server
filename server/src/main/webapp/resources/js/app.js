@@ -2,9 +2,11 @@
 
 var SpringAngularApp = SpringAngularApp || {};
 
-var App = angular.module('SpringAngularApp', ['ngRoute', 'ui.bootstrap','ngSanitize', 'ngCookies', 'SpringAngularApp.filters', 'SpringAngularApp.services', 'SpringAngularApp.directives']);
+var httpHeaders, message;
 
-var httpHeaders;
+var App = angular.module('SpringAngularApp', 
+		['ngRoute', 'ui.bootstrap','ngSanitize', 'ngCookies', 'SpringAngularApp.filters', 
+		 'SpringAngularApp.services', 'SpringAngularApp.directives']);
 
 //Declare app level module which depends on filters, and services
 App.config(['$routeProvider', '$httpProvider', '$provide', function($routeProvider, $httpProvider, $provide) {
@@ -40,12 +42,6 @@ App.config(['$routeProvider', '$httpProvider', '$provide', function($routeProvid
 		    // On request success
 		    request: function (config) {
 		    	console.log(config); // Contains the data about the request before it is sent.
-//		    	if (typeof config.data !== undefined){
-//		            config.data.auth ='hasAuth';
-//		            config.data.token = $cookies.token;
-//		            config.data.idx = $cookies.idx;
-//		            console.log(config);
-//		        }
 		    	
 		    	if (angular.isDefined($rootScope.authToken)) {
       			var authToken = $rootScope.authToken;
@@ -97,12 +93,13 @@ App.config(['$routeProvider', '$httpProvider', '$provide', function($routeProvid
 	    };
   });
   
-  httpHeaders = $httpProvider.defaults.headers;
   $httpProvider.interceptors.push('authHttpInterceptor');
-    
+  //sets a resource in the header of each request
+  httpHeaders = $httpProvider.defaults.headers;
+//  $httpProvider.defaults.withCredentials = true;
 }]);
 
-App.run(['$rootScope', '$http', '$cookieStore', '$location', function($rootScope, $http, $cookieStore,  $location, userAccountFactory) {
+App.run(function($rootScope, $http, $location, base64Factory, userAccountFactory, accessTokenCookieService) {
 
     /**
      * Holds all the requests which failed due to 401 response.
@@ -110,12 +107,10 @@ App.run(['$rootScope', '$http', '$cookieStore', '$location', function($rootScope
     $rootScope.requests401 = [];
 
     $rootScope.$on('event:loginRequired', function () {
-    	$rootScope.requests401 = [];	    
-		if ($location.path().indexOf("/login") == -1) {
-			originalLocation = $location.path();
+    	if ($location.path().indexOf("/login") == -1) {
 			$rootScope.error = "Please enter a valid username / password";
 	    }
-		$location.path('/login');;
+		$location.path('/login');
     });
     
     /**
@@ -139,23 +134,21 @@ App.run(['$rootScope', '$http', '$cookieStore', '$location', function($rootScope
      * On 'event:loginRequest' send credentials to the server.
      */
 	$rootScope.$on('event:loginRequest', function (event, credentials) {
+		var token = 'Basic ' + base64Factory.encode(credentials.username + ':' + credentials.password);
+		accessTokenCookieService.initToken(token);
+		var payload = 'j_username=' + credentials.username + '&j_password=' + credentials.password;
+		var config = {
+			    headers: {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+			    withCredentials: true
+			  };
 
-		console.log("EVENT " + event);
-		console.log("CRED " + credentials.username + " - " + credentials.password);
-		$http({
-			method: 'POST',
-			url: 'j_spring_security_check',
-			param: {j_username: credentials.username, j_password: credentials.password },
-			headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'}
-		})
+		$http.post('j_spring_security_check', payload, config)
 		.success(function(data) {
-			console.log(data);
-			if(data ==='AUTHENTICATION_SUCCESS'){
-				$rootScope.$broadcast('event:loginConfirmed');
-			}
+			accessTokenCookieService.initCookies();
+			$rootScope.$broadcast('event:loginConfirmed');
 		})
-		.error(function(data){
-			console.log(data);
+		.error(function(data, status){
+			console.log(status);
 		});
 	});
 	
@@ -163,22 +156,13 @@ App.run(['$rootScope', '$http', '$cookieStore', '$location', function($rootScope
      * On 'logoutRequest' invoke logout on the server and broadcast 'event:loginRequired'.
      */
     $rootScope.$on('event:logoutRequest', function () {
+    	accessTokenCookieService.removeToken();
+    	accessTokenCookieService.removeCookies();
     	$http.put('/j_spring_security_logout', {}).success(function() {
-    		delete $rootScope.user;
-    		delete $rootScope.authToken;
-    		$cookieStore.remove('authToken');
+    		console.log("Logout");
       	});
+		$location.path('/login');
     });
 	
-    var originalLocation = $location.path();
-//	$location.path("/login");
-	var authToken = $cookieStore.get('authToken');
-	if (authToken !== undefined) {
-		$rootScope.authToken = authToken;
-		userAccountFactory.getUser(function(user) {
-			$rootScope.user = user;
-			$location.path(originalLocation);
-		});
-	}
 
-}]);
+});
