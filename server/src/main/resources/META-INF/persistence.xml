@@ -11,13 +11,18 @@
         	<property name="connection.username" value="sa"/>  
         	<property name="connection.password"/>  
         	<property name="connection.pool_size" value="1"/> -->
-			<property name="hibernate.dialect" value="org.hibernate.dialect.HSQLDialect" />
+		<!-- 	<property name="hibernate.dialect" value="org.hibernate.dialect.HSQLDialect" />
 			<property name="hibernate.hbm2ddl.auto" value="create-drop" />
 			<property name="hibernate.show_sql" value="true" />
 			<property name="hibernate.format_sql" value="true" />
-			<property name="hibernate.cache.provider_class" value="org.hibernate.cache.HashtableCacheProvider" />
+			<property name="hibernate.cache.provider_class" value="org.hibernate.cache.HashtableCacheProvider" /> -->
 			<!-- <property name="hibernate.cache.use_query_cache" value="false"/>  
         	<property name="hibernate.cache.use_second_level_cache" value="false"/> -->
+        	<property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQLDialect" />
+			<property name="hibernate.hbm2ddl.auto" value="create" />
+			<property name="hibernate.show_sql" value="true" />
+			<property name="hibernate.format_sql" value="true" />
+			<property name="hibernate.cache.provider_class" value="org.hibernate.cache.NoCacheProvider" />
 		</properties>
 	</persistence-unit>
 </persistence>
