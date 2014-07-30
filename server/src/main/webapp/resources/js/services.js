@@ -6,7 +6,7 @@ var AppServices = angular.module('SpringAngularApp.services', []);
 
 AppServices.value('version', '0.1');
 
-AppServices.service('accessTokenService', function($cookies, $cookieStore){
+AppServices.service('accessTokenCookieService', function($cookies, $cookieStore){
 	return ({
 		initToken: initToken,
 		removeToken: removeToken,
