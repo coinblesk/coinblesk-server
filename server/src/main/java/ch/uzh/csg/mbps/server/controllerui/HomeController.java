@@ -23,7 +23,7 @@ public class HomeController {
         return "home";
     }
 	
-	@RequestMapping(value={"/balance"})
+	@RequestMapping(value={"/balance"}, method=RequestMethod.GET, produces="application/json")
 	public 	@ResponseBody double getBalanceSum(){
 		BigDecimal balance = UserAccountService.getInstance().getSumOfAllAccounts();
 		return balance.doubleValue();
