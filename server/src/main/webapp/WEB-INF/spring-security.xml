@@ -11,14 +11,13 @@
     <http pattern="/login" security='none' />
     <http pattern="/" security='none' />
     
-   
 	<http auto-config="false" use-expressions="true" entry-point-ref="restAuthenticationEntryPoint">
 		<intercept-url pattern="/user/create" access="permitAll" requires-channel="http" />
 		<intercept-url pattern="/user/resetPassword/**" access="permitAll" requires-channel="http" />
 		<intercept-url pattern="/user/resetPasswordRequest" access="permitAll" requires-channel="http" />
 		<intercept-url pattern="/user/verify/**" access="permitAll" requires-channel="http" />
 		<intercept-url pattern="/transaction/exchange-rate" access="permitAll" requires-channel="http" />
-		<intercept-url pattern="/home/**" access="permitAll" requires-channel="http"/>
+		<intercept-url pattern="/home/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
 		<intercept-url pattern="/relation/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
 		<intercept-url pattern="/users/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
 		<intercept-url pattern="/history/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
@@ -68,14 +67,6 @@
 			org.springframework.security.authentication.ProviderManager. Otherwise we get an error 
 			A probable bug. This is still under investigation-->
 	<!-- <authentication-manager/> -->
-	<authentication-manager alias="authenticationManager"> 
-	    <authentication-provider>
-	    	<user-service>
-	    		<user name="user" password="pass" authorities="ROLE_ADMIN" />
-	    		<user name="user2" password="pass" authorities="ROLE_USER" />
-	    		<user name="user3" password="pass" authorities="ROLE_BOTH" />
-	    	</user-service>
-	    </authentication-provider>
-  </authentication-manager>
+	<authentication-manager/>
  
 </beans:beans>
