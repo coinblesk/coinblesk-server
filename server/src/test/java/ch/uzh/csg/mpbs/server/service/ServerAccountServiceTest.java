@@ -66,9 +66,9 @@ public class ServerAccountServiceTest {
 	}
 
 	@Test
-	@DatabaseSetup(value="classpath:DbUnitFiles/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	@DatabaseTearDown(value="classpath:DbUnitFiles/serverAccountData.xml", type=DatabaseOperation.DELETE_ALL)
-	@ExpectedDatabase(value="classpath:DbUnitFiles/serverAccountExpectedCreateData.xml", table="server_account")
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	@DatabaseTearDown(value="classpath:DbUnitFiles/Services/serverAccountData.xml", type=DatabaseOperation.DELETE_ALL)
+	@ExpectedDatabase(value="classpath:DbUnitFiles/Services/serverAccountExpectedCreateData.xml", table="server_account")
 	public void testCreateAccount() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException, ServerAccountNotFoundException {
 		int numberOfServerAccount = getAllServerAccounts().size();
 		ServerAccount newServer = new ServerAccount("www.test-test.ch", "test6@mail.com", "publicKey");
@@ -80,8 +80,8 @@ public class ServerAccountServiceTest {
 	}
 	
 	@Test(expected=UrlAlreadyExistsException.class)
-	@DatabaseSetup(value="classpath:DbUnitFiles/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	@DatabaseTearDown(value="classpath:DbUnitFiles/serverAccountData.xml", type=DatabaseOperation.DELETE_ALL)
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	@DatabaseTearDown(value="classpath:DbUnitFiles/Services/serverAccountData.xml", type=DatabaseOperation.DELETE_ALL)
 	public void testCreateAccount_FailUrlAlreadyExists() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException{
 		ServerAccount newServer = new ServerAccount("https://www.my_url.ch", "test@mail.ch", "my public key");
 		ServerAccountService.getInstance().createAccount(newServer);
@@ -105,9 +105,9 @@ public class ServerAccountServiceTest {
 	}
 	
 	@Test
-	@DatabaseSetup(value="classpath:DbUnitFiles/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	@DatabaseTearDown(value="classpath:DbUnitFiles/serverAccountData.xml", type=DatabaseOperation.DELETE_ALL)
-	@ExpectedDatabase(value="classpath:DbUnitFiles/serverAccountExpectedManuallyData.xml", table="server_account")
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	@DatabaseTearDown(value="classpath:DbUnitFiles/Services/serverAccountData.xml", type=DatabaseOperation.DELETE_ALL)
+	@ExpectedDatabase(value="classpath:DbUnitFiles/Services/serverAccountExpectedManuallyData.xml", table="server_account")
 	public void testCreateAccount_EnterFieldsManually() throws BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, UrlAlreadyExistsException, InvalidUrlException, InvalidPublicKeyException, ServerAccountNotFoundException {
 		ServerAccount newAccount = new ServerAccount("www.insert.com", "insert@mail.ch", "fake-insert");
 		newAccount.setBalanceLimit(BigDecimal.ZERO);
@@ -132,8 +132,8 @@ public class ServerAccountServiceTest {
 	}
 	
 	@Test
-	@DatabaseSetup(value="classpath:DbUnitFiles/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	@DatabaseTearDown(value="classpath:DbUnitFiles/serverAccountData.xml", type=DatabaseOperation.DELETE_ALL)
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	@DatabaseTearDown(value="classpath:DbUnitFiles/Services/serverAccountData.xml", type=DatabaseOperation.DELETE_ALL)
 	public void testReadAccount() throws ServerAccountNotFoundException, UrlAlreadyExistsException {
 		ServerAccount byUrl = ServerAccountService.getInstance().getByUrl("https://www.my_url.ch");
 		assertNotNull(byUrl);
@@ -143,11 +143,11 @@ public class ServerAccountServiceTest {
 	}
 	
 	@Test
-	@DatabaseSetup(value="classpath:DbUnitFiles/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	@DatabaseTearDown(value="classpath:DbUnitFiles/serverAccountData.xml", type=DatabaseOperation.DELETE_ALL)
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	@DatabaseTearDown(value="classpath:DbUnitFiles/Services/serverAccountData.xml", type=DatabaseOperation.DELETE_ALL)
 	public void testTrustLevel() throws ServerAccountNotFoundException {
-		ServerAccount serverUrl1 = ServerAccountService.getInstance().getByUrl("https://www.my_url.ch");
-		ServerAccount serverUrl2 = ServerAccountService.getInstance().getByUrl("www.haus.ch");
+		ServerAccount serverUrl1 = ServerAccountService.getInstance().getByUrl("www.haus.ch");
+		ServerAccount serverUrl2 = ServerAccountService.getInstance().getByUrl("https://www.my_url.ch");
 		
 		serverUrl1.setTrustLevel(1);
 		
@@ -156,9 +156,9 @@ public class ServerAccountServiceTest {
 	}
 
 	@Test
-	@DatabaseSetup(value="classpath:DbUnitFiles/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	@DatabaseTearDown(value="classpath:DbUnitFiles/serverAccountData.xml", type=DatabaseOperation.DELETE_ALL)
-	@ExpectedDatabase(value="classpath:DbUnitFiles/serverAccountExpectedUpdatedData.xml", table="server_account")
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	@DatabaseTearDown(value="classpath:DbUnitFiles/Services/serverAccountData.xml", type=DatabaseOperation.DELETE_ALL)
+	@ExpectedDatabase(value="classpath:DbUnitFiles/Services/serverAccountExpectedUpdatedData.xml", table="server_account")
 	public void testUpdatedAccount() throws ServerAccountNotFoundException {
 		ServerAccount beforeUpdateAccount = ServerAccountService.getInstance().getByUrl("www.mbps.com");
 		assertNotNull(beforeUpdateAccount);

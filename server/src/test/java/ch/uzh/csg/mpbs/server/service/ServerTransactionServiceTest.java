@@ -3,8 +3,12 @@ package ch.uzh.csg.mpbs.server.service;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import java.io.FileInputStream;
 import java.util.ArrayList;
 
+import org.dbunit.DatabaseUnitException;
+import org.dbunit.dataset.IDataSet;
+import org.dbunit.dataset.xml.FlatXmlDataSetBuilder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -13,8 +17,6 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
-import org.springframework.test.context.support.DirtiesContextTestExecutionListener;
-import org.springframework.test.context.transaction.TransactionalTestExecutionListener;
 
 import ch.uzh.csg.mbps.model.HistoryServerAccountTransaction;
 import ch.uzh.csg.mbps.server.service.ServerAccountService;
@@ -31,8 +33,6 @@ import com.github.springtestdbunit.annotation.DbUnitConfiguration;
 @DbUnitConfiguration(databaseConnection="dataSource")
 @TestExecutionListeners({ 
 	DependencyInjectionTestExecutionListener.class,
-	DirtiesContextTestExecutionListener.class,
-	TransactionalTestExecutionListener.class,
 	DbUnitTestExecutionListener.class })
 public class ServerTransactionServiceTest {
 
@@ -52,23 +52,23 @@ public class ServerTransactionServiceTest {
 	}
 	
 	@Test
-	@DatabaseSetup(value="classpath:DbUnitFiles/serverTransactionData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	@DatabaseTearDown(value="classpath:DbUnitFiles/serverTransactionData.xml", type=DatabaseOperation.DELETE_ALL)
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverTransactionData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	@DatabaseTearDown(value="classpath:DbUnitFiles/Services/serverTransactionData.xml", type=DatabaseOperation.DELETE_ALL)
 //	@ExpectedDatabase(value="classpath:DbUnitFiles/serverTransactionExpectedCreateData.xml", table="server_transaction")
 	public void testCreateTransaction() {
 		//TODO: mehmet needed when communicating with android
 	}
 	
 	@Test
-	@DatabaseSetup(value="classpath:DbUnitFiles/serverTransactionData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	@DatabaseTearDown(value="classpath:DbUnitFiles/serverTransactionData.xml", type=DatabaseOperation.DELETE_ALL)
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverTransactionData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	@DatabaseTearDown(value="classpath:DbUnitFiles/Services/serverTransactionData.xml", type=DatabaseOperation.DELETE_ALL)
 	public void testGetHistory() {
 		//TODO: mehmet need createAccount
 	}
 	
 	@Test
-	@DatabaseSetup(value="classpath:DbUnitFiles/serverTransactionData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	@DatabaseTearDown(value="classpath:DbUnitFiles/serverTransactionData.xml", type=DatabaseOperation.DELETE_ALL)
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverTransactionData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	@DatabaseTearDown(value="classpath:DbUnitFiles/Services/serverTransactionData.xml", type=DatabaseOperation.DELETE_ALL)
 	public void testGetPayeeHistory() {
 		ArrayList<HistoryServerAccountTransaction> payeeList = ServerTransactionService.getInstance().getPayeeHistory(0);
 		
@@ -77,8 +77,8 @@ public class ServerTransactionServiceTest {
 	}
 	
 	@Test
-	@DatabaseSetup(value="classpath:DbUnitFiles/serverTransactionData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	@DatabaseTearDown(value="classpath:DbUnitFiles/serverTransactionData.xml", type=DatabaseOperation.DELETE_ALL)
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverTransactionData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	@DatabaseTearDown(value="classpath:DbUnitFiles/Services/serverTransactionData.xml", type=DatabaseOperation.DELETE_ALL)
 	public void testGetPayerHistory() {
 		ArrayList<HistoryServerAccountTransaction> payerList = ServerTransactionService.getInstance().getPayerHistory(0);
 		
