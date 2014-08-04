@@ -34,7 +34,7 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 public class TransactionService implements ITransaction {
 
 	//TODO: mehmet move to a config file
-	public static final String BALANCE = "Not sufficient funds. Payment rejected.";
+	public static final String BALANCE = "BALANCE";
 	public static final String NEGATIVE_AMOUNT = "The transaction amount can't be negative or equals 0.";
 	public static final String HIBERNATE_ERROR = "An error occured while persisting the data. Please try again later.";
 	public static final String INTERNAL_ERROR = "An internal error occured. Please try again later.";
