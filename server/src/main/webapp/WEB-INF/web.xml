@@ -63,8 +63,9 @@
 	
  	<servlet-mapping>
 		<servlet-name>mvc-dispatcher</servlet-name>
+		<!-- <url-pattern>*.html</url-pattern> -->
 		<url-pattern>/</url-pattern>
-		<url-pattern>*.html</url-pattern>
+<!-- 		<url-pattern>*.htm</url-pattern> -->
 	</servlet-mapping>
 
 	<!-- Disables Servlet Container welcome file handling. Needed for compatibility with Servlet 3.0 and Tomcat 7.0 -->
