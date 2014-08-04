@@ -1,0 +1,56 @@
+<!doctype html>
+<html data-ng-app="SpringAngularApp">
+	<head>
+ 		<meta charset="utf-8"/>
+		<title>MBPS</title>
+		<!-- <base href="/"> -->
+		
+		<link rel="stylesheet" href="resources/css/app.css"/>
+    	<link rel="stylesheet" href="resources/bootstrap/css/bootstrap.min.css" />
+		<script type="text/javascript" src="resources/js/lib/jquery-1.11.1.js"></script>
+		<script type="text/javascript" src="resources/js/lib/angular/angular.js"></script>
+		<script type="text/javascript" src="resources/js/lib/angular/angular-route.js"></script>
+		<script type="text/javascript" src="resources/js/lib/angular/angular-cookies.js"></script>
+		<script type="text/javascript" src="resources/js/lib/angular/angular-ui-router.js"></script>
+		<script type="text/javascript" src="resources/js/lib/ui-bootstrap-tpls-0.11.0.min.js"></script>
+		<script type="text/javascript" src="resources/js/lib/angular/angular-sanitize.min.js"></script>
+		<script type="text/javascript" src="resources/js/lib/underscore.js"></script>
+		<script type="text/javascript" src="resources/js/app.js"></script>
+		<script type="text/javascript" src="resources/js/services.js"></script>
+		<script type="text/javascript" src="resources/js/controllers/LoginController.js"></script>
+		<script type="text/javascript" src="resources/js/controllers/LogoutController.js"></script>
+		<script type="text/javascript" src="resources/js/controllers/HomeController.js"></script>
+		<script type="text/javascript" src="resources/js/controllers/RelationController.js"></script>
+		<script type="text/javascript" src="resources/js/controllers/UsersController.js"></script>
+		<script type="text/javascript" src="resources/js/controllers/HistoryController.js"></script>
+		<script type="text/javascript" src="resources/js/filters.js"></script>
+		<script type="text/javascript" src="resources/js/directives.js"></script>
+	</head>
+	<body>
+		<nav class="navbar navbar-fixed-top navbar-default ng-hide" data-role="navigation" data-ng-show="initialized">
+			<div class="container">
+				<div class="collapse navbar-collapse">
+					<ul class="nav navbar-nav navbar-right" data-ng-controller="LogoutController">
+						<li class="dropdown" data-ng-show="loggedUser">
+							<a href="" class="dropdown-toggle" data-toggle="dropdown">{{loggedUser.username}} <b class="caret"></b></a>
+							<ul class="dropdown-menu">
+								<li><a href="" data-ng-click="logout()"><span class="glyphicon glyphicon-off"></span> Logout</a></li>
+							</ul>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</nav>
+		<div class="wrapper">
+			<div data-ng-view=""></div>
+		</div>	
+    	<div class="footer_logos">
+    		<table border="0" width="100%"><tbody><tr>
+  			<td align="center" width="33%"><img src="resources/images/uzh_logo.png" height="90px" width="auto"/></td>
+  			<td align="center" width="33%"><img src="resources/images/csg.png" height="80px" width="auto"/></td>
+  			<td align="center" width="33%"><img src="resources/images/bitcoin.png" height="30px" width="auto"/></td>
+  			</tr></tbody></table>
+        	<p>&copy; MBPS App 2014</p>
+    	</div>
+	</body>
+</html>
