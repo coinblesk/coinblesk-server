@@ -21,20 +21,11 @@
 	    <property name="username" value="sa"/>
 	    <property name="password" value=""/>
 	</bean>
- 	<bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
-		<property name="dataSource" ref="dataSource" />
-		<property name="jpaDialect">
-			<bean class="org.springframework.orm.jpa.vendor.HibernateJpaDialect"/>
-		</property>
-	</bean>
-	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
-		<property name="entityManagerFactory" ref="entityManagerFactory" />
-	</bean>
-<!--     <bean id="sessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
+	<!--  Hibernate template beans -->
+	<bean id="sessionFactory" class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
  		<property name="dataSource">
  			<ref local="dataSource" />
  		</property>
- 		<property name="configurationClass" value="org.hibernate.cfg.AnnotationConfiguration" />
  		<property name="configLocation" value="classpath:hibernate.cfg.xml" />
  		<property name="hibernateProperties">
  			<value>
@@ -46,5 +37,8 @@
  				hibernate.connection.autocommit=true
  			</value>
  		</property>
- 	</bean> -->
+ 	</bean>
+	<bean id="hibernateTemplate" class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+	      <property name="sessionFactory" ref="sessionFactory"></property>
+	</bean>
 </beans>
