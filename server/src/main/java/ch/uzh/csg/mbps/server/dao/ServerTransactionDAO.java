@@ -293,8 +293,7 @@ public class ServerTransactionDAO {
 		Session session = openSession();
 		session.beginTransaction();
 				
-		@SuppressWarnings("unchecked")
-		List<HistoryServerAccountTransaction> resultWithAliasedBean = session.createSQLQuery(
+		Query query= session.createSQLQuery(
 				  "SELECT st.timestamp, st.amount, st.payin_address as btcAddress " +
 				  "FROM server_transaction st " +
 				  "WHERE st.received = 'FALSE' "+
@@ -302,12 +301,14 @@ public class ServerTransactionDAO {
 				  "ORDER BY st.timestamp DESC")
 				  .addScalar("timestamp")
 				  .addScalar("amount")
-				  .addScalar("btcAddress")
+				  .addScalar("btcAddress", StandardBasicTypes.STRING)
 				  .setFirstResult(page * Config.SEREVER_TRANSACTION_MAX_RESULTS)
 				  .setMaxResults(Config.SEREVER_TRANSACTION_MAX_RESULTS)
 				  .setFetchSize(Config.SEREVER_TRANSACTION_MAX_RESULTS)
-				  .setResultTransformer(Transformers.aliasToBean(HistoryServerAccountTransaction.class))
-				  .list();
+				  .setResultTransformer(Transformers.aliasToBean(HistoryServerAccountTransaction.class));
+		
+		@SuppressWarnings("unchecked")
+		List<HistoryServerAccountTransaction> resultWithAliasedBean = query.list();
 		
 		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;
 		session.close();
