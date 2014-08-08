@@ -5,7 +5,7 @@
  * @constructor
  */
 
-var HomeController = function($scope, $modal, $log, $location, $rootScope, balanceService, serverTransactionsFactory, userAccountFactory) {
+var HomeController = function($rootScope, $scope, $modal, $log, $location, balanceService, serverTransactionsFactory, userAccountFactory) {
 	$scope.home = {};
 	$scope.editMode = false;
 	$scope.lastThreeTransactions = [];
@@ -17,24 +17,24 @@ var HomeController = function($scope, $modal, $log, $location, $rootScope, balan
 	loadRemoteData();
 
 	function loadRemoteData(){
-		balanceService.getBalance()
-		.then(
-				function(balance){
-					$scope.homeObject.balance = balance;
-					console.log("ba" + balance);
-					console.log("ba2" + $scope.homeObject.balance);
-				});
-		serverTransactionsFactory.getLastThreeTransactions()
-		.then(
-				function(transactions){
-					$scope.lastThreeTransactions = transactions;
-				});
-		userAccountFactory.getAdmins()
-		.then(
-				function(admins){
-					$scope.allAdmins = admins; 
-				});
+		balanceService.getBalance().then(function(balance){
+			$scope.homeObject.balance = balance;
+		});
+		
+		serverTransactionsFactory.getLastThreeTransactions().then(function(transactions){
+			$scope.lastThreeTransactions = transactions;
+		});
+		
+		userAccountFactory.getAdmins().then(function(admins){
+			$scope.allAdmins = admins; 
+		});
+		
+//		userAccountFactory.getLoggedUser($rootScope.loggeduser.username).then(function(loggedUser){
+//			$rootScope.loggedUser = loggedUser;
+//			console.log(loggedUser);
+//		});
 	}
+	
 
 	$scope.openEmailModal = function () {
 
@@ -45,6 +45,7 @@ var HomeController = function($scope, $modal, $log, $location, $rootScope, balan
 		
 		modalInstance.result.then(function(user){
 			$scope.userMail = user;
+//			userAccountFactory.updateMail(user);
 			console.log($scope.userMail);
 		});
 	};
@@ -57,7 +58,7 @@ var HomeController = function($scope, $modal, $log, $location, $rootScope, balan
 			
 		modalPasswordInstance.result.then(function(user){
 			$scope.userPassword = user;
-			userAccountFactory.
+//			userAccountFactory.updatePassword(user);
 			console.log($scope.userPassword);
 		});
 	  };
