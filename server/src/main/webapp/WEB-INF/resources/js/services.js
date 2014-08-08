@@ -41,10 +41,6 @@ AppServices.service('balanceService', function($http, $q) {
 	});
 	
 	function getBalance(){
-//		var config = {
-//			    headers: {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'}
-//			  };
-		var request = $http.get('home/balance');
 		var request = $http({
 			method: 'GET', 
 			url: 'home/balance'
@@ -120,9 +116,17 @@ AppServices.factory('userAccountFactory', function($http, $q) {
 		return (request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
 	};
 	
+	userAccountFactory.getLoggedUser = function(username){
+		console.log(username);
+		var request = $http({
+			method: 'GET',
+			url: 'home/user/' + username
+		});
+		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
+	};
+	
 	userAccountFactory.handleSuccess = function( response ){
 		return(response.data);
-		console.log("Success", data);
 	};
 	
 	userAccountFactory.handleError = function( response ){
@@ -149,7 +153,6 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 	
 	serverAccountFactory.handleSuccess = function( response ){
 		return(response.data);
-		console.log("Success", data);
 	};
 	
 	serverAccountFactory.handleError = function( response ){
