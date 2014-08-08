@@ -165,12 +165,12 @@ public class ServerTransactionDAO {
 		
 		@SuppressWarnings("unchecked")
 		List<HistoryServerAccountTransaction> resultWithAliasedBean = session.createSQLQuery(
-				  "SELECT st.timestamp, st.amount, st.payin_address as btcAddress " +
+				  "SELECT st.timestamp, st.amount, st.payin_address as payinAddress " +
 				  "FROM server_transaction st " +
 				  "ORDER BY st.timestamp DESC")
 				  .addScalar("timestamp")
 				  .addScalar("amount")
-				  .addScalar("btcAddress")
+				  .addScalar("payinAddress")
 				  .setMaxResults(3)
 				  .setFetchSize(3)
 				  .setResultTransformer(Transformers.aliasToBean(HistoryPayOutTransaction.class))
@@ -200,13 +200,13 @@ public class ServerTransactionDAO {
 		session2.beginTransaction();
 		@SuppressWarnings("unchecked")
 		List<HistoryServerAccountTransaction> resultWithAliasedBean = session.createSQLQuery(
-				  "SELECT st.timestamp, st.amount, st.payin_address as btcAddress " +
+				  "SELECT st.timestamp, st.amount, st.payin_address as payinAddress " +
 				  "FROM server_transaction st " +
 				  "WHERE st.user_id = :userid " +
 				  "ORDER BY st.timestamp DESC")
 				  .addScalar("timestamp")
 				  .addScalar("amount")
-				  .addScalar("btcAddress")
+				  .addScalar("payinAddress")
 				  .setLong("userid",  serverAccount.getId())
 				  .setMaxResults(3)
 				  .setFetchSize(3)
@@ -233,12 +233,12 @@ public class ServerTransactionDAO {
 				
 		@SuppressWarnings("unchecked")
 		List<HistoryServerAccountTransaction> resultWithAliasedBean = session.createSQLQuery(
-				  "SELECT st.timestamp, st.amount, st.payin_address as btcAddress " +
+				  "SELECT st.timestamp, st.amount, st.payin_address as payinAddress " +
 				  "FROM server_transaction st " +
 				  "ORDER BY pot.timestamp DESC")
 				  .addScalar("timestamp")
 				  .addScalar("amount")
-				  .addScalar("btcAddress")
+				  .addScalar("payinAddress")
 				  .setFirstResult(page * Config.SEREVER_TRANSACTION_MAX_RESULTS)
 				  .setMaxResults(Config.SEREVER_TRANSACTION_MAX_RESULTS)
 				  .setFetchSize(Config.SEREVER_TRANSACTION_MAX_RESULTS)
@@ -264,14 +264,14 @@ public class ServerTransactionDAO {
 		session.beginTransaction();
 				
 		Query query= session.createSQLQuery(
-				  "SELECT st.timestamp, st.amount, st.payin_address as btcAddress " +
+				  "SELECT st.timestamp, st.amount, st.payin_address as payinAddress " +
 				  "FROM server_transaction st " +
 				  "WHERE st.received = 'TRUE' "+
 				  "AND st.verified = 'TRUE' "+ 
 				  "ORDER BY st.timestamp DESC")
 				  .addScalar("timestamp")
 				  .addScalar("amount")
-				  .addScalar("btcAddress", StandardBasicTypes.STRING)
+				  .addScalar("payinAddress", StandardBasicTypes.STRING)
 				  .setFirstResult(page * Config.SEREVER_TRANSACTION_MAX_RESULTS)
 				  .setMaxResults(Config.SEREVER_TRANSACTION_MAX_RESULTS)
 				  .setFetchSize(Config.SEREVER_TRANSACTION_MAX_RESULTS)
@@ -294,14 +294,14 @@ public class ServerTransactionDAO {
 		session.beginTransaction();
 				
 		Query query= session.createSQLQuery(
-				  "SELECT st.timestamp, st.amount, st.payin_address as btcAddress " +
+				  "SELECT st.timestamp, st.amount, st.payin_address as payinAddress " +
 				  "FROM server_transaction st " +
 				  "WHERE st.received = 'FALSE' "+
 				  "AND st.verified = 'TRUE' "+ 
 				  "ORDER BY st.timestamp DESC")
 				  .addScalar("timestamp")
 				  .addScalar("amount")
-				  .addScalar("btcAddress", StandardBasicTypes.STRING)
+				  .addScalar("payinAddress", StandardBasicTypes.STRING)
 				  .setFirstResult(page * Config.SEREVER_TRANSACTION_MAX_RESULTS)
 				  .setMaxResults(Config.SEREVER_TRANSACTION_MAX_RESULTS)
 				  .setFetchSize(Config.SEREVER_TRANSACTION_MAX_RESULTS)
