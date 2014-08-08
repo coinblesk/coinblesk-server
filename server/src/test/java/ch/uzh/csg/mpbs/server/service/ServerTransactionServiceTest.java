@@ -1,14 +1,11 @@
 package ch.uzh.csg.mpbs.server.service;
 
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
 
-import java.io.FileInputStream;
 import java.util.ArrayList;
 
-import org.dbunit.DatabaseUnitException;
-import org.dbunit.dataset.IDataSet;
-import org.dbunit.dataset.xml.FlatXmlDataSetBuilder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,6 +31,8 @@ import com.github.springtestdbunit.annotation.DbUnitConfiguration;
 @TestExecutionListeners({ 
 	DependencyInjectionTestExecutionListener.class,
 	DbUnitTestExecutionListener.class })
+@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverTransactionData.xml",type=DatabaseOperation.CLEAN_INSERT)
+@DatabaseTearDown(value="classpath:DbUnitFiles/Services/serverTransactionData.xml", type=DatabaseOperation.DELETE_ALL)
 public class ServerTransactionServiceTest {
 
 	private static boolean initialized = false;
@@ -52,37 +51,29 @@ public class ServerTransactionServiceTest {
 	}
 	
 	@Test
-	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverTransactionData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	@DatabaseTearDown(value="classpath:DbUnitFiles/Services/serverTransactionData.xml", type=DatabaseOperation.DELETE_ALL)
 //	@ExpectedDatabase(value="classpath:DbUnitFiles/serverTransactionExpectedCreateData.xml", table="server_transaction")
 	public void testCreateTransaction() {
 		//TODO: mehmet needed when communicating with android
 	}
 	
 	@Test
-	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverTransactionData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	@DatabaseTearDown(value="classpath:DbUnitFiles/Services/serverTransactionData.xml", type=DatabaseOperation.DELETE_ALL)
 	public void testGetHistory() {
 		//TODO: mehmet need createAccount
 	}
 	
 	@Test
-	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverTransactionData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	@DatabaseTearDown(value="classpath:DbUnitFiles/Services/serverTransactionData.xml", type=DatabaseOperation.DELETE_ALL)
 	public void testGetPayeeHistory() {
 		ArrayList<HistoryServerAccountTransaction> payeeList = ServerTransactionService.getInstance().getPayeeHistory(0);
-		
+		System.out.println("*************************** " + payeeList.size());
 		assertNotNull(payeeList);
-		assertEquals(5, payeeList.size());
+		assertThat(payeeList.size(), is(5));
 	}
 	
 	@Test
-	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverTransactionData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	@DatabaseTearDown(value="classpath:DbUnitFiles/Services/serverTransactionData.xml", type=DatabaseOperation.DELETE_ALL)
 	public void testGetPayerHistory() {
 		ArrayList<HistoryServerAccountTransaction> payerList = ServerTransactionService.getInstance().getPayerHistory(0);
-		
+		System.out.println("*************************** " + payerList.size());
 		assertNotNull(payerList);
-		assertEquals(4, payerList.size());
+		assertThat(payerList.size(), is(4));
 	}
 }
