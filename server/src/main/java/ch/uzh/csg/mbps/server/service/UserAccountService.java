@@ -19,6 +19,7 @@ import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.CustomPasswordEncoder;
 import ch.uzh.csg.mbps.server.util.Emailer;
 import ch.uzh.csg.mbps.server.util.PasswordMatcher;
+import ch.uzh.csg.mbps.server.util.UserModel;
 import ch.uzh.csg.mbps.server.util.UserRoles;
 import ch.uzh.csg.mbps.server.util.UserRoles.Role;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
@@ -368,5 +369,22 @@ public class UserAccountService implements IUserAccount {
 		users = UserAccountDAO.getAllUsersByRoles(Role.USER);
 		users.addAll(UserAccountDAO.getAllUsersByRoles(Role.BOTH));
 		return users;
+	}
+	
+	//TODO: mehmet
+	/**
+	 * 
+	 * @param username
+	 * @return
+	 */
+	public UserModel getLoggedAdmin(String username) {
+		UserAccount account = null;
+		try {
+			account = UserAccountDAO.getByUsername(username);
+		} catch (UserAccountNotFoundException e) {
+			return null;
+		}
+		return new UserModel(account.getId(), account.getUsername(), account.getCreationDate(), 
+				account.getEmail(), account.getPassword(), account.getPaymentAddress(), account.getRoles());
 	}
 }
