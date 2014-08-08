@@ -99,11 +99,12 @@ App.config(['$routeProvider', '$httpProvider', '$provide', function($routeProvid
   
   $httpProvider.interceptors.push('authHttpInterceptor');
   //sets a resource in the header of each request
+  $httpProvider.defaults.useXDomain = true;
+  $httpProvider.defaults.withCredentials = true;
   httpHeaders = $httpProvider.defaults.headers;
-//  $httpProvider.defaults.withCredentials = true;
 }]);
 
-App.run(function($rootScope, $http, $location, $cookieStore, base64Factory, userAccountFactory, accessTokenCookieService) {
+App.run(function($rootScope, $http, $location, $cookieStore, $injector, base64Factory, userAccountFactory, accessTokenCookieService) {
 
     /**
      * Holds all the requests which failed due to 401 response.
@@ -144,16 +145,22 @@ App.run(function($rootScope, $http, $location, $cookieStore, base64Factory, user
 		accessTokenCookieService.initToken(token);
 		var payload = 'j_username=' + credentials.username + '&j_password=' + credentials.password;
 		var config = {
-			    headers: {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'}
-			  };
+				headers: {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'}
+		};
 
 		$http.post('j_spring_security_check', payload, config)
 		.success(function(data) {
 			accessTokenCookieService.initCookies();
-			$rootScope.loggedUser = {
+			$rootScope.loggeduser = {
 					username: ''
 			};
-			$rootScope.loggedUser.username = credentials.username;
+			
+			userAccountFactory.getLoggedUser(credentials.username).then(function(loggedUser){
+				$rootScope.loggedUser = loggedUser;
+				console.log(loggedUser);
+			});
+			
+			$rootScope.loggeduser.username = credentials.username;
 			$rootScope.initialized = true;
 			$rootScope.$broadcast('event:loginConfirmed');
 		})
