@@ -46,6 +46,7 @@ import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.PayOutTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
+import ch.uzh.csg.mbps.server.service.TransactionService;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
@@ -74,17 +75,19 @@ public class TransactionControllerTest {
 	private static MockMvc mockMvc;
 	
 	private static boolean initialized = false;
-	private static UserAccount test0;
-	private static UserAccount test0_1;
-	private static UserAccount test1;
-	private static UserAccount test2;
-	private static UserAccount test3;
-	private static UserAccount test4;
-	private static UserAccount test5;
-	private static UserAccount test6;
+	private static UserAccount test1_1;
+	private static UserAccount test1_2;
+	private static UserAccount test2_1;
+	private static UserAccount test2_2;
+	private static UserAccount test3_1;
+	private static UserAccount test3_2;
+	private static UserAccount test4_1;
+	private static UserAccount test4_2;
+	private static UserAccount test5_1;
 	private static UserAccount test6_1;
-	private static UserAccount test7;
-	private static UserAccount test9_1;
+	private static UserAccount test6_2;
+	private static UserAccount test7_1;
+	private static UserAccount test8_1;
 	
 	private String password = "asdf";
 	
@@ -96,17 +99,19 @@ public class TransactionControllerTest {
 		
 		if (!initialized) {
 			mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();
-			test0 = new UserAccount("test0", "test0@bitcoin.csg.uzh.ch", password);
-			test0_1 = new UserAccount("test0_1", "test0_1@bitcoin.csg.uzh.ch", password);
-			test1 = new UserAccount("test1", "test1@bitcoin.csg.uzh.ch", password);
-			test2 = new UserAccount("test2", "test2@bitcoin.csg.uzh.ch", password);
-			test3 = new UserAccount("test3", "test3@bitcoin.csg.uzh.ch", password);
-			test4 = new UserAccount("test4", "test4@bitcoin.csg.uzh.ch", password);
-			test5 = new UserAccount("test5", "test5@bitcoin.csg.uzh.ch", password);
-			test6 = new UserAccount("test6", "test6@bitcoin.csg.uzh.ch", password);
+			test1_1 = new UserAccount("test1_1", "test1_1@bitcoin.csg.uzh.ch", password);
+			test1_2 = new UserAccount("test1_2", "test1_2@bitcoin.csg.uzh.ch", password);
+			test2_1 = new UserAccount("test2_1", "test2_1@bitcoin.csg.uzh.ch", password);
+			test2_2 = new UserAccount("test2_2", "test2_2@bitcoin.csg.uzh.ch", password);
+			test3_1 = new UserAccount("test3_1", "test3_1@bitcoin.csg.uzh.ch", password);
+			test3_2 = new UserAccount("test3_2", "test3_2@bitcoin.csg.uzh.ch", password);
+			test4_1 = new UserAccount("test4_1", "test4_1@bitcoin.csg.uzh.ch", password);
+			test4_2 = new UserAccount("test4_2", "test4_2@bitcoin.csg.uzh.ch", password);
+			test5_1 = new UserAccount("test5_1", "test5_1@bitcoin.csg.uzh.ch", password);
 			test6_1 = new UserAccount("test6_1", "test6_1@bitcoin.csg.uzh.ch", password);
-			test7 = new UserAccount("test7", "test7@bitcoin.csg.uzh.ch", password);
-			test9_1 = new UserAccount("test9_1", "test9_+@bitcoin.csg.uzh.ch", password);
+			test6_2 = new UserAccount("test6_2", "test6_2@bitcoin.csg.uzh.ch", password);
+			test7_1 = new UserAccount("test7_1", "test7_1@bitcoin.csg.uzh.ch", password);
+			test8_1 = new UserAccount("test8_1", "test8_1@bitcoin.csg.uzh.ch", password);
 			
 			KeyPair keypair = KeyHandler.generateKeyPair();
 			
@@ -123,11 +128,11 @@ public class TransactionControllerTest {
 	
 	@Test
 	public void testCreateTransaction_failNotAuthenticated() throws Exception {
-		assertTrue(UserAccountService.getInstance().createAccount(test1));
-		assertTrue(UserAccountService.getInstance().createAccount(test2));
+		assertTrue(UserAccountService.getInstance().createAccount(test1_1));
+		assertTrue(UserAccountService.getInstance().createAccount(test1_2));
 		
-		UserAccount payerAccount = UserAccountService.getInstance().getByUsername(test1.getUsername());
-		UserAccount payeeAccount  = UserAccountService.getInstance().getByUsername(test2.getUsername());
+		UserAccount payerAccount = UserAccountService.getInstance().getByUsername(test1_1.getUsername());
+		UserAccount payeeAccount  = UserAccountService.getInstance().getByUsername(test1_2.getUsername());
 		payerAccount.setEmailVerified(true);
 		payerAccount.setBalance(TRANSACTION_AMOUNT.add(BigDecimal.ONE));
 		UserAccountDAO.updateAccount(payerAccount);
@@ -160,12 +165,12 @@ public class TransactionControllerTest {
 	}
 	
 	@Test
-	public void testCreateDirectSendTransaction() throws Exception {
-		assertTrue(UserAccountService.getInstance().createAccount(test0));
-		assertTrue(UserAccountService.getInstance().createAccount(test0_1));
+	public void testSendMoney() throws Exception {
+		assertTrue(UserAccountService.getInstance().createAccount(test2_1));
+		assertTrue(UserAccountService.getInstance().createAccount(test2_2));
 		
-		UserAccount payerAccount = UserAccountService.getInstance().getByUsername(test0.getUsername());
-		UserAccount payeeAccount  = UserAccountService.getInstance().getByUsername(test0_1.getUsername());
+		UserAccount payerAccount = UserAccountService.getInstance().getByUsername(test2_1.getUsername());
+		UserAccount payeeAccount  = UserAccountService.getInstance().getByUsername(test2_2.getUsername());
 		payerAccount.setEmailVerified(true);
 		payerAccount.setBalance(TRANSACTION_AMOUNT.add(BigDecimal.ONE));
 		UserAccountDAO.updateAccount(payerAccount);
@@ -200,7 +205,7 @@ public class TransactionControllerTest {
 		ObjectMapper mapper = new ObjectMapper();
 		String asString = mapper.writeValueAsString(ctto);
 		
-		HttpSession session = loginAndGetSession(test0.getUsername(), password);
+		HttpSession session = loginAndGetSession(test2_1.getUsername(), password);
 		
 		MvcResult mvcResult = mockMvc.perform(post("/transaction/create").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isOk())
@@ -230,43 +235,129 @@ public class TransactionControllerTest {
 	}
 	
 	@Test
-	public void testCreateTransaction() throws Exception {
-		assertTrue(UserAccountService.getInstance().createAccount(test3));
-		test3 = UserAccountService.getInstance().getByUsername(test3.getUsername());
-		test3.setEmailVerified(true);
-		test3.setBalance(TRANSACTION_AMOUNT);
-		UserAccountDAO.updateAccount(test3);
+	public void testSendMoney_failNotAuthenticatedUser() throws Exception {
+		assertTrue(UserAccountService.getInstance().createAccount(test3_1));
+		assertTrue(UserAccountService.getInstance().createAccount(test3_2));
 		
-		String plainTextPw = test4.getPassword();
-		assertTrue(UserAccountService.getInstance().createAccount(test4));
-		test4 = UserAccountService.getInstance().getByUsername(test4.getUsername());
-		test4.setEmailVerified(true);
-		UserAccountDAO.updateAccount(test4);
+		UserAccount payerAccount = UserAccountService.getInstance().getByUsername(test3_1.getUsername());
+		UserAccount payeeAccount  = UserAccountService.getInstance().getByUsername(test3_2.getUsername());
+		payerAccount.setEmailVerified(true);
+		payerAccount.setBalance(TRANSACTION_AMOUNT.add(BigDecimal.ONE));
+		UserAccountDAO.updateAccount(payerAccount);
+		payeeAccount.setEmailVerified(true);
+		payeeAccount.setBalance(TRANSACTION_AMOUNT);
+		UserAccountDAO.updateAccount(payeeAccount);
 		
-		KeyPair keyPairPayer = KeyHandler.generateKeyPair();
-		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(test3.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayer.getPublic()));
+		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
+	
+		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
 		
 		PaymentRequest paymentRequestPayer = new PaymentRequest(
 				PKIAlgorithm.DEFAULT, 
 				keyNumberPayer, 
-				test3.getUsername(), 
-				test4.getUsername(), 
+				payerAccount.getUsername(), 
+				payeeAccount.getUsername(), 
 				Currency.BTC, 
 				Converter.getLongFromBigDecimal(TRANSACTION_AMOUNT),
+				Currency.CHF, 
+				Converter.getLongFromBigDecimal(new BigDecimal("0.5")), 
 				System.currentTimeMillis());
+
+		paymentRequestPayer.sign(payerKeyPair.getPrivate());
+		
+		ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer);
+		
+		CreateTransactionTransferObject ctto = new CreateTransactionTransferObject(spr);
+		
+		BigDecimal payerBalanceBefore = payerAccount.getBalance();
+		BigDecimal payeeBalanceBefore = payeeAccount.getBalance();
+		
+		ObjectMapper mapper = new ObjectMapper();
+		String asString = mapper.writeValueAsString(ctto);
+		
+		HttpSession session = loginAndGetSession(test3_2.getUsername(), password);
+		
+		MvcResult mvcResult = mockMvc.perform(post("/transaction/create").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
+				.andExpect(status().isOk())
+				.andReturn();
+		
+		CustomResponseObject result = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
+		
+		byte[] serverPaymentResponseEncoded = result.getServerPaymentResponse();
+		ServerPaymentResponse serverPaymentResponse = DecoderFactory.decode(ServerPaymentResponse.class, serverPaymentResponseEncoded);
+	
+		UserAccount payerAccountUpdated = UserAccountService.getInstance().getById(payerAccount.getId());
+		UserAccount payeeAccountUpdated = UserAccountService.getInstance().getById(payeeAccount.getId());
+		
+		assertTrue(result.isSuccessful());
+		assertEquals(ServerResponseStatus.FAILURE, serverPaymentResponse.getPaymentResponsePayer().getStatus());
+		assertEquals(TransactionService.NOT_AUTHENTICATED_USER, serverPaymentResponse.getPaymentResponsePayer().getReason());
+		
+		assertTrue(serverPaymentResponse.getPaymentResponsePayer().verify(KeyHandler.decodePublicKey(Constants.SERVER_KEY_PAIR.getPublicKey())));
+		
+		assertTrue(payerBalanceBefore.equals(payerAccountUpdated.getBalance()));
+		assertTrue(payeeBalanceBefore.equals(payeeAccountUpdated.getBalance()));
+		
+		PaymentResponse responsePayer = serverPaymentResponse.getPaymentResponsePayer();
+		
+		assertEquals(paymentRequestPayer.getAmount(), responsePayer.getAmount());
+		assertEquals(paymentRequestPayer.getUsernamePayer(), responsePayer.getUsernamePayer());
+		assertEquals(paymentRequestPayer.getUsernamePayee(), responsePayer.getUsernamePayee());
+	}
+	
+	@Test
+	public void testCreateTransaction() throws Exception {
+		assertTrue(UserAccountService.getInstance().createAccount(test4_1));
+		test4_1 = UserAccountService.getInstance().getByUsername(test4_1.getUsername());
+		test4_1.setEmailVerified(true);
+		test4_1.setBalance(TRANSACTION_AMOUNT);
+		UserAccountDAO.updateAccount(test4_1);
+		
+		String plainTextPw = test4_2.getPassword();
+		assertTrue(UserAccountService.getInstance().createAccount(test4_2));
+		test4_2 = UserAccountService.getInstance().getByUsername(test4_2.getUsername());
+		test4_2.setEmailVerified(true);
+		UserAccountDAO.updateAccount(test4_2);
+		
+		KeyPair keyPairPayer = KeyHandler.generateKeyPair();
+		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(test4_1.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayer.getPublic()));
+		
+		KeyPair keyPairPayee = KeyHandler.generateKeyPair();
+		byte keyNumberPayee = UserAccountService.getInstance().saveUserPublicKey(test4_2.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayee.getPublic()));
+		
+		long timestamp = System.currentTimeMillis();
+		
+		PaymentRequest paymentRequestPayer = new PaymentRequest(
+				PKIAlgorithm.DEFAULT, 
+				keyNumberPayer, 
+				test4_1.getUsername(), 
+				test4_2.getUsername(), 
+				Currency.BTC, 
+				Converter.getLongFromBigDecimal(TRANSACTION_AMOUNT),
+				timestamp);
 		paymentRequestPayer.sign(keyPairPayer.getPrivate());
 		
-		ServerPaymentRequest request = new ServerPaymentRequest(paymentRequestPayer);
+		PaymentRequest paymentRequestPayee = new PaymentRequest(
+				PKIAlgorithm.DEFAULT, 
+				keyNumberPayee, 
+				test4_1.getUsername(), 
+				test4_2.getUsername(), 
+				Currency.BTC, 
+				Converter.getLongFromBigDecimal(TRANSACTION_AMOUNT),
+				timestamp);
+		paymentRequestPayee.sign(keyPairPayee.getPrivate());
+		
+		ServerPaymentRequest request = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
 		CreateTransactionTransferObject ctto = new CreateTransactionTransferObject(request);
 		
 		ObjectMapper mapper = new ObjectMapper();
 		String asString = mapper.writeValueAsString(ctto);
 		
-		BigDecimal test3BalanceBefore = UserAccountService.getInstance().getByUsername(test3.getUsername()).getBalance();
-		BigDecimal test4BalanceBefore = UserAccountService.getInstance().getByUsername(test4.getUsername()).getBalance();
+		BigDecimal payerBalanceBefore = UserAccountService.getInstance().getByUsername(test4_1.getUsername()).getBalance();
+		BigDecimal payeeBalanceBefore = UserAccountService.getInstance().getByUsername(test4_2.getUsername()).getBalance();
 		
 		
-		HttpSession session = loginAndGetSession(test4.getUsername(), plainTextPw);
+		HttpSession session = loginAndGetSession(test4_2.getUsername(), plainTextPw);
 		
 		MvcResult mvcResult = mockMvc.perform(post("/transaction/create").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isOk())
@@ -278,46 +369,47 @@ public class TransactionControllerTest {
 		ServerPaymentResponse response = DecoderFactory.decode(ServerPaymentResponse.class, result.getServerPaymentResponse());
 		assertNotNull(response);
 		assertNotNull(response.getPaymentResponsePayer());
+		
 		assertEquals(ServerResponseStatus.SUCCESS, response.getPaymentResponsePayer().getStatus());
 		assertTrue(response.getPaymentResponsePayer().verify(KeyHandler.decodePublicKey(Constants.SERVER_KEY_PAIR.getPublicKey())));
 		
-		assertEquals(test3BalanceBefore.subtract(TRANSACTION_AMOUNT), UserAccountService.getInstance().getById(test3.getId()).getBalance());
-		assertEquals(test4BalanceBefore.add(TRANSACTION_AMOUNT), UserAccountService.getInstance().getById(test4.getId()).getBalance());
+		assertEquals(payerBalanceBefore.subtract(TRANSACTION_AMOUNT), UserAccountService.getInstance().getById(test4_1.getId()).getBalance());
+		assertEquals(payeeBalanceBefore.add(TRANSACTION_AMOUNT), UserAccountService.getInstance().getById(test4_2.getId()).getBalance());
 	}
 	
 	@Test
 	public void testGetHistory_failNotAuthenticated() throws Exception {
-		assertTrue(UserAccountService.getInstance().createAccount(test5));
-		test5 = UserAccountService.getInstance().getByUsername(test5.getUsername());
-		test5.setEmailVerified(true);
-		test5.setBalance(TRANSACTION_AMOUNT.multiply(new BigDecimal(3)));
-		UserAccountDAO.updateAccount(test5);
+		assertTrue(UserAccountService.getInstance().createAccount(test5_1));
+		test5_1 = UserAccountService.getInstance().getByUsername(test5_1.getUsername());
+		test5_1.setEmailVerified(true);
+		test5_1.setBalance(TRANSACTION_AMOUNT.multiply(new BigDecimal(3)));
+		UserAccountDAO.updateAccount(test5_1);
 		
 		mockMvc.perform(get("/transaction/history").secure(false)).andExpect(status().isUnauthorized());
 	}
 	
 	@Test
 	public void testGetHistory() throws Exception {
-		assertTrue(UserAccountService.getInstance().createAccount(test6));
-		test6 = UserAccountService.getInstance().getByUsername(test6.getUsername());
-		test6.setEmailVerified(true);
-		test6.setBalance(TRANSACTION_AMOUNT);
-		UserAccountDAO.updateAccount(test6);
+		assertTrue(UserAccountService.getInstance().createAccount(test6_1));
+		test6_1 = UserAccountService.getInstance().getByUsername(test6_1.getUsername());
+		test6_1.setEmailVerified(true);
+		test6_1.setBalance(TRANSACTION_AMOUNT);
+		UserAccountDAO.updateAccount(test6_1);
 		
-		String plainTextPw = test7.getPassword();
-		assertTrue(UserAccountService.getInstance().createAccount(test7));
-		test7 = UserAccountService.getInstance().getByUsername(test7.getUsername());
-		test7.setEmailVerified(true);
-		UserAccountDAO.updateAccount(test7);
+		String plainTextPw = test6_2.getPassword();
+		assertTrue(UserAccountService.getInstance().createAccount(test6_2));
+		test6_2 = UserAccountService.getInstance().getByUsername(test6_2.getUsername());
+		test6_2.setEmailVerified(true);
+		UserAccountDAO.updateAccount(test6_2);
 		
 		KeyPair keyPairPayer = KeyHandler.generateKeyPair();
-		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(test6.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayer.getPublic()));
+		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(test6_1.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayer.getPublic()));
 		
 		PaymentRequest paymentRequestPayer = new PaymentRequest(
 				PKIAlgorithm.DEFAULT, 
 				keyNumberPayer, 
-				test6.getUsername(), 
-				test7.getUsername(), 
+				test6_1.getUsername(), 
+				test6_2.getUsername(), 
 				Currency.BTC, 
 				Converter.getLongFromBigDecimal(TRANSACTION_AMOUNT),
 				System.currentTimeMillis());
@@ -330,7 +422,7 @@ public class TransactionControllerTest {
 		String asString = mapper.writeValueAsString(ctto);
 		
 		
-		HttpSession session = loginAndGetSession(test7.getUsername(), plainTextPw);
+		HttpSession session = loginAndGetSession(test6_1.getUsername(), plainTextPw);
 		
 		MvcResult mvcResult = mockMvc.perform(post("/transaction/create").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isOk())
@@ -390,13 +482,13 @@ public class TransactionControllerTest {
 	
 	@Test
 	public void testGetExchangeRateTest() throws Exception{
-		createAccountAndVerifyAndReload(test6_1, BigDecimal.ONE);
-		String plainTextPw = test6_1.getPassword();
+		createAccountAndVerifyAndReload(test7_1, BigDecimal.ONE);
+		String plainTextPw = test7_1.getPassword();
 		
 		
 		ObjectMapper mapper = new ObjectMapper();
 		
-		HttpSession session = loginAndGetSession(test6_1.getUsername(), plainTextPw);
+		HttpSession session = loginAndGetSession(test7_1.getUsername(), plainTextPw);
 		
 		MvcResult mvcResult = mockMvc.perform(get("/transaction/exchange-rate").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
@@ -414,9 +506,9 @@ public class TransactionControllerTest {
 
 	@Test
 	public void testPayOut() throws Exception{
-		createAccountAndVerifyAndReload(test9_1, BigDecimal.ONE);
-		String plainTextPw = test9_1.getPassword();
-		UserAccount fromDB = UserAccountService.getInstance().getByUsername(test9_1.getUsername());
+		createAccountAndVerifyAndReload(test8_1, BigDecimal.ONE);
+		String plainTextPw = test8_1.getPassword();
+		UserAccount fromDB = UserAccountService.getInstance().getByUsername(test8_1.getUsername());
 		
 		PayOutTransaction pot = new PayOutTransaction();
 		pot.setUserID(fromDB.getId());
@@ -426,7 +518,7 @@ public class TransactionControllerTest {
 		ObjectMapper mapper = new ObjectMapper();
 		String asString = mapper.writeValueAsString(pot);
 		
-		HttpSession session = loginAndGetSession(test9_1.getUsername(), plainTextPw);
+		HttpSession session = loginAndGetSession(test8_1.getUsername(), plainTextPw);
 		
 		MvcResult mvcResult = mockMvc.perform(post("/transaction/payOut").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isOk())
@@ -435,7 +527,6 @@ public class TransactionControllerTest {
 		CustomResponseObject result = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
 		
 		assertTrue(result.isSuccessful());
-		
 	}
 	
 }
