@@ -69,7 +69,7 @@ public class TransactionController {
 		try {
 			try {
 				String username = AuthenticationInfo.getPrincipalUsername();
-				ServerPaymentResponse serverPaymentResponse = TransactionService.getInstance().createTransaction(requestObject.getServerPaymentRequest());
+				ServerPaymentResponse serverPaymentResponse = TransactionService.getInstance().createTransaction(username, requestObject.getServerPaymentRequest());
 				responseObject = new CustomResponseObject(true, SUCCESS, Type.CREATE_TRANSACTION);
 				responseObject.setServerPaymentResponse(serverPaymentResponse.encode());
 				responseObject.setBalance(UserAccountService.getInstance().getByUsername(username).getBalance().toPlainString());

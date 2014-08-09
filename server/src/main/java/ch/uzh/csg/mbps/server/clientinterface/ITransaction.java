@@ -32,13 +32,14 @@ public interface ITransaction {
 	/**
 	 * Creates a new Transaction on the server/database.
 	 * 
+	 * @param authenticatedUser
+	 *            the username of the authenticated user
 	 * @param toVerify
 	 *            the {@link ServerPaymentRequest} containing one or two
 	 *            {@link PaymentRequest}
-	 * @return If the server has accepted and executed this given
-	 *         Transaction, than it signs the object with his private
-	 *         key. The callers can then verify the Transaction which has been
-	 *         executed.
+	 * @return If the server has accepted and executed this given Transaction,
+	 *         than it signs the object with his private key. The callers can
+	 *         then verify the Transaction which has been executed.
 	 * @throws TransactionException
 	 *             If the {@link PaymentRequest} objects (contained in the
 	 *             object {@link ServerPaymentRequest}) received are not
@@ -48,7 +49,7 @@ public interface ITransaction {
 	 *             If the a {@link UserAccount} contained in one or both
 	 *             Transaction objects cannot be found.
 	 */
-	public ServerPaymentResponse createTransaction(ServerPaymentRequest toVerify) throws TransactionException, UserAccountNotFoundException;
+	public ServerPaymentResponse createTransaction(String authenticatedUser, ServerPaymentRequest toVerify) throws TransactionException, UserAccountNotFoundException;
 
 	/**
 	 * Returns the five last Transactions of a given {@link UserAccount}.

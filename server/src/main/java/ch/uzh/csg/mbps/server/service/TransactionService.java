@@ -39,6 +39,7 @@ public class TransactionService implements ITransaction {
 	public static final String HIBERNATE_ERROR = "An error occured while persisting the data. Please try again later.";
 	public static final String INTERNAL_ERROR = "An internal error occured. Please try again later.";
 	public static final String PAYMENT_REFUSE = "The server refused the payment.";
+	public static final String NOT_AUTHENTICATED_USER = "Only the authenticated user can act as the payer in the payment.";
 
 
 	private static TransactionService transactionService;
@@ -82,8 +83,8 @@ public class TransactionService implements ITransaction {
 	}
 
 	@Override
-	public ServerPaymentResponse createTransaction(ServerPaymentRequest serverPaymentRequest) throws TransactionException, UserAccountNotFoundException {
-		if (serverPaymentRequest == null)
+	public ServerPaymentResponse createTransaction(String authenticatedUser, ServerPaymentRequest serverPaymentRequest) throws TransactionException, UserAccountNotFoundException {
+		if (authenticatedUser == null || authenticatedUser.isEmpty() || serverPaymentRequest == null)
 			throw new TransactionException(PAYMENT_REFUSE);
 		
 		int numberOfSignatures = serverPaymentRequest.getNofSignatures();
@@ -96,8 +97,16 @@ public class TransactionService implements ITransaction {
 		String payerUsername = payerRequest.getUsernamePayer();
 		String payeeUsername = payerRequest.getUsernamePayee();
 		
-		if (payerUsername == payeeUsername)
+		if (payerUsername.equals(payeeUsername))
 			throw new TransactionException(PAYMENT_REFUSE);
+		
+		/*
+		 * Assure that only the authenticated user can act as the payer!
+		 * Otherwise, the send money use-case is vulnerable to send money to
+		 * himself from another account!
+		 */
+		if (numberOfSignatures == 1 && !payerUsername.equals(authenticatedUser))
+			throw new TransactionException(NOT_AUTHENTICATED_USER);
 		
 		UserAccount payerUserAccount = null;
 		UserAccount payeeUserAccount = null;

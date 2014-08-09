@@ -106,7 +106,7 @@ public class TransactionServiceTest {
 		BigDecimal payerBalanceBefore = payerAccount.getBalance();
 		BigDecimal payeeBalanceBefore = payeeAccount.getBalance();
 		
-		ServerPaymentResponse response = TransactionService.getInstance().createTransaction(request);
+		ServerPaymentResponse response = TransactionService.getInstance().createTransaction(payerAccount.getUsername(), request);
 	
 		assertEquals(nofTransaction+1, getAllTransactions().size());
 		
@@ -156,7 +156,7 @@ public class TransactionServiceTest {
 		BigDecimal payerBalanceBefore = payerAccount.getBalance();
 		BigDecimal payeeBalanceBefore = payeeAccount.getBalance();
 		
-		ServerPaymentResponse response = TransactionService.getInstance().createTransaction(request);
+		ServerPaymentResponse response = TransactionService.getInstance().createTransaction(payerAccount.getUsername(), request);
 	
 		assertEquals(nofTransaction+1, getAllTransactions().size());
 		
@@ -200,7 +200,7 @@ public class TransactionServiceTest {
 		BigDecimal payerBalanceBefore = payerAccount.getBalance();
 		BigDecimal payeeBalanceBefore = payeeAccount.getBalance();
 		
-		ServerPaymentResponse response = TransactionService.getInstance().createTransaction(request);
+		ServerPaymentResponse response = TransactionService.getInstance().createTransaction(payerAccount.getUsername(), request);
 	
 		nofTransaction++;
 		assertEquals(nofTransaction, getAllTransactions().size());
@@ -223,7 +223,7 @@ public class TransactionServiceTest {
 		// now launch the same request again - this must fail
 		payerBalanceBefore = UserAccountService.getInstance().getById(payerAccount.getId()).getBalance();
 		payeeBalanceBefore = UserAccountService.getInstance().getById(payeeAccount.getId()).getBalance();
-		response = TransactionService.getInstance().createTransaction(request);
+		response = TransactionService.getInstance().createTransaction(payerAccount.getUsername(), request);
 		
 		// same nofTransaction
 		assertEquals(nofTransaction, getAllTransactions().size());
@@ -272,7 +272,7 @@ public class TransactionServiceTest {
 		
 		boolean exceptionThrown = false;
 		try {
-			TransactionService.getInstance().createTransaction(request);
+			TransactionService.getInstance().createTransaction(payerAccount.getUsername(), request);
 		} catch (TransactionException e) {
 			exceptionThrown = true;
 			assertEquals(TransactionService.BALANCE, e.getMessage());
@@ -285,6 +285,8 @@ public class TransactionServiceTest {
 		assertEquals(payerBalanceBefore, UserAccountService.getInstance().getById(payerAccount.getId()).getBalance());
 		assertEquals(payeeBalanceBefore, UserAccountService.getInstance().getById(payeeAccount.getId()).getBalance());
 	}
+	
+	//TODO jeton:: write test for NOT_AUTHENTICATED_USER
 	
 	@Test
 	public void testCreateTransaction_FailInvalidSignature() throws Exception {
@@ -314,7 +316,7 @@ public class TransactionServiceTest {
 		
 		boolean exceptionThrown = false;
 		try {
-			TransactionService.getInstance().createTransaction(request);
+			TransactionService.getInstance().createTransaction(payerAccount.getUsername(), request);
 		} catch (TransactionException e) {
 			exceptionThrown = true;
 			assertEquals(TransactionService.PAYMENT_REFUSE, e.getMessage());
@@ -361,7 +363,7 @@ public class TransactionServiceTest {
 		paymentRequestPayee.sign(keyPairPayee.getPrivate());
 		
 		ServerPaymentRequest request = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
-		TransactionService.getInstance().createTransaction(request);
+		TransactionService.getInstance().createTransaction(payerAccount.getUsername(), request);
 		
 		//transaction #2 - TDAOT_12 buys from TDAOT_11
 		paymentRequestPayer = new PaymentRequest(
@@ -385,7 +387,7 @@ public class TransactionServiceTest {
 		paymentRequestPayee.sign(keyPairPayer.getPrivate());
 		
 		request = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
-		TransactionService.getInstance().createTransaction(request);
+		TransactionService.getInstance().createTransaction(payerAccount.getUsername(), request);
 		
 		int nofTransactionsPayer = TransactionService.getInstance().getHistory(payerAccount.getUsername(), 0).size();
 		assertEquals(2, nofTransactionsPayer);
@@ -421,7 +423,7 @@ public class TransactionServiceTest {
 		paymentRequestPayee.sign(keyPairAccount3.getPrivate());
 		
 		request = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
-		TransactionService.getInstance().createTransaction(request);
+		TransactionService.getInstance().createTransaction(payerAccount.getUsername(), request);
 		
 		int nofTransactions11 = TransactionService.getInstance().getHistory("TDAOT_11", 0).size();
 		assertEquals(3, nofTransactions11);
