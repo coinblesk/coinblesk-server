@@ -21,8 +21,8 @@
 	<!-- Handles HTTP GET requests for /resources/** by efficiently serving up static resources in the ${webappRoot}/WEB-INF/resources/ directory -->
 	<mvc:resources mapping="/resources/**" location="/WEB-INF/resources/" />
 
- 	<mvc:view-controller path="/" view-name="index"/>
-	<mvc:view-controller path="/login" view-name="login"/>
+ 	<mvc:view-controller path="/" view-name="html/index"/>
+	<mvc:view-controller path="/login" view-name="html/login"/>
 	
 	<!-- Configures the @Controller programming model -->
 	<mvc:annotation-driven /> 
