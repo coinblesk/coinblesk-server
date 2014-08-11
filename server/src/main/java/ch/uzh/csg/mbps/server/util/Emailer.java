@@ -50,7 +50,8 @@ public class Emailer {
 	 * @param resetPWToken
 	 */
 	public static void sendResetPasswordLink(UserAccount user, String resetPWToken) {
-		messageText = "Dear " + user.getUsername() + ",<br><br>Please reset your account password by clicking on the following link: " + SecurityConfig.BASE_URL + "/user/resetPassword/" + resetPWToken;
+		String link = SecurityConfig.BASE_URL + "/user/resetPassword/" + resetPWToken;
+		messageText = "Dear " + user.getUsername() + ",<br><br>Please reset your account password by clicking on the following link: <a href = \"" + link + "\">" + link + "</a>";
 		subject = "MBPS Account Password Reset";
 		sendEmail(user.getEmail(), null);
 	}
