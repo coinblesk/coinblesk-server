@@ -3,28 +3,19 @@
     	<div class="navbar-inner">
     		<div class="container">
     			<ul class="menu">
-    				<li data-ng-class="{ active: isActive('/home')}"><a href="#!/home">Home</a></li>
-    				<li data-ng-class="{ active: isActive('/relation')}"><a href="#!/relation">Trust Relation</a></li>
-    				<li data-ng-class="{ active: isActive('/users')}"><a href="#!/users">Users</a></li>
-    				<li data-ng-class="{ active: isActive('/history')}"><a href="#!/history">History</a></li>
+    				<li data-ng-class="{ active: isActive('/home')}"><a href="/#/home">Home</a></li>
+    				<li data-ng-class="{ active: isActive('/relation')}"><a href="/#/relation">Trust Relation</a></li>
+    				<li data-ng-class="{ active: isActive('/users')}"><a href="/#/users">Users</a></li>
+    				<li data-ng-class="{ active: isActive('/history')}"><a href="/#/history">History</a></li>
     			</ul>
     		</div>
     	</div>
 	</div>
 </div>
-<div class="container" id="relationController" data-ng-controller="RelationController">
-	<h2 class="title_2">Relations</h2><span><a herf="#">create new trust</a></span>
-	<table class="table table-striped table-bordered table-hover table-condensed">
-		<tr><th>URL</th><th>Address</th><th>Relation</th><th>Balance</th><th>Time</th>
-		</tr>
-		<tr data-ng-repeat="account in serveracounts">
-			<td><a href="#">{{account.url}}</a></td>
-			<td>{{account.address}}</td>
-			<td>{{account.trust}}</td>
-			<td>{{account.balance}}</td>
-			<td>{{account.timestamp}}</td>
-		</tr>
-	</table>
+<div class="container" id="historyController">
+	<div class="history_transaction" data-ng-repeat="transaction in servertransactions">
+		Amount: <b>{{transaction.amount}} BTC</b><span style="margin:20px;"></span> Address: <b>{{transaction.payinAddress}}</b><span style="margin:20px;"></span>Timestamp: <b>{{transaction.timestamp}}</b>
+	</div>
 </div>
 <div class="row">
 	<p></p>
