@@ -16,7 +16,7 @@ public class HistoryController {
 
 	@RequestMapping(method = RequestMethod.GET)
 	public String history() {
-        return "history";
+        return "html/history";
     }
 	
 	@RequestMapping(value={"/transactions"}, method = RequestMethod.GET)

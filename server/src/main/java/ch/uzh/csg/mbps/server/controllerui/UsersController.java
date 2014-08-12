@@ -16,7 +16,7 @@ public class UsersController {
 	
 	@RequestMapping(method = RequestMethod.GET)
 	public String users() {
-        return "users";
+        return "html/users";
     }
 	
 	@RequestMapping(value={"/all"}, method = RequestMethod.GET)

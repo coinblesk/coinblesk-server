@@ -16,15 +16,15 @@ public class RelationController {
 
 	@RequestMapping(method = RequestMethod.GET)
 	public String relation() {
-        return "relation";
+        return "html/relation";
     }
 	
-	@RequestMapping(value={"/accounts"}, method = RequestMethod.GET)
+	@RequestMapping(value={"/accounts"}, method = RequestMethod.GET, produces="application/json")
 	public @ResponseBody List<ServerAccount> getAccounts() {
         return ServerAccountService.getInstance().getAll();
     }
 	
-	@RequestMapping(value={"/fulltrust"}, method = RequestMethod.GET)
+	@RequestMapping(value={"/fulltrust"}, method = RequestMethod.GET, produces="application/json")
 	public @ResponseBody List<ServerAccount> getFullTrust() {
         return ServerAccountService.getInstance().getByTrustLevel(2);
     }
