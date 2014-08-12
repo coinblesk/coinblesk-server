@@ -192,8 +192,9 @@ public class UserAccountService implements IUserAccount {
 		if (updatedAccount.getPassword() != null && !updatedAccount.getPassword().isEmpty())
 			userAccount.setPassword(CustomPasswordEncoder.getEncodedPassword(updatedAccount.getPassword()));
 		
-		if (UserRoles.isValidRole(updatedAccount.getRoles()))
-			userAccount.setRoles(updatedAccount.getRoles());
+		//TODO: no logic behind....changes the role always to user 
+//		if (UserRoles.isValidRole(updatedAccount.getRoles()))
+//			userAccount.setRoles(updatedAccount.getRoles());
 
 		try {
 			UserAccountDAO.updateAccount(userAccount);
