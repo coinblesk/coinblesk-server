@@ -163,8 +163,7 @@ public class ServerTransactionDAO {
 		Session session = openSession();
 		session.beginTransaction();
 		
-		@SuppressWarnings("unchecked")
-		List<HistoryServerAccountTransaction> resultWithAliasedBean = session.createSQLQuery(
+		Query query = session.createSQLQuery(
 				  "SELECT st.timestamp, st.amount, st.payin_address as payinAddress " +
 				  "FROM server_transaction st " +
 				  "ORDER BY st.timestamp DESC")
@@ -173,8 +172,10 @@ public class ServerTransactionDAO {
 				  .addScalar("payinAddress")
 				  .setMaxResults(3)
 				  .setFetchSize(3)
-				  .setResultTransformer(Transformers.aliasToBean(HistoryPayOutTransaction.class))
-				  .list();
+				  .setResultTransformer(Transformers.aliasToBean(HistoryServerAccountTransaction.class));
+		
+		@SuppressWarnings("unchecked")
+		List<HistoryServerAccountTransaction> resultWithAliasedBean = query.list();
 		
 		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;
 		session.close();
@@ -198,8 +199,7 @@ public class ServerTransactionDAO {
 		
 		Session session2 = openSession();
 		session2.beginTransaction();
-		@SuppressWarnings("unchecked")
-		List<HistoryServerAccountTransaction> resultWithAliasedBean = session.createSQLQuery(
+		Query query = session.createSQLQuery(
 				  "SELECT st.timestamp, st.amount, st.payin_address as payinAddress " +
 				  "FROM server_transaction st " +
 				  "WHERE st.user_id = :userid " +
@@ -210,8 +210,10 @@ public class ServerTransactionDAO {
 				  .setLong("userid",  serverAccount.getId())
 				  .setMaxResults(3)
 				  .setFetchSize(3)
-				  .setResultTransformer(Transformers.aliasToBean(HistoryPayOutTransaction.class))
-				  .list();
+				  .setResultTransformer(Transformers.aliasToBean(HistoryServerAccountTransaction.class));
+		
+		@SuppressWarnings("unchecked")
+		List<HistoryServerAccountTransaction> resultWithAliasedBean = query.list();
 		
 		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;
 		session2.close();
@@ -231,19 +233,20 @@ public class ServerTransactionDAO {
 		Session session = openSession();
 		session.beginTransaction();
 				
-		@SuppressWarnings("unchecked")
-		List<HistoryServerAccountTransaction> resultWithAliasedBean = session.createSQLQuery(
+		Query query = session.createSQLQuery(
 				  "SELECT st.timestamp, st.amount, st.payin_address as payinAddress " +
 				  "FROM server_transaction st " +
-				  "ORDER BY pot.timestamp DESC")
+				  "ORDER BY st.timestamp DESC")
 				  .addScalar("timestamp")
 				  .addScalar("amount")
 				  .addScalar("payinAddress")
 				  .setFirstResult(page * Config.SEREVER_TRANSACTION_MAX_RESULTS)
 				  .setMaxResults(Config.SEREVER_TRANSACTION_MAX_RESULTS)
 				  .setFetchSize(Config.SEREVER_TRANSACTION_MAX_RESULTS)
-				  .setResultTransformer(Transformers.aliasToBean(HistoryServerAccountTransaction.class))
-				  .list();
+				  .setResultTransformer(Transformers.aliasToBean(HistoryServerAccountTransaction.class));
+		
+		@SuppressWarnings("unchecked")
+		List<HistoryServerAccountTransaction> resultWithAliasedBean = query.list();
 		
 		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;
 		session.close();
