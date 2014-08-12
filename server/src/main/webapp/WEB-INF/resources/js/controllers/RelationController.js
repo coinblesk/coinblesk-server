@@ -13,9 +13,8 @@ var RelationController = function($scope, $location, $rootScope, serverAccountFa
 	
 	function loadRemoteData(){
 		serverAccountFactory.getAccounts()
-		.then(
-				function(accounts){
+		.then(function(accounts){
 					$scope.serveraccounts = accounts; 
-				});
+		});
 	}
 };

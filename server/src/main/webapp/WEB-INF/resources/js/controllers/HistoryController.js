@@ -13,9 +13,8 @@ var HistoryController = function($scope, $location, $rootScope, serverTransactio
 	
 	function loadRemoteData(){
 		serverTransactionsFactory.getHistory()
-		.then(
-				function(transactions){
+		.then(function(transactions){
 					$scope.servertransactions = transactions; 
-				});
+		});
 	}
 };
