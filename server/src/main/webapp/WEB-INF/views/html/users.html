@@ -24,11 +24,11 @@
 				<th>Address</th>
 			</tr>
 		</thead>
-		<tbody data-ng-repeat="user in allUsers">
+		<tbody data-ng-repeat="user in allUsers" data-ng-non-bindable="">
 			<tr>
 				<td>{{user.username}}</td>
 				<td>{{user.email}}</td>
-				<td>{{user.creationDate}}</td>
+				<td>{{user.creationDate | date:'yyyy-MM-dd HH:mm'}}</td>
 				<td>{{user.paymentAddress}}</td>
 			</tr>
 		</tbody>

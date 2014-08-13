@@ -22,7 +22,7 @@
  	<div class="col-lg-5">
  		<p></p>
  		<h2 class="title_2">Latest Transactions</h2>
- 		<div class="transaction_list" data-ng-repeat="trans in lastTransactions">{{trans.timestamp}} - {{trans.amount}} - {{trans.payinAddress}}</div>
+ 		<div class="transaction_list" data-ng-repeat="trans in lastTransactions" data-ng-non-bindable="">{{trans.timestamp | date:'yyyy-MM-dd HH:mm'}} - {{trans.amount}} - {{trans.payinAddress}}</div>
  	</div>
   	<div class="col-lg-5">
 		<p></p>

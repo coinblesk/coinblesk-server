@@ -23,9 +23,9 @@
 				<th>User</th>
 			</tr>
 		</thead>
-		<tbody data-ng-repeat="activity in activitylogs">
+		<tbody data-ng-repeat="activity in activitylogs" data-ng-non-bindable="">
 			<tr>
-				<td>{{activity.creationDate}}</td>
+				<td>{{activity.creationDate | date:'yyyy-MM-dd HH:mm'}}</td>
 				<td>{{activity.title}}</td>
 				<td>{{activity.username}}</td>
 			</tr>
