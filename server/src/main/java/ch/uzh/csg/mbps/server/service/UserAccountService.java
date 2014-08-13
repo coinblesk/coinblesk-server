@@ -12,6 +12,7 @@ import org.hibernate.HibernateException;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.dao.UserPublicKeyDAO;
+import ch.uzh.csg.mbps.server.domain.AdminRole;
 import ch.uzh.csg.mbps.server.domain.ResetPassword;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.BitcoindController;
@@ -387,5 +388,64 @@ public class UserAccountService implements IUserAccount {
 		}
 		return new UserModel(account.getId(), account.getUsername(), account.getCreationDate(), 
 				account.getEmail(), account.getPassword(), account.getPaymentAddress(), account.getRoles());
+	}
+
+	//TODO: mehmet test & javadoc
+	/**
+	 * 
+	 * @param email
+	 * @return
+	 * @throws UserAccountNotFoundException 
+	 */
+	public UserAccount getByEmail(String email) throws UserAccountNotFoundException {
+		return UserAccountDAO.getByEmail(email);
+	}
+
+	//TODO: mehmet test & javadoc
+	/**
+	 * 
+	 * @param email
+	 * @throws UserAccountNotFoundException 
+	 */
+	public static void changeRoleBoth(String emailAddress) throws UserAccountNotFoundException {
+		UserAccount user = UserAccountDAO.getByEmail(emailAddress);
+		Emailer.sendUpdateRoleBothLink(user);
+	}
+
+	//TODO: mehmet Test & javadoc
+	/**
+	 * 
+	 * @param email
+	 * @throws UserAccountNotFoundException 
+	 */
+	public static void changeRoleAdmin(String emailAddress) throws UserAccountNotFoundException {
+		UserAccount user = UserAccountDAO.getByEmail(emailAddress);
+		String token = java.util.UUID.randomUUID().toString();
+		UserAccountDAO.createAdminToken(user, token);
+		
+		Emailer.sendCreateRoleAdminLink(user, token);
+	}
+	
+	/**
+	 * Checks if token is saved in table and still valid (younger than 1h)
+	 * @param adminToken
+	 * @return
+	 */
+	public boolean isValidAdminLink(String adminToken) {
+		try {
+			AdminRole adminRole = UserAccountDAO.getCreateAdmin(adminToken);
+			if (adminRole == null) {
+				return false;
+			} else {
+				// checks if token has been created during the last 1h
+				if (adminRole.getCreationDate().getTime() >= (new Date().getTime() - Config.VALID_TOKEN_LIMIT)) {
+					return true;
+				} else {
+					return false;
+				}
+			}
+		} catch (VerificationTokenNotFoundException e) {
+			return false;
+		} 
 	}
 }

@@ -13,6 +13,7 @@ import org.hibernate.criterion.Restrictions;
 import ch.uzh.csg.mbps.server.domain.EmailVerification;
 import ch.uzh.csg.mbps.server.domain.ResetPassword;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.domain.AdminRole;
 import ch.uzh.csg.mbps.server.util.HibernateUtil;
 import ch.uzh.csg.mbps.server.util.UserRoles.Role;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
@@ -418,6 +419,55 @@ public class UserAccountDAO {
 	}
 
 	/**
+	 * Saves a token for resetting password of a {@link UserAccount}.
+	 * 
+	 * @param user
+	 * @param token
+	 */
+	public static void createAdminToken(UserAccount user, String token){
+		Session session = null;
+		Transaction transaction = null;
+		
+		try {
+			session = openSession();
+			transaction = session.beginTransaction();
+			
+			AdminRole ar = new AdminRole(user.getId(), token);
+			session.save(ar);
+			
+			transaction.commit();
+			LOGGER.info("Created AdminRoleToken for UserAccount with ID: " + user.getId());
+		} catch (HibernateException e) {
+			LOGGER.error("Problem creating AdminRoleToken for UserAccount with ID: " + user.getId() + "ErrorMessage: " + e.getMessage());
+			 if (transaction != null)
+				 transaction.rollback();
+			 throw e;
+		} finally {
+			session.close();
+		}
+	}
+
+	//TODO: mehmet Test & javadoc
+	/**
+	 * 
+	 * @param adminToken
+	 * @return
+	 * @throws VerificationTokenNotFoundException 
+	 */
+	public static AdminRole getCreateAdmin(String adminToken) throws VerificationTokenNotFoundException {
+		Session session = openSession();
+		session.beginTransaction();
+		AdminRole adminRole = (AdminRole) session.createCriteria(AdminRole.class).add(Restrictions.eq("token", adminToken)).uniqueResult();
+		
+		session.close();
+		if (adminRole == null){
+			throw new VerificationTokenNotFoundException(adminToken);			
+		}
+		
+		return adminRole;
+	}
+	
+	/**
 	 * Returns a list with all {@link ResetPassword} objects saved in the
 	 * database.
 	 * 
@@ -476,6 +526,5 @@ public class UserAccountDAO {
 		
 		return list;
 	}
-	
-	
+
 }

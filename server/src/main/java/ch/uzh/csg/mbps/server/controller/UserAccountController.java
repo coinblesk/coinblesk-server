@@ -316,5 +316,17 @@ public class UserAccountController {
 			return new CustomResponseObject(false, UPDATE_ERROR, Type.SAVE_PUBLIC_KEY);
 		}
 	}
-
+	
+	//TODO: mehmet create Account should be called
+	@RequestMapping(value = "/createAdmin/{adminPasswordToken}", method = RequestMethod.GET)
+	public ModelAndView createAdminProcessing(@PathVariable String adminPasswordToken) {
+		if (UserAccountService.getInstance().isValidResetPasswordLink(adminPasswordToken)) {
+			UserAccount account = new UserAccount();
+			ModelAndView mv = new ModelAndView("AdminRole", "command", account);
+			mv.addObject("token", adminPasswordToken);
+			return mv;
+		} else {
+			return new ModelAndView("WrongToken", "command", null);
+		}
+	}
 }

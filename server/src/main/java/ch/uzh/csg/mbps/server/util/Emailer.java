@@ -159,4 +159,29 @@ public class Emailer {
 		sendEmail(email,null);
 	}
 	
+	/**
+	 * Sends email to notify user that is account was updated from Role_User user to Role_Both.
+	 * 
+	 * @param user
+	 * @param resetPWToken
+	 */
+	public static void sendUpdateRoleBothLink(UserAccount user) {
+		String link = SecurityConfig.BASE_URL;
+		messageText = "Dear " + user.getUsername() + ",<br><br>Your account was updated! Now, you gained administration rights for the server at the following link:  <a href = \"" + link + "\">" + link + "</a>";
+		subject = "MBPS Update Account";
+		sendEmail(user.getEmail(), null);
+	}
+
+	/**
+	 * Sends email with link to create an account as admin. 
+	 * @param user
+	 * @param token
+	 */
+	public static void sendCreateRoleAdminLink(UserAccount user, String adminPWToken) {
+		String server = SecurityConfig.BASE_URL;
+		String link = SecurityConfig.BASE_URL + "/user/createAdmin/" + adminPWToken;
+		messageText = "Dear " + user.getUsername() + ",<br><br>You are invited to adminsitred the following website: <a href = \"" + server + "\">" + server + "</a>. To create an account, please enter your credentials on the follwowing link: <a href = \"" + link + "\">" + link + "</a>";
+		subject = "MBPS Admin Account";
+		sendEmail(user.getEmail(), null);
+	}
 }
