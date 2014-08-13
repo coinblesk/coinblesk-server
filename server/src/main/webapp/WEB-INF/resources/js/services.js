@@ -81,9 +81,8 @@ AppServices.factory('serverTransactionsFactory', function($http, $q) {
 		return (request.then(serverTransactionsFactory.handleSuccess, serverTransactionsFactory.handleError));
 	};
 	
-	serverTransactionsFactory.handleSuccess = function( response ){
+	serverTransactionsFactory.handleSuccess = function(response){
 		return(response.data);
-		console.log("Success", data);
 	};
 	
 	serverTransactionsFactory.handleError = function( response ){
@@ -117,10 +116,42 @@ AppServices.factory('userAccountFactory', function($http, $q) {
 	};
 	
 	userAccountFactory.getLoggedUser = function(username){
-		console.log(username);
 		var request = $http({
 			method: 'GET',
 			url: 'home/user/' + username
+		});
+		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
+	};
+	
+	userAccountFactory.updateMail = function(user){
+		var request = $http({
+			method: 'GET',
+			url: 'home/updateMail/' + user.username,
+			params: {
+				"newemail": user.new_email
+			}
+		});
+		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
+	};
+	
+	userAccountFactory.updatePassword = function(user){
+		var request = $http({
+			method: 'GET',
+			url: 'home/updatePassword/' + user.username,
+			params: {
+				"password": user.password
+			}
+		});
+		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
+	};
+	
+	userAccountFactory.inviteAdmin = function(user){
+		var request = $http({
+			method: 'GET',
+			url: 'home/inviteAdmin',
+			params:{
+				"email": user.email
+			}
 		});
 		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
 	};
@@ -164,6 +195,32 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 	};
 	
 	return serverAccountFactory;
+});
+
+AppServices.factory('activitiesFactory', function($http, $q) {
+	var activitiesFactory = {};
+	
+	activitiesFactory.getActivities = function() {
+		var request = $http({
+			method: 'GET',
+			url: 'activities/logs'
+		});
+		return (request.then(activitiesFactory.handleSuccess, activitiesFactory.handleError));
+	};
+	
+	activitiesFactory.handleSuccess = function( response ){
+		return(response.data);
+	};
+	
+	activitiesFactory.handleError = function( response ){
+		if(!angular.isObject(response.data) || !response.data.message){
+			return($q.reject("Request failed"));
+		}
+		
+		return($q.reject(response.data));
+	};
+	
+	return activitiesFactory;
 });
 
 //TODO: mehmet set link http://wemadeyoulook.at/en/blog/implementing-basic-http-authentication-http-requests-angular/
