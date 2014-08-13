@@ -21,6 +21,7 @@
 		<intercept-url pattern="/relation/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
 		<intercept-url pattern="/users/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
 		<intercept-url pattern="/history/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
+		<intercept-url pattern="/activities/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
 		<intercept-url pattern="/**" access="isFullyAuthenticated()" requires-channel="http" />
 		<logout invalidate-session="true" 
 				logout-success-url="/"
