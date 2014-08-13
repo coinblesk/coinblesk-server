@@ -7,6 +7,7 @@
     				<li data-ng-class="{ active: isActive('/relation')}"><a href="#/relation">Trust Relation</a></li>
     				<li data-ng-class="{ active: isActive('/users')}"><a href="#/users">Users</a></li>
     				<li data-ng-class="{ active: isActive('/history')}"><a href="#/history">History</a></li>
+    				<li data-ng-class="{ active: isActive('/activities')}"><a href="#/activities">Activities</a></li>
     			</ul>
     		</div>
     	</div>
@@ -18,7 +19,7 @@
 		<tr><th>URL</th><th>Address</th><th>Relation</th><th>Balance</th><th>Time</th>
 		</tr>
 		<tr data-ng-repeat="account in serveraccounts">
-			<td><a href="#">{{account.url}}</a></td>
+			<td><a data-ng-href="#/relation/{{account.id}}" data-ng-bind="account.url">{{account.url}}</a></td>
 			<td>{{account.payinAddress}}</td>
 			<td>{{account.trustLevel}}</td>
 			<td>{{account.activeBalance}}</td>
