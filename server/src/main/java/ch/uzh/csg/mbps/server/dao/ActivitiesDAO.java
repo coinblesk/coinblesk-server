@@ -58,7 +58,7 @@ private static Logger LOGGER = Logger.getLogger(ActivitiesDAO.class);
 		
 		@SuppressWarnings("unchecked")
 		List<Activities> result = (List<Activities>) session.createCriteria(Activities.class)
-				.addOrder(Order.desc("creationdate"))
+				.addOrder(Order.desc("creationDate"))
 				.setFirstResult(page * Config.ACTIVITIES_MAX_RESULTS)
 				.setMaxResults(Config.ACTIVITIES_MAX_RESULTS)
 				.setFetchSize(Config.ACTIVITIES_MAX_RESULTS)
