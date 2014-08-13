@@ -7,6 +7,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.criterion.Order;
 
 import ch.uzh.csg.mbps.server.domain.Activities;
 import ch.uzh.csg.mbps.server.util.Config;
@@ -48,7 +49,7 @@ private static Logger LOGGER = Logger.getLogger(ActivitiesDAO.class);
 	 * @param page: Accessed site page
 	 * @return
 	 */
-	public static ArrayList<Activities> getLogs(int page){
+	public static List<Activities> getLogs(int page){
 		if (page < 0)
 			return null;
 
@@ -57,12 +58,13 @@ private static Logger LOGGER = Logger.getLogger(ActivitiesDAO.class);
 		
 		@SuppressWarnings("unchecked")
 		List<Activities> result = (List<Activities>) session.createCriteria(Activities.class)
+				.addOrder(Order.desc("creationdate"))
 				.setFirstResult(page * Config.ACTIVITIES_MAX_RESULTS)
 				.setMaxResults(Config.ACTIVITIES_MAX_RESULTS)
 				.setFetchSize(Config.ACTIVITIES_MAX_RESULTS)
 				.list();
 		session.close();
 		
-		return (ArrayList<Activities>) result;
+		return result;
 	}
 }

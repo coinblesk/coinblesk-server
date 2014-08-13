@@ -1,6 +1,6 @@
 package ch.uzh.csg.mbps.server.service;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import ch.uzh.csg.mbps.server.dao.ActivitiesDAO;
 import ch.uzh.csg.mbps.server.domain.Activities;
@@ -56,7 +56,7 @@ public class ActivitiesService {
 	 * @param page
 	 * @return
 	 */
-	public ArrayList<Activities> getLogs(int page){
+	public List<Activities> getLogs(int page){
 		return ActivitiesDAO.getLogs(page);
 	}
 }

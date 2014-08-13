@@ -1,6 +1,6 @@
 package ch.uzh.csg.mbps.server.controllerui;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,7 +20,7 @@ public class ActivitiesController {
     }
 	
 	@RequestMapping(value={"/logs"}, method = RequestMethod.GET)
-	public @ResponseBody ArrayList<Activities> getlogs(){
+	public @ResponseBody List<Activities> getlogs(){
 		//TODO: mehmet page number should be passed too
 		return ActivitiesService.getInstrance().getLogs(0);
 	}
