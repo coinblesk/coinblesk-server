@@ -7,8 +7,8 @@
 	    
 	    <!-- Database connection settings -->
 		<property name="connection.driver_class">org.postgresql.Driver</property>
-		<property name="connection.url">jdbc:postgresql://localhost:5433/mbps</property>
-		<!-- <property name="connection.url">jdbc:postgresql://localhost:5433/mbps-test</property> -->
+		<!-- <property name="connection.url">jdbc:postgresql://localhost:5433/mbps</property> -->
+		<property name="connection.url">jdbc:postgresql://localhost:5433/mbps-test</property>
 		<property name="connection.username">postgres</property>
 		<property name="connection.password">****</property>
 		
@@ -20,29 +20,26 @@
 		<property name="hibernate.c3p0.idle_test_period">300</property>
 
 		<!-- SQL dialect -->
-		<property name="dialect">org.hibernate.dialect.PostgreSQLDialect</property>
+ 		<property name="dialect">org.hibernate.dialect.PostgreSQLDialect</property>
 
 		<!-- Disable the second-level cache -->
 		<property name="cache.provider_class">org.hibernate.cache.NoCacheProvider</property>
 
 		<!-- Echo all execudes SQL to stdout -->
-		<!-- <property name="show_sql">true</property> -->
+		<property name="show_sql">true</property>
 
 		<!-- Drop and recreate the database schema on startup -->
  		<property name="hibernate.hbm2ddl.auto">validate</property>
   		<!-- <property name="hibernate.hbm2ddl.auto">create-drop</property> -->
   		
   		<!-- Hibernate settings for testing with DbUnit -->
-<!-- 		<property name="connection.driver_class">org.hsqldb.jdbcDriver</property>
-    	<property name="connection.url">jdbc:hsqldb:mem:public</property>
+ 		<!-- <property name="connection.driver_class">org.hsqldb.jdbcDriver</property>
+    	<property name="connection.url">jdbc:hsqldb:mem:testDB;MVCC=true</property>
     	<property name="connection.username">sa</property>
     	<property name="connection.password"/>
   		<property name="connection.pool_size">1</property>
-   		<property name="jdbc.batch_size">20</property>
-    	<property name="connection.autocommit">true</property>
-    	<property name="current_session_context_class">thread</property>
-    	<property name="bytecode.use_reflection_optimizer">false</property> -->
-		
+   		<property name="jdbc.batch_size">20</property> -->
+  		
 		<!-- Names the annotated entity classes -->
 		<mapping class="ch.uzh.csg.mbps.server.domain.UserAccount" />
 		<mapping class="ch.uzh.csg.mbps.server.domain.DbTransaction"/>
@@ -54,5 +51,7 @@
 		<mapping class="ch.uzh.csg.mbps.server.domain.UserPublicKey"/>
 		<mapping class="ch.uzh.csg.mbps.server.domain.ServerAccount"/>
 		<mapping class="ch.uzh.csg.mbps.server.domain.ServerTransaction"/>
+		<mapping class="ch.uzh.csg.mbps.server.domain.Activities"/>
+		<mapping class="ch.uzh.csg.mbps.server.domain.AdminRole"/>
 	</session-factory>
 </hibernate-configuration>
