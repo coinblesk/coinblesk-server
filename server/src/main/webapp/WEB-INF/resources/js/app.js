@@ -28,6 +28,10 @@ App.config(['$routeProvider', '$httpProvider', '$provide', function($routeProvid
         templateUrl: 'relation',
         controller: RelationController
     });
+    $routeProvider.when('/relation/:serverId', {
+    	templateUrl: 'serveraccount',
+    	controller: ServerAccountController
+    });
     $routeProvider.when('/users', {
         templateUrl: 'users',
         controller: UsersController
@@ -35,6 +39,10 @@ App.config(['$routeProvider', '$httpProvider', '$provide', function($routeProvid
     $routeProvider.when('/history', {
         templateUrl: 'history',
         controller: HistoryController
+    });
+    $routeProvider.when('/activities', {
+        templateUrl: 'activities',
+        controller: ActivitiesController
     });
     $routeProvider.otherwise({redirectTo: '/login'});
 
