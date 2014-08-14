@@ -4,7 +4,7 @@
  * HistoryController
  * @constructor
  */
-var HistoryController = function($scope, $location, $rootScope, serverTransactionsFactory) {
+var HistoryController = function($rootScope, $scope, $location, serverTransactionsFactory) {
 	$scope.history = {};
 	$scope.editMode = false;
 	$scope.servertransactions = [];
