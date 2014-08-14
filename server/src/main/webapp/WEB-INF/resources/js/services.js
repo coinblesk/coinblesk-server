@@ -182,6 +182,14 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 		return (request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError));
 	};
 	
+	serverAccountFactory.getServerAccount = function(id){
+		var request = $http({
+			method: 'GET',
+			url: 'relation/account/' + id
+		});
+		return (request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError));
+	};
+	
 	serverAccountFactory.handleSuccess = function( response ){
 		return(response.data);
 	};

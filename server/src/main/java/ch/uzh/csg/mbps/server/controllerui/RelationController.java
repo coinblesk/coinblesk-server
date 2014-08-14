@@ -3,12 +3,14 @@ package ch.uzh.csg.mbps.server.controllerui;
 import java.util.List;
 
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.service.ServerAccountService;
+import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 
 @Controller
 @RequestMapping("/relation")
@@ -28,4 +30,10 @@ public class RelationController {
 	public @ResponseBody List<ServerAccount> getFullTrust() {
         return ServerAccountService.getInstance().getByTrustLevel(2);
     }
+	
+	@RequestMapping(value={"/account/{id}"}, method = RequestMethod.GET)
+	public @ResponseBody ServerAccount  account(@PathVariable("id") long id) throws ServerAccountNotFoundException{
+		ServerAccount account = ServerAccountService.getInstance().getById(id);
+		return account;
+	}
 }
