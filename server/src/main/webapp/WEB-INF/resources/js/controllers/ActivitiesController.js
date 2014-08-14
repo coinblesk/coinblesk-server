@@ -9,8 +9,7 @@ var ActivitiesController = function($scope, $location, $rootScope, activitiesFac
 	loadRemoteData();
 	
 	function loadRemoteData(){
-		activitiesFactory.getActivities()
-		.then(function(logs){
+		activitiesFactory.getActivities().then(function(logs){
 					$scope.activitylogs = logs; 
 		});
 	}
