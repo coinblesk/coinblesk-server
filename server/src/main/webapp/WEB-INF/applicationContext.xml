@@ -23,6 +23,7 @@
 
  	<mvc:view-controller path="/" view-name="html/index"/>
 	<mvc:view-controller path="/login" view-name="html/login"/>
+	<mvc:view-controller path="/relation/serveraccount/**" view-name="html/serveraccount"/>
 	
 	<!-- Configures the @Controller programming model -->
 	<mvc:annotation-driven /> 
