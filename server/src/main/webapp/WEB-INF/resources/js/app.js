@@ -28,7 +28,7 @@ App.config(['$routeProvider', '$httpProvider', '$provide', function($routeProvid
         templateUrl: 'relation',
         controller: RelationController
     });
-    $routeProvider.when('/relation/:serverId', {
+    $routeProvider.when('/relation/serveraccount/:serverId', {
     	templateUrl: 'serveraccount',
     	controller: ServerAccountController
     });
