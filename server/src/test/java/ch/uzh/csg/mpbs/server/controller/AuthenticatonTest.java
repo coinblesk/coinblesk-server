@@ -24,7 +24,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
@@ -36,10 +36,12 @@ import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
 @RunWith(SpringJUnit4ClassRunner.class)
+
 @ContextConfiguration(locations = {
-		"file:src/main/webapp/WEB-INF/applicationContext.xml",
-		"file:src/main/webapp/WEB-INF/mvc-dispatcher-servlet.xml",
-		"file:src/main/webapp/WEB-INF/spring-security.xml"})
+		"classpath:context.xml",
+		"classpath:test-database.xml",
+		"classpath:view.xml",
+		"classpath:security.xml"})
 @WebAppConfiguration
 public class AuthenticatonTest {
 	
@@ -48,6 +50,9 @@ public class AuthenticatonTest {
 
 	@Autowired
 	private FilterChainProxy springSecurityFilterChain;
+	
+	@Autowired
+	private IUserAccount userAccountService;
 
 	private static MockMvc mockMvc;
 	
@@ -99,7 +104,7 @@ public class AuthenticatonTest {
 	@Test
 	public void testLoginEmailNotVerified() throws Exception {	  
 		String plainTextPassword = test61.getPassword();
-		assertTrue(UserAccountService.getInstance().createAccount(test61));
+		assertTrue(userAccountService.createAccount(test61));
 
 		mockMvc.perform(post("/j_spring_security_check").secure(false).param("j_username", test61.getUsername()).param("j_password", plainTextPassword))
 				.andExpect(status().isUnauthorized())
@@ -138,11 +143,12 @@ public class AuthenticatonTest {
 	}
 	
 	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
-		assertTrue(UserAccountService.getInstance().createAccount(userAccount));
-		userAccount = UserAccountService.getInstance().getByUsername(userAccount.getUsername());
+		assertTrue(userAccountService.createAccount(userAccount));
+		userAccount = userAccountService.getByUsername(userAccount.getUsername());
 		userAccount.setEmailVerified(true);
 		userAccount.setBalance(balance);
-		UserAccountDAO.updateAccount(userAccount);
+		
+		userAccountService.updateAccount(userAccount);
 	}
 
 	private HttpSession loginAndGetSession(String username, String plainTextPassword) throws Exception {

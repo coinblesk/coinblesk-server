@@ -2,7 +2,9 @@ package ch.uzh.csg.mbps.server.service;
 
 import java.util.ArrayList;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.mbps.model.HistoryServerAccountTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IServerTransaction;
@@ -20,53 +22,46 @@ public class ServerTransactionService implements IServerTransaction{
 	public static final String INTERNAL_ERROR = "An internal error occured. Please try again later.";
 	public static final String PAYMENT_REFUSE = "The server refused the payment.";
 
-	private static ServerTransactionService serverTransactionService;
-
-	private ServerTransactionService() {
-	}
+	@Autowired
+	private ServerTransactionDAO serverTransactionDAO;
 	
 	//TODO: mehmet: javadoc
-	/**
-	 * 
-	 * @return
-	 */
-	public static ServerTransactionService getInstance() {
-		if (serverTransactionService == null) {
-			serverTransactionService = new ServerTransactionService();
-		}
-			
-		return serverTransactionService;
-	}
 	
 	@Override
+	@Transactional
 	public void createServerTransaction(ServerTransaction serverTransaction) throws ServerAccountNotFoundException {
 		// TODO mehmet what should be passed (ServerTransaction)
 		
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public ArrayList<HistoryServerAccountTransaction> getLast3Transactions() {
-		return ServerTransactionDAO.getLast3Transactions();
+		return serverTransactionDAO.getLast3Transactions();
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public ArrayList<HistoryServerAccountTransaction> getLast3ServerAccountTransaction(String url) throws ServerAccountNotFoundException {
-		return ServerTransactionDAO.getLast3ServerAccountTransaction(url);
+		return serverTransactionDAO.getLast3ServerAccountTransaction(url);
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public ArrayList<HistoryServerAccountTransaction> getHistory(int page) {
-		return ServerTransactionDAO.getHistory(page);
+		return serverTransactionDAO.getHistory(page);
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public ArrayList<HistoryServerAccountTransaction> getPayeeHistory(int page) {
-		return ServerTransactionDAO.getPayeeHistory(page);
+		return serverTransactionDAO.getPayeeHistory(page);
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public ArrayList<HistoryServerAccountTransaction> getPayerHistory(int page) {
-		return ServerTransactionDAO.getPayerHistory(page);
+		return serverTransactionDAO.getPayerHistory(page);
 	}
 
 }

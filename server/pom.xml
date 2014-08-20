@@ -10,8 +10,8 @@
 	<description>mbps-server</description>
 
 	<properties>
-		<spring.version>3.2.4.RELEASE</spring.version>
-		<spring.security.version>3.1.4.RELEASE</spring.security.version>
+		<spring.version>3.2.10.RELEASE</spring.version>
+		<spring.security.version>3.2.5.RELEASE</spring.security.version>
 		<slf4j.version>1.7.5</slf4j.version>
 		<jsonpath.version>0.8.1</jsonpath.version>
 	</properties>
@@ -59,12 +59,6 @@
 		</dependency>
 
 		<!-- JSON processor -->
-		<dependency>
-			<groupId>org.codehaus.jackson</groupId>
-			<artifactId>jackson-mapper-asl</artifactId>
-			<version>1.9.13</version>
-			<scope>runtime</scope>
-		</dependency>
 		<dependency>
 			<groupId>net.minidev</groupId>
 			<artifactId>json-smart</artifactId>
@@ -114,6 +108,7 @@
 			<groupId>javax.servlet</groupId>
 			<artifactId>jstl</artifactId>
 			<version>1.2</version>
+			<scope>provided</scope>
 		</dependency>
 
 		<!-- Logging -->
@@ -165,6 +160,13 @@
 			<version>${spring.version}</version>
 			<scope>test</scope>
 		</dependency>
+		
+		<dependency>
+      		<groupId>com.google</groupId>
+      		<artifactId>bitcoinj</artifactId>
+      		<version>0.11.3</version>
+      	</dependency>
+		
 		<dependency>
 			<groupId>javax.mail</groupId>
 			<artifactId>mail</artifactId>
@@ -253,7 +255,7 @@
 		<dependency>
 			<groupId>ch.uzh.csg</groupId>
 			<artifactId>mbps-shared-resources</artifactId>
-			<version>1.2.3</version>
+			<version>1.2.4</version>
 		</dependency>
 		
 		<!-- Bouncy Castle -->
@@ -369,6 +371,12 @@
 	                <include>**/*.xml</include>
 	            </includes>
 	        </testResource>
+	        
+	        
+			<testResource>
+				<directory>src/main/webapp/WEB-INF</directory>
+			</testResource>
+	        
 	    </testResources>
 	</build>
 

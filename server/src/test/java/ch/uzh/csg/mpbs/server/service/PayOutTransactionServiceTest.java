@@ -7,14 +7,18 @@ import static org.junit.Assert.assertTrue;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import ch.uzh.csg.mbps.model.HistoryPayOutTransaction;
-import ch.uzh.csg.mbps.server.dao.PayOutTransactionDAO;
-import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.PayOutTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.service.PayOutTransactionService;
@@ -28,7 +32,18 @@ import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(locations = {
+		"classpath:context.xml",
+		"classpath:test-database.xml"})
+
 public class PayOutTransactionServiceTest {
+	
+	@Autowired
+	private IUserAccount userAccountService;
+	
+	@Autowired
+	private PayOutTransactionService payOutTransactionService;
 	
 	private static UserAccount test71;
 
@@ -44,20 +59,20 @@ public class PayOutTransactionServiceTest {
 	}
 
 	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
-		assertTrue(UserAccountService.getInstance().createAccount(userAccount));
-		userAccount = UserAccountService.getInstance().getByUsername(userAccount.getUsername());
+		assertTrue(userAccountService.createAccount(userAccount));
+		userAccount = userAccountService.getByUsername(userAccount.getUsername());
 		userAccount.setEmailVerified(true);
 		userAccount.setBalance(balance);
-		UserAccountDAO.updateAccount(userAccount);
+		userAccountService.updateAccount(userAccount);
 	}
 
 	@Test
 	public void testGetHistory() throws Exception {
 		createAccountAndVerifyAndReload(test71, BigDecimal.ZERO); 
 		
-		UserAccount fromDB = UserAccountService.getInstance().getByUsername(test71.getUsername());
+		UserAccount fromDB = userAccountService.getByUsername(test71.getUsername());
 		
-		assertEquals(0, PayOutTransactionService.getInstance().getHistory(fromDB.getUsername(), 0).size());
+		assertEquals(0, payOutTransactionService.getHistory(fromDB.getUsername(), 0).size());
 		
 		PayOutTransaction tx;
 		
@@ -76,13 +91,13 @@ public class PayOutTransactionServiceTest {
 			tx.setTransactionID(Integer.toString(nofTransactions));
 			tx.setVerified(false);
 			
-			PayOutTransactionDAO.createPayOutTransaction(tx);
+			payOutTransactionService.createPayOutTransaction(tx);
 			
 			nofTransactions++;
 		}
 		
 		assertTrue(nofTransactions > Config.PAY_OUTS_MAX_RESULTS);
-		ArrayList<HistoryPayOutTransaction> history = PayOutTransactionService.getInstance().getHistory(fromDB.getUsername(), 0);
+		List<HistoryPayOutTransaction> history = payOutTransactionService.getHistory(fromDB.getUsername(), 0);
 		assertEquals(Config.PAY_OUTS_MAX_RESULTS, history.size());
 		
 		//assert that the list is in descending order
@@ -98,7 +113,7 @@ public class PayOutTransactionServiceTest {
 		}
 		
 		//get the secod page
-		ArrayList<HistoryPayOutTransaction> history2 = PayOutTransactionService.getInstance().getHistory(fromDB.getUsername(), 1);
+		List<HistoryPayOutTransaction> history2 = payOutTransactionService.getHistory(fromDB.getUsername(), 1);
 		assertEquals(additionalTx, history2.size());
 		
 		//assert that the first and the second tx are now in the list, since we fetched the second page
@@ -114,7 +129,7 @@ public class PayOutTransactionServiceTest {
 		}
 		
 		//test get the number of results
-		long historyCount = PayOutTransactionService.getInstance().getHistoryCount(fromDB.getUsername());
+		long historyCount = payOutTransactionService.getHistoryCount(fromDB.getUsername());
 		assertEquals(Config.PAY_OUTS_MAX_RESULTS+additionalTx, historyCount);
 	}
 

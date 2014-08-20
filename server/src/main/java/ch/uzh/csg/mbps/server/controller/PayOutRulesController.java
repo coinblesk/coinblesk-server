@@ -3,6 +3,7 @@ package ch.uzh.csg.mbps.server.controller;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,6 +29,7 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 @Controller
 @RequestMapping("/rules")
 public class PayOutRulesController {
+	
 	private static final String CREATION_SUCCESS = "Your new rule has successfully been saved.";
 	private static final String ACCOUNT_NOT_FOUND = "UserAccount not found.";
 	private static final String NO_RULES = "No payout rules defined for this user.";
@@ -35,6 +37,8 @@ public class PayOutRulesController {
 	private static final String INVALID_ADDRESS = "Your defined payout adress is not a valid bitcoin address.";
 	private static final String RULES_ALREADY_DEFINED = "You already defined your payout rules. Please reset first to create new rules.";
 	
+	@Autowired
+	private PayOutRuleService payOutRuleService;
 
 	/**
 	 * Creates one/multiple new PayOutRules. Returns failure message when
@@ -47,7 +51,7 @@ public class PayOutRulesController {
 	@ResponseBody
 	public CustomResponseObject createRule(@RequestBody PayOutRulesTransferObject porto) {
 		try {
-			PayOutRuleService.getInstance().createRule(porto, AuthenticationInfo.getPrincipalUsername());
+			payOutRuleService.createRule(porto, AuthenticationInfo.getPrincipalUsername());
 			return new CustomResponseObject(true, CREATION_SUCCESS);
 		} catch (UserAccountNotFoundException e) {
 			return new CustomResponseObject(false, ACCOUNT_NOT_FOUND);
@@ -68,7 +72,7 @@ public class PayOutRulesController {
 	@ResponseBody
 	public CustomResponseObject getRules() {
 		try {
-			ArrayList<PayOutRule> list = PayOutRuleService.getInstance().getRules(AuthenticationInfo.getPrincipalUsername());
+			List<PayOutRule> list = payOutRuleService.getRules(AuthenticationInfo.getPrincipalUsername());
 			PayOutRulesTransferObject porto = new PayOutRulesTransferObject();
 			porto.setPayOutRulesList(transform(list));
 			CustomResponseObject cro = new CustomResponseObject(true, "", Type.PAYOUT_RULE);
@@ -114,7 +118,7 @@ public class PayOutRulesController {
 	@ResponseBody
 	public CustomResponseObject resetRules() {
 		try {
-			PayOutRuleService.getInstance().deleteRules(AuthenticationInfo.getPrincipalUsername());
+			payOutRuleService.deleteRules(AuthenticationInfo.getPrincipalUsername());
 			return new CustomResponseObject(true, RESET_SUCCESS);
 		} catch (UserAccountNotFoundException e) {
 			return new CustomResponseObject(false, ACCOUNT_NOT_FOUND);

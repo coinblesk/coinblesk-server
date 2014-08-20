@@ -1,21 +1,23 @@
 package ch.uzh.csg.mbps.server.dao;
 
-import java.util.ArrayList;
 import java.util.List;
+
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
 
 import org.apache.log4j.Logger;
 import org.hibernate.HibernateException;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.criterion.Restrictions;
-import org.hibernate.transform.Transformers;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
 
 import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
 import ch.uzh.csg.mbps.server.domain.PayInTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
-import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.Config;
-import ch.uzh.csg.mbps.server.util.HibernateUtil;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 
 /**
@@ -23,13 +25,15 @@ import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
  * regarding PayInTransactions.
  * 
  */
+@Repository
 public class PayInTransactionDAO {
 	private static Logger LOGGER = Logger.getLogger(PayInTransactionDAO.class);
 	
-	private static Session openSession() {
-		SessionFactory sessionFactory = HibernateUtil.getSessionFactory();
-		return sessionFactory.openSession();
-	}
+	@PersistenceContext
+	private EntityManager em;
+	
+	@Autowired
+	private UserAccountDAO userAccountDAO;
 
 	/**
 	 * Saves a new {@link PayInTransaction} in the database.
@@ -38,30 +42,13 @@ public class PayInTransactionDAO {
 	 * @throws HibernateException
 	 * @throws UserAccountNotFoundException
 	 */
-	public static void createPayInTransaction(PayInTransaction tx) throws HibernateException, UserAccountNotFoundException {
-		Session session = openSession();
-		org.hibernate.Transaction transaction = null;
-		
-		try {
-			transaction = session.beginTransaction();
-			
-			session.save(tx);
-			
-			//update UserAccountBalance
-			UserAccount userAccount = UserAccountDAO.getById(tx.getUserID());
-			userAccount.setBalance(userAccount.getBalance().add(tx.getAmount()));
-			session.update(userAccount);
-			
-			transaction.commit();
-			LOGGER.info("PayInTransaction created and balance for user with ID " + tx.getUserID() + " updated: " + tx.toString());
-		} catch (HibernateException e) {
-			LOGGER.error("Problem creating PayInTransaction: " + tx.toString() + "ErrorMessage: " + e.getMessage());
-			if (transaction != null)
-				transaction.rollback();
-			throw e;
-		} finally {
-			session.close();
-		}
+	public void createPayInTransaction(PayInTransaction tx) throws UserAccountNotFoundException {
+		em.persist(tx);
+		//update UserAccountBalance
+		UserAccount userAccount = userAccountDAO.getById(tx.getUserID());
+		userAccount.setBalance(userAccount.getBalance().add(tx.getAmount()));
+		em.merge(userAccount);
+		LOGGER.info("PayInTransaction created and balance for user with ID " + tx.getUserID() + " updated: " + tx.toString());
 	}
 
 	/**
@@ -71,16 +58,22 @@ public class PayInTransactionDAO {
 	 * @param pit
 	 * @return boolean if PayInTransaction is new (not in DB yet).
 	 */
-	public static boolean isNew(PayInTransaction pit) {
-		Session session = openSession();
-		session.beginTransaction();
-		PayInTransaction existingPIT = (PayInTransaction) session.createCriteria(PayInTransaction.class).add(Restrictions.eq("userID", pit.getUserID())).add(Restrictions.eq("transactionID", pit.getTransactionID())).uniqueResult();
-		session.close();
-	
-		if (existingPIT == null)
-			return true;
-		else
-			return false;
+	public boolean isNew(PayInTransaction pit) {
+		
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<Long> cq = cb.createQuery(Long.class);
+		
+		Root<PayInTransaction> root = cq.from(PayInTransaction.class);
+		cq.select(cb.count(root));
+		
+		Predicate condition1 = cb.equal(root.get("userID"), pit.getUserID());
+		Predicate condition2 = cb.equal(root.get("transactionID"), pit.getTransactionID());
+		Predicate condition3 = cb.and(condition1, condition2);
+		cq.where(condition3);
+		
+		Long count = em.createQuery(cq).getSingleResult();
+		
+		return count == 0;
 	}
 
 	/**
@@ -93,33 +86,25 @@ public class PayInTransactionDAO {
 	 * @return ArrayList<HistoryPayInTransaction>
 	 * @throws UserAccountNotFoundException
 	 */
-	public static ArrayList<HistoryPayInTransaction> getHistory(String username, int page) throws UserAccountNotFoundException {
-		if (page < 0)
+	public List<HistoryPayInTransaction> getHistory(String username, int page) throws UserAccountNotFoundException {
+		if (page < 0) {
 			return null;
+		}
 		
-		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
-		Session session = openSession();
-		session.beginTransaction();
-				
+		UserAccount userAccount = userAccountDAO.getByUsername(username);
+		
 		@SuppressWarnings("unchecked")
-		List<HistoryPayInTransaction> resultWithAliasedBean = session.createSQLQuery(
-				  "SELECT pit.timestamp, pit.amount " +
-				  "FROM pay_in_transaction pit " +
-				  "WHERE pit.user_id = :userid " +
-				  "ORDER BY pit.timestamp DESC")
-				  .addScalar("timestamp")
-				  .addScalar("amount")
-				  .setLong("userid",  userAccount.getId())
-				  .setFirstResult(page * Config.PAY_INS_MAX_RESULTS)
-				  .setMaxResults(Config.PAY_INS_MAX_RESULTS)
-				  .setFetchSize(Config.PAY_INS_MAX_RESULTS)
-				  .setResultTransformer(Transformers.aliasToBean(HistoryPayInTransaction.class))
-				  .list();
+        List<HistoryPayInTransaction> resultWithAliasedBean = em.createQuery(""
+				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayInTransaction(pit.timestamp,  pit.amount) "
+				+ "FROM PAY_IN_TRANSACTION pit "
+				+ "WHERE pit.userID = :userid "
+				+ "ORDER BY pit.timestamp DESC")
+				.setFirstResult(page * Config.PAY_INS_MAX_RESULTS)
+				.setMaxResults(Config.PAY_INS_MAX_RESULTS)
+				.setParameter("userid", userAccount.getId())
+				.getResultList();
 		
-		List<HistoryPayInTransaction> results = resultWithAliasedBean;
-		session.close();
-		
-		return new ArrayList<HistoryPayInTransaction>(results);
+		return resultWithAliasedBean;
 	}
 	
 	/**
@@ -130,21 +115,15 @@ public class PayInTransactionDAO {
 	 * @return long number of PayInTransactions
 	 * @throws UserAccountNotFoundException  if no PITs are assigned to given UserAccount
 	 */
-	public static long getHistoryCount(String username) throws UserAccountNotFoundException {
-		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
-		Session session = openSession();
-		session.beginTransaction();
-				
-		long nofResults = ((Number) session.createSQLQuery(
-				  "SELECT COUNT(*) " +
-				  "FROM pay_in_transaction pit " +
-				  "WHERE pit.user_id = :userid")
-				  .setLong("userid", userAccount.getId())
-				  .uniqueResult())
-				  .longValue();
-		session.close();
+	public long getHistoryCount(UserAccount userAccount) throws UserAccountNotFoundException {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<Long> cq = cb.createQuery(Long.class);
+		Root<PayInTransaction> root = cq.from(PayInTransaction.class);
+		cq.select(cb.count(root));
 		
-		return nofResults;
+		Predicate condition = cb.equal(root.get("userID"), userAccount.getId());
+		cq.where(condition);
+		return em.createQuery(cq).getSingleResult();
 	}
 	
 	/**
@@ -155,28 +134,19 @@ public class PayInTransactionDAO {
 	 * @return ArrayList<HistoryPayInTransaction>
 	 * @throws UserAccountNotFoundException
 	 */
-	public static ArrayList<HistoryPayInTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
-		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
-		Session session = openSession();
-		session.beginTransaction();
-				
+	public List<HistoryPayInTransaction> getLast5Transactions(UserAccount userAccount) throws UserAccountNotFoundException {
+		
+		
 		@SuppressWarnings("unchecked")
-		List<HistoryPayInTransaction> resultWithAliasedBean = session.createSQLQuery(
-				  "SELECT pit.timestamp, pit.amount " +
-				  "FROM pay_in_transaction pit " +
-				  "WHERE pit.user_id = :userid " +
-				  "ORDER BY pit.timestamp DESC")
-				  .addScalar("timestamp")
-				  .addScalar("amount")
-				  .setLong("userid",  userAccount.getId())
-				  .setMaxResults(5)
-				  .setFetchSize(5)
-				  .setResultTransformer(Transformers.aliasToBean(HistoryPayInTransaction.class))
-				  .list();
+        List<HistoryPayInTransaction> resultWithAliasedBean = em.createQuery(""
+				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayInTransaction(pit.timestamp,  pit.amount) "
+				+ "FROM PAY_IN_TRANSACTION pit "
+				+ "WHERE pit.userID = :userid "
+				+ "ORDER BY pit.timestamp DESC")
+				.setMaxResults(5)
+				.setParameter("userid", userAccount.getId())
+				.getResultList();
 		
-		List<HistoryPayInTransaction> results = resultWithAliasedBean;
-		session.close();
-		
-		return new ArrayList<HistoryPayInTransaction>(results);
+		return resultWithAliasedBean;
 	}
 }

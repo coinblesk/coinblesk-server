@@ -5,16 +5,19 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
-
 import org.hibernate.HibernateException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.dao.UserPublicKeyDAO;
 import ch.uzh.csg.mbps.server.domain.AdminRole;
 import ch.uzh.csg.mbps.server.domain.ResetPassword;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.domain.UserPublicKey;
 import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.CustomPasswordEncoder;
@@ -36,25 +39,15 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 /**
  * Service class for {@link UserAccount}.
  */
+@Service
 public class UserAccountService implements IUserAccount {
-	private static UserAccountService userAccountService;
 	private static boolean TESTING_MODE = false;
 
-	private UserAccountService() {
-	}
-
-	/**
-	 * Returns new or existing instance of {@link UserAccountService}.
-	 * 
-	 * @return instance of UserAccountService
-	 */
-	public static UserAccountService getInstance() {
-		if (userAccountService == null) {
-			userAccountService = new UserAccountService();
-		}
-			
-		return userAccountService;
-	}
+	@Autowired
+	private UserAccountDAO userAccountDAO;
+	
+	@Autowired
+	private UserPublicKeyDAO userPublicKeyDAO;
 	
 	/**
 	 * Enables testing mode for JUnit Tests.
@@ -75,6 +68,7 @@ public class UserAccountService implements IUserAccount {
 	}
 
 	@Override
+	@Transactional
 	public boolean createAccount(UserAccount userAccount) throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
 		if (TESTING_MODE)
 			return createAccount(userAccount, "fake-address");
@@ -134,7 +128,7 @@ public class UserAccountService implements IUserAccount {
 		
 		String token = java.util.UUID.randomUUID().toString();
 		try {
-			UserAccountDAO.createAccount(userAccount, token);
+			userAccountDAO.createAccount(userAccount, token);
 			sendEmailVerificationLink(token, userAccount.getEmail());
 		} catch (HibernateException e) {
 			return false;
@@ -150,15 +144,16 @@ public class UserAccountService implements IUserAccount {
 		Emailer.sendEmailConfirmationLink(token, email);
 	}
 	
+	@Transactional
 	public void resendVerificationEmail(UserAccount userAccount) {
 		String token;
 		try {
-			token = UserAccountDAO.getVerificationTokenByUserId(userAccount.getId());
+			token = userAccountDAO.getVerificationTokenByUserId(userAccount.getId());
 			Emailer.sendEmailConfirmationLink(token, userAccount.getEmail());
 		} catch (VerificationTokenNotFoundException e) {
 			token = java.util.UUID.randomUUID().toString();
 			try {
-				UserAccountDAO.createEmailVerificationToken(userAccount.getId(), token);
+				userAccountDAO.createEmailVerificationToken(userAccount.getId(), token);
 				Emailer.sendEmailConfirmationLink(token, userAccount.getEmail());
 			} catch (HibernateException e1) { 
 			}
@@ -166,24 +161,27 @@ public class UserAccountService implements IUserAccount {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public UserAccount getByUsername(String username) throws UserAccountNotFoundException {
-		return UserAccountDAO.getByUsername(username);
+		return userAccountDAO.getByUsername(username);
 	}
 	
 	private UserAccount getByUsernameIgnoreCaseAndDeletedFlag(String username) throws UserAccountNotFoundException {
-		return UserAccountDAO.getByUsernameIgnoreCaseAndDeletedFlag(username);
+		return userAccountDAO.getByUsernameIgnoreCaseAndDeletedFlag(username);
 	}
 	
 	private UserAccount getByEmailIgnoreCaseAndDeletedFlag(String email) throws UserAccountNotFoundException{
-		return UserAccountDAO.getByEmailIgnoreCaseAndDeletedFlag(email);
+		return userAccountDAO.getByEmailIgnoreCaseAndDeletedFlag(email);
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public UserAccount getById(long id) throws UserAccountNotFoundException {
-		return UserAccountDAO.getById(id);
+		return userAccountDAO.getById(id);
 	}
 
 	@Override
+	@Transactional
 	public boolean updateAccount(String username, UserAccount updatedAccount) throws UserAccountNotFoundException{
 		UserAccount userAccount = getByUsername(username);
 
@@ -194,11 +192,11 @@ public class UserAccountService implements IUserAccount {
 			userAccount.setPassword(CustomPasswordEncoder.getEncodedPassword(updatedAccount.getPassword()));
 		
 		//TODO: no logic behind....changes the role always to user 
-//		if (UserRoles.isValidRole(updatedAccount.getRoles()))
-//			userAccount.setRoles(updatedAccount.getRoles());
+		if (UserRoles.isValidRole(updatedAccount.getRoles()))
+			userAccount.setRoles(updatedAccount.getRoles());
 
 		try {
-			UserAccountDAO.updateAccount(userAccount);
+			userAccountDAO.updateAccount(userAccount);
 			return true;
 		} catch (HibernateException e) {
 			return false;
@@ -206,9 +204,10 @@ public class UserAccountService implements IUserAccount {
 	}
 
 	@Override
+	@Transactional
 	public boolean delete(String username) throws UserAccountNotFoundException, BalanceNotZeroException {
 		try {
-			UserAccountDAO.delete(username);
+			userAccountDAO.delete(username);
 			return true;
 		} catch (HibernateException e) {
 			return false;
@@ -216,9 +215,10 @@ public class UserAccountService implements IUserAccount {
 	}
 
 	@Override
+	@Transactional
 	public boolean verifyEmailAddress(String verificationToken) {
 		try {
-			UserAccountDAO.verifyEmail(verificationToken);
+			userAccountDAO.verifyEmail(verificationToken);
 			return true;
 		} catch (UserAccountNotFoundException | HibernateException | VerificationTokenNotFoundException e) {
 			return false;
@@ -230,10 +230,11 @@ public class UserAccountService implements IUserAccount {
 	 * @param emailAddress
 	 * @throws UserAccountNotFoundException
 	 */
+	@Transactional
 	public void resetPasswordRequest(String emailAddress) throws UserAccountNotFoundException {
-		UserAccount user = UserAccountDAO.getByEmail(emailAddress);
+		UserAccount user = userAccountDAO.getByEmail(emailAddress);
 		String token = java.util.UUID.randomUUID().toString();
-		UserAccountDAO.createPasswordResetToken(user, token);
+		userAccountDAO.createPasswordResetToken(user, token);
 		
 		Emailer.sendResetPasswordLink(user, token);
 	}
@@ -243,9 +244,10 @@ public class UserAccountService implements IUserAccount {
 	 * @param resetPasswordToken
 	 * @return
 	 */
+	@Transactional(readOnly = true)
 	public boolean isValidResetPasswordLink(String resetPasswordToken) {
 		try {
-			ResetPassword resetPassword = UserAccountDAO.getResetPassword(resetPasswordToken);
+			ResetPassword resetPassword = userAccountDAO.getResetPassword(resetPasswordToken);
 			if (resetPassword == null) {
 				return false;
 			} else {
@@ -264,13 +266,14 @@ public class UserAccountService implements IUserAccount {
 	/**
 	 * Deletes every time when a password is reseted the old entries ({@link ResetPassword}s) (older than 24h) from the table.
 	 */
+	@Transactional
 	public void deleteOldResetPasswords(){
 		Date currentDate = new Date();
-		List<ResetPassword> list = UserAccountDAO.getAllResetPassword();
+		List<ResetPassword> list = userAccountDAO.getAllResetPassword();
 		for(int i=0; i< list.size();i++){
 			if(list.get(i).getCreationDate().getTime() < (currentDate.getTime() - Config.DELETE_TOKEN_LIMIT)){
 				try {
-					UserAccountDAO.deleteResetPassword(list.get(i).getToken());
+					userAccountDAO.deleteResetPassword(list.get(i).getToken());
 				} catch (VerificationTokenNotFoundException e) {
 				}
 			}
@@ -284,8 +287,9 @@ public class UserAccountService implements IUserAccount {
 	 * @throws VerificationTokenNotFoundException
 	 * @throws UserAccountNotFoundException
 	 */
+	@Transactional(readOnly = true)
 	public UserAccount getByResetPasswordToken(String token) throws VerificationTokenNotFoundException, UserAccountNotFoundException{
-		return UserAccountDAO.getByResetPasswordToken(token);
+		return userAccountDAO.getByResetPasswordToken(token);
 	}
 	
 	/**
@@ -293,8 +297,9 @@ public class UserAccountService implements IUserAccount {
 	 * @param matcher
 	 * @return true if password has successfully been reseted
 	 */
+	@Transactional
 	public boolean resetPassword(PasswordMatcher matcher){
-		if (!UserAccountService.getInstance().isValidResetPasswordLink(matcher.getToken())) {
+		if (!isValidResetPasswordLink(matcher.getToken())) {
 			return false;
 		}
 		
@@ -304,10 +309,10 @@ public class UserAccountService implements IUserAccount {
 		UserAccount user;
 		if (matcher.compare()){
 			try {
-				user = UserAccountService.getInstance().getByResetPasswordToken(matcher.getToken());
+				user = getByResetPasswordToken(matcher.getToken());
 				user.setPassword(matcher.getPw1());
-				UserAccountService.getInstance().updateAccount(user.getUsername(), user);
-				UserAccountDAO.deleteResetPassword(matcher.getToken());		
+				updateAccount(user.getUsername(), user);
+				userAccountDAO.deleteResetPassword(matcher.getToken());		
 				return true;
 			} catch (VerificationTokenNotFoundException | UserAccountNotFoundException e) {
 				return false;
@@ -331,16 +336,23 @@ public class UserAccountService implements IUserAccount {
 	 *         key has in a list of public keys mapped to this user account
 	 * @throws UserAccountNotFoundException
 	 */
+	@Transactional
 	public byte saveUserPublicKey(long userId, PKIAlgorithm algorithm, String publicKey) throws UserAccountNotFoundException {
-		return UserPublicKeyDAO.saveUserPublicKey(userId, algorithm, publicKey);
+		return userPublicKeyDAO.saveUserPublicKey(userId, algorithm, publicKey);
+	}
+	
+	@Transactional(readOnly = true)
+	public List<UserPublicKey> getUserPublicKey(long userId) throws UserAccountNotFoundException {
+		return userPublicKeyDAO.getUserPublicKeys(userId);
 	}
 	
 	/**
 	 * Returns sum of Balance of each user account in the system.
 	 * @return Sum of each Balance
 	 */
+	@Transactional(readOnly = true)
 	public BigDecimal getSumOfAllAccounts(){
-		List<UserAccount> users = UserAccountDAO.getAllUserAccounts();
+		List<UserAccount> users = userAccountDAO.getAllUserAccounts();
 		
 		BigDecimal sum = BigDecimal.ZERO;
 		for(UserAccount user: users){
@@ -354,10 +366,11 @@ public class UserAccountService implements IUserAccount {
 	 * Gets all users which have the role as admin
 	 * @return
 	 */
+	@Transactional(readOnly = true)
 	public List<UserAccount> getAdmins(){
 		List<UserAccount> users = new ArrayList<UserAccount>(); 
-		users = UserAccountDAO.getAllUsersByRoles(Role.ADMIN);
-		users.addAll(UserAccountDAO.getAllUsersByRoles(Role.BOTH));
+		users = userAccountDAO.getAllUsersByRoles(Role.ADMIN);
+		users.addAll(userAccountDAO.getAllUsersByRoles(Role.BOTH));
 		return users;
 	}
 	
@@ -366,10 +379,11 @@ public class UserAccountService implements IUserAccount {
 	 * Gets all users which have the role as user
 	 * @return
 	 */
+	@Transactional(readOnly = true)
 	public List<UserAccount> getUsers(){
 		List<UserAccount> users = new ArrayList<UserAccount>(); 
-		users = UserAccountDAO.getAllUsersByRoles(Role.USER);
-		users.addAll(UserAccountDAO.getAllUsersByRoles(Role.BOTH));
+		users = userAccountDAO.getAllUsersByRoles(Role.USER);
+		users.addAll(userAccountDAO.getAllUsersByRoles(Role.BOTH));
 		return users;
 	}
 	
@@ -379,10 +393,11 @@ public class UserAccountService implements IUserAccount {
 	 * @param username
 	 * @return
 	 */
+	@Transactional(readOnly = true)
 	public UserModel getLoggedAdmin(String username) {
 		UserAccount account = null;
 		try {
-			account = UserAccountDAO.getByUsername(username);
+			account = userAccountDAO.getByUsername(username);
 		} catch (UserAccountNotFoundException e) {
 			return null;
 		}
@@ -397,8 +412,9 @@ public class UserAccountService implements IUserAccount {
 	 * @return
 	 * @throws UserAccountNotFoundException 
 	 */
+	@Transactional(readOnly = true)
 	public UserAccount getByEmail(String email) throws UserAccountNotFoundException {
-		return UserAccountDAO.getByEmail(email);
+		return userAccountDAO.getByEmail(email);
 	}
 
 	//TODO: mehmet test & javadoc
@@ -407,8 +423,9 @@ public class UserAccountService implements IUserAccount {
 	 * @param email
 	 * @throws UserAccountNotFoundException 
 	 */
-	public static void changeRoleBoth(String emailAddress) throws UserAccountNotFoundException {
-		UserAccount user = UserAccountDAO.getByEmail(emailAddress);
+	@Transactional
+	public void changeRoleBoth(String emailAddress) throws UserAccountNotFoundException {
+		UserAccount user = userAccountDAO.getByEmail(emailAddress);
 		Emailer.sendUpdateRoleBothLink(user);
 	}
 
@@ -418,10 +435,11 @@ public class UserAccountService implements IUserAccount {
 	 * @param email
 	 * @throws UserAccountNotFoundException 
 	 */
-	public static void changeRoleAdmin(String emailAddress) throws UserAccountNotFoundException {
-		UserAccount user = UserAccountDAO.getByEmail(emailAddress);
+	@Transactional
+	public void changeRoleAdmin(String emailAddress) throws UserAccountNotFoundException {
+		UserAccount user = userAccountDAO.getByEmail(emailAddress);
 		String token = java.util.UUID.randomUUID().toString();
-		UserAccountDAO.createAdminToken(user, token);
+		userAccountDAO.createAdminToken(user, token);
 		
 		Emailer.sendCreateRoleAdminLink(user, token);
 	}
@@ -431,9 +449,10 @@ public class UserAccountService implements IUserAccount {
 	 * @param adminToken
 	 * @return
 	 */
+	@Transactional(readOnly = true)
 	public boolean isValidAdminLink(String adminToken) {
 		try {
-			AdminRole adminRole = UserAccountDAO.getCreateAdmin(adminToken);
+			AdminRole adminRole = userAccountDAO.getCreateAdmin(adminToken);
 			if (adminRole == null) {
 				return false;
 			} else {
@@ -448,4 +467,40 @@ public class UserAccountService implements IUserAccount {
 			return false;
 		} 
 	}
+
+	@Override
+	@Transactional
+    public void updateAccount(UserAccount userAccount) throws UserAccountNotFoundException {
+	    userAccountDAO.updateAccount(userAccount);
+    }
+
+	@Override
+	@Transactional(readOnly = true)
+    public List<ResetPassword> getAllResetPassword() {
+	    return userAccountDAO.getAllResetPassword();
+    }
+
+	@Override
+	@Transactional(readOnly = true)
+    public String getTokenForUser(long userID) throws VerificationTokenNotFoundException {
+		return userAccountDAO.getVerificationTokenByUserId(userID);
+    }
+
+	@Override
+	@Transactional(readOnly = true)
+    public List<UserAccount> getAllUserAccounts() {
+	    return userAccountDAO.getAllUserAccounts();
+    }
+
+	@Override
+	@Transactional(readOnly = true)
+    public String getVerificationTokenByUserId(long id) throws VerificationTokenNotFoundException {
+	    return userAccountDAO.getVerificationTokenByUserId(id);
+    }
+
+	@Override
+	@Transactional(readOnly = true)
+    public List<UserPublicKey> getUserPublicKeys(long id) {
+	    return userPublicKeyDAO.getUserPublicKeys(id);
+    }
 }

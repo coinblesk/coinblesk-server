@@ -1,10 +1,15 @@
 package ch.uzh.csg.mbps.server.service;
 
-import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.server.dao.PayInTransactionDAO;
+import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.PayInTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.Emailer;
@@ -16,23 +21,12 @@ import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
  * Service class for {@link PayInTransaction}.
  * 
  */
+@Service
 public class PayInTransactionService {
-	private static PayInTransactionService payInTransactionService;
-
-	private PayInTransactionService() {
-	}
-
-	/**
-	 * Returns new or existing instance of {@link PayInTransactionService}.
-	 * 
-	 * @return instance of PayInTransactionService
-	 */
-	public static PayInTransactionService getInstance() {
-		if (payInTransactionService == null)
-			payInTransactionService = new PayInTransactionService();
-
-		return payInTransactionService;
-	}
+	@Autowired
+	private PayInTransactionDAO payInTransactionDAO;
+	@Autowired
+	private UserAccountDAO userAccountDAO;
 
 	/**
 	 * Creates a new {@link PayInTransaction} for {@link UserAccount} with BTC Address defined
@@ -41,11 +35,14 @@ public class PayInTransactionService {
 	 * @param transaction
 	 * @throws UserAccountNotFoundException
 	 */
-	public static void create(Transaction transaction)
+	@Transactional
+	public void create(Transaction transaction)
 			throws UserAccountNotFoundException {
-		PayInTransaction pit = new PayInTransaction(transaction);
-		if (PayInTransactionDAO.isNew(pit))
-			PayInTransactionDAO.createPayInTransaction(pit);
+		long userID = userAccountDAO.getByBTCAddress(transaction.address()).getId();
+		PayInTransaction pit = new PayInTransaction(userID, transaction);
+		if (payInTransactionDAO.isNew(pit)) {
+			payInTransactionDAO.createPayInTransaction(pit);
+		}
 	}
 
 	/**
@@ -57,9 +54,10 @@ public class PayInTransactionService {
 	 * @return ArrayList of HistoryPayInTransactions
 	 * @throws UserAccountNotFoundException
 	 */
-	public ArrayList<HistoryPayInTransaction> getHistory(String username,
+	@Transactional(readOnly = true)
+	public List<HistoryPayInTransaction> getHistory(String username,
 			int page) throws UserAccountNotFoundException {
-		return PayInTransactionDAO.getHistory(username, page);
+		return payInTransactionDAO.getHistory(username, page);
 	}
 
 	/**
@@ -70,14 +68,11 @@ public class PayInTransactionService {
 	 * @return number of PayInTrasactions
 	 * @throws UserAccountNotFoundException
 	 */
+	@Transactional(readOnly = true)
 	public long getHistoryCount(String username)
 			throws UserAccountNotFoundException {
-		return PayInTransactionDAO.getHistoryCount(username);
-	}
-
-	public CustomResponseObject sendPayInAddressByEmail(String username, String email, String payInAddress) {	
-		Emailer.sendPayInAddressAsEmail(username, email, payInAddress);
-		return new CustomResponseObject(true, "Pay in address is send to your email address.");
+		UserAccount userAccount = userAccountDAO.getByUsername(username);
+		return payInTransactionDAO.getHistoryCount(userAccount);
 	}
 
 	/**
@@ -87,8 +82,22 @@ public class PayInTransactionService {
 	 * @return ArrayList<{@link HistoryPayInTransaction>
 	 * @throws UserAccountNotFoundException
 	 */
-	public ArrayList<HistoryPayInTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
-		return PayInTransactionDAO.getLast5Transactions(username);
+	@Transactional(readOnly = true)
+	public List<HistoryPayInTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
+		UserAccount userAccount = userAccountDAO.getByUsername(username);
+		return payInTransactionDAO.getLast5Transactions(userAccount);
 	}
+	
+	//TODO: does this need to be here?
+	public CustomResponseObject sendPayInAddressByEmail(String username, String email, String payInAddress) {	
+		Emailer.sendPayInAddressAsEmail(username, email, payInAddress);
+		return new CustomResponseObject(true, "Pay in address is send to your email address.");
+	}
+	
+	@Transactional
+	public void createPayInTransaction(PayInTransaction tx) throws UserAccountNotFoundException {
+	    payInTransactionDAO.createPayInTransaction(tx);
+	    
+    }
 
 }

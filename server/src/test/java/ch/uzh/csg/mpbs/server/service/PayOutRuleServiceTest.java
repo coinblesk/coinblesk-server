@@ -6,6 +6,7 @@ import static org.junit.Assert.assertTrue;
 import java.math.BigDecimal;
 import java.security.KeyPair;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
@@ -14,21 +15,19 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.test.context.web.WebAppConfiguration;
-import org.springframework.web.context.WebApplicationContext;
 
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.keys.CustomKeyPair;
 import ch.uzh.csg.mbps.responseobject.PayOutRulesTransferObject;
-import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.PayOutRule;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.PayOutRuleService;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
+import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
@@ -42,15 +41,17 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
-		"file:src/main/webapp/WEB-INF/applicationContext.xml",
-		"file:src/main/webapp/WEB-INF/mvc-dispatcher-servlet.xml",
-"file:src/main/webapp/WEB-INF/spring-security.xml" })
-@WebAppConfiguration
+		"classpath:context.xml",
+		"classpath:test-database.xml"})
+
 public class PayOutRuleServiceTest {
+	
 	@Autowired
-	private WebApplicationContext webAppContext;
+	private IUserAccount userAccountService;
+	
 	@Autowired
-	private FilterChainProxy springSecurityFilterChain;
+	private PayOutRuleService payOutRuleService;
+	
 	private static boolean initialized = false;
 	private static UserAccount test51;
 	private static UserAccount test52;
@@ -62,6 +63,7 @@ public class PayOutRuleServiceTest {
 
 	@Before
 	public void setUp() throws Exception {
+		BitcoindController.TESTING = true;
 		UserAccountService.enableTestingMode();
 		
 		if (!initialized) {
@@ -84,17 +86,17 @@ public class PayOutRuleServiceTest {
 	}
 
 	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
-		assertTrue(UserAccountService.getInstance().createAccount(userAccount));
-		userAccount = UserAccountService.getInstance().getByUsername(userAccount.getUsername());
+		assertTrue(userAccountService.createAccount(userAccount));
+		userAccount = userAccountService.getByUsername(userAccount.getUsername());
 		userAccount.setEmailVerified(true);
 		userAccount.setBalance(balance);
-		UserAccountDAO.updateAccount(userAccount);
+		userAccountService.updateAccount(userAccount);
 	}
 
 	@Test
 	public void checkBalanceLimitRules() throws Exception{
 		createAccountAndVerifyAndReload(test51,BigDecimal.ONE.add(BigDecimal.ONE));
-		UserAccount fromDB = UserAccountService.getInstance().getByUsername(test51.getUsername());
+		UserAccount fromDB = userAccountService.getByUsername(test51.getUsername());
 
 		ch.uzh.csg.mbps.model.PayOutRule por = new ch.uzh.csg.mbps.model.PayOutRule();
 		por.setBalanceLimit(BigDecimal.ONE);
@@ -114,19 +116,19 @@ public class PayOutRuleServiceTest {
 		list.add(por2);
 		porto.setPayOutRulesList(list);
 
-		PayOutRuleService.getInstance().createRule(porto, test51.getUsername());
+		payOutRuleService.createRule(porto, test51.getUsername());
 
-		fromDB = UserAccountService.getInstance().getByUsername(test51.getUsername());
+		fromDB = userAccountService.getByUsername(test51.getUsername());
 
 		assertTrue(fromDB.getBalance().compareTo(new BigDecimal("2"))==0);
 
-		PayOutRuleService.getInstance().checkBalanceLimitRules(fromDB);
+		payOutRuleService.checkBalanceLimitRules(fromDB);
 
-		fromDB = UserAccountService.getInstance().getByUsername(test51.getUsername());
+		fromDB = userAccountService.getByUsername(test51.getUsername());
 
 		assertTrue(fromDB.getBalance().compareTo(BigDecimal.ZERO)==0);
 
-		PayOutRuleService.getInstance().checkBalanceLimitRules(fromDB);
+		payOutRuleService.checkBalanceLimitRules(fromDB);
 
 	}
 
@@ -135,7 +137,7 @@ public class PayOutRuleServiceTest {
 		PayOutRuleService.testingMode = true;
 		createAccountAndVerifyAndReload(test52,BigDecimal.ONE);
 
-		UserAccount fromDB = UserAccountService.getInstance().getByUsername(test52.getUsername());
+		UserAccount fromDB = userAccountService.getByUsername(test52.getUsername());
 		ArrayList<ch.uzh.csg.mbps.model.PayOutRule> list = new ArrayList<ch.uzh.csg.mbps.model.PayOutRule>();
 
 		for(int i=1; i<8;i++){
@@ -152,20 +154,20 @@ public class PayOutRuleServiceTest {
 		PayOutRulesTransferObject porto = new PayOutRulesTransferObject();
 		porto.setPayOutRulesList(list);
 
-		PayOutRuleService.getInstance().createRule(porto, test52.getUsername());
+		payOutRuleService.createRule(porto, test52.getUsername());
 
-		assertEquals(PayOutRuleService.getInstance().getRules(fromDB.getId()).size(), list.size());
+		assertEquals(payOutRuleService.getRules(fromDB.getId()).size(), list.size());
 
 
 		assertTrue(fromDB.getBalance().compareTo(BigDecimal.ONE)==0);
 
-		PayOutRuleService.getInstance().checkAllRules();
+		payOutRuleService.checkAllRules();
 
-		fromDB = UserAccountService.getInstance().getByUsername(test52.getUsername());
+		fromDB = userAccountService.getByUsername(test52.getUsername());
 
 		assertTrue(fromDB.getBalance().compareTo(BigDecimal.ZERO)==0);
 
-		PayOutRuleService.getInstance().checkAllRules();
+		payOutRuleService.checkAllRules();
 
 		PayOutRuleService.testingMode = false;
 	}
@@ -173,7 +175,7 @@ public class PayOutRuleServiceTest {
 	@Test
 	public void checkGetRules() throws Exception {
 		createAccountAndVerifyAndReload(test53,BigDecimal.ONE.add(BigDecimal.ONE));
-		UserAccount fromDB = UserAccountService.getInstance().getByUsername(test53.getUsername());
+		UserAccount fromDB = userAccountService.getByUsername(test53.getUsername());
 
 		ch.uzh.csg.mbps.model.PayOutRule por1 = new ch.uzh.csg.mbps.model.PayOutRule();
 		por1.setDay(5);
@@ -195,16 +197,16 @@ public class PayOutRuleServiceTest {
 		list.add(por2);
 		porto.setPayOutRulesList(list);
 
-		PayOutRuleService.getInstance().createRule(porto, test53.getUsername());
+		payOutRuleService.createRule(porto, test53.getUsername());
 		
-		ArrayList<PayOutRule> resultList = PayOutRuleService.getInstance().getRules(fromDB.getUsername());
+		List<PayOutRule> resultList = payOutRuleService.getRules(fromDB.getUsername());
 		assertEquals(resultList.size(), list.size());
 	}
 	
 	@Test
 	public void checkDeleteRules() throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, PayOutRulesAlreadyDefinedException, PayOutRuleNotFoundException, InvalidEmailException, EmailAlreadyExistsException {
 		createAccountAndVerifyAndReload(test54,BigDecimal.ONE.add(BigDecimal.ONE));
-		UserAccount fromDB = UserAccountService.getInstance().getByUsername(test54.getUsername());
+		UserAccount fromDB = userAccountService.getByUsername(test54.getUsername());
 
 		ch.uzh.csg.mbps.model.PayOutRule por1 = new ch.uzh.csg.mbps.model.PayOutRule();
 		por1.setDay(5);
@@ -226,16 +228,16 @@ public class PayOutRuleServiceTest {
 		list.add(por2);
 		porto.setPayOutRulesList(list);
 
-		PayOutRuleService.getInstance().createRule(porto, test54.getUsername());
+		payOutRuleService.createRule(porto, test54.getUsername());
 		
-		ArrayList<PayOutRule> resultList = PayOutRuleService.getInstance().getRules(fromDB.getUsername());
+		List<PayOutRule> resultList = payOutRuleService.getRules(fromDB.getUsername());
 		assertEquals(resultList.size(), list.size());
 		
-		PayOutRuleService.getInstance().deleteRules(fromDB.getUsername());
+		payOutRuleService.deleteRules(fromDB.getUsername());
 		
 		
 		exception.expect(PayOutRuleNotFoundException.class);
-		PayOutRuleService.getInstance().getRules(fromDB.getUsername());
+		payOutRuleService.getRules(fromDB.getUsername());
 
 
 	}

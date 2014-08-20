@@ -73,5 +73,4 @@ public interface IServerAccount {
 	 * @return
 	 */
 	public List<ServerAccount> getAll();
-
 }

@@ -1,23 +1,21 @@
 package ch.uzh.csg.mbps.server.dao;
 
 import java.util.ArrayList;
-import java.util.List;
+
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
 
 import org.apache.log4j.Logger;
-import org.hibernate.HibernateException;
-import org.hibernate.Query;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.criterion.Restrictions;
-import org.hibernate.transform.Transformers;
-import org.hibernate.type.StandardBasicTypes;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
 
-import ch.uzh.csg.mbps.model.HistoryPayOutTransaction;
 import ch.uzh.csg.mbps.model.HistoryServerAccountTransaction;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.ServerTransaction;
-import ch.uzh.csg.mbps.server.util.Config;
-import ch.uzh.csg.mbps.server.util.HibernateUtil;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.TransactionException;
 
@@ -26,50 +24,30 @@ import ch.uzh.csg.mbps.server.util.exceptions.TransactionException;
  * regarding {@link ServerTransaction}s.
  * 
  */
+@Repository
 public class ServerTransactionDAO {
+	
+	
 	private static Logger LOGGER = Logger.getLogger(ServerTransactionDAO.class);
+	
+	@Autowired
+	private ServerAccountDAO serverAccountDAO;
+	
+	@PersistenceContext
+	private EntityManager em;
 
-	private ServerTransactionDAO(){
-	}
-	
-	private static Session openSession() {
-		SessionFactory sessionFactory = HibernateUtil.getSessionFactory();
-		return sessionFactory.openSession();
-	}
-	
 	//TODO: mehmet: javadoc
 	/**
 	 * 
 	 * @param serverTransaction
 	 * @throws ServerAccountNotFoundException
 	 */
-	public static void createServerTransaction(ServerTransaction serverTransaction) throws ServerAccountNotFoundException{
-		Session session = openSession();
-		org.hibernate.Transaction transaction = null;
-		ServerAccount serverAccount;
-		
-		try{
-			transaction = session.beginTransaction();
-			
-			session.save(serverTransaction);
-			
-			serverAccount = ServerAccountDAO.getByPayinAddress(serverTransaction.getPayinAddress());
-			serverAccount.setActiveBalance(serverAccount.getActiveBalance().subtract(serverTransaction.getAmount()));
-			session.update(serverAccount);
-			
-			transaction.commit();
-			LOGGER.info("ServerTransaction is created for ServerAccount with ID: " +  serverAccount.getId() + " Transaction: " + serverTransaction);
-		} catch (HibernateException e) {
-			LOGGER.error("Error creating ServerTransaction" + serverTransaction + "Error: " + e.getMessage());
-			if(transaction != null)
-				transaction.rollback();
-			throw e;
-		} catch (ServerAccountNotFoundException e) {
-			LOGGER.error("ServerAccount with the PayinAddress " + serverTransaction.getPayinAddress() + " not found");
-			throw e;
-		} finally {
-			session.close();
-		}
+	public void createServerTransaction(ServerTransaction serverTransaction) throws ServerAccountNotFoundException{
+		em.persist(serverTransaction);
+		ServerAccount serverAccount = serverAccountDAO.getByPayinAddress(serverTransaction.getPayinAddress());
+		serverAccount.setActiveBalance(serverAccount.getActiveBalance().subtract(serverTransaction.getAmount()));
+		em.merge(serverAccount);
+		LOGGER.info("ServerTransaction is created for ServerAccount with ID: " +  serverAccount.getId() + " Transaction: " + serverTransaction);
 	}
 	
 	/**
@@ -77,32 +55,24 @@ public class ServerTransactionDAO {
 	 * @param serverTransaction
 	 * @throws TransactionException
 	 */
-	public static void verifyTransaction(ServerTransaction serverTransaction) throws TransactionException{
-		Session session = openSession();
-		session.beginTransaction();
-		ServerTransaction existingServerTransaction = (ServerTransaction) session.createCriteria(ServerTransaction.class).add(Restrictions.eq("transactionID", serverTransaction.getTransactionID())).uniqueResult();
-		session.close();
+	public void verifyTransaction(ServerTransaction serverTransaction) throws TransactionException{
 		
-		if(existingServerTransaction == null)
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ServerTransaction> cq = cb.createQuery(ServerTransaction.class);
+		Root<ServerTransaction> root = cq.from(ServerTransaction.class);
+		Predicate condition = cb.equal(root.get("transactionID"), serverTransaction.getTransactionID());
+		cq.where(condition);
+		ServerTransaction existingServerTransaction = UserAccountDAO.getSingle(cq, em);
+		
+		if(existingServerTransaction == null) {
 			throw new TransactionException("Problem verifying ServerTransaction. This transaction does not exists.");
+		}
 		
 		if(!existingServerTransaction.isVerified()){
 			existingServerTransaction.setVerified(true);
-			Session session2 = openSession();
-			org.hibernate.Transaction transaction = null;
-			try{
-				transaction = session2.beginTransaction();
-				session2.update(existingServerTransaction);
-				transaction.commit();
-				LOGGER.info("Successfully verified ServerTransaction with ID: " + existingServerTransaction.getId());
-			} catch(HibernateException e) {
-				LOGGER.error("Problem verifying ServerTransaction with TransactionID: " + serverTransaction.getTransactionID());
-				 if (transaction != null)
-					 transaction.rollback();
-				 throw e;
-			} finally {
-				session.close();
-			}
+			em.merge(existingServerTransaction);
+			LOGGER.info("Successfully verified ServerTransaction with ID: " + existingServerTransaction.getId());
+			
 		}
 				
 	}
@@ -111,17 +81,14 @@ public class ServerTransactionDAO {
 	 * 
 	 * @return
 	 */
-	public static long getHistoryCount(){
-		Session session = openSession();
-		session.beginTransaction();
+	public long getHistoryCount(){
 		
-		long nofResults = ((Number) session.createSQLQuery(
+		long nofResults = ((Number) em.createQuery(
 				"SELECT COUNT(*) " +
 				"FROM server_transaction st")
-				.uniqueResult())
+				.getSingleResult())
 				.longValue();
-
-		session.close();
+		
 		return nofResults;	
 	}
 	
@@ -130,26 +97,25 @@ public class ServerTransactionDAO {
 	 * @param url
 	 * @return
 	 */
-	public static long getServerAccountHistoryCount(String url){
-		Session session = openSession();
-		session.beginTransaction();
-		ServerAccount serverAccount = null;
+	public long getServerAccountHistoryCount(String url){
 		
-		try{
-			serverAccount = (ServerAccount) session.createCriteria(ServerAccount.class).add(Restrictions.eq("url", url)).uniqueResult();
-		} catch (HibernateException e) {
-			LOGGER.error("Problem counting Transaction of url: " + url + " ErrorMessage: "+ e.getMessage());
-			throw e;
-		} finally {
-			session.close();
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ServerTransaction> cq = cb.createQuery(ServerTransaction.class);
+		Root<ServerTransaction> root = cq.from(ServerTransaction.class);
+		Predicate condition = cb.equal(root.get("url"), url);
+		cq.where(condition);
+		ServerTransaction existingServerTransaction = em.createQuery(cq).getSingleResult();
+		
+		if(existingServerTransaction == null) {
+			return 0;
 		}
 		
-		long nofResults = ((Number) session.createSQLQuery(
+		long nofResults = ((Number) em.createQuery(
 				  "SELECT COUNT(*) " +
 				  "FROM server_transaction st " +
 				  "WHERE st.user_id = :userid")
-				  .setLong("userid", serverAccount.getId())
-				  .uniqueResult())
+				  .setParameter("userid", existingServerTransaction.getId())
+				  .getSingleResult())
 				  .longValue();
 
 		return nofResults;
@@ -159,11 +125,10 @@ public class ServerTransactionDAO {
 	 * 
 	 * @return
 	 */
-	public static ArrayList<HistoryServerAccountTransaction> getLast3Transactions(){
-		Session session = openSession();
-		session.beginTransaction();
+	public ArrayList<HistoryServerAccountTransaction> getLast3Transactions(){
 		
-		Query query = session.createSQLQuery(
+		
+		/*Query query = session.createSQLQuery(
 				  "SELECT st.timestamp, st.amount, st.payin_address as payinAddress " +
 				  "FROM server_transaction st " +
 				  "ORDER BY st.timestamp DESC")
@@ -177,10 +142,12 @@ public class ServerTransactionDAO {
 		@SuppressWarnings("unchecked")
 		List<HistoryServerAccountTransaction> resultWithAliasedBean = query.list();
 		
-		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;
-		session.close();
+		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;*/
 		
-		return new ArrayList<HistoryServerAccountTransaction>(results);
+		//TODO: rewrite with JPA, not Hibernate!
+		
+		
+		return new ArrayList<HistoryServerAccountTransaction>();
 	}
 	
 	/**
@@ -189,17 +156,21 @@ public class ServerTransactionDAO {
 	 * @return
 	 * @throws ServerAccountNotFoundException
 	 */
-	public static ArrayList<HistoryServerAccountTransaction> getLast3ServerAccountTransaction(String url) throws ServerAccountNotFoundException{
-		Session session = openSession();
-		session.beginTransaction();
-		ServerAccount serverAccount = (ServerAccount) session.createCriteria(ServerAccount.class).add(Restrictions.eq("url", url)).uniqueResult();
-		session.close();
-		if(serverAccount == null)
+	public ArrayList<HistoryServerAccountTransaction> getLast3ServerAccountTransaction(String url) throws ServerAccountNotFoundException{
+		
+		
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ServerTransaction> cq = cb.createQuery(ServerTransaction.class);
+		Root<ServerTransaction> root = cq.from(ServerTransaction.class);
+		Predicate condition = cb.equal(root.get("url"), url);
+		cq.where(condition);
+		ServerTransaction existingServerTransaction = em.createQuery(cq).getSingleResult();
+
+		if(existingServerTransaction == null)
 			throw new ServerAccountNotFoundException(url);
 		
-		Session session2 = openSession();
-		session2.beginTransaction();
-		Query query = session.createSQLQuery(
+		
+		/*Query query = session.createSQLQuery(
 				  "SELECT st.timestamp, st.amount, st.payin_address as payinAddress " +
 				  "FROM server_transaction st " +
 				  "WHERE st.user_id = :userid " +
@@ -215,10 +186,11 @@ public class ServerTransactionDAO {
 		@SuppressWarnings("unchecked")
 		List<HistoryServerAccountTransaction> resultWithAliasedBean = query.list();
 		
-		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;
-		session2.close();
+		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;*/
+		//TODO: rewrite with JPA, not Hibernate!
 		
-		return new ArrayList<HistoryServerAccountTransaction>(results);
+		
+		return new ArrayList<HistoryServerAccountTransaction>(0);
 	}
 	
 	/**
@@ -226,14 +198,14 @@ public class ServerTransactionDAO {
 	 * @param page
 	 * @return
 	 */
-	public static ArrayList<HistoryServerAccountTransaction> getHistory(int page){
-		if (page < 0)
+	public ArrayList<HistoryServerAccountTransaction> getHistory(int page){
+		if (page < 0) {
 			return null;
+		}
 
-		Session session = openSession();
-		session.beginTransaction();
+		
 				
-		Query query = session.createSQLQuery(
+		/*Query query = session.createSQLQuery(
 				  "SELECT st.timestamp, st.amount, st.payin_address as payinAddress " +
 				  "FROM server_transaction st " +
 				  "ORDER BY st.timestamp DESC")
@@ -248,10 +220,10 @@ public class ServerTransactionDAO {
 		@SuppressWarnings("unchecked")
 		List<HistoryServerAccountTransaction> resultWithAliasedBean = query.list();
 		
-		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;
-		session.close();
+		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;*/
+		//TODO: rewrite with JPA, not Hibernate!
 		
-		return new ArrayList<HistoryServerAccountTransaction>(results);
+		return new ArrayList<HistoryServerAccountTransaction>();
 	}
 	
 	/**
@@ -259,14 +231,12 @@ public class ServerTransactionDAO {
 	 * @param page
 	 * @return
 	 */
-	public static ArrayList<HistoryServerAccountTransaction> getPayeeHistory(int page){
-		if (page < 0)
+	public ArrayList<HistoryServerAccountTransaction> getPayeeHistory(int page){
+		if (page < 0) {
 			return null;
+		}
 
-		Session session = openSession();
-		session.beginTransaction();
-				
-		Query query= session.createSQLQuery(
+		/*Query query= session.createSQLQuery(
 				  "SELECT st.timestamp, st.amount, st.payin_address as payinAddress " +
 				  "FROM server_transaction st " +
 				  "WHERE st.received = 'TRUE' "+
@@ -283,20 +253,18 @@ public class ServerTransactionDAO {
 		@SuppressWarnings("unchecked")
 		List<HistoryServerAccountTransaction> resultWithAliasedBean = query.list();
 		
-		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;
-		session.close();
+		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;*/
+		//TODO: rewrite with JPA, not Hibernate!
 		
-		return new ArrayList<HistoryServerAccountTransaction>(results);
+		return new ArrayList<HistoryServerAccountTransaction>();
 	}
 	
-	public static ArrayList<HistoryServerAccountTransaction> getPayerHistory(int page){
-		if (page < 0)
+	public ArrayList<HistoryServerAccountTransaction> getPayerHistory(int page){
+		if (page < 0) {
 			return null;
+		}
 
-		Session session = openSession();
-		session.beginTransaction();
-				
-		Query query= session.createSQLQuery(
+		/*Query query= session.createSQLQuery(
 				  "SELECT st.timestamp, st.amount, st.payin_address as payinAddress " +
 				  "FROM server_transaction st " +
 				  "WHERE st.received = 'FALSE' "+
@@ -313,9 +281,9 @@ public class ServerTransactionDAO {
 		@SuppressWarnings("unchecked")
 		List<HistoryServerAccountTransaction> resultWithAliasedBean = query.list();
 		
-		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;
-		session.close();
+		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;*/
+		//TODO: rewrite with JPA, not Hibernate!
 		
-		return new ArrayList<HistoryServerAccountTransaction>(results);
+		return new ArrayList<HistoryServerAccountTransaction>();
 	}
 }

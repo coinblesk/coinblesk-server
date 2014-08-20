@@ -3,15 +3,19 @@ package ch.uzh.csg.mbps.server.dao;
 import java.math.BigDecimal;
 import java.util.List;
 
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+
 import org.apache.log4j.Logger;
-import org.hibernate.HibernateException;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.Transaction;
-import org.hibernate.criterion.Restrictions;
+import org.springframework.stereotype.Repository;
 
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
-import ch.uzh.csg.mbps.server.util.HibernateUtil;
+import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 
@@ -20,75 +24,34 @@ import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
  * regarding {@link ServerAccount}s.
  * 
  */
+@Repository
 public class ServerAccountDAO {
 	private static Logger LOGGER = Logger.getLogger(ServerAccountDAO.class);
-
-	private ServerAccountDAO(){
-	}
 	
 	//TODO: mehmet: javadoc
-	/**
-	 * 
-	 * @return
-	 */
-	private static Session openSession() {
-		SessionFactory sessionFactory = HibernateUtil.getSessionFactory();
-		Session session = sessionFactory.openSession();
-		return session;
-	}
+	
+	@PersistenceContext
+	private EntityManager em;
 	
 	/**
 	 * 
 	 * @param serverAccount
 	 * @param token
 	 */
-	public static void createAccount(ServerAccount serverAccount, String token){
-		Session session = null;
-		
-		org.hibernate.Transaction transaction = null;
-		ServerAccount fromDb;
-		try{
-			session = openSession();
-			transaction = session.beginTransaction();
-			session.save(serverAccount);
-			fromDb = (ServerAccount) session.createCriteria(ServerAccount.class).add(Restrictions.eq("url", serverAccount.getUrl())).uniqueResult();
-			transaction.commit();
-			LOGGER.info("ServerAccount created: " + fromDb.toString());
-		} catch(HibernateException e) {
-			LOGGER.error("Problem creating ServerAccount: " + serverAccount.toString() + " Error: " + e.getMessage());
-			if(transaction != null)
-				transaction.rollback();
-			throw e;
-		} finally {
-			session.close();
-		}
+	public void createAccount(ServerAccount serverAccount, String token){
+		em.persist(serverAccount);
+		LOGGER.info("ServerAccount created: " + serverAccount.toString());
 	}
 
-	public static void delete(String url) throws ServerAccountNotFoundException, BalanceNotZeroException, HibernateException{
+	public void delete(String url) throws ServerAccountNotFoundException, BalanceNotZeroException {
 		ServerAccount serverAccount = getByUrl(url);
-		
-		Session session = openSession();
-		Transaction transaction = null;
 		
 		//TODO: mehmet: check: TrustLevel -> 
 		// Hyprid: escrow account
 
 		if(serverAccount.getActiveBalance().compareTo(BigDecimal.ZERO)==0 && serverAccount.getTrustLevel() == 0){
-			try{
-				serverAccount.setDeleted(true);
-				
-				transaction = session.beginTransaction();
-				session.update(serverAccount);
-				transaction.commit();
-				LOGGER.info("Delted ServerAccount: " + serverAccount.toString());
-			} catch(HibernateException e) {
-				LOGGER.error("Problem deleting ServerAccount: " + serverAccount.toString() + " ErrorMessage: " + e.getMessage());
-				 if (transaction != null)
-					 transaction.rollback();
-				 throw e;
-			} finally {
-				session.close();
-			}
+			serverAccount.setDeleted(true);
+			em.merge(serverAccount);
 		}
 	}
 	
@@ -96,24 +59,9 @@ public class ServerAccountDAO {
 	 * 
 	 * @param serverAccount
 	 */
-	public static void updatedAccount(ServerAccount serverAccount){
-		Session session = openSession();
-		org.hibernate.Transaction transaction = null;
-		
-		try{
-			transaction = session.beginTransaction();
-			session.update(serverAccount);
-			transaction.commit();
-			LOGGER.info("Updated ServerAccount: " + serverAccount.toString());
-		} catch(HibernateException e) {
-			LOGGER.error("Problem updating ServerAccount: " + serverAccount.toString() + " ErrorMessage: "+ e.getMessage());
-			if(transaction != null)
-				transaction.rollback();
-			throw e;
-		} finally {
-			session.close();
-		}
-		
+	public void updatedAccount(ServerAccount serverAccount){
+		em.merge(serverAccount);
+		LOGGER.info("Updated ServerAccount: " + serverAccount.toString());
 	}
 	
 	/**
@@ -122,32 +70,39 @@ public class ServerAccountDAO {
 	 * @return
 	 * @throws ServerAccountNotFoundException
 	 */
-	public static ServerAccount getByUrl(String url) throws ServerAccountNotFoundException{
-		Session session = openSession();
-		session.beginTransaction();
+	public ServerAccount getByUrl(String url) throws ServerAccountNotFoundException{
 		
-		ServerAccount serverAccount = (ServerAccount) session.createCriteria(ServerAccount.class).add(Restrictions.eq("url", url)).uniqueResult();
-		session.close();
-		if(serverAccount == null || serverAccount.isDeleted())
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ServerAccount> cq = cb.createQuery(ServerAccount.class);
+		Root<ServerAccount> root = cq.from(ServerAccount.class);
+		
+		Predicate condition = cb.equal(root.get("url"), url);
+		cq.where(condition);
+		
+		ServerAccount serverAccount = UserAccountDAO.getSingle(cq, em);
+		
+		if(serverAccount == null || serverAccount.isDeleted()) {
 			throw new ServerAccountNotFoundException(url);
+		}
 		
 		return serverAccount;
 	}
-
-	/**
-	 * 
-	 * @param url
-	 * @return
-	 * @throws ServerAccountNotFoundException
-	 */
-	public static ServerAccount getByUrlIgnoreCaseAndDeletedFlag(String url) throws ServerAccountNotFoundException{
-		Session session = openSession();
-		session.beginTransaction();
+	
+	public ServerAccount getByUrlIgnoreCaseAndDeletedFlag(String url) throws ServerAccountNotFoundException{
 		
-		ServerAccount serverAccount = (ServerAccount) session.createCriteria(ServerAccount.class).add(Restrictions.eq("url", url)).uniqueResult();
-		session.close();
-		if(serverAccount == null)
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ServerAccount> cq = cb.createQuery(ServerAccount.class);
+		Root<ServerAccount> root = cq.from(ServerAccount.class);
+		
+		Expression<String> e = root.get("url");
+		Predicate condition = cb.equal(cb.upper(e), url.toUpperCase());
+		cq.where(condition);
+		
+		ServerAccount serverAccount = UserAccountDAO.getSingle(cq, em);
+		
+		if(serverAccount == null) {
 			throw new ServerAccountNotFoundException(url);
+		}
 		
 		return serverAccount;
 	}
@@ -158,31 +113,21 @@ public class ServerAccountDAO {
 	 * @return
 	 * @throws ServerAccountNotFoundException
 	 */
-	public static ServerAccount getById(Long id) throws ServerAccountNotFoundException{
-		Session session = openSession();
-		session.beginTransaction();
+	public ServerAccount getById(Long id) throws ServerAccountNotFoundException{
 		
-		ServerAccount serverAccount = (ServerAccount) session.createCriteria(ServerAccount.class).add(Restrictions.eq("id", id)).uniqueResult();
-		session.close();
-		if(serverAccount == null || serverAccount.isDeleted())
-			throw new ServerAccountNotFoundException("id: " + id);
 		
-		return serverAccount;
-	}
-	
-	/**
-	 * 
-	 * @param email
-	 * @return
-	 * @throws ServerAccountNotFoundException
-	 */
-	public static ServerAccount getByEmail(String email) throws ServerAccountNotFoundException{
-		Session session = openSession();
-		session.beginTransaction();
-		ServerAccount serverAccount = (ServerAccount) session.createCriteria(ServerAccount.class).add(Restrictions.eq("email", email)).uniqueResult();
-		session.close();
-		if (serverAccount == null || serverAccount.isDeleted())
-			throw new ServerAccountNotFoundException("email: "+ email);
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ServerAccount> cq = cb.createQuery(ServerAccount.class);
+		Root<ServerAccount> root = cq.from(ServerAccount.class);
+		
+		Predicate condition = cb.equal(root.get("id"), id);
+		cq.where(condition);
+		
+		ServerAccount serverAccount = UserAccountDAO.getSingle(cq, em);
+		
+		if(serverAccount == null || serverAccount.isDeleted()) {
+			throw new ServerAccountNotFoundException("id:" + id);
+		}
 		
 		return serverAccount;
 	}
@@ -193,13 +138,43 @@ public class ServerAccountDAO {
 	 * @return
 	 * @throws ServerAccountNotFoundException
 	 */
-	public static ServerAccount getByEmailIgnoreCaseAndDeletedFlag(String email) throws ServerAccountNotFoundException{
-		Session session = openSession();
-		session.beginTransaction();
-		ServerAccount serverAccount = (ServerAccount) session.createCriteria(ServerAccount.class).add(Restrictions.eq("email", email).ignoreCase()).uniqueResult();
-		session.close();
-		if (serverAccount == null)
-			throw new ServerAccountNotFoundException(email);
+	public ServerAccount getByEmail(String email) throws ServerAccountNotFoundException{
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ServerAccount> cq = cb.createQuery(ServerAccount.class);
+		Root<ServerAccount> root = cq.from(ServerAccount.class);
+		
+		Predicate condition = cb.equal(root.get("email"), email);
+		cq.where(condition);
+		
+		ServerAccount serverAccount = UserAccountDAO.getSingle(cq, em);
+		
+		if(serverAccount == null || serverAccount.isDeleted()) {
+			throw new ServerAccountNotFoundException("email:" + email);
+		}
+		
+		return serverAccount;
+	}
+	
+	/**
+	 * 
+	 * @param email
+	 * @return
+	 * @throws ServerAccountNotFoundException
+	 */
+	public ServerAccount getByEmailIgnoreCaseAndDeletedFlag(String email) throws ServerAccountNotFoundException{
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ServerAccount> cq = cb.createQuery(ServerAccount.class);
+		Root<ServerAccount> root = cq.from(ServerAccount.class);
+		
+		Expression<String> e = root.get("email");
+		Predicate condition = cb.equal(cb.upper(e), email.toUpperCase());
+		cq.where(condition);
+		
+		ServerAccount serverAccount = UserAccountDAO.getSingle(cq, em);
+		
+		if(serverAccount == null) {
+			throw new ServerAccountNotFoundException("email:" + email);
+		}
 		
 		return serverAccount;
 	}
@@ -210,15 +185,20 @@ public class ServerAccountDAO {
 	 * @return
 	 * @throws ServerAccountNotFoundException
 	 */
-	public static ServerAccount getByPayinAddress(String address) throws ServerAccountNotFoundException{
-		Session session = openSession();
-		session.beginTransaction();
-		ServerAccount serverAccount = (ServerAccount) session.createCriteria(ServerAccount.class).add(Restrictions.eq("payinAddress", address)).uniqueResult();
+	public ServerAccount getByPayinAddress(String payinAddress) throws ServerAccountNotFoundException{
 		
-		session.close();
-		if (serverAccount == null || serverAccount.isDeleted())
-			throw new ServerAccountNotFoundException("Payin Address: "+address);
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ServerAccount> cq = cb.createQuery(ServerAccount.class);
+		Root<ServerAccount> root = cq.from(ServerAccount.class);
 		
+		Predicate condition = cb.equal(root.get("payinAddress"), payinAddress);
+		cq.where(condition);
+		
+		ServerAccount serverAccount = UserAccountDAO.getSingle(cq, em);
+		
+		if(serverAccount == null || serverAccount.isDeleted()) {
+			throw new ServerAccountNotFoundException("payinAddress:" + payinAddress);
+		}
 		return serverAccount;
 	}
 	
@@ -227,26 +207,27 @@ public class ServerAccountDAO {
 	 * @param trustlevel
 	 * @return
 	 */
-	public static List<ServerAccount> getByTrustLevel(int trustlevel){
-		Session session = openSession();
-		session.beginTransaction();
-		@SuppressWarnings("unchecked")
-		List<ServerAccount> list = (List<ServerAccount>) session.createCriteria(ServerAccount.class).add(Restrictions.eq("trustLevel", trustlevel)).list();
-		session.close();
-		return list;
+	public List<ServerAccount> getByTrustLevel(int trustlevel){
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ServerAccount> cq = cb.createQuery(ServerAccount.class);
+		Root<ServerAccount> root = cq.from(ServerAccount.class);
+		
+		Predicate condition = cb.equal(root.get("trustLevel"), trustlevel);
+		cq.where(condition);
+		
+		return em.createQuery(cq).getResultList();
 	}
 	
 	/**
 	 * 
 	 * @return
 	 */
-	public static List<ServerAccount> getAllServerAccounts(){
-		Session session = openSession();
-		session.beginTransaction();
-		@SuppressWarnings("unchecked")
-		List<ServerAccount> list = (List<ServerAccount>) session.createCriteria(ServerAccount.class).list();
-		session.close();
-		return list;
+	public List<ServerAccount> getAllServerAccounts(){
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ServerAccount> cq = cb.createQuery(ServerAccount.class);
+		cq.from(ServerAccount.class);
+		return em.createQuery(cq).getResultList();
+		
 	}
 	
 }

@@ -13,7 +13,6 @@ import java.security.KeyPair;
 
 import javax.servlet.http.HttpSession;
 
-import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -42,12 +41,13 @@ import ch.uzh.csg.mbps.keys.CustomKeyPair;
 import ch.uzh.csg.mbps.responseobject.CreateTransactionTransferObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.responseobject.GetHistoryTransferObject;
-import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.PayOutTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.TransactionService;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
+import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
@@ -57,12 +57,14 @@ import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
 import ch.uzh.csg.mbps.util.Converter;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
-		"file:src/main/webapp/WEB-INF/applicationContext.xml",
-		"file:src/main/webapp/WEB-INF/mvc-dispatcher-servlet.xml",
-		"file:src/main/webapp/WEB-INF/spring-security.xml" })
+		"classpath:context.xml",
+		"classpath:test-database.xml",
+		"classpath:view.xml",
+		"classpath:security.xml"})
 @WebAppConfiguration
 public class TransactionControllerTest {
 	
@@ -71,6 +73,9 @@ public class TransactionControllerTest {
 	
 	@Autowired
 	private FilterChainProxy springSecurityFilterChain;
+	
+	@Autowired
+	private IUserAccount userAccountService;
 	
 	private static MockMvc mockMvc;
 	
@@ -128,21 +133,21 @@ public class TransactionControllerTest {
 	
 	@Test
 	public void testCreateTransaction_failNotAuthenticated() throws Exception {
-		assertTrue(UserAccountService.getInstance().createAccount(test1_1));
-		assertTrue(UserAccountService.getInstance().createAccount(test1_2));
+		assertTrue(userAccountService.createAccount(test1_1));
+		assertTrue(userAccountService.createAccount(test1_2));
 		
-		UserAccount payerAccount = UserAccountService.getInstance().getByUsername(test1_1.getUsername());
-		UserAccount payeeAccount  = UserAccountService.getInstance().getByUsername(test1_2.getUsername());
+		UserAccount payerAccount = userAccountService.getByUsername(test1_1.getUsername());
+		UserAccount payeeAccount  = userAccountService.getByUsername(test1_2.getUsername());
 		payerAccount.setEmailVerified(true);
 		payerAccount.setBalance(TRANSACTION_AMOUNT.add(BigDecimal.ONE));
-		UserAccountDAO.updateAccount(payerAccount);
+		userAccountService.updateAccount(payerAccount);
 		payeeAccount.setEmailVerified(true);
 		payeeAccount.setBalance(TRANSACTION_AMOUNT);
-		UserAccountDAO.updateAccount(payeeAccount);
+		userAccountService.updateAccount(payeeAccount);
 		
 		KeyPair keyPairPayer = KeyHandler.generateKeyPair();
 		
-		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayer.getPublic()));
+		byte keyNumberPayer = userAccountService.saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayer.getPublic()));
 		
 		PaymentRequest paymentRequestPayer = new PaymentRequest(
 				PKIAlgorithm.DEFAULT, 
@@ -166,21 +171,21 @@ public class TransactionControllerTest {
 	
 	@Test
 	public void testSendMoney() throws Exception {
-		assertTrue(UserAccountService.getInstance().createAccount(test2_1));
-		assertTrue(UserAccountService.getInstance().createAccount(test2_2));
+		assertTrue(userAccountService.createAccount(test2_1));
+		assertTrue(userAccountService.createAccount(test2_2));
 		
-		UserAccount payerAccount = UserAccountService.getInstance().getByUsername(test2_1.getUsername());
-		UserAccount payeeAccount  = UserAccountService.getInstance().getByUsername(test2_2.getUsername());
+		UserAccount payerAccount = userAccountService.getByUsername(test2_1.getUsername());
+		UserAccount payeeAccount  = userAccountService.getByUsername(test2_2.getUsername());
 		payerAccount.setEmailVerified(true);
 		payerAccount.setBalance(TRANSACTION_AMOUNT.add(BigDecimal.ONE));
-		UserAccountDAO.updateAccount(payerAccount);
+		userAccountService.updateAccount(payerAccount);
 		payeeAccount.setEmailVerified(true);
 		payeeAccount.setBalance(TRANSACTION_AMOUNT);
-		UserAccountDAO.updateAccount(payeeAccount);
+		userAccountService.updateAccount(payeeAccount);
 		
 		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
 	
-		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
+		byte keyNumberPayer = userAccountService.saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
 		
 		PaymentRequest paymentRequestPayer = new PaymentRequest(
 				PKIAlgorithm.DEFAULT, 
@@ -216,8 +221,8 @@ public class TransactionControllerTest {
 		byte[] serverPaymentResponseEncoded = result.getServerPaymentResponse();
 		ServerPaymentResponse serverPaymentResponse = DecoderFactory.decode(ServerPaymentResponse.class, serverPaymentResponseEncoded);
 	
-		UserAccount payerAccountUpdated = UserAccountService.getInstance().getById(payerAccount.getId());
-		UserAccount payeeAccountUpdated = UserAccountService.getInstance().getById(payeeAccount.getId());
+		UserAccount payerAccountUpdated = userAccountService.getById(payerAccount.getId());
+		UserAccount payeeAccountUpdated = userAccountService.getById(payeeAccount.getId());
 		
 		assertTrue(result.isSuccessful());
 		assertEquals(ServerResponseStatus.SUCCESS, serverPaymentResponse.getPaymentResponsePayer().getStatus());
@@ -236,21 +241,21 @@ public class TransactionControllerTest {
 	
 	@Test
 	public void testSendMoney_failNotAuthenticatedUser() throws Exception {
-		assertTrue(UserAccountService.getInstance().createAccount(test3_1));
-		assertTrue(UserAccountService.getInstance().createAccount(test3_2));
+		assertTrue(userAccountService.createAccount(test3_1));
+		assertTrue(userAccountService.createAccount(test3_2));
 		
-		UserAccount payerAccount = UserAccountService.getInstance().getByUsername(test3_1.getUsername());
-		UserAccount payeeAccount  = UserAccountService.getInstance().getByUsername(test3_2.getUsername());
+		UserAccount payerAccount = userAccountService.getByUsername(test3_1.getUsername());
+		UserAccount payeeAccount  = userAccountService.getByUsername(test3_2.getUsername());
 		payerAccount.setEmailVerified(true);
 		payerAccount.setBalance(TRANSACTION_AMOUNT.add(BigDecimal.ONE));
-		UserAccountDAO.updateAccount(payerAccount);
+		userAccountService.updateAccount(payerAccount);
 		payeeAccount.setEmailVerified(true);
 		payeeAccount.setBalance(TRANSACTION_AMOUNT);
-		UserAccountDAO.updateAccount(payeeAccount);
+		userAccountService.updateAccount(payeeAccount);
 		
 		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
 	
-		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
+		byte keyNumberPayer = userAccountService.saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
 		
 		PaymentRequest paymentRequestPayer = new PaymentRequest(
 				PKIAlgorithm.DEFAULT, 
@@ -286,8 +291,8 @@ public class TransactionControllerTest {
 		byte[] serverPaymentResponseEncoded = result.getServerPaymentResponse();
 		ServerPaymentResponse serverPaymentResponse = DecoderFactory.decode(ServerPaymentResponse.class, serverPaymentResponseEncoded);
 	
-		UserAccount payerAccountUpdated = UserAccountService.getInstance().getById(payerAccount.getId());
-		UserAccount payeeAccountUpdated = UserAccountService.getInstance().getById(payeeAccount.getId());
+		UserAccount payerAccountUpdated = userAccountService.getById(payerAccount.getId());
+		UserAccount payeeAccountUpdated = userAccountService.getById(payeeAccount.getId());
 		
 		assertTrue(result.isSuccessful());
 		assertEquals(ServerResponseStatus.FAILURE, serverPaymentResponse.getPaymentResponsePayer().getStatus());
@@ -307,23 +312,23 @@ public class TransactionControllerTest {
 	
 	@Test
 	public void testCreateTransaction() throws Exception {
-		assertTrue(UserAccountService.getInstance().createAccount(test4_1));
-		test4_1 = UserAccountService.getInstance().getByUsername(test4_1.getUsername());
+		assertTrue(userAccountService.createAccount(test4_1));
+		test4_1 = userAccountService.getByUsername(test4_1.getUsername());
 		test4_1.setEmailVerified(true);
 		test4_1.setBalance(TRANSACTION_AMOUNT);
-		UserAccountDAO.updateAccount(test4_1);
+		userAccountService.updateAccount(test4_1);
 		
 		String plainTextPw = test4_2.getPassword();
-		assertTrue(UserAccountService.getInstance().createAccount(test4_2));
-		test4_2 = UserAccountService.getInstance().getByUsername(test4_2.getUsername());
+		assertTrue(userAccountService.createAccount(test4_2));
+		test4_2 = userAccountService.getByUsername(test4_2.getUsername());
 		test4_2.setEmailVerified(true);
-		UserAccountDAO.updateAccount(test4_2);
+		userAccountService.updateAccount(test4_2);
 		
 		KeyPair keyPairPayer = KeyHandler.generateKeyPair();
-		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(test4_1.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayer.getPublic()));
+		byte keyNumberPayer = userAccountService.saveUserPublicKey(test4_1.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayer.getPublic()));
 		
 		KeyPair keyPairPayee = KeyHandler.generateKeyPair();
-		byte keyNumberPayee = UserAccountService.getInstance().saveUserPublicKey(test4_2.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayee.getPublic()));
+		byte keyNumberPayee = userAccountService.saveUserPublicKey(test4_2.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayee.getPublic()));
 		
 		long timestamp = System.currentTimeMillis();
 		
@@ -353,8 +358,8 @@ public class TransactionControllerTest {
 		ObjectMapper mapper = new ObjectMapper();
 		String asString = mapper.writeValueAsString(ctto);
 		
-		BigDecimal payerBalanceBefore = UserAccountService.getInstance().getByUsername(test4_1.getUsername()).getBalance();
-		BigDecimal payeeBalanceBefore = UserAccountService.getInstance().getByUsername(test4_2.getUsername()).getBalance();
+		BigDecimal payerBalanceBefore = userAccountService.getByUsername(test4_1.getUsername()).getBalance();
+		BigDecimal payeeBalanceBefore = userAccountService.getByUsername(test4_2.getUsername()).getBalance();
 		
 		
 		HttpSession session = loginAndGetSession(test4_2.getUsername(), plainTextPw);
@@ -373,37 +378,37 @@ public class TransactionControllerTest {
 		assertEquals(ServerResponseStatus.SUCCESS, response.getPaymentResponsePayer().getStatus());
 		assertTrue(response.getPaymentResponsePayer().verify(KeyHandler.decodePublicKey(Constants.SERVER_KEY_PAIR.getPublicKey())));
 		
-		assertEquals(payerBalanceBefore.subtract(TRANSACTION_AMOUNT), UserAccountService.getInstance().getById(test4_1.getId()).getBalance());
-		assertEquals(payeeBalanceBefore.add(TRANSACTION_AMOUNT), UserAccountService.getInstance().getById(test4_2.getId()).getBalance());
+		assertEquals(payerBalanceBefore.subtract(TRANSACTION_AMOUNT), userAccountService.getById(test4_1.getId()).getBalance());
+		assertEquals(payeeBalanceBefore.add(TRANSACTION_AMOUNT), userAccountService.getById(test4_2.getId()).getBalance());
 	}
 	
 	@Test
 	public void testGetHistory_failNotAuthenticated() throws Exception {
-		assertTrue(UserAccountService.getInstance().createAccount(test5_1));
-		test5_1 = UserAccountService.getInstance().getByUsername(test5_1.getUsername());
+		assertTrue(userAccountService.createAccount(test5_1));
+		test5_1 = userAccountService.getByUsername(test5_1.getUsername());
 		test5_1.setEmailVerified(true);
 		test5_1.setBalance(TRANSACTION_AMOUNT.multiply(new BigDecimal(3)));
-		UserAccountDAO.updateAccount(test5_1);
+		userAccountService.updateAccount(test5_1);
 		
 		mockMvc.perform(get("/transaction/history").secure(false)).andExpect(status().isUnauthorized());
 	}
 	
 	@Test
 	public void testGetHistory() throws Exception {
-		assertTrue(UserAccountService.getInstance().createAccount(test6_1));
-		test6_1 = UserAccountService.getInstance().getByUsername(test6_1.getUsername());
+		assertTrue(userAccountService.createAccount(test6_1));
+		test6_1 = userAccountService.getByUsername(test6_1.getUsername());
 		test6_1.setEmailVerified(true);
 		test6_1.setBalance(TRANSACTION_AMOUNT);
-		UserAccountDAO.updateAccount(test6_1);
+		userAccountService.updateAccount(test6_1);
 		
 		String plainTextPw = test6_2.getPassword();
-		assertTrue(UserAccountService.getInstance().createAccount(test6_2));
-		test6_2 = UserAccountService.getInstance().getByUsername(test6_2.getUsername());
+		assertTrue(userAccountService.createAccount(test6_2));
+		test6_2 = userAccountService.getByUsername(test6_2.getUsername());
 		test6_2.setEmailVerified(true);
-		UserAccountDAO.updateAccount(test6_2);
+		userAccountService.updateAccount(test6_2);
 		
 		KeyPair keyPairPayer = KeyHandler.generateKeyPair();
-		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(test6_1.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayer.getPublic()));
+		byte keyNumberPayer = userAccountService.saveUserPublicKey(test6_1.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayer.getPublic()));
 		
 		PaymentRequest paymentRequestPayer = new PaymentRequest(
 				PKIAlgorithm.DEFAULT, 
@@ -473,11 +478,11 @@ public class TransactionControllerTest {
 	}
 	
 	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
-		assertTrue(UserAccountService.getInstance().createAccount(userAccount));
-		userAccount = UserAccountService.getInstance().getByUsername(userAccount.getUsername());
+		assertTrue(userAccountService.createAccount(userAccount));
+		userAccount = userAccountService.getByUsername(userAccount.getUsername());
 		userAccount.setEmailVerified(true);
 		userAccount.setBalance(balance);
-		UserAccountDAO.updateAccount(userAccount);
+		userAccountService.updateAccount(userAccount);
 	}
 	
 	@Test
@@ -506,9 +511,10 @@ public class TransactionControllerTest {
 
 	@Test
 	public void testPayOut() throws Exception{
+		BitcoindController.TESTING = true;
 		createAccountAndVerifyAndReload(test8_1, BigDecimal.ONE);
 		String plainTextPw = test8_1.getPassword();
-		UserAccount fromDB = UserAccountService.getInstance().getByUsername(test8_1.getUsername());
+		UserAccount fromDB = userAccountService.getByUsername(test8_1.getUsername());
 		
 		PayOutTransaction pot = new PayOutTransaction();
 		pot.setUserID(fromDB.getId());

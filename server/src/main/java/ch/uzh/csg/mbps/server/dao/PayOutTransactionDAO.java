@@ -1,21 +1,23 @@
 package ch.uzh.csg.mbps.server.dao;
 
-import java.util.ArrayList;
 import java.util.List;
+
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
 
 import org.apache.log4j.Logger;
 import org.hibernate.HibernateException;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.criterion.Restrictions;
-import org.hibernate.transform.Transformers;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
 
 import ch.uzh.csg.mbps.model.HistoryPayOutTransaction;
 import ch.uzh.csg.mbps.server.domain.PayOutTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
-import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.Config;
-import ch.uzh.csg.mbps.server.util.HibernateUtil;
 import ch.uzh.csg.mbps.server.util.exceptions.TransactionException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 
@@ -24,13 +26,15 @@ import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
  * regarding {@link PayOutTransaction}s.
  * 
  */
+@Repository
 public class PayOutTransactionDAO {
 	private static Logger LOGGER = Logger.getLogger(PayOutTransactionDAO.class);
 	
-	private static Session openSession() {
-		SessionFactory sessionFactory = HibernateUtil.getSessionFactory();
-		return sessionFactory.openSession();
-	}
+	@PersistenceContext
+	private EntityManager em;
+	
+	@Autowired
+	private UserAccountDAO userAccountDAO;
 	
 	/**
 	 * Returns defined amount of {@link PayOutTransaction}s assigned to the given
@@ -42,34 +46,23 @@ public class PayOutTransactionDAO {
 	 * @return ArrayList<HistoryPayOutTransaction> (an array list with the requested amount of PayOutTransactions)
 	 * @throws UserAccountNotFoundException
 	 */
-	public static ArrayList<HistoryPayOutTransaction> getHistory(String username, int page) throws UserAccountNotFoundException {
-		if (page < 0)
+	public List<HistoryPayOutTransaction> getHistory(UserAccount userAccount, int page) throws UserAccountNotFoundException {
+		if (page < 0) {
 			return null;
+		}
 		
-		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
-		Session session = openSession();
-		session.beginTransaction();
-				
 		@SuppressWarnings("unchecked")
-		List<HistoryPayOutTransaction> resultWithAliasedBean = session.createSQLQuery(
-				  "SELECT pot.timestamp, pot.amount, pot.btc_address as btcAddress " +
-				  "FROM pay_out_transaction pot " +
-				  "WHERE pot.user_id = :userid " +
-				  "ORDER BY pot.timestamp DESC")
-				  .addScalar("timestamp")
-				  .addScalar("amount")
-				  .addScalar("btcAddress")
-				  .setLong("userid",  userAccount.getId())
-				  .setFirstResult(page * Config.PAY_OUTS_MAX_RESULTS)
-				  .setMaxResults(Config.PAY_OUTS_MAX_RESULTS)
-				  .setFetchSize(Config.PAY_OUTS_MAX_RESULTS)
-				  .setResultTransformer(Transformers.aliasToBean(HistoryPayOutTransaction.class))
-				  .list();
+        List<HistoryPayOutTransaction> resultWithAliasedBean = em.createQuery(""
+				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayOutTransaction(pot.timestamp,  pot.amount, pot.btcAddress) "
+				+ "FROM PAY_OUT_TRANSACTION pot "
+				+ "WHERE pot.userID = :userid "
+				+ "ORDER BY pot.timestamp DESC")
+				.setFirstResult(page * Config.PAY_INS_MAX_RESULTS)
+				.setMaxResults(Config.PAY_INS_MAX_RESULTS)
+				.setParameter("userid", userAccount.getId())
+				.getResultList();
 		
-		List<HistoryPayOutTransaction> results = resultWithAliasedBean;
-		session.close();
-		
-		return new ArrayList<HistoryPayOutTransaction>(results);
+		return resultWithAliasedBean;
 	}
 
 	/**
@@ -80,22 +73,15 @@ public class PayOutTransactionDAO {
 	 * @return number of PayOutTransaction
 	 * @throws UserAccountNotFoundException if no POTs are assigned to given UserAccount
 	 */
-	public static long getHistoryCount(String username) throws UserAccountNotFoundException {
-		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
-		Session session = openSession();
-		session.beginTransaction();
+	public long getHistoryCount(UserAccount userAccount) throws UserAccountNotFoundException {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<Long> cq = cb.createQuery(Long.class);
+		Root<PayOutTransaction> root = cq.from(PayOutTransaction.class);
+		cq.select(cb.count(root));
 		
-		long nofResults = ((Number) session.createSQLQuery(
-				  "SELECT COUNT(*) " +
-				  "FROM pay_out_transaction pot " +
-				  "WHERE pot.user_id = :userid")
-				  .setLong("userid", userAccount.getId())
-				  .uniqueResult())
-				  .longValue();
-
-		session.close();
-		
-		return nofResults;
+		Predicate condition = cb.equal(root.get("userID"), userAccount.getId());
+		cq.where(condition);
+		return em.createQuery(cq).getSingleResult();
 	}
 
 	/**
@@ -105,32 +91,13 @@ public class PayOutTransactionDAO {
 	 * @throws UserAccountNotFoundException if defined UserAccount is not found
 	 * @throws HibernateException
 	 */
-	public static void createPayOutTransaction(PayOutTransaction pot) throws UserAccountNotFoundException, HibernateException {
-		Session session = openSession();
-		org.hibernate.Transaction transaction = null;
-		UserAccount userAccount;
-		try {
-			transaction = session.beginTransaction();
-			
-			session.save(pot);
-			
-			//update UserAccountBalance
-			userAccount = UserAccountDAO.getById(pot.getUserID());
-			userAccount.setBalance(userAccount.getBalance().subtract(pot.getAmount()));
-			session.update(userAccount);
-			
-			transaction.commit();
-			LOGGER.info("PayOutTransaction created for UserAccount with ID: " + userAccount.getId() + " Transaction: " + pot.toString());
-		} catch (HibernateException e) {
-			LOGGER.error("Error creating PayOutTransaction: " + pot.toString() + "ErrorMessage: " + e.getMessage());
-			if (transaction != null)
-				transaction.rollback();
-			throw e;
-		} catch (UserAccountNotFoundException e) {
-			throw e;
-		} finally {
-			session.close();
-		}
+	public void createPayOutTransaction(PayOutTransaction pot) throws UserAccountNotFoundException {
+		em.persist(pot);
+		//update UserAccountBalance
+		UserAccount userAccount = userAccountDAO.getById(pot.getUserID());
+		userAccount.setBalance(userAccount.getBalance().subtract(pot.getAmount()));
+		em.merge(userAccount);
+		LOGGER.info("PayOutTransaction created for UserAccount with ID: " + userAccount.getId() + " Transaction: " + pot.toString());
 	}
 
 	/**
@@ -140,34 +107,27 @@ public class PayOutTransactionDAO {
 	 * @throws TransactionException if PayOutTransaction with specified TransactionId does not exist in the database.
 	 * @throws HibernateException
 	 */
-	public static void verify(PayOutTransaction pot) throws TransactionException, HibernateException {
-		Session session = openSession();
-		session.beginTransaction();
-		PayOutTransaction existingPOT = (PayOutTransaction) session.createCriteria(PayOutTransaction.class).add(Restrictions.eq("transactionID", pot.getTransactionID())).uniqueResult();
-		session.close();
-
+	public void verify(PayOutTransaction pot) throws TransactionException {
+		
+		
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<PayOutTransaction> cq = cb.createQuery(PayOutTransaction.class);
+		Root<PayOutTransaction> root = cq.from(PayOutTransaction.class);
+		
+		//TODO: no check for userid?
+		Predicate condition = cb.equal(root.get("transactionID"), pot.getTransactionID());
+		cq.where(condition);
+		
+		PayOutTransaction existingPOT = UserAccountDAO.getSingle(cq, em);
+		
 		if(existingPOT == null){
 			throw new TransactionException("Problem verifying PayOutTransaction. This transaction does not exists.");
 		}
 				
 		if(!existingPOT.isVerified()){
 			existingPOT.setVerified(true);
-			Session session2 = openSession();
-			org.hibernate.Transaction transaction = null;			
-		
-			try {
-				transaction = session2.beginTransaction();
-				session2.update(existingPOT);
-				transaction.commit();
-				LOGGER.info("Successfully verified PayOutTransaction with ID: " + existingPOT.getId());
-			} catch (HibernateException e) {
-				LOGGER.error("Problem verifying PayOutTransaction with TransactionID: " + pot.getTransactionID());
-				 if (transaction != null)
-					 transaction.rollback();
-				 throw e;
-			} finally {
-				session2.close();
-			}
+			em.merge(existingPOT);
+			LOGGER.info("Successfully verified PayOutTransaction with ID: " + existingPOT.getId());
 		}
 	}
 	
@@ -181,30 +141,19 @@ public class PayOutTransactionDAO {
 	 *         5 PayOutTransactions)
 	 * @throws UserAccountNotFoundException
 	 */
-	public static ArrayList<HistoryPayOutTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
-		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
-		Session session = openSession();
-		session.beginTransaction();
-
+	public List<HistoryPayOutTransaction> getLast5Transactions(UserAccount userAccount) throws UserAccountNotFoundException {
+		
 		@SuppressWarnings("unchecked")
-		List<HistoryPayOutTransaction> resultWithAliasedBean = session.createSQLQuery(
-				  "SELECT pot.timestamp, pot.amount, pot.btc_address as btcAddress " +
-				  "FROM pay_out_transaction pot " +
-				  "WHERE pot.user_id = :userid " +
-				  "ORDER BY pot.timestamp DESC")
-				  .addScalar("timestamp")
-				  .addScalar("amount")
-				  .addScalar("btcAddress")
-				  .setLong("userid",  userAccount.getId())
-				  .setMaxResults(5)
-				  .setFetchSize(5)
-				  .setResultTransformer(Transformers.aliasToBean(HistoryPayOutTransaction.class))
-				  .list();
+        List<HistoryPayOutTransaction> resultWithAliasedBean = em.createQuery(""
+				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayOutTransaction(pot.timestamp,  pot.amount, pot.btcAddress) "
+				+ "FROM PAY_OUT_TRANSACTION pot "
+				+ "WHERE pot.userID = :userid "
+				+ "ORDER BY pot.timestamp DESC")
+				.setMaxResults(5)
+				.setParameter("userid", userAccount.getId())
+				.getResultList();
 		
-		List<HistoryPayOutTransaction> results = resultWithAliasedBean;
-		session.close();
-		
-		return new ArrayList<HistoryPayOutTransaction>(results);
+		return resultWithAliasedBean;
 	}
 	
 }

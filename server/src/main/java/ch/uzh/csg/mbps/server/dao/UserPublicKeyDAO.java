@@ -1,19 +1,21 @@
 package ch.uzh.csg.mbps.server.dao;
 
-import java.util.ArrayList;
 import java.util.List;
 
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+
 import org.apache.log4j.Logger;
-import org.hibernate.HibernateException;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.Transaction;
-import org.hibernate.criterion.Restrictions;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
 
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.domain.UserPublicKey;
-import ch.uzh.csg.mbps.server.util.HibernateUtil;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 
 /**
@@ -23,17 +25,15 @@ import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
  * @author Jeton Memeti
  * 
  */
+@Repository
 public class UserPublicKeyDAO {
 	private static Logger LOGGER = Logger.getLogger(UserPublicKeyDAO.class);
 	
-	private UserPublicKeyDAO() {
-	}
+	@PersistenceContext
+	private EntityManager em;
 	
-	private static Session openSession() {
-		SessionFactory sessionFactory = HibernateUtil.getSessionFactory();
-		Session session = sessionFactory.openSession();
-		return session;
-	}
+	@Autowired
+	private UserAccountDAO userAccountDAO;
 	
 	/**
 	 * Stores a public key on the database and maps this public key to a user
@@ -49,33 +49,16 @@ public class UserPublicKeyDAO {
 	 *         key has in a list of public keys mapped to this user account
 	 * @throws UserAccountNotFoundException
 	 */
-	public static byte saveUserPublicKey(long userId, PKIAlgorithm algorithm, String publicKey) throws UserAccountNotFoundException {
-		Session session = null;
-		Transaction transaction = null;
-		
-		UserAccount userAccountFromDB = UserAccountDAO.getById(userId);
+	public byte saveUserPublicKey(long userId, PKIAlgorithm algorithm, String publicKey) throws UserAccountNotFoundException {
+		UserAccount userAccountFromDB = userAccountDAO.getById(userId);
 		byte newKeyNumber = (byte) (userAccountFromDB.getNofKeys()+1);
-		
 		userAccountFromDB.setNofKeys(newKeyNumber);
-		
 		UserPublicKey toSave = new UserPublicKey(userId, newKeyNumber, algorithm.getCode(), publicKey);
+		em.merge(userAccountFromDB);
+		em.persist(toSave);
+		LOGGER.info("UserPublicKey saved: user id: " + userId + ", key number: " + newKeyNumber);
+		return toSave.getKeyNumber();
 		
-		try {
-			session = openSession();
-			transaction = session.beginTransaction();
-			session.update(userAccountFromDB);
-			session.save(toSave);
-			transaction.commit();
-			LOGGER.info("UserPublicKey saved: user id: " + userId + ", key number: " + newKeyNumber);
-			return toSave.getKeyNumber();
-		} catch (HibernateException e) {
-			LOGGER.error("Problem creating UserPublicKey: " + toSave.toString());
-			 if (transaction != null)
-				 transaction.rollback();
-			 throw e;
-		} finally {
-			session.close();
-		}
 	}
 	
 	/**
@@ -86,20 +69,13 @@ public class UserPublicKeyDAO {
 	 * @return a list with all {@link UserPublicKey} or an empty list, if no key
 	 *         has been stored for this user id
 	 */
-	public static List<UserPublicKey> getUserPublicKeys(long userId) {
-		Session session = openSession();
-		session.beginTransaction();
-		
-		@SuppressWarnings("unchecked")
-		List<UserPublicKey> list = (List<UserPublicKey>) session
-				.createCriteria(UserPublicKey.class)
-				.add(Restrictions.eq("userId", userId)).list();
-		session.close();
-		
-		if (list == null || list.isEmpty())
-			return new ArrayList<UserPublicKey>();
-		else
-			return list;
+	public List<UserPublicKey> getUserPublicKeys(long userId) {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<UserPublicKey> cq = cb.createQuery(UserPublicKey.class);
+		Root<UserPublicKey> root = cq.from(UserPublicKey.class);
+		Predicate condition = cb.equal(root.get("userId"), userId);
+		cq.where(condition);
+		return em.createQuery(cq).getResultList();
 	}
 	
 	/**
@@ -112,17 +88,15 @@ public class UserPublicKeyDAO {
 	 *            the key number of the {@link UserPublicKey} to return
 	 * @return the corresponding {@link UserPublicKey} or null
 	 */
-	public static UserPublicKey getUserPublicKey(long userId, byte keyNumber) {
-		Session session = openSession();
-		session.beginTransaction();
-		
-		UserPublicKey result = (UserPublicKey) session
-				.createCriteria(UserPublicKey.class)
-				.add(Restrictions.eq("userId", userId))
-				.add(Restrictions.eq("keyNumber", keyNumber)).uniqueResult();
-		session.close();
-		
-		return result;
+	public UserPublicKey getUserPublicKey(long userId, byte keyNumber) {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<UserPublicKey> cq = cb.createQuery(UserPublicKey.class);
+		Root<UserPublicKey> root = cq.from(UserPublicKey.class);
+		Predicate condition1 = cb.equal(root.get("userId"), userId);
+		Predicate condition2 = cb.equal(root.get("keyNumber"), keyNumber);
+		Predicate condition3 = cb.and(condition1, condition2);
+		cq.where(condition3);
+		return em.createQuery(cq).getSingleResult();
 	}
 
 }

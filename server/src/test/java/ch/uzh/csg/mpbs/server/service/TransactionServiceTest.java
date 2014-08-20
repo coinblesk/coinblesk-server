@@ -11,6 +11,14 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+
 import ch.uzh.csg.mbps.customserialization.Currency;
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
@@ -18,17 +26,10 @@ import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
-
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import ch.uzh.csg.mbps.keys.CustomKeyPair;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
-import ch.uzh.csg.mbps.server.dao.TransactionDAO;
-import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
+import ch.uzh.csg.mbps.server.clientinterface.ITransaction;
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.DbTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
@@ -36,14 +37,23 @@ import ch.uzh.csg.mbps.server.service.TransactionService;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.Constants;
-import ch.uzh.csg.mbps.server.util.HibernateUtil;
 import ch.uzh.csg.mbps.server.util.exceptions.TransactionException;
 import ch.uzh.csg.mbps.util.Converter;
 
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(locations = {
+		"classpath:context.xml",
+		"classpath:test-database.xml"})
 public class TransactionServiceTest {
 	private static final BigDecimal TRANSACTION_AMOUNT = new BigDecimal("1.50000000");
 	
 	private boolean initialized = false;
+	
+	@Autowired
+	private IUserAccount userAccountService;
+	
+	@Autowired
+	private ITransaction transactionService;
 	
 	@Before
 	public void setUp() throws Exception {
@@ -70,8 +80,8 @@ public class TransactionServiceTest {
 		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
 		KeyPair payeeKeyPair = KeyHandler.generateKeyPair();
 	
-		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
-		byte keyNumberPayee = UserAccountService.getInstance().saveUserPublicKey(payeeAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payeeKeyPair.getPublic()));
+		byte keyNumberPayer = userAccountService.saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
+		byte keyNumberPayee = userAccountService.saveUserPublicKey(payeeAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payeeKeyPair.getPublic()));
 		
 		PaymentRequest paymentRequestPayer = new PaymentRequest(
 				PKIAlgorithm.DEFAULT, 
@@ -101,17 +111,17 @@ public class TransactionServiceTest {
 		
 		ServerPaymentRequest request = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
 		
-		int nofTransaction = getAllTransactions().size();
+		int nofTransaction = transactionService.getAll().size();
 		
 		BigDecimal payerBalanceBefore = payerAccount.getBalance();
 		BigDecimal payeeBalanceBefore = payeeAccount.getBalance();
 		
-		ServerPaymentResponse response = TransactionService.getInstance().createTransaction(payerAccount.getUsername(), request);
+		ServerPaymentResponse response = transactionService.createTransaction(payerAccount.getUsername(), request);
 	
-		assertEquals(nofTransaction+1, getAllTransactions().size());
+		assertEquals(nofTransaction+1, transactionService.getAll().size());
 		
-		UserAccount payerAccountUpdated = UserAccountService.getInstance().getById(payerAccount.getId());
-		UserAccount payeeAccountUpdated = UserAccountService.getInstance().getById(payeeAccount.getId());
+		UserAccount payerAccountUpdated = userAccountService.getById(payerAccount.getId());
+		UserAccount payeeAccountUpdated = userAccountService.getById(payeeAccount.getId());
 		
 		assertEquals(0, payerBalanceBefore.subtract(TRANSACTION_AMOUNT).compareTo(payerAccountUpdated.getBalance()));
 		assertEquals(0, payeeBalanceBefore.add(TRANSACTION_AMOUNT).compareTo(payeeAccountUpdated.getBalance()));
@@ -134,7 +144,7 @@ public class TransactionServiceTest {
 		
 		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
 	
-		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
+		byte keyNumberPayer = userAccountService.saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
 		
 		PaymentRequest paymentRequestPayer = new PaymentRequest(
 				PKIAlgorithm.DEFAULT, 
@@ -151,17 +161,17 @@ public class TransactionServiceTest {
 		
 		ServerPaymentRequest request = new ServerPaymentRequest(paymentRequestPayer);
 		
-		int nofTransaction = getAllTransactions().size();
+		int nofTransaction = transactionService.getAll().size();
 		
 		BigDecimal payerBalanceBefore = payerAccount.getBalance();
 		BigDecimal payeeBalanceBefore = payeeAccount.getBalance();
 		
-		ServerPaymentResponse response = TransactionService.getInstance().createTransaction(payerAccount.getUsername(), request);
+		ServerPaymentResponse response = transactionService.createTransaction(payerAccount.getUsername(), request);
 	
-		assertEquals(nofTransaction+1, getAllTransactions().size());
+		assertEquals(nofTransaction+1, transactionService.getAll().size());
 		
-		UserAccount payerAccountUpdated = UserAccountService.getInstance().getById(payerAccount.getId());
-		UserAccount payeeAccountUpdated = UserAccountService.getInstance().getById(payeeAccount.getId());
+		UserAccount payerAccountUpdated = userAccountService.getById(payerAccount.getId());
+		UserAccount payeeAccountUpdated = userAccountService.getById(payeeAccount.getId());
 		
 		assertEquals(0, payerBalanceBefore.subtract(TRANSACTION_AMOUNT).compareTo(payerAccountUpdated.getBalance()));
 		assertEquals(0, payeeBalanceBefore.add(TRANSACTION_AMOUNT).compareTo(payeeAccountUpdated.getBalance()));
@@ -181,7 +191,7 @@ public class TransactionServiceTest {
 		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_6", "TDAOT_6@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
 		
 		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
-		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
+		byte keyNumberPayer = userAccountService.saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
 		
 		PaymentRequest paymentRequestPayer = new PaymentRequest(
 				PKIAlgorithm.DEFAULT, 
@@ -195,18 +205,18 @@ public class TransactionServiceTest {
 		
 		ServerPaymentRequest request = new ServerPaymentRequest(paymentRequestPayer);
 		
-		int nofTransaction = getAllTransactions().size();
+		int nofTransaction = transactionService.getAll().size();
 		
 		BigDecimal payerBalanceBefore = payerAccount.getBalance();
 		BigDecimal payeeBalanceBefore = payeeAccount.getBalance();
 		
-		ServerPaymentResponse response = TransactionService.getInstance().createTransaction(payerAccount.getUsername(), request);
+		ServerPaymentResponse response = transactionService.createTransaction(payerAccount.getUsername(), request);
 	
 		nofTransaction++;
-		assertEquals(nofTransaction, getAllTransactions().size());
+		assertEquals(nofTransaction, transactionService.getAll().size());
 		
-		UserAccount payerAccountUpdated = UserAccountService.getInstance().getById(payerAccount.getId());
-		UserAccount payeeAccountUpdated = UserAccountService.getInstance().getById(payeeAccount.getId());
+		UserAccount payerAccountUpdated = userAccountService.getById(payerAccount.getId());
+		UserAccount payeeAccountUpdated = userAccountService.getById(payeeAccount.getId());
 		
 		assertEquals(0, payerBalanceBefore.subtract(TRANSACTION_AMOUNT).compareTo(payerAccountUpdated.getBalance()));
 		assertEquals(0, payeeBalanceBefore.add(TRANSACTION_AMOUNT).compareTo(payeeAccountUpdated.getBalance()));
@@ -221,16 +231,16 @@ public class TransactionServiceTest {
 		assertEquals(paymentRequestPayer.getAmount(), responsePayer.getAmount());
 		
 		// now launch the same request again - this must fail
-		payerBalanceBefore = UserAccountService.getInstance().getById(payerAccount.getId()).getBalance();
-		payeeBalanceBefore = UserAccountService.getInstance().getById(payeeAccount.getId()).getBalance();
-		response = TransactionService.getInstance().createTransaction(payerAccount.getUsername(), request);
+		payerBalanceBefore = userAccountService.getById(payerAccount.getId()).getBalance();
+		payeeBalanceBefore = userAccountService.getById(payeeAccount.getId()).getBalance();
+		response = transactionService.createTransaction(payerAccount.getUsername(), request);
 		
 		// same nofTransaction
-		assertEquals(nofTransaction, getAllTransactions().size());
+		assertEquals(nofTransaction, transactionService.getAll().size());
 		
 		//balance unchanged
-		assertEquals(payerBalanceBefore, UserAccountService.getInstance().getById(payerAccount.getId()).getBalance());
-		assertEquals(payeeBalanceBefore, UserAccountService.getInstance().getById(payeeAccount.getId()).getBalance());
+		assertEquals(payerBalanceBefore, userAccountService.getById(payerAccount.getId()).getBalance());
+		assertEquals(payeeBalanceBefore, userAccountService.getById(payeeAccount.getId()).getBalance());
 		
 		assertTrue(response.getPaymentResponsePayer().verify(KeyHandler.decodePublicKey(Constants.SERVER_KEY_PAIR.getPublicKey())));
 		assertNull(response.getPaymentResponsePayee());
@@ -250,7 +260,7 @@ public class TransactionServiceTest {
 		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_8", "TDAOT_8@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
 		
 		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
-		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
+		byte keyNumberPayer = userAccountService.saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
 		
 		PaymentRequest paymentRequestPayer = new PaymentRequest(
 				PKIAlgorithm.DEFAULT, 
@@ -265,14 +275,14 @@ public class TransactionServiceTest {
 		
 		ServerPaymentRequest request = new ServerPaymentRequest(paymentRequestPayer);
 		
-		int nofTransaction = getAllTransactions().size();
+		int nofTransaction = transactionService.getAll().size();
 		
-		BigDecimal payerBalanceBefore = UserAccountService.getInstance().getById(payerAccount.getId()).getBalance();
-		BigDecimal payeeBalanceBefore = UserAccountService.getInstance().getById(payeeAccount.getId()).getBalance();
+		BigDecimal payerBalanceBefore = userAccountService.getById(payerAccount.getId()).getBalance();
+		BigDecimal payeeBalanceBefore = userAccountService.getById(payeeAccount.getId()).getBalance();
 		
 		boolean exceptionThrown = false;
 		try {
-			TransactionService.getInstance().createTransaction(payerAccount.getUsername(), request);
+			transactionService.createTransaction(payerAccount.getUsername(), request);
 		} catch (TransactionException e) {
 			exceptionThrown = true;
 			assertEquals(TransactionService.BALANCE, e.getMessage());
@@ -280,10 +290,10 @@ public class TransactionServiceTest {
 		
 		assertTrue(exceptionThrown);
 		
-		assertEquals(nofTransaction, getAllTransactions().size());
+		assertEquals(nofTransaction, transactionService.getAll().size());
 		
-		assertEquals(payerBalanceBefore, UserAccountService.getInstance().getById(payerAccount.getId()).getBalance());
-		assertEquals(payeeBalanceBefore, UserAccountService.getInstance().getById(payeeAccount.getId()).getBalance());
+		assertEquals(payerBalanceBefore, userAccountService.getById(payerAccount.getId()).getBalance());
+		assertEquals(payeeBalanceBefore, userAccountService.getById(payeeAccount.getId()).getBalance());
 	}
 	
 	//TODO jeton:: write test for NOT_AUTHENTICATED_USER
@@ -309,14 +319,14 @@ public class TransactionServiceTest {
 		
 		ServerPaymentRequest request = new ServerPaymentRequest(paymentRequestPayer);
 		
-		int nofTransaction = getAllTransactions().size();
+		int nofTransaction = transactionService.getAll().size();
 		
-		BigDecimal payerBalanceBefore = UserAccountService.getInstance().getById(payerAccount.getId()).getBalance();
-		BigDecimal payeeBalanceBefore = UserAccountService.getInstance().getById(payeeAccount.getId()).getBalance();
+		BigDecimal payerBalanceBefore = userAccountService.getById(payerAccount.getId()).getBalance();
+		BigDecimal payeeBalanceBefore = userAccountService.getById(payeeAccount.getId()).getBalance();
 		
 		boolean exceptionThrown = false;
 		try {
-			TransactionService.getInstance().createTransaction(payerAccount.getUsername(), request);
+			transactionService.createTransaction(payerAccount.getUsername(), request);
 		} catch (TransactionException e) {
 			exceptionThrown = true;
 			assertEquals(TransactionService.PAYMENT_REFUSE, e.getMessage());
@@ -324,10 +334,10 @@ public class TransactionServiceTest {
 		
 		assertTrue(exceptionThrown);
 		
-		assertEquals(nofTransaction, getAllTransactions().size());
+		assertEquals(nofTransaction, transactionService.getAll().size());
 		
-		assertEquals(payerBalanceBefore, UserAccountService.getInstance().getById(payerAccount.getId()).getBalance());
-		assertEquals(payeeBalanceBefore, UserAccountService.getInstance().getById(payeeAccount.getId()).getBalance());
+		assertEquals(payerBalanceBefore, userAccountService.getById(payerAccount.getId()).getBalance());
+		assertEquals(payeeBalanceBefore, userAccountService.getById(payeeAccount.getId()).getBalance());
 	}
 	
 	@Test
@@ -338,8 +348,8 @@ public class TransactionServiceTest {
 		KeyPair keyPairPayer = KeyHandler.generateKeyPair();
 		KeyPair keyPairPayee = KeyHandler.generateKeyPair();
 	
-		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayer.getPublic()));
-		byte keyNumberPayee = UserAccountService.getInstance().saveUserPublicKey(payeeAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayee.getPublic()));
+		byte keyNumberPayer = userAccountService.saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayer.getPublic()));
+		byte keyNumberPayee = userAccountService.saveUserPublicKey(payeeAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayee.getPublic()));
 		
 		//transaction #1 - TDAOT_11 buys from TDAOT_12
 		PaymentRequest paymentRequestPayer = new PaymentRequest(
@@ -363,7 +373,7 @@ public class TransactionServiceTest {
 		paymentRequestPayee.sign(keyPairPayee.getPrivate());
 		
 		ServerPaymentRequest request = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
-		TransactionService.getInstance().createTransaction(payerAccount.getUsername(), request);
+		transactionService.createTransaction(payerAccount.getUsername(), request);
 		
 		//transaction #2 - TDAOT_12 buys from TDAOT_11
 		paymentRequestPayer = new PaymentRequest(
@@ -387,19 +397,19 @@ public class TransactionServiceTest {
 		paymentRequestPayee.sign(keyPairPayer.getPrivate());
 		
 		request = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
-		TransactionService.getInstance().createTransaction(payerAccount.getUsername(), request);
+		transactionService.createTransaction(payerAccount.getUsername(), request);
 		
-		int nofTransactionsPayer = TransactionService.getInstance().getHistory(payerAccount.getUsername(), 0).size();
+		int nofTransactionsPayer = transactionService.getHistory(payerAccount.getUsername(), 0).size();
 		assertEquals(2, nofTransactionsPayer);
 		
-		int nofTransactionsPayee = TransactionService.getInstance().getHistory(payeeAccount.getUsername(), 0).size();
+		int nofTransactionsPayee = transactionService.getHistory(payeeAccount.getUsername(), 0).size();
 		assertEquals(2, nofTransactionsPayee);
 		
 		
 		UserAccount account3 = createAccountAndVerifyAndReload("TDAOT_13", "TDAOT_13@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
 		KeyPair keyPairAccount3 = KeyHandler.generateKeyPair();
 		
-		byte keyNumberAccount3 = UserAccountService.getInstance().saveUserPublicKey(account3.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairAccount3.getPublic()));
+		byte keyNumberAccount3 = userAccountService.saveUserPublicKey(account3.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairAccount3.getPublic()));
 		
 		//transaction #3 - TDAOT_11 buys from TDAOT_13
 		paymentRequestPayer = new PaymentRequest(
@@ -423,15 +433,15 @@ public class TransactionServiceTest {
 		paymentRequestPayee.sign(keyPairAccount3.getPrivate());
 		
 		request = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
-		TransactionService.getInstance().createTransaction(payerAccount.getUsername(), request);
+		transactionService.createTransaction(payerAccount.getUsername(), request);
 		
-		int nofTransactions11 = TransactionService.getInstance().getHistory("TDAOT_11", 0).size();
+		int nofTransactions11 = transactionService.getHistory("TDAOT_11", 0).size();
 		assertEquals(3, nofTransactions11);
 		
-		int nofTransactions12 = TransactionService.getInstance().getHistory("TDAOT_12", 0).size();
+		int nofTransactions12 = transactionService.getHistory("TDAOT_12", 0).size();
 		assertEquals(2, nofTransactions12);
 		
-		int nofTransactions13 = TransactionService.getInstance().getHistory("TDAOT_13", 0).size();
+		int nofTransactions13 = transactionService.getHistory("TDAOT_13", 0).size();
 		assertEquals(1, nofTransactions13);
 	}
 	
@@ -440,16 +450,15 @@ public class TransactionServiceTest {
 		UserAccount fromDB = createAccountAndVerifyAndReload("TDAOT_14", "TDAOT_14@bitcoin.csg.uzh.ch", "my-password", new BigDecimal("0.0"));
 		UserAccount fromDB2 = createAccountAndVerifyAndReload("TDAOT_15", "TDAOT_15@bitcoin.csg.uzh.ch", "my-password", new BigDecimal("0.0"));
 		
-		assertEquals(0, TransactionService.getInstance().getHistory(fromDB.getUsername(), 0).size());
+		assertEquals(0, transactionService.getHistory(fromDB.getUsername(), 0).size());
 		
-		DbTransaction tx;
 		
 		ArrayList<Date> dates = new ArrayList<Date>();
 		int nofTransactions = 0;
 		int additionalTx = 2;
 		
 		while (nofTransactions < Config.TRANSACTIONS_MAX_RESULTS+additionalTx) {
-			tx = new DbTransaction();
+			DbTransaction tx = new DbTransaction();
 			tx.setId(nofTransactions);
 			Date d = new Date();
 			dates.add(d);
@@ -458,15 +467,15 @@ public class TransactionServiceTest {
 			tx.setUsernamePayer(fromDB.getUsername());
 			tx.setUsernamePayee(fromDB2.getUsername());
 			
-			TransactionDAO.createTransaction(tx, fromDB, fromDB2);
+			transactionService.createTransaction(tx, fromDB, fromDB2);
 		
-			fromDB = UserAccountService.getInstance().getByUsername(fromDB.getUsername());
-			fromDB2 = UserAccountService.getInstance().getByUsername(fromDB2.getUsername());
+			fromDB = userAccountService.getByUsername(fromDB.getUsername());
+			fromDB2 = userAccountService.getByUsername(fromDB2.getUsername());
 			nofTransactions++;
 		}
 		
 		assertTrue(nofTransactions > Config.TRANSACTIONS_MAX_RESULTS);
-		ArrayList<HistoryTransaction> history = TransactionService.getInstance().getHistory(fromDB.getUsername(), 0);
+		List<HistoryTransaction> history = transactionService.getHistory(fromDB.getUsername(), 0);
 		assertEquals(Config.TRANSACTIONS_MAX_RESULTS, history.size());
 		
 		//assert that the list is in descending order
@@ -482,7 +491,7 @@ public class TransactionServiceTest {
 		}
 		
 		//get the secod page
-		ArrayList<HistoryTransaction> history2 = TransactionService.getInstance().getHistory(fromDB.getUsername(), 1);
+		List<HistoryTransaction> history2 = transactionService.getHistory(fromDB.getUsername(), 1);
 		assertEquals(additionalTx, history2.size());
 		
 		//assert that the first and the second tx are now in the list, since we fetched the second page
@@ -498,29 +507,18 @@ public class TransactionServiceTest {
 		}
 		
 		//test get the number of results
-		long historyCount = TransactionService.getInstance().getHistoryCount(fromDB.getUsername());
+		long historyCount = transactionService.getHistoryCount(fromDB.getUsername());
 		assertEquals(Config.TRANSACTIONS_MAX_RESULTS+additionalTx, historyCount);
 	}
 	
 	private UserAccount createAccountAndVerifyAndReload(String username, String email, String password, BigDecimal bigDecimal) throws Exception {
 		UserAccount buyerAccount = new UserAccount(username, email, password);
-		assertTrue(UserAccountService.getInstance().createAccount(buyerAccount));
-		buyerAccount = UserAccountService.getInstance().getByUsername(buyerAccount.getUsername());
+		assertTrue(userAccountService.createAccount(buyerAccount));
+		buyerAccount = userAccountService.getByUsername(buyerAccount.getUsername());
 		buyerAccount.setEmailVerified(true);
 		buyerAccount.setBalance(bigDecimal);
-		UserAccountDAO.updateAccount(buyerAccount);
+		userAccountService.updateAccount(buyerAccount);
 		return buyerAccount;
-	}
-
-	@SuppressWarnings("unchecked")
-	private List<DbTransaction> getAllTransactions() {
-		SessionFactory sessionFactory = HibernateUtil.getSessionFactory();
-		Session session = sessionFactory.openSession();
-		session.beginTransaction();
-		List<DbTransaction> list = session.createQuery("from DB_TRANSACTION").list();
-		
-		session.close();
-		return list;
 	}
 	
 }

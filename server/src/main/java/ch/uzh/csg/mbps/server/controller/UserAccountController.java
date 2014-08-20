@@ -1,9 +1,11 @@
 package ch.uzh.csg.mbps.server.controller;
 
 import java.io.IOException;
+import java.util.List;
 
 import net.minidev.json.parser.ParseException;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,7 +22,10 @@ import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
 import ch.uzh.csg.mbps.responseobject.GetHistoryTransferObject;
 import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;
+import ch.uzh.csg.mbps.server.clientinterface.ITransaction;
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.domain.UserPublicKey;
 import ch.uzh.csg.mbps.server.service.PayInTransactionService;
 import ch.uzh.csg.mbps.server.service.PayOutTransactionService;
 import ch.uzh.csg.mbps.server.service.TransactionService;
@@ -60,6 +65,18 @@ public class UserAccountController {
 	private static final String PASSWORD_RESET_LINK_SENT = 	"A link to reset your password has been sent to your email address.";
 	private static final String INVALID_EMAIL = 	"Invalid emailaddress. Please enter a proper emailaddress.";
 	private static final String EMAIL_ALREADY_EXISTS = 	"An account with this email address already exists.";
+	
+	@Autowired
+	private PayInTransactionService payInTransactionService;
+	
+	@Autowired
+	private PayOutTransactionService payOutTransactionService;
+	
+	@Autowired
+	private ITransaction transactionService;
+	
+	@Autowired
+	private IUserAccount userAccountService;
 
 	/**
 	 * Creates a new UserAccount and saves it to DB.
@@ -72,7 +89,7 @@ public class UserAccountController {
 	@ResponseBody
 	public CustomResponseObject createAccount(@RequestBody UserAccount userAccount) {
 		try {
-			boolean success = UserAccountService.getInstance().createAccount(userAccount);
+			boolean success = userAccountService.createAccount(userAccount);
 			if (success)
 				return new CustomResponseObject(true, CREATION_SUCCESS);
 			else
@@ -100,8 +117,10 @@ public class UserAccountController {
 	@ResponseBody
 	public CustomResponseObject getUserAccount() {
 		try {
-			UserAccount userAccount = UserAccountService.getInstance().getByUsername(AuthenticationInfo.getPrincipalUsername());
-			CustomResponseObject responseObject = new CustomResponseObject(true, null, Type.AFTER_LOGIN);
+			UserAccount userAccount = userAccountService.getByUsername(AuthenticationInfo.getPrincipalUsername());
+			List<UserPublicKey> pubList = userAccountService.getUserPublicKey(userAccount.getId());
+			
+			CustomResponseObject responseObject = new CustomResponseObject(true, pubList.isEmpty()? null: Integer.toString(pubList.size()), Type.AFTER_LOGIN);
 			CustomPublicKey cpk = new CustomPublicKey(Constants.SERVER_KEY_PAIR.getKeyNumber(), Constants.SERVER_KEY_PAIR.getPkiAlgorithm(), Constants.SERVER_KEY_PAIR.getPublicKey());
 			responseObject.setServerPublicKey(cpk);
 			responseObject.setReadAccountTO(new ReadAccountTransferObject(transform(userAccount)));
@@ -148,7 +167,7 @@ public class UserAccountController {
 	@ResponseBody
 	public CustomResponseObject updateAccount(@RequestBody UserAccount updatedAccount){
 		try {
-			boolean success = UserAccountService.getInstance().updateAccount(AuthenticationInfo.getPrincipalUsername(), updatedAccount);
+			boolean success = userAccountService.updateAccount(AuthenticationInfo.getPrincipalUsername(), updatedAccount);
 			if (success)
 				return new CustomResponseObject(true, UPDATE_SUCCESS);
 			else
@@ -170,7 +189,7 @@ public class UserAccountController {
 	@ResponseBody
 	public CustomResponseObject deleteUserAccount() {
 		try {
-			boolean success = UserAccountService.getInstance().delete(AuthenticationInfo.getPrincipalUsername());
+			boolean success = userAccountService.delete(AuthenticationInfo.getPrincipalUsername());
 			if (success)
 				return new CustomResponseObject(true, DELETE_SUCCESS);
 			else
@@ -192,7 +211,7 @@ public class UserAccountController {
 	 */
 	@RequestMapping(value = "/verify/{verificationToken}", method = RequestMethod.GET, produces = "application/json")
 	public String verifyEmailAccount(@PathVariable String verificationToken) {
-		if (UserAccountService.getInstance().verifyEmailAddress(verificationToken))
+		if (userAccountService.verifyEmailAddress(verificationToken))
 			return "SuccessfulEmailVerification";
 		else
 			return "FailedEmailVerification";
@@ -212,7 +231,7 @@ public class UserAccountController {
 	public CustomResponseObject resetPasswordRequest(@RequestBody String emailAddress) {
 		try {
 			emailAddress = emailAddress.substring(1, emailAddress.length()-1);
-			UserAccountService.getInstance().resetPasswordRequest(emailAddress);
+			userAccountService.resetPasswordRequest(emailAddress);
 			return new CustomResponseObject(true, PASSWORD_RESET_LINK_SENT);
 		} catch (UserAccountNotFoundException e) {
 			return new CustomResponseObject(false, e.getMessage());
@@ -230,7 +249,7 @@ public class UserAccountController {
 	 */
 	@RequestMapping(value = "/resetPassword/setPassword", method = RequestMethod.POST)
 	public String setPassword(@ModelAttribute("server")PasswordMatcher matcher) {
-		if (UserAccountService.getInstance().resetPassword(matcher)) {
+		if (userAccountService.resetPassword(matcher)) {
 			return "SuccessfulPasswordReset";
 		} else {
 			return "FailedPasswordReset";
@@ -248,7 +267,7 @@ public class UserAccountController {
 	 */
 	@RequestMapping(value = "/resetPassword/{resetPasswordToken}", method = RequestMethod.GET)
 	public ModelAndView resetPasswordProcessing(@PathVariable String resetPasswordToken) {
-		if (UserAccountService.getInstance().isValidResetPasswordLink(resetPasswordToken)) {
+		if (userAccountService.isValidResetPasswordLink(resetPasswordToken)) {
 			PasswordMatcher matcher = new PasswordMatcher();
 			ModelAndView mv = new ModelAndView("ResetPassword", "command", matcher);
 			mv.addObject("token", resetPasswordToken);
@@ -271,7 +290,7 @@ public class UserAccountController {
 	public CustomResponseObject mainActivityRequests() {
 		try {
 			String username = AuthenticationInfo.getPrincipalUsername();
-			UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
+			UserAccount userAccount = userAccountService.getByUsername(username);
 			CustomResponseObject response = new CustomResponseObject();
 			response.setSuccessful(true);
 			response.setType(Type.MAIN_ACTIVITY);
@@ -280,9 +299,9 @@ public class UserAccountController {
 			response.setMessage(ExchangeRates.getExchangeRate().toString());
 			//set History
 			GetHistoryTransferObject ghto = new GetHistoryTransferObject();
-			ghto.setTransactionHistory(TransactionService.getInstance().getLast5Transactions(username));
-			ghto.setPayInTransactionHistory(PayInTransactionService.getInstance().getLast5Transactions(username));
-			ghto.setPayOutTransactionHistory(PayOutTransactionService.getInstance().getLast5Transactions(username));
+			ghto.setTransactionHistory(transactionService.getLast5Transactions(username));
+			ghto.setPayInTransactionHistory(payInTransactionService.getLast5Transactions(username));
+			ghto.setPayOutTransactionHistory(payOutTransactionService.getLast5Transactions(username));
 			response.setGetHistoryTO(ghto);
 			//set Balance
 			response.setBalance(userAccount.getBalance().toString());
@@ -306,9 +325,9 @@ public class UserAccountController {
 	@ResponseBody
 	public CustomResponseObject savePublicKey(@RequestBody CustomPublicKey userPublicKey) {
 		try {
-			UserAccount userAccount = UserAccountService.getInstance().getByUsername(AuthenticationInfo.getPrincipalUsername());
+			UserAccount userAccount = userAccountService.getByUsername(AuthenticationInfo.getPrincipalUsername());
 			PKIAlgorithm pkiAlgorithm = PKIAlgorithm.getPKIAlgorithm(userPublicKey.getPkiAlgorithm());
-			byte keyNumber = UserAccountService.getInstance().saveUserPublicKey(userAccount.getId(), pkiAlgorithm, userPublicKey.getPublicKey());
+			byte keyNumber = userAccountService.saveUserPublicKey(userAccount.getId(), pkiAlgorithm, userPublicKey.getPublicKey());
 			return new CustomResponseObject(true, Byte.toString(keyNumber), Type.SAVE_PUBLIC_KEY);
 		} catch (UserAccountNotFoundException e) {
 			return new CustomResponseObject(false, ACCOUNT_NOT_FOUND, Type.SAVE_PUBLIC_KEY);
@@ -320,7 +339,7 @@ public class UserAccountController {
 	//TODO: mehmet create Account should be called
 	@RequestMapping(value = "/createAdmin/{adminPasswordToken}", method = RequestMethod.GET)
 	public ModelAndView createAdminProcessing(@PathVariable String adminPasswordToken) {
-		if (UserAccountService.getInstance().isValidResetPasswordLink(adminPasswordToken)) {
+		if (userAccountService.isValidResetPasswordLink(adminPasswordToken)) {
 			UserAccount account = new UserAccount();
 			ModelAndView mv = new ModelAndView("AdminRole", "command", account);
 			mv.addObject("token", adminPasswordToken);

@@ -5,22 +5,28 @@
 
 	<display-name>MBPS Server</display-name>
 	
+	<!-- Application Context -->
 	<listener>
 		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
-	</listener>
-	
-	<listener>
-		<listener-class>org.springframework.security.web.session.HttpSessionEventPublisher</listener-class>
 	</listener>
 
 	<context-param>
 		<param-name>contextConfigLocation</param-name>
 		<param-value>
-		    /WEB-INF/mvc-dispatcher-servlet.xml
-		    /WEB-INF/spring-security.xml
-		    /WEB-INF/applicationContext.xml
+		    /WEB-INF/security.xml
+		    /WEB-INF/database.xml
+		    /WEB-INF/cron.xml
+		    /WEB-INF/context.xml
+		    /WEB-INF/local-context.xml
 		</param-value>
 	</context-param>
+	
+	<!-- Session creation and destruction is managed by Spring-->
+	<listener>
+		<listener-class>org.springframework.security.web.session.HttpSessionEventPublisher</listener-class>
+	</listener>
+	
+
 
 	<!--  Enconding helper reads request input using UTF-8 encoding  -->
     <filter>
@@ -50,22 +56,20 @@
 		<url-pattern>/*</url-pattern>
 	</filter-mapping>
     
-	<!--  Handles all requests into the application  -->
+	<!--  Web Application Context  -->
 	<servlet>
-		<servlet-name>mvc-dispatcher</servlet-name>
+		<servlet-name>mbps</servlet-name>
 		<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
 		<init-param>
 			<param-name>contextConfigLocation</param-name>
-			<param-value>*</param-value>
+			<param-value>/WEB-INF/view.xml</param-value>
 		</init-param>
 		<load-on-startup>2</load-on-startup>
 	</servlet>
 	
  	<servlet-mapping>
-		<servlet-name>mvc-dispatcher</servlet-name>
-		<!-- <url-pattern>*.html</url-pattern> -->
+		<servlet-name>mbps</servlet-name>
 		<url-pattern>/</url-pattern>
-<!-- 		<url-pattern>*.htm</url-pattern> -->
 	</servlet-mapping>
 
 	<!-- Disables Servlet Container welcome file handling. Needed for compatibility with Servlet 3.0 and Tomcat 7.0 -->

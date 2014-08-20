@@ -16,9 +16,6 @@ import java.util.List;
 
 import javax.servlet.http.HttpSession;
 
-import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
-
-import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -35,14 +32,16 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.keys.CustomKeyPair;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.responseobject.PayOutRulesTransferObject;
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.controller.PayOutRulesController;
-import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
+import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
@@ -51,12 +50,14 @@ import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
-		"file:src/main/webapp/WEB-INF/applicationContext.xml",
-		"file:src/main/webapp/WEB-INF/mvc-dispatcher-servlet.xml",
-		"file:src/main/webapp/WEB-INF/spring-security.xml" })
+		"classpath:context.xml",
+		"classpath:test-database.xml",
+		"classpath:view.xml",
+		"classpath:security.xml"})
 @WebAppConfiguration
 public class PayOutRulesControllerTest {
 
@@ -64,6 +65,10 @@ public class PayOutRulesControllerTest {
 	private WebApplicationContext webAppContext;
 	@Autowired
 	private FilterChainProxy springSecurityFilterChain;
+	
+	@Autowired
+	private IUserAccount userAccountService;
+	
 	private static MockMvc mockMvc;
 	private static boolean initialized = false;
 	private static UserAccount test41;
@@ -96,11 +101,11 @@ public class PayOutRulesControllerTest {
 	}
 
 	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
-		assertTrue(UserAccountService.getInstance().createAccount(userAccount));
-		userAccount = UserAccountService.getInstance().getByUsername(userAccount.getUsername());
+		assertTrue(userAccountService.createAccount(userAccount));
+		userAccount = userAccountService.getByUsername(userAccount.getUsername());
 		userAccount.setEmailVerified(true);
 		userAccount.setBalance(balance);
-		UserAccountDAO.updateAccount(userAccount);
+		userAccountService.updateAccount(userAccount);
 	}
 
 	@Test
@@ -127,10 +132,12 @@ public class PayOutRulesControllerTest {
 
 	@Test
 	public void testCreateAndGetPayOutRule() throws Exception {
+		
+		BitcoindController.TESTING = true;
 
 		createAccountAndVerifyAndReload(test42,BigDecimal.ONE);
 		String plainTextPw = test42.getPassword();
-		UserAccount fromDB = UserAccountService.getInstance().getByUsername(test42.getUsername());
+		UserAccount fromDB = userAccountService.getByUsername(test42.getUsername());
 
 		ch.uzh.csg.mbps.model.PayOutRule por = new ch.uzh.csg.mbps.model.PayOutRule();
 		por.setDay(2);
@@ -170,10 +177,12 @@ public class PayOutRulesControllerTest {
 
 	@Test
 	public void testResetPayOutRules() throws Exception {
+		
+		BitcoindController.TESTING = true;
 
 		createAccountAndVerifyAndReload(test43,BigDecimal.ONE);
 		String plainTextPw = test43.getPassword();
-		UserAccount fromDB = UserAccountService.getInstance().getByUsername(test43.getUsername());
+		UserAccount fromDB = userAccountService.getByUsername(test43.getUsername());
 
 		ch.uzh.csg.mbps.model.PayOutRule por = new ch.uzh.csg.mbps.model.PayOutRule();
 		por.setDay(2);
@@ -200,7 +209,8 @@ public class PayOutRulesControllerTest {
 				.andExpect(status().isOk())
 				.andReturn();
 
-		CustomResponseObject cro = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
+		String result = mvcResult.getResponse().getContentAsString();
+		CustomResponseObject cro = mapper.readValue(result, CustomResponseObject.class);
 		assertTrue(cro.isSuccessful());
 
 		PayOutRulesTransferObject porto2 = cro.getPayOutRulesTO();

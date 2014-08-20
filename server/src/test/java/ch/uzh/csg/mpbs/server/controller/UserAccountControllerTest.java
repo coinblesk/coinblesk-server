@@ -18,19 +18,7 @@ import java.util.List;
 
 import javax.servlet.http.HttpSession;
 
-import ch.uzh.csg.mbps.customserialization.Currency;
-import ch.uzh.csg.mbps.customserialization.DecoderFactory;
-import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
-import ch.uzh.csg.mbps.customserialization.PaymentRequest;
-import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
-import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
-import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
-
-import org.codehaus.jackson.map.ObjectMapper;
 import org.hibernate.HibernateException;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.criterion.Restrictions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -47,19 +35,24 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import ch.uzh.csg.mbps.customserialization.Currency;
+import ch.uzh.csg.mbps.customserialization.DecoderFactory;
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
+import ch.uzh.csg.mbps.customserialization.PaymentRequest;
+import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
+import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
+import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
 import ch.uzh.csg.mbps.keys.CustomPublicKey;
 import ch.uzh.csg.mbps.responseobject.CreateTransactionTransferObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
 import ch.uzh.csg.mbps.responseobject.GetHistoryTransferObject;
 import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;
-import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
-import ch.uzh.csg.mbps.server.domain.EmailVerification;
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.ResetPassword;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
-import ch.uzh.csg.mbps.server.util.HibernateUtil;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
@@ -68,12 +61,14 @@ import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
 import ch.uzh.csg.mbps.util.Converter;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
-		"file:src/main/webapp/WEB-INF/applicationContext.xml",
-		"file:src/main/webapp/WEB-INF/mvc-dispatcher-servlet.xml",
-		"file:src/main/webapp/WEB-INF/spring-security.xml" })
+		"classpath:context.xml",
+		"classpath:test-database.xml",
+		"classpath:view.xml",
+		"classpath:security.xml"})
 @WebAppConfiguration
 public class UserAccountControllerTest {
 
@@ -82,6 +77,9 @@ public class UserAccountControllerTest {
 
 	@Autowired
 	private FilterChainProxy springSecurityFilterChain;
+	
+	@Autowired
+	private IUserAccount userAccountService;
 
 	private static MockMvc mockMvc;
 
@@ -147,7 +145,7 @@ public class UserAccountControllerTest {
 
 	@Test
 	public void testCreateUserAccount_UsernameNotUnique() throws Exception {
-		assertTrue(UserAccountService.getInstance().createAccount(test23));
+		assertTrue(userAccountService.createAccount(test23));
 
 		ObjectMapper mapper = new ObjectMapper();
 		String asString = mapper.writeValueAsString(test23_2);
@@ -165,16 +163,16 @@ public class UserAccountControllerTest {
 
 	@Test(expected = InvalidEmailException.class)  
 	public void testCreateUserAccount_EmptyFields() throws HibernateException, UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
-		UserAccountService.getInstance().createAccount(test27);
+		userAccountService.createAccount(test27);
 	}
 
 	@Test
 	public void testVerifyEmail() throws Exception {
 		String plainTextPassword = test29.getPassword();
-		assertTrue(UserAccountService.getInstance().createAccount(test29));
+		assertTrue(userAccountService.createAccount(test29));
 
-		UserAccount fromDB = UserAccountService.getInstance().getByUsername(test29.getUsername());
-		String token = getTokenForUser(fromDB.getId());
+		UserAccount fromDB = userAccountService.getByUsername(test29.getUsername());
+		String token = userAccountService.getTokenForUser(fromDB.getId());
 
 		MvcResult mvcResult = mockMvc.perform(get("/user/verify/"+token).secure(false))
 				.andExpect(status().isOk())
@@ -281,7 +279,7 @@ public class UserAccountControllerTest {
 		assertEquals(test25.getUsername(), readAccountTO.getUserAccount().getUsername());
 		assertEquals(newEmail, readAccountTO.getUserAccount().getEmail());
 
-		UserAccountService.getInstance().delete(test25.getUsername());
+		userAccountService.delete(test25.getUsername());
 
 		mvcResult = mockMvc.perform(post("/user/update").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isOk())
@@ -356,11 +354,11 @@ public class UserAccountControllerTest {
 	}
 
 	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
-		assertTrue(UserAccountService.getInstance().createAccount(userAccount));
-		userAccount = UserAccountService.getInstance().getByUsername(userAccount.getUsername());
+		assertTrue(userAccountService.createAccount(userAccount));
+		userAccount = userAccountService.getByUsername(userAccount.getUsername());
 		userAccount.setEmailVerified(true);
 		userAccount.setBalance(balance);
-		UserAccountDAO.updateAccount(userAccount);
+		userAccountService.updateAccount(userAccount);
 	}
 
 	private HttpSession loginAndGetSession(String username, String plainTextPassword) throws Exception {
@@ -377,7 +375,7 @@ public class UserAccountControllerTest {
 	public void testResetPassword() throws Exception {
 		createAccountAndVerifyAndReload(test30,BigDecimal.ONE);
 
-		UserAccount fromDB = UserAccountService.getInstance().getByUsername(test30.getUsername());
+		UserAccount fromDB = userAccountService.getByUsername(test30.getUsername());
 
 		ObjectMapper mapper = new ObjectMapper();
 		String emailAddress = fromDB.getEmail();
@@ -399,7 +397,7 @@ public class UserAccountControllerTest {
 		transferObject = mapper.readValue(resultAsString, CustomResponseObject.class);		
 		assertFalse(transferObject.isSuccessful());
 
-		List<ResetPassword> list = UserAccountDAO.getAllResetPassword();
+		List<ResetPassword> list = userAccountService.getAllResetPassword();
 		String token = null;
 		for(int i=0; i<list.size();i++){
 			if(list.get(i).getUserID() == fromDB.getId()){
@@ -468,20 +466,20 @@ public class UserAccountControllerTest {
 	
 	@Test
 	public void testGetMainActivityRequests() throws Exception {
-		assertTrue(UserAccountService.getInstance().createAccount(test32));
-		test32 = UserAccountService.getInstance().getByUsername(test32.getUsername());
+		assertTrue(userAccountService.createAccount(test32));
+		test32 = userAccountService.getByUsername(test32.getUsername());
 		test32.setEmailVerified(true);
 		test32.setBalance(TRANSACTION_AMOUNT.multiply(new BigDecimal(10)));
-		UserAccountDAO.updateAccount(test32);
+		userAccountService.updateAccount(test32);
 		
 		String plainTextPw = test33.getPassword();
-		assertTrue(UserAccountService.getInstance().createAccount(test33));
-		test33 = UserAccountService.getInstance().getByUsername(test33.getUsername());
+		assertTrue(userAccountService.createAccount(test33));
+		test33 = userAccountService.getByUsername(test33.getUsername());
 		test33.setEmailVerified(true);
-		UserAccountDAO.updateAccount(test33);
+		userAccountService.updateAccount(test33);
 		
 		KeyPair keyPairPayer = KeyHandler.generateKeyPair();
-		byte keyNumberPayer = UserAccountService.getInstance().saveUserPublicKey(test32.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayer.getPublic()));
+		byte keyNumberPayer = userAccountService.saveUserPublicKey(test32.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayer.getPublic()));
 		
 		ObjectMapper mapper = null;
 		
@@ -531,7 +529,7 @@ public class UserAccountControllerTest {
 		
 		GetHistoryTransferObject ghto = cro2.getGetHistoryTO();
 		assertNotNull(ghto);
-		assertEquals(3, ghto.getTransactionHistory().size());
+		assertEquals(5, ghto.getTransactionHistory().size());
 		assertEquals(0, ghto.getPayInTransactionHistory().size());
 		assertEquals(0, ghto.getPayOutTransactionHistory().size());
 		
@@ -546,16 +544,6 @@ public class UserAccountControllerTest {
 		result.getRequest().getSession().invalidate();
 	}
 
-	private String getTokenForUser(long id) {
-		SessionFactory sessionFactory = HibernateUtil.getSessionFactory();
-		Session session = sessionFactory.openSession();
-		session.beginTransaction();
-
-		EmailVerification ev = (EmailVerification) session.createCriteria(EmailVerification.class).add(Restrictions.eq("userID", id)).uniqueResult();
-		if (ev != null)
-			return ev.getVerificationToken();
-		else
-			return null;
-	}
+	
 
 }

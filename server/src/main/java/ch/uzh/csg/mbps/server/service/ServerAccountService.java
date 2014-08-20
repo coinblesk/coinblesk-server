@@ -2,12 +2,16 @@ package ch.uzh.csg.mbps.server.service;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 import org.hibernate.HibernateException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import ch.uzh.csg.mbps.model.HistoryServerAccountTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
 import ch.uzh.csg.mbps.server.dao.ServerAccountDAO;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
@@ -27,25 +31,14 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
  *
  */
 @Service
-public class ServerAccountService implements IServerAccount{
-	private static ServerAccountService serverAccountService;
-	private static boolean TESTING_MODE = false;
-
-	private ServerAccountService() {
-	}
+public class ServerAccountService implements IServerAccount {
 	
+	private static boolean TESTING_MODE = false;
+	
+	@Autowired
+	private ServerAccountDAO serverAccountDAO;
+
 	//TODO: mehmet: javadoc
-	/**
-	 * 
-	 * @return
-	 */
-	public static ServerAccountService getInstance() {
-		if (serverAccountService == null) {
-			serverAccountService = new ServerAccountService();
-		}
-			
-		return serverAccountService;
-	}
 	
 	/**
 	 * Enables testing mode for JUnit Tests.
@@ -66,6 +59,7 @@ public class ServerAccountService implements IServerAccount{
 	}
 	
 	@Override
+	@Transactional
 	public boolean createAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException {
 		Date date = new Date();
 		if (TESTING_MODE){
@@ -129,7 +123,7 @@ public class ServerAccountService implements IServerAccount{
 		
 		String token = java.util.UUID.randomUUID().toString();
 		try {
-			ServerAccountDAO.createAccount(serverAccount, token);
+			serverAccountDAO.createAccount(serverAccount, token);
 		} catch (HibernateException e) {
 			return false;
 		}
@@ -141,20 +135,24 @@ public class ServerAccountService implements IServerAccount{
 	}
 	
 	@Override
+	@Transactional(readOnly = true)
 	public ServerAccount getByUrl(String url) throws ServerAccountNotFoundException {
-		return ServerAccountDAO.getByUrl(url);
+		return serverAccountDAO.getByUrl(url);
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public ServerAccount getById(long id) throws ServerAccountNotFoundException {
-		return ServerAccountDAO.getById(id);
+		return serverAccountDAO.getById(id);
 	}
 	
+	@Transactional(readOnly = true)
 	public ServerAccount getByUrlIgnoreCaseAndDeletedFlag(String url) throws ServerAccountNotFoundException{
-		return ServerAccountDAO.getByUrlIgnoreCaseAndDeletedFlag(url);
+		return serverAccountDAO.getByUrlIgnoreCaseAndDeletedFlag(url);
 	}
 
 	@Override
+	@Transactional
 	public boolean updateAccount(String url, ServerAccount updatedAccount) throws ServerAccountNotFoundException {
 		ServerAccount serverAccount = getByUrl(url);
 		
@@ -168,7 +166,7 @@ public class ServerAccountService implements IServerAccount{
 			serverAccount.setTrustLevel(updatedAccount.getTrustLevel());
 		
 		try{
-			ServerAccountDAO.updatedAccount(serverAccount);
+			serverAccountDAO.updatedAccount(serverAccount);
 		} catch (HibernateException e) {
 			return false;
 		}
@@ -177,9 +175,10 @@ public class ServerAccountService implements IServerAccount{
 	}
 
 	@Override
+	@Transactional
 	public boolean delete(String url) throws ServerAccountNotFoundException, BalanceNotZeroException {
 		try {
-			ServerAccountDAO.delete(url);
+			serverAccountDAO.delete(url);
 			return true;
 		} catch (HibernateException e) {
 			return false;
@@ -187,13 +186,14 @@ public class ServerAccountService implements IServerAccount{
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public List<ServerAccount> getByTrustLevel(int trustlevel) {
-		return ServerAccountDAO.getByTrustLevel(trustlevel);
+		return serverAccountDAO.getByTrustLevel(trustlevel);
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public List<ServerAccount> getAll() {
-		return ServerAccountDAO.getAllServerAccounts();
+		return serverAccountDAO.getAllServerAccounts();
 	}
-
 }

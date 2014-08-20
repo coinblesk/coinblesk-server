@@ -1,12 +1,16 @@
 package ch.uzh.csg.mbps.server.service;
 
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import ch.uzh.csg.mbps.responseobject.PayOutRulesTransferObject;
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.dao.PayOutRuleDAO;
 import ch.uzh.csg.mbps.server.domain.PayOutRule;
 import ch.uzh.csg.mbps.server.domain.PayOutTransaction;
@@ -23,24 +27,16 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
  * Service class for {@link PayOutRule}s.
  *
  */
+@Service
 public class PayOutRuleService {
-	private static PayOutRuleService payOutRuleService;
+	@Autowired
+	private PayOutRuleDAO payOutRuleDAO;
+	@Autowired
+	private PayOutTransactionService payOutTransactionService;
+	@Autowired
+	private IUserAccount userAccountService;
+	
 	public static Boolean testingMode = false;
-
-	private PayOutRuleService() {
-	}
-
-	/**
-	 * Returns new or existing instance of {@link PayOutRuleService}.
-	 * 
-	 * @return instance of PayOutRuleService
-	 */
-	public static PayOutRuleService getInstance() {
-		if (payOutRuleService == null)
-			payOutRuleService = new PayOutRuleService();
-
-		return payOutRuleService;
-	}
 
 	/**
 	 * Creates a new set of {@link PayOutRule}s for assigned UserAccount. Not more than
@@ -53,12 +49,13 @@ public class PayOutRuleService {
 	 * @throws PayOutRulesAlreadyDefinedException
 	 *             if already PayOutRules for this UserAccount are defined
 	 */
+	@Transactional
 	public void createRule(PayOutRulesTransferObject porto, String username) throws UserAccountNotFoundException, BitcoinException, PayOutRulesAlreadyDefinedException {
-		UserAccount user = UserAccountService.getInstance().getByUsername(username);
+		UserAccount user = userAccountService.getByUsername(username);
 		long userId = user.getId();
 		boolean noRulesDefined = true;
 		try {
-			noRulesDefined = PayOutRuleDAO.getByUserId(userId).isEmpty();
+			noRulesDefined = payOutRuleDAO.getByUserId(userId).isEmpty();
 		} catch (PayOutRuleNotFoundException e) {
 			noRulesDefined = true;
 		}
@@ -74,7 +71,7 @@ public class PayOutRuleService {
 		} else {
 			throw new PayOutRulesAlreadyDefinedException();
 		}
-		PayOutRuleDAO.createPayOutRules(porto.getPayOutRulesList());
+		payOutRuleDAO.createPayOutRules(porto.getPayOutRulesList());
 	}
 
 	/**
@@ -85,9 +82,10 @@ public class PayOutRuleService {
 	 * @throws PayOutRuleNotFoundException
 	 * @throws UserAccountNotFoundException
 	 */
-	public ArrayList<PayOutRule> getRules(String username) throws PayOutRuleNotFoundException, UserAccountNotFoundException {
-		UserAccount user = UserAccountService.getInstance().getByUsername(username);
-		return PayOutRuleDAO.getByUserId(user.getId());
+	@Transactional(readOnly = true)
+	public List<PayOutRule> getRules(String username) throws PayOutRuleNotFoundException, UserAccountNotFoundException {
+		UserAccount user = userAccountService.getByUsername(username);
+		return payOutRuleDAO.getByUserId(user.getId());
 	}
 
 	/**
@@ -96,9 +94,10 @@ public class PayOutRuleService {
 	 * @param username
 	 * @throws UserAccountNotFoundException
 	 */
+	@Transactional
 	public void deleteRules(String username) throws UserAccountNotFoundException {
-		UserAccount user = UserAccountService.getInstance().getByUsername(username);
-		PayOutRuleDAO.deleteRules(user.getId());
+		UserAccount user = userAccountService.getByUsername(username);
+		payOutRuleDAO.deleteRules(user.getId());
 	}
 
 	/**
@@ -112,9 +111,10 @@ public class PayOutRuleService {
 	 * @throws UserAccountNotFoundException
 	 * @throws BitcoinException
 	 */
+	@Transactional
 	public void checkBalanceLimitRules(UserAccount sellerAccount) throws PayOutRuleNotFoundException, UserAccountNotFoundException, BitcoinException {
-		sellerAccount = UserAccountService.getInstance().getById(sellerAccount.getId());
-		List<PayOutRule> rules = PayOutRuleDAO.getByUserId(sellerAccount.getId());
+		sellerAccount = userAccountService.getById(sellerAccount.getId());
+		List<PayOutRule> rules = payOutRuleDAO.getByUserId(sellerAccount.getId());
 
 		PayOutRule tempRule;
 		for (int i=0; i < rules.size(); i++){
@@ -125,7 +125,7 @@ public class PayOutRuleService {
 				pot.setAmount(sellerAccount.getBalance().subtract(Config.TRANSACTION_FEE));
 				pot.setBtcAddress(tempRule.getPayoutAddress());
 				pot.setUserID(sellerAccount.getId());
-				PayOutTransactionService.getInstance().createPayOutTransaction(sellerAccount.getUsername(), pot);
+				payOutTransactionService.createPayOutTransaction(sellerAccount.getUsername(), pot);
 			}
 		}		
 	}
@@ -137,14 +137,16 @@ public class PayOutRuleService {
 	 * @return List<PayOutRule>
 	 * @throws PayOutRuleNotFoundException
 	 */
+	@Transactional(readOnly = true)
 	public List<PayOutRule> getRules(long userId) throws PayOutRuleNotFoundException{
-		return PayOutRuleDAO.getByUserId(userId);
+		return payOutRuleDAO.getByUserId(userId);
 	}
 
 	/**
 	 * Checks if Rules exist for the current hour and day. If yes these
 	 * {@link PayOutRule}s are executed.
 	 */
+	@Transactional
 	public void checkAllRules() {
 		Date date = new Date();
 		Calendar calendar = GregorianCalendar.getInstance();
@@ -154,18 +156,18 @@ public class PayOutRuleService {
 
 		List<PayOutRule> rules;
 		try {
-			rules = PayOutRuleDAO.get(hour, day);
+			rules = payOutRuleDAO.get(hour, day);
 			PayOutRule tempRule;
 			for (int i = 0; i < rules.size(); i++) {
 				tempRule = rules.get(i);
 				try {
-					UserAccount user = UserAccountService.getInstance().getById(tempRule.getUserId());
+					UserAccount user = userAccountService.getById(tempRule.getUserId());
 					if (user.getBalance().compareTo(Config.TRANSACTION_FEE) == 1) {
 						PayOutTransaction pot = new PayOutTransaction();
 						pot.setUserID(user.getId());
 						pot.setBtcAddress(tempRule.getPayoutAddress());
 						pot.setAmount(user.getBalance().subtract(Config.TRANSACTION_FEE));
-						PayOutTransactionService.getInstance().createPayOutTransaction(user.getUsername(),pot);
+						payOutTransactionService.createPayOutTransaction(user.getUsername(),pot);
 					}
 				} catch (UserAccountNotFoundException | BitcoinException e) {
 				}

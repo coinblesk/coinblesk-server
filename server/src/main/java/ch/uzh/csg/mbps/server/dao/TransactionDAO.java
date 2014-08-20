@@ -1,22 +1,29 @@
 package ch.uzh.csg.mbps.server.dao;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
 
 import org.apache.log4j.Logger;
 import org.hibernate.HibernateException;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.criterion.Restrictions;
-import org.hibernate.transform.Transformers;
+import org.springframework.stereotype.Repository;
 
 import ch.uzh.csg.mbps.customserialization.Currency;
+import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
 import ch.uzh.csg.mbps.server.domain.DbTransaction;
+import ch.uzh.csg.mbps.server.domain.PayInTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
-import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.Config;
-import ch.uzh.csg.mbps.server.util.HibernateUtil;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.util.Converter;
 
@@ -25,13 +32,12 @@ import ch.uzh.csg.mbps.util.Converter;
  * {@link DbTransaction}s between two {@link UserAccount}s.
  * 
  */
+@Repository
 public class TransactionDAO {
 	private static Logger LOGGER = Logger.getLogger(TransactionDAO.class);
 
-	private static Session openSession() {
-		SessionFactory sessionFactory = HibernateUtil.getSessionFactory();
-		return sessionFactory.openSession();
-	}
+	@PersistenceContext
+	private EntityManager em;
 
 	/**
 	 * Returns defined amount of {@link DbTransaction}s assigned to the given
@@ -46,15 +52,28 @@ public class TransactionDAO {
 	 * @return ArrayList with requested amount of HistoryTransactions
 	 * @throws UserAccountNotFoundException
 	 */
-	@SuppressWarnings("unchecked")
-	public static ArrayList<HistoryTransaction> getHistory(String username, int page) throws UserAccountNotFoundException, HibernateException {
-		if (page < 0)
+	public List<HistoryTransaction> getHistory(UserAccount userAccount, int page) throws UserAccountNotFoundException {
+		if (page < 0) {
 			return null;
+		}
 		
-		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
-		Session session = openSession();
-		session.beginTransaction();	
-		List<HistoryTransaction> resultWithAliasedBean = session
+		@SuppressWarnings("unchecked")
+        List<HistoryTransaction> resultWithAliasedBean = em.createQuery(
+				  "SELECT NEW ch.uzh.csg.mbps.model.HistoryTransaction(dbt.timestamp, dbt.usernamePayer, dbt.usernamePayee, dbt.amount, dbt.inputCurrency, dbt.inputCurrencyAmount) "
+				+ "FROM DB_TRANSACTION dbt "
+				+ "WHERE (dbt.usernamePayer = :username OR dbt.usernamePayee = :username) "
+				+ "ORDER BY dbt.timestamp DESC")
+				.setParameter("username", userAccount.getUsername())
+				.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
+				.setMaxResults(Config.TRANSACTIONS_MAX_RESULTS)
+				.getResultList();
+		
+		return resultWithAliasedBean;
+		
+		//TODO: why so many joins?
+		//UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
+		
+		/*List<HistoryTransaction> resultWithAliasedBean = session
 				.createSQLQuery(
 						"SELECT transaction.timestamp, u2.username as buyer, u1.username as seller, transaction.amount, transaction.input_currency as inputCurrency, transaction.input_currency_amount as inputCurrencyAmount "
 								+ "FROM DB_TRANSACTION transaction "
@@ -75,10 +94,10 @@ public class TransactionDAO {
 				.setResultTransformer(Transformers.aliasToBean(HistoryTransaction.class))
 				.list();
 
-		List<HistoryTransaction> results = resultWithAliasedBean;
-		session.close();
+		List<HistoryTransaction> results = resultWithAliasedBean;*/
+		//TODO: rewrite with JPA, not Hibernate!
 		
-		return new ArrayList<HistoryTransaction>(results);
+		//return new ArrayList<HistoryTransaction>();
 	}
 
 	/**
@@ -90,23 +109,18 @@ public class TransactionDAO {
 	 * @return number of Transactions assigned to username.
 	 * @throws UserAccountNotFoundException
 	 */
-	public static long getHistoryCount(String username) throws UserAccountNotFoundException {
-		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
-		Session session = openSession();
-		session.beginTransaction();
-		long nofResults = ((Number) session.createSQLQuery(
-				  "SELECT COUNT(*) " +
-				  "FROM DB_TRANSACTION transaction " +
-				  "INNER JOIN user_account u1 on transaction.username_payee = u1.username " +
-				  "INNER JOIN user_account u2 on transaction.username_payer = u2.username " +
-				  "WHERE transaction.username_payer = :username OR transaction.username_payee = :username")
-				  .setString("username",userAccount.getUsername())
-				  .uniqueResult())
-				  .longValue();
-
-		session.close();
+	public long getHistoryCount(UserAccount userAccount) throws UserAccountNotFoundException {
 		
-		return nofResults;
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<Long> cq = cb.createQuery(Long.class);
+		Root<DbTransaction> root = cq.from(DbTransaction.class);
+		cq.select(cb.count(root));
+		
+		Predicate condition1 = cb.equal(root.get("usernamePayer"), userAccount.getUsername());
+		Predicate condition2 = cb.equal(root.get("usernamePayee"), userAccount.getUsername());
+		Predicate condition3 = cb.or(condition1, condition2);
+		cq.where(condition3);
+		return em.createQuery(cq).getSingleResult();
 	}
 
 	/**
@@ -120,31 +134,14 @@ public class TransactionDAO {
 	 *            UserAccount to which transaction-amount is added.
 	 * @throws HibernateException
 	 */
-	public static void createTransaction(DbTransaction tx, UserAccount buyerAccount, UserAccount sellerAccount) throws HibernateException {
-		Session session = openSession();
-		org.hibernate.Transaction transaction = null;
+	public void createTransaction(DbTransaction tx, UserAccount buyerAccount, UserAccount sellerAccount) {
 		
-		try {
-			transaction = session.beginTransaction();
-			session.save(tx);
-			buyerAccount.setBalance(buyerAccount.getBalance().subtract(tx.getAmount()));
-			session.update(buyerAccount);
-			
-			sellerAccount.setBalance(sellerAccount.getBalance().add(tx.getAmount()));
-			session.update(sellerAccount);
-			
-			transaction.commit();			
-			
-			LOGGER.info("Transaction created: " + tx.toString());
-		} catch (HibernateException e) {
-			LOGGER.error("Problem creating Transaction: " + tx.toString() + " " + e.getMessage());
-			if (transaction != null)
-				transaction.rollback();
-			
-			throw e;
-		} finally {
-			session.close();
-		}
+		buyerAccount.setBalance(buyerAccount.getBalance().subtract(tx.getAmount()));
+		em.merge(buyerAccount);
+		sellerAccount.setBalance(sellerAccount.getBalance().add(tx.getAmount()));
+		em.merge(sellerAccount);
+		em.persist(tx);
+		LOGGER.info("Transaction created: " + tx.toString());
 	}
 	
 	/**
@@ -162,25 +159,26 @@ public class TransactionDAO {
 	 *            the payer's timestamp
 	 * @return
 	 */
-	public static boolean exists(String usernamePayer, String usernamePayee, Currency currency, long amount, long timestampPayer) {
-		Session session = openSession();
-		session.beginTransaction();
+	public boolean exists(String usernamePayer, String usernamePayee, Currency currency, long amount, long timestampPayer) {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<Long> cq = cb.createQuery(Long.class);
 		
-		DbTransaction tx = (DbTransaction) session.createCriteria(DbTransaction.class)
-				.add(Restrictions.eq("usernamePayer", usernamePayer))
-				.add(Restrictions.eq("usernamePayee", usernamePayee))
-				.add(Restrictions.eq("currency", currency.getCurrencyCode()))
-				.add(Restrictions.eq("amount", Converter.getBigDecimalFromLong(amount)))
-				.add(Restrictions.eq("timestampPayer", timestampPayer))
-				.uniqueResult();
+		Root<DbTransaction> root = cq.from(DbTransaction.class);
+		cq.select(cb.count(root));
 		
-		session.close();
 		
-		if (tx != null) {
-			return true;
-		} else {
-			return false;
-		}
+		Predicate condition1 = cb.equal(root.get("usernamePayer"), usernamePayer);
+		Predicate condition2 = cb.equal(root.get("usernamePayee"), usernamePayee);
+		Predicate condition3= cb.equal(root.get("currency"), currency.getCurrencyCode());
+		Predicate condition4 = cb.equal(root.get("amount"), Converter.getBigDecimalFromLong(amount));
+		Predicate condition5= cb.equal(root.get("timestampPayer"), timestampPayer);
+		
+		Predicate condition6 = cb.and(condition1, condition2, condition3, condition4, condition5);
+		
+		cq.where(condition6);
+		Long count = em.createQuery(cq).getSingleResult();
+		
+		return count > 0;
 	}
 
 	/**
@@ -191,35 +189,28 @@ public class TransactionDAO {
 	 * @return ArrayList<HistoryTransaction>
 	 * @throws UserAccountNotFoundException
 	 */
-	@SuppressWarnings("unchecked")
-	public static ArrayList<HistoryTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
-		UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
-		Session session = openSession();
-		session.beginTransaction();
+	public List<HistoryTransaction> getLast5Transactions(UserAccount userAccount) throws UserAccountNotFoundException {
 		
-		List<HistoryTransaction> resultWithAliasedBean = session.createSQLQuery(
-				  "SELECT transaction.timestamp, u2.username as buyer, u1.username as seller, transaction.amount, transaction.input_currency as inputCurrency, transaction.input_currency_amount as inputCurrencyAmount " +
-				  "FROM DB_TRANSACTION transaction " +
-				  "INNER JOIN user_account u1 on transaction.username_payee = u1.username " +
-				  "INNER JOIN user_account u2 on transaction.username_payer = u2.username " +
-				  "WHERE transaction.username_payer = :username OR transaction.username_payee = :username " +
-				  "ORDER BY transaction.timestamp DESC")
-				  .addScalar("timestamp")
-				  .addScalar("buyer")
-				  .addScalar("seller")
-				  .addScalar("amount")
-				  .addScalar("inputCurrency")
-				  .addScalar("inputCurrencyAmount")
-				  .setString("username", userAccount.getUsername())
-				  .setMaxResults(5)
-				  .setFetchSize(5)
-				  .setResultTransformer(Transformers.aliasToBean(HistoryTransaction.class))
-				  .list();
-
-		List<HistoryTransaction> results = resultWithAliasedBean;
-		session.close();
+		@SuppressWarnings("unchecked")
+        List<HistoryTransaction> resultWithAliasedBean = em.createQuery(
+				  "SELECT NEW ch.uzh.csg.mbps.model.HistoryTransaction(dbt.timestamp, dbt.usernamePayer, dbt.usernamePayee, dbt.amount, dbt.inputCurrency, dbt.inputCurrencyAmount) "
+				+ "FROM DB_TRANSACTION dbt "
+				+ "WHERE (dbt.usernamePayer = :username OR dbt.usernamePayee = :username) "
+				+ "ORDER BY dbt.timestamp DESC")
+				.setParameter("username", userAccount.getUsername())
+				.setMaxResults(5)
+				.getResultList();
 		
-		return new ArrayList<HistoryTransaction>(results);
+		return resultWithAliasedBean;
 	}
-	
+
+	public List<HistoryTransaction> getAll() {		
+		@SuppressWarnings("unchecked")
+        List<HistoryTransaction> resultWithAliasedBean = em.createQuery(
+				  "SELECT NEW ch.uzh.csg.mbps.model.HistoryTransaction(dbt.timestamp,  dbt.usernamePayer, dbt.usernamePayee, dbt.amount, dbt.inputCurrency, dbt.inputCurrencyAmount) "
+				+ "FROM DB_TRANSACTION dbt")
+				.getResultList();
+		
+		return resultWithAliasedBean;
+    }
 }

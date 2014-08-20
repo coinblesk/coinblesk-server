@@ -1,5 +1,6 @@
 package ch.uzh.csg.mbps.server.auth;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -8,8 +9,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
-import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.UserRoles;
 
 /**
@@ -18,7 +19,8 @@ import ch.uzh.csg.mbps.server.util.UserRoles;
  * database, etc.
  */
 public class CustomAuthenticationManager implements AuthenticationManager {
-	private UserAccountService userAccountService = UserAccountService.getInstance();
+	@Autowired
+	private IUserAccount userAccountService;
 	private PasswordEncoder pwEncoder = new BCryptPasswordEncoder();
 	
 	@Override
@@ -33,7 +35,7 @@ public class CustomAuthenticationManager implements AuthenticationManager {
 		}
 		
 		if (!userAccount.isEmailVerified()) {
-			UserAccountService.getInstance().resendVerificationEmail(userAccount);
+			userAccountService.resendVerificationEmail(userAccount);
 			String errMsg = "User \""+authentication.getName()+"\" has to verify his email address!";
 			throw new BadCredentialsException(errMsg);
 		}

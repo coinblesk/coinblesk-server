@@ -3,14 +3,17 @@ package ch.uzh.csg.mbps.server.dao;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.hibernate.HibernateException;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.criterion.Restrictions;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+
+import org.springframework.stereotype.Repository;
 
 import ch.uzh.csg.mbps.server.domain.PayOutRule;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
-import ch.uzh.csg.mbps.server.util.HibernateUtil;
 import ch.uzh.csg.mbps.server.util.exceptions.PayOutRuleNotFoundException;
 
 /**
@@ -18,12 +21,11 @@ import ch.uzh.csg.mbps.server.util.exceptions.PayOutRuleNotFoundException;
  * regarding {@link PayOutRule}s.
  * 
  */
+@Repository
 public class PayOutRuleDAO {
 	
-	private static Session openSession() {
-		SessionFactory sessionFactory = HibernateUtil.getSessionFactory();
-		return sessionFactory.openSession();
-	}
+	@PersistenceContext
+	private EntityManager em;
 	
 	private static PayOutRule transform(ch.uzh.csg.mbps.model.PayOutRule por) {
 		PayOutRule por2 = new PayOutRule();
@@ -39,23 +41,9 @@ public class PayOutRuleDAO {
 	 * Saves a new {@link PayOutRule} object in the database. 
 	 * @param list with {@link PayOutRule}
 	 */
-	public static void createPayOutRules(ArrayList<ch.uzh.csg.mbps.model.PayOutRule> list) {
-		Session session = null;
-		org.hibernate.Transaction transaction = null;
-		
-		try {
-			session = openSession();
-			transaction = session.beginTransaction();
-			for(int i=0; i<list.size(); i++){
-				session.save(transform(list.get(i)));				
-			}
-			transaction.commit();
-		} catch (HibernateException e) {
-			 if (transaction != null)
-				 transaction.rollback();
-			 throw e;
-		} finally {
-			session.close();
+	public void createPayOutRules(ArrayList<ch.uzh.csg.mbps.model.PayOutRule> list) {
+		for(ch.uzh.csg.mbps.model.PayOutRule po:list) {
+			em.persist(transform(po));
 		}
 	}
 	
@@ -68,16 +56,19 @@ public class PayOutRuleDAO {
 	 * @return ArrayList<PayOutRule>
 	 * @throws PayOutRuleNotFoundException
 	 */
-	@SuppressWarnings("unchecked")
-	public static ArrayList<PayOutRule> getByUserId(long userId) throws PayOutRuleNotFoundException {
-		Session session = openSession();
-		session.beginTransaction();
-		ArrayList<PayOutRule> por = (ArrayList<PayOutRule>) session.createCriteria(PayOutRule.class).add(Restrictions.eq("userId", userId)).list();
+	public List<PayOutRule> getByUserId(long userId) throws PayOutRuleNotFoundException {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<PayOutRule> cq = cb.createQuery(PayOutRule.class);
+		Root<PayOutRule> root = cq.from(PayOutRule.class);
 		
-		session.close();
+		Predicate condition = cb.equal(root.get("userId"), userId);
+		cq.where(condition);
+		
+		List<PayOutRule> por = em.createQuery(cq).getResultList();
 	
-		if(por == null || por.isEmpty())
+		if(por == null || por.isEmpty()) {
 			throw new PayOutRuleNotFoundException();
+		}
 		
 		return por;
 	}
@@ -88,14 +79,9 @@ public class PayOutRuleDAO {
 	 * 
 	 * @param userId
 	 */
-	public static void deleteRules(long userId) {
-		Session session = openSession();
-		org.hibernate.Transaction tx = session.beginTransaction();
-		
+	public void deleteRules(long userId) {
 		String hql = "delete from PAYOUT_RULES where userId= :userId";
-		session.createQuery(hql).setLong("userId", userId).executeUpdate();
-		tx.commit();
-		session.close();
+		em.createQuery(hql).setParameter("userId", userId).executeUpdate();
 	}
 
 	/**
@@ -108,16 +94,22 @@ public class PayOutRuleDAO {
 	 * @return List<PayOutRule>
 	 * @throws PayOutRuleNotFoundException
 	 */
-	@SuppressWarnings("unchecked")
-	public static List<PayOutRule> get(int hour, int day) throws PayOutRuleNotFoundException {
-		Session session = openSession();
-		session.beginTransaction();
-		List<PayOutRule> por = (List<PayOutRule>) session.createCriteria(PayOutRule.class).add(Restrictions.eq("hour", hour)).add(Restrictions.eq("day", day)).list();
+	public List<PayOutRule> get(int hour, int day) throws PayOutRuleNotFoundException {
 		
-		session.close();
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<PayOutRule> cq = cb.createQuery(PayOutRule.class);
+		Root<PayOutRule> root = cq.from(PayOutRule.class);
 		
-		if (por == null || por.isEmpty())
+		Predicate condition1 = cb.equal(root.get("hour"), hour);
+		Predicate condition2 = cb.equal(root.get("day"), day);
+		Predicate condition3 = cb.and(condition1, condition2);
+		cq.where(condition3);
+		
+		List<PayOutRule> por = em.createQuery(cq).getResultList();
+		
+		if (por == null || por.isEmpty()) {
 			throw new PayOutRuleNotFoundException();
+		}
 			
 		return por;
 	}

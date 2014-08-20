@@ -2,9 +2,14 @@ package ch.uzh.csg.mbps.server.service;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import ch.uzh.csg.mbps.server.dao.ActivitiesDAO;
 import ch.uzh.csg.mbps.server.domain.Activities;
 
+@Service
 public class ActivitiesService {
 
 	public static final String IVITE_ADMIN = "Invitation for administration rights";
@@ -22,23 +27,10 @@ public class ActivitiesService {
 	public static final String DOWNGRADE_TRUST_LEVEL = "Trust level downgraded";
 	public static final String CREATE_PAYOUT_RULES = "Created payout rule for bitcoins";
 	
-	private static ActivitiesService activitiesService;
-	
-	public ActivitiesService(){
-	}
+	@Autowired
+	private ActivitiesDAO activitiesDAO;
 	
 	//TODO: mehmet test & javadoc
-	
-	/**
-	 * 
-	 * @return
-	 */
-	public static ActivitiesService getInstrance(){
-		if(activitiesService == null)
-			activitiesService = new ActivitiesService();
-		
-		return activitiesService;
-	}
 	
 	/**
 	 * 
@@ -46,9 +38,10 @@ public class ActivitiesService {
 	 * @param title
 	 * @param message
 	 */
+	@Transactional
 	public void activityLog (String username, String title, String message){
 		Activities activity = new Activities(username, title, message);
-		ActivitiesDAO.createActivityLog(activity);
+		activitiesDAO.createActivityLog(activity);
 	}
 	
 	/**
@@ -56,7 +49,8 @@ public class ActivitiesService {
 	 * @param page
 	 * @return
 	 */
+	@Transactional(readOnly = true)
 	public List<Activities> getLogs(int page){
-		return ActivitiesDAO.getLogs(page);
+		return activitiesDAO.getLogs(page);
 	}
 }

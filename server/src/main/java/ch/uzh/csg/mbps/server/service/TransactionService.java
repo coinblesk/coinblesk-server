@@ -2,8 +2,13 @@ package ch.uzh.csg.mbps.server.service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 import org.hibernate.HibernateException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.mbps.customserialization.Currency;
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
@@ -14,6 +19,7 @@ import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.ITransaction;
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.dao.TransactionDAO;
 import ch.uzh.csg.mbps.server.dao.UserPublicKeyDAO;
 import ch.uzh.csg.mbps.server.domain.DbTransaction;
@@ -31,6 +37,7 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
  * Service class for {@link DbTransaction} between two {@link UserAccount}s.
  *
  */
+@Service
 public class TransactionService implements ITransaction {
 
 	//TODO: mehmet move to a config file
@@ -42,31 +49,29 @@ public class TransactionService implements ITransaction {
 	public static final String NOT_AUTHENTICATED_USER = "Only the authenticated user can act as the payer in the payment.";
 
 
-	private static TransactionService transactionService;
+	@Autowired 
+	private TransactionDAO transactionDAO;
+	@Autowired 
+	private UserPublicKeyDAO userPublicKeyDAO;
+	
+	@Autowired
+	private PayOutRuleService payOutRuleService;
+	
+	@Autowired
+	private IUserAccount userAccountService;
 
-	private TransactionService() {
-	}
-
-	/**
-	 * Returns new or existing instance of {@link TransactionService}
-	 * 
-	 * @return instance of TransactionService
-	 */
-	public static TransactionService getInstance() {
-		if (transactionService == null)
-			transactionService = new TransactionService();
-
-		return transactionService;
+	@Override
+	@Transactional(readOnly = true)
+	public List<HistoryTransaction> getHistory(String username, int page) throws UserAccountNotFoundException, HibernateException {
+		UserAccount user = userAccountService.getByUsername(username);
+		return transactionDAO.getHistory(user, page);
 	}
 
 	@Override
-	public ArrayList<HistoryTransaction> getHistory(String username, int page) throws UserAccountNotFoundException, HibernateException {
-		return TransactionDAO.getHistory(username, page);
-	}
-
-	@Override
-	public ArrayList<HistoryTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
-		return  TransactionDAO.getLast5Transactions(username);
+	@Transactional(readOnly = true)
+	public List<HistoryTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
+		UserAccount user = userAccountService.getByUsername(username);
+		return  transactionDAO.getLast5Transactions(user);
 	}
 
 	/**
@@ -78,11 +83,14 @@ public class TransactionService implements ITransaction {
 	 * @return number of PayInTrasactions
 	 * @throws UserAccountNotFoundException
 	 */
+	@Transactional(readOnly = true)
 	public long getHistoryCount(String username) throws UserAccountNotFoundException {
-		return TransactionDAO.getHistoryCount(username);
+		UserAccount user = userAccountService.getByUsername(username);
+		return transactionDAO.getHistoryCount(user);
 	}
 
 	@Override
+	@Transactional
 	public ServerPaymentResponse createTransaction(String authenticatedUser, ServerPaymentRequest serverPaymentRequest) throws TransactionException, UserAccountNotFoundException {
 		if (authenticatedUser == null || authenticatedUser.isEmpty() || serverPaymentRequest == null)
 			throw new TransactionException(PAYMENT_REFUSE);
@@ -111,26 +119,27 @@ public class TransactionService implements ITransaction {
 		UserAccount payerUserAccount = null;
 		UserAccount payeeUserAccount = null;
 		try {
-			payerUserAccount = UserAccountService.getInstance().getByUsername(payerUsername);
-			payeeUserAccount = UserAccountService.getInstance().getByUsername(payeeUsername);
+			payerUserAccount = userAccountService.getByUsername(payerUsername);
+			payeeUserAccount = userAccountService.getByUsername(payeeUsername);
 		} catch (UserAccountNotFoundException e) {
 			throw new TransactionException(PAYMENT_REFUSE);
 		}
 		
 		try {
-			if (!payerRequest.verify(KeyHandler.decodePublicKey(UserPublicKeyDAO.getUserPublicKey(payerUserAccount.getId(), (byte) payerRequest.getKeyNumber()).getPublicKey()))) {
+			if (!payerRequest.verify(KeyHandler.decodePublicKey(userPublicKeyDAO.getUserPublicKey(payerUserAccount.getId(), (byte) payerRequest.getKeyNumber()).getPublicKey()))) {
 				throw new TransactionException(PAYMENT_REFUSE);
 			}
 		} catch (Exception e) {
 			throw new TransactionException(PAYMENT_REFUSE);
 		}
 		
+		//TODO: numberOfSignatures == 3?
 		if (numberOfSignatures == 2) {
 			if (!payerRequest.requestsIdentic(payeeRequest)) {
 				throw new TransactionException(PAYMENT_REFUSE);
 			}
 			try {
-				if (!payeeRequest.verify(KeyHandler.decodePublicKey(UserPublicKeyDAO.getUserPublicKey(payeeUserAccount.getId(), (byte) payeeRequest.getKeyNumber()).getPublicKey()))) {
+				if (!payeeRequest.verify(KeyHandler.decodePublicKey(userPublicKeyDAO.getUserPublicKey(payeeUserAccount.getId(), (byte) payeeRequest.getKeyNumber()).getPublicKey()))) {
 					throw new TransactionException(PAYMENT_REFUSE);
 				}
 			} catch (Exception e) {
@@ -141,7 +150,7 @@ public class TransactionService implements ITransaction {
 		if ((payerUserAccount.getBalance().subtract(Converter.getBigDecimalFromLong(payerRequest.getAmount()))).compareTo(BigDecimal.ZERO) < 0)
 			throw new TransactionException(BALANCE);
 		
-		if (TransactionDAO.exists(payerRequest.getUsernamePayer(), payerRequest.getUsernamePayee(), payerRequest.getCurrency(), payerRequest.getAmount(), payerRequest.getTimestamp())) {
+		if (transactionDAO.exists(payerRequest.getUsernamePayer(), payerRequest.getUsernamePayee(), payerRequest.getCurrency(), payerRequest.getAmount(), payerRequest.getTimestamp())) {
 			try {
 				PaymentResponse paymentResponsePayer = new PaymentResponse(
 						PKIAlgorithm.getPKIAlgorithm(Constants.SERVER_KEY_PAIR.getPkiAlgorithm()),
@@ -171,14 +180,14 @@ public class TransactionService implements ITransaction {
 					dbTransaction.setInputCurrencyAmount(Converter.getBigDecimalFromLong(payeeRequest.getInputAmount()));
 				}
 			}
-			TransactionDAO.createTransaction(dbTransaction, payerUserAccount, payeeUserAccount);
+			transactionDAO.createTransaction(dbTransaction, payerUserAccount, payeeUserAccount);
 		} catch (HibernateException e) {
 			throw new TransactionException(HIBERNATE_ERROR);
 		}
 
 		//check if user account balance limit has been exceeded (according to PayOutRules)
 		try {
-			PayOutRuleService.getInstance().checkBalanceLimitRules(payeeUserAccount);
+			payOutRuleService.checkBalanceLimitRules(payeeUserAccount);
 		} catch (PayOutRuleNotFoundException | BitcoinException e) {
 			// do nothing as user requests actually a transaction and not a payout
 		}
@@ -203,5 +212,16 @@ public class TransactionService implements ITransaction {
 
 		return signedResponse;
 	}
+
+	@Transactional(readOnly = true)
+	public List<HistoryTransaction> getAll() {
+	    return transactionDAO.getAll();
+    }
+
+	@Transactional
+	public void createTransaction(DbTransaction tx, UserAccount fromDB, UserAccount fromDB2) {
+		transactionDAO.createTransaction(tx, fromDB, fromDB2);
+	    
+    }
 
 }

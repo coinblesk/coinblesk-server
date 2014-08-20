@@ -6,9 +6,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import javax.servlet.http.HttpSession;
 
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.criterion.Restrictions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,26 +21,22 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import ch.uzh.csg.mbps.server.domain.EmailVerification;
-import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.service.ServerAccountService;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
-import ch.uzh.csg.mbps.server.util.HibernateUtil;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseOperation;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
-import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import com.github.springtestdbunit.annotation.DbUnitConfiguration;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
-		"classpath:test-applicationContext.xml",
-		"classpath:applicationContext.xml",
-		"classpath:mvc-dispatcher-servlet.xml",
-		"classpath:spring-security.xml"})
+		"classpath:context.xml",
+		"classpath:test-database.xml",
+		"classpath:view.xml",
+		"classpath:security.xml"})
 @DbUnitConfiguration(databaseConnection="dataSource")
-@TestExecutionListeners({ 
+@TestExecutionListeners({
 	DependencyInjectionTestExecutionListener.class,
 	DbUnitTestExecutionListener.class })
 @WebAppConfiguration
@@ -107,15 +100,4 @@ public class HomeControllerTest {
 		return session;
 	}
 	
-	private String getTokenForUser(long id) {
-		SessionFactory sessionFactory = HibernateUtil.getSessionFactory();
-		Session session = sessionFactory.openSession();
-		session.beginTransaction();
-
-		EmailVerification ev = (EmailVerification) session.createCriteria(EmailVerification.class).add(Restrictions.eq("userID", id)).uniqueResult();
-		if (ev != null)
-			return ev.getVerificationToken();
-		else
-			return null;
-	}
 }

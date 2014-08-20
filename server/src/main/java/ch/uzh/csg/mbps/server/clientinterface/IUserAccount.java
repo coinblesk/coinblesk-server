@@ -1,14 +1,23 @@
 package ch.uzh.csg.mbps.server.clientinterface;
 
+import java.math.BigDecimal;
+import java.util.List;
+
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
+import ch.uzh.csg.mbps.server.domain.ResetPassword;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.domain.UserPublicKey;
+import ch.uzh.csg.mbps.server.util.PasswordMatcher;
+import ch.uzh.csg.mbps.server.util.UserModel;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
+import ch.uzh.csg.mbps.server.util.exceptions.VerificationTokenNotFoundException;
 
 public interface IUserAccount {
 	
@@ -71,5 +80,43 @@ public interface IUserAccount {
 	 * @return boolean if UserAccount has successfully been verified.
 	 */
 	public boolean verifyEmailAddress(String verificationToken);
+
+	public List<UserAccount> getUsers();
+
+	public void resetPasswordRequest(String emailAddress) throws UserAccountNotFoundException;
+
+	public boolean resetPassword(PasswordMatcher matcher);
+
+	public boolean isValidResetPasswordLink(String resetPasswordToken);
+
+	public byte saveUserPublicKey(long id, PKIAlgorithm pkiAlgorithm, String publicKey) throws UserAccountNotFoundException;
+
+	public BigDecimal getSumOfAllAccounts();
+
+	public List<UserAccount> getAdmins();
+
+	public UserModel getLoggedAdmin(String username);
+
+	public UserAccount getByEmail(String email) throws UserAccountNotFoundException;
+
+	public void changeRoleBoth(String email) throws UserAccountNotFoundException;
+
+	public void changeRoleAdmin(String email) throws UserAccountNotFoundException;
+
+	public void resendVerificationEmail(UserAccount userAccount);
+	
+	public List<UserPublicKey> getUserPublicKey(long userId) throws UserAccountNotFoundException;
+
+	public void updateAccount(UserAccount userAccount) throws UserAccountNotFoundException;
+
+	public List<ResetPassword> getAllResetPassword();
+
+	public String getTokenForUser(long id) throws VerificationTokenNotFoundException;
+
+	public List<UserAccount> getAllUserAccounts();
+
+	public String getVerificationTokenByUserId(long id)  throws VerificationTokenNotFoundException;
+
+	public List<UserPublicKey> getUserPublicKeys(long id);
 
 }

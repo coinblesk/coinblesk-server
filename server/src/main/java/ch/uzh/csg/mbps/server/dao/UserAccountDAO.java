@@ -3,18 +3,21 @@ package ch.uzh.csg.mbps.server.dao;
 import java.math.BigDecimal;
 import java.util.List;
 
-import org.apache.log4j.Logger;
-import org.hibernate.HibernateException;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.Transaction;
-import org.hibernate.criterion.Restrictions;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
 
+import org.apache.log4j.Logger;
+import org.springframework.stereotype.Repository;
+
+import ch.uzh.csg.mbps.server.domain.AdminRole;
 import ch.uzh.csg.mbps.server.domain.EmailVerification;
 import ch.uzh.csg.mbps.server.domain.ResetPassword;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
-import ch.uzh.csg.mbps.server.domain.AdminRole;
-import ch.uzh.csg.mbps.server.util.HibernateUtil;
 import ch.uzh.csg.mbps.server.util.UserRoles.Role;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
@@ -24,11 +27,12 @@ import ch.uzh.csg.mbps.server.util.exceptions.VerificationTokenNotFoundException
  * DatabaseAccessObject for the {@link UserAccount}. Handles all DB operations
  * regarding UserAccounts.
  */
+@Repository
 public class UserAccountDAO {
 	private static Logger LOGGER = Logger.getLogger(UserAccountDAO.class);
 
-	private UserAccountDAO() {
-	}
+	@PersistenceContext(unitName = "localdb")
+	private EntityManager em;
 
 	/**
 	 * Saves a new {@link UserAccount} to the database.
@@ -40,32 +44,13 @@ public class UserAccountDAO {
 	 *            email-verification.
 	 * @throws HibernateException
 	 */
-	public static void createAccount(UserAccount userAccount, String token) throws HibernateException {
-		Session session = null;
-		Transaction transaction = null;
-		try {
-			session = openSession();
-			transaction = session.beginTransaction();
-			session.save(userAccount);
-			UserAccount fromDb = (UserAccount) session.createCriteria(UserAccount.class).add(Restrictions.eq("username", userAccount.getUsername())).uniqueResult();
-			EmailVerification ev = new EmailVerification(fromDb.getId(), token);
-			session.save(ev);
-			transaction.commit();
-			LOGGER.info("UserAccount created: " + fromDb.toString() + " and created EmailVerification: " + ev.toString());
-		} catch (HibernateException e) {
-			LOGGER.error("Problem creating UserAccount: " + userAccount.toString());
-			 if (transaction != null)
-				 transaction.rollback();
-			 throw e;
-		} finally {
-			session.close();
-		}
-	}
-
-	private static Session openSession() {
-		SessionFactory sessionFactory = HibernateUtil.getSessionFactory();
-		Session session = sessionFactory.openSession();
-		return session;
+	public void createAccount(UserAccount userAccount, String token) {
+		em.persist(userAccount);
+		em.flush();
+		long id = userAccount.getId();
+		EmailVerification ev = new EmailVerification(id, token);
+		em.persist(ev);
+		LOGGER.info("UserAccount created: " + id + " and created EmailVerification: " + ev.toString());
 	}
 
 	/**
@@ -77,15 +62,30 @@ public class UserAccountDAO {
 	 * @return UserAccount
 	 * @throws UserAccountNotFoundException
 	 */
-	public static UserAccount getByUsername(String username) throws UserAccountNotFoundException{
-		Session session = openSession();
-		session.beginTransaction();
-		UserAccount userAccount = (UserAccount) session.createCriteria(UserAccount.class).add(Restrictions.eq("username", username)).uniqueResult();
-		session.close();
-		if (userAccount == null || userAccount.isDeleted())
+	public UserAccount getByUsername(String username) throws UserAccountNotFoundException{
+		
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<UserAccount> cq = cb.createQuery(UserAccount.class);
+		Root<UserAccount> root = cq.from(UserAccount.class);
+		Predicate condition = cb.equal(root.get("username"), username);
+		cq.where(condition);
+		
+		UserAccount userAccount = getSingle(cq, em);
+		
+		//exception in normal program code is bad!
+		if (userAccount == null || userAccount.isDeleted()) {
 			throw new UserAccountNotFoundException(username);
+		}
 		
 		return userAccount;
+	}
+	
+	public static<K> K getSingle(CriteriaQuery<K> cq, EntityManager em) {
+		List<K> list =  em.createQuery(cq).getResultList();
+		if(list.size() == 0) {
+			return null;
+		}
+		return list.get(0);
 	}
 	
 	/**
@@ -98,13 +98,21 @@ public class UserAccountDAO {
 	 * @return UserAccount matching the given username
 	 * @throws UserAccountNotFoundException
 	 */
-	public static UserAccount getByUsernameIgnoreCaseAndDeletedFlag(String username) throws UserAccountNotFoundException{
-		Session session = openSession();
-		session.beginTransaction();
-		UserAccount userAccount = (UserAccount) session.createCriteria(UserAccount.class).add(Restrictions.eq("username", username).ignoreCase()).uniqueResult();
-		session.close();
-		if (userAccount == null)
+	public UserAccount getByUsernameIgnoreCaseAndDeletedFlag(String username) throws UserAccountNotFoundException{
+		
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<UserAccount> cq = cb.createQuery(UserAccount.class);
+		Root<UserAccount> root = cq.from(UserAccount.class);
+		Expression<String> e = root.get("username");
+		Predicate condition = cb.equal(cb.upper(e), username.toUpperCase());
+		cq.where(condition);
+				
+		UserAccount userAccount = getSingle(cq, em);
+		
+		//exception in normal program code is bad!
+		if (userAccount == null) {
 			throw new UserAccountNotFoundException(username);
+		}
 		
 		return userAccount;
 	}
@@ -117,13 +125,19 @@ public class UserAccountDAO {
 	 * @return UserAccount matching the given id
 	 * @throws UserAccountNotFoundException
 	 */
-	public static UserAccount getById(long id) throws UserAccountNotFoundException {
-		Session session = openSession();
-		session.beginTransaction();
-		UserAccount userAccount = (UserAccount) session.get(UserAccount.class, new Long(id));
-		session.close();
-		if (userAccount == null || userAccount.isDeleted())
+	public UserAccount getById(long id) throws UserAccountNotFoundException {
+		
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<UserAccount> cq = cb.createQuery(UserAccount.class);
+		Root<UserAccount> root = cq.from(UserAccount.class);
+		Predicate condition = cb.equal(root.get("id"), id);
+		cq.where(condition);
+		
+		UserAccount userAccount = getSingle(cq, em);
+		
+		if (userAccount == null || userAccount.isDeleted()) {
 			throw new UserAccountNotFoundException("id: "+id);
+		}
 		
 		return userAccount;
 	}
@@ -140,28 +154,13 @@ public class UserAccountDAO {
 	 *             if balance of UserAccount is unequal zero.
 	 * @throws HibernateException
 	 */
-	public static void delete(String username) throws UserAccountNotFoundException, BalanceNotZeroException, HibernateException {
+	public void delete(String username) throws UserAccountNotFoundException, BalanceNotZeroException {
 		UserAccount userAccount = getByUsername(username);
 		
-		Session session = openSession();
-		Transaction transaction = null;
-		
 		if (userAccount.getBalance().compareTo(BigDecimal.ZERO)==0) {
-			try {
-				userAccount.setDeleted(true);
-				
-				transaction = session.beginTransaction();
-				session.update(userAccount);
-				transaction.commit();
-				LOGGER.info("Delted UserAccount: " + userAccount.toString());
-			} catch (HibernateException e) {
-				LOGGER.error("Problem deleting UserAccount: " + userAccount.toString() + " ErrorMessage: " + e.getMessage());
-				 if (transaction != null)
-					 transaction.rollback();
-				 throw e;
-			} finally {
-				session.close();
-			}
+			userAccount.setDeleted(true);
+			em.merge(userAccount);	
+			LOGGER.info("Delted UserAccount: " + userAccount.toString());
 		} else {
 			throw new BalanceNotZeroException();
 		}
@@ -175,23 +174,9 @@ public class UserAccountDAO {
 	 * @throws UserAccountNotFoundException
 	 * @throws HibernateException
 	 */
-	public static void updateAccount(UserAccount userAccount) throws UserAccountNotFoundException, HibernateException {
-		Session session = openSession();
-		Transaction transaction = null;
-		
-		try {
-			transaction = session.beginTransaction();
-			session.update(userAccount);
-			transaction.commit();
-			LOGGER.info("Updated UserAccount: " + userAccount.toString());
-		} catch (HibernateException e) {
-			LOGGER.error("Problem updating UserAccount: " + userAccount.toString() + " ErrorMessage: " + e.getMessage());
-			 if (transaction != null)
-				 transaction.rollback();
-			 throw e;
-		} finally {
-			session.close();
-		}
+	public void updateAccount(UserAccount userAccount) throws UserAccountNotFoundException {
+		em.merge(userAccount);
+		LOGGER.info("Updated UserAccount: " + userAccount.toString());
 	}
 	
 	/**
@@ -204,30 +189,25 @@ public class UserAccountDAO {
 	 * @throws VerificationTokenNotFoundException
 	 *             if token is not found in the DB
 	 */
-	public static void verifyEmail(String verificationToken) throws UserAccountNotFoundException, HibernateException, VerificationTokenNotFoundException {
-		Session session = openSession();
-		Transaction tx = session.beginTransaction();
+	public void verifyEmail(String verificationToken) throws UserAccountNotFoundException, VerificationTokenNotFoundException {
 		
-		EmailVerification ev = (EmailVerification) session.createCriteria(EmailVerification.class).add(Restrictions.eq("verificationToken", verificationToken)).uniqueResult();
-		if (ev == null)
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<EmailVerification> cq = cb.createQuery(EmailVerification.class);
+		Root<EmailVerification> root = cq.from(EmailVerification.class);
+		Predicate condition = cb.equal(root.get("verificationToken"), verificationToken);
+		cq.where(condition);
+		
+		EmailVerification ev = getSingle(cq, em);
+		
+		if (ev == null) {
 			throw new VerificationTokenNotFoundException(verificationToken);
+		}
 		
 		UserAccount userAccount = getById(ev.getUserID());
-		
-		try {
-			userAccount.setEmailVerified(true);
-			session.update(userAccount);
-			session.delete(ev);
-			tx.commit();
-			LOGGER.info("Verified Emailaddress for UserAccount with ID: " + userAccount.getId() );
-		} catch (HibernateException e) {
-			LOGGER.error("Problem verifying UserAccount with ID: " + userAccount.getId() + "ErrorMessage: " + e.getMessage());
-			if (tx != null)
-				 tx.rollback();
-			 throw e;
-		} finally {
-			session.close();
-		}
+		userAccount.setEmailVerified(true);
+		em.merge(userAccount);
+		em.remove(ev);
+		LOGGER.info("Verified Emailaddress for UserAccount with ID: " + userAccount.getId() );
 	}
 
 	/**
@@ -239,14 +219,17 @@ public class UserAccountDAO {
 	 * @return UserAccount matching the given address.
 	 * @throws UserAccountNotFoundException
 	 */
-	public static UserAccount getByBTCAddress(String address) throws UserAccountNotFoundException {
-		Session session = openSession();
-		session.beginTransaction();
-		UserAccount userAccount = (UserAccount) session.createCriteria(UserAccount.class).add(Restrictions.eq("paymentAddress", address)).uniqueResult();
+	public UserAccount getByBTCAddress(String paymentAddress) throws UserAccountNotFoundException {
 		
-		session.close();
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<UserAccount> cq = cb.createQuery(UserAccount.class);
+		Root<UserAccount> root = cq.from(UserAccount.class);
+		Predicate condition = cb.equal(root.get("paymentAddress"), paymentAddress);
+		cq.where(condition);
+		UserAccount userAccount = getSingle(cq, em);
+		
 		if (userAccount == null || userAccount.isDeleted())
-			throw new UserAccountNotFoundException("BTC Address: "+address);
+			throw new UserAccountNotFoundException("BTC Address: "+paymentAddress);
 		
 		return userAccount;
 	}
@@ -260,13 +243,17 @@ public class UserAccountDAO {
 	 * @return UserAccount matching the given address.
 	 * @throws UserAccountNotFoundException
 	 */
-	public static UserAccount getByEmail(String emailAddress) throws UserAccountNotFoundException {
-		Session session = openSession();
-		session.beginTransaction();
-		UserAccount userAccount = (UserAccount) session.createCriteria(UserAccount.class).add(Restrictions.eq("email", emailAddress)).uniqueResult();
-		session.close();
+	public UserAccount getByEmail(String email) throws UserAccountNotFoundException {
+		
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<UserAccount> cq = cb.createQuery(UserAccount.class);
+		Root<UserAccount> root = cq.from(UserAccount.class);
+		Predicate condition = cb.equal(root.get("email"), email);
+		cq.where(condition);
+		UserAccount userAccount = getSingle(cq, em);
+		
 		if (userAccount == null || userAccount.isDeleted())
-			throw new UserAccountNotFoundException("email: "+ emailAddress);
+			throw new UserAccountNotFoundException("email: "+ email);
 		
 		return userAccount;
 	}
@@ -277,27 +264,10 @@ public class UserAccountDAO {
 	 * @param user
 	 * @param token
 	 */
-	public static void createPasswordResetToken(UserAccount user, String token){
-		Session session = null;
-		Transaction transaction = null;
-		
-		try {
-			session = openSession();
-			transaction = session.beginTransaction();
-			
-			ResetPassword rp = new ResetPassword(user.getId(), token);
-			session.save(rp);
-			
-			transaction.commit();
-			LOGGER.info("Created ResetPasswordToken for UserAccount with ID: " + user.getId());
-		} catch (HibernateException e) {
-			LOGGER.error("Problem creating ResetPasswordToken for UserAccount with ID: " + user.getId() + "ErrorMessage: " + e.getMessage());
-			 if (transaction != null)
-				 transaction.rollback();
-			 throw e;
-		} finally {
-			session.close();
-		}
+	public void createPasswordResetToken(UserAccount user, String token){
+		ResetPassword rp = new ResetPassword(user.getId(), token);
+		em.persist(rp);
+		LOGGER.info("Created ResetPasswordToken for UserAccount with ID: " + user.getId());
 	}
 
 	/**
@@ -307,14 +277,18 @@ public class UserAccountDAO {
 	 * @return ResetPassword matching between UserAccount and resetPasswordToken
 	 * @throws VerificationTokenNotFoundException
 	 */
-	public static ResetPassword getResetPassword(String resetPasswordToken) throws VerificationTokenNotFoundException{
-		Session session = openSession();
-		session.beginTransaction();
-		ResetPassword resetPassword = (ResetPassword) session.createCriteria(ResetPassword.class).add(Restrictions.eq("token", resetPasswordToken)).uniqueResult();
+	public ResetPassword getResetPassword(String token) throws VerificationTokenNotFoundException{
 		
-		session.close();
-		if (resetPassword == null){
-			throw new VerificationTokenNotFoundException(resetPasswordToken);			
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ResetPassword> cq = cb.createQuery(ResetPassword.class);
+		Root<ResetPassword> root = cq.from(ResetPassword.class);
+		Predicate condition = cb.equal(root.get("token"), token);
+		cq.where(condition);
+
+		ResetPassword resetPassword = getSingle(cq, em);
+		
+		if (resetPassword == null) {
+			throw new VerificationTokenNotFoundException(token);			
 		}
 		
 		return resetPassword;
@@ -328,14 +302,19 @@ public class UserAccountDAO {
 	 * @return verificationToken for userAccount with matching id.
 	 * @throws VerificationTokenNotFoundException
 	 */
-	public static String getVerificationTokenByUserId(long id) throws VerificationTokenNotFoundException {
-		Session session = openSession();
-		session.beginTransaction();
-		EmailVerification ev = (EmailVerification) session.createCriteria(EmailVerification.class).add(Restrictions.eq("userID", id)).uniqueResult();
-		session.close();
+	public String getVerificationTokenByUserId(long userID) throws VerificationTokenNotFoundException {
 		
-		if (ev == null)
-			throw new VerificationTokenNotFoundException("");			
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<EmailVerification> cq = cb.createQuery(EmailVerification.class);
+		Root<EmailVerification> root = cq.from(EmailVerification.class);
+		Predicate condition = cb.equal(root.get("userID"), userID);
+		cq.where(condition);
+		
+		EmailVerification ev = getSingle(cq, em);
+		
+		if (ev == null) {
+			throw new VerificationTokenNotFoundException("userID:"+userID);
+		}
 		
 		return ev.getVerificationToken();
 	}
@@ -349,27 +328,10 @@ public class UserAccountDAO {
 	 * @param token
 	 * @throws HibernateException
 	 */
-	public static void createEmailVerificationToken(long userId, String token) throws HibernateException {
-		Session session = null;
-		Transaction transaction = null;
-		
-		try {
-			session = openSession();
-			transaction = session.beginTransaction();
-			
-			EmailVerification ev = new EmailVerification(userId, token);
-			session.save(ev);
-			
-			transaction.commit();
-			LOGGER.info("Created VerifyEmailToken for UserAccount with ID: " + userId);
-		} catch (HibernateException e) {
-			LOGGER.error("Problem creating VerifyEmailToken for UserAccount with ID: " + userId + "ErrorMessage: " + e.getMessage());
-			 if (transaction != null)
-				 transaction.rollback();
-			 throw e;
-		} finally {
-			session.close();
-		}
+	public void createEmailVerificationToken(long userId, String token) {
+		EmailVerification ev = new EmailVerification(userId, token);
+		em.persist(ev);
+		LOGGER.info("Created VerifyEmailToken for UserAccount with ID: " + userId);
 	}
 
 	/**
@@ -380,11 +342,16 @@ public class UserAccountDAO {
 	 * @throws VerificationTokenNotFoundException
 	 * @throws UserAccountNotFoundException
 	 */
-	public static UserAccount getByResetPasswordToken(String token) throws VerificationTokenNotFoundException, UserAccountNotFoundException {
-		Session session = openSession();
-		session.beginTransaction();
-		ResetPassword resetPassword = (ResetPassword) session.createCriteria(ResetPassword.class).add(Restrictions.eq("token", token)).uniqueResult();
-		session.close();
+	public UserAccount getByResetPasswordToken(String token) throws VerificationTokenNotFoundException, UserAccountNotFoundException {
+		
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ResetPassword> cq = cb.createQuery(ResetPassword.class);
+		Root<ResetPassword> root = cq.from(ResetPassword.class);
+		Predicate condition = cb.equal(root.get("token"), token);
+		cq.where(condition);
+		
+		ResetPassword resetPassword = getSingle(cq, em);
+		
 		if (resetPassword == null){
 			throw new VerificationTokenNotFoundException(token);			
 		}
@@ -398,24 +365,10 @@ public class UserAccountDAO {
 	 *            of ResetPassword to be deleted
 	 * @throws VerificationTokenNotFoundException
 	 */
-	public static void deleteResetPassword(String resetPasswordToken) throws VerificationTokenNotFoundException {	
-		Session session = openSession();
-		Transaction tx = session.beginTransaction();
-		
+	public void deleteResetPassword(String resetPasswordToken) throws VerificationTokenNotFoundException {	
 		ResetPassword resetPassword = getResetPassword(resetPasswordToken);
-		
-		try {
-			session.delete(resetPassword);
-			tx.commit();
-			LOGGER.info("Deleted ResetPasswordToken: " + resetPasswordToken);
-		} catch (HibernateException e) {
-			LOGGER.error("Problem deleting ResetPasswordToken with Token: " + resetPasswordToken + "ErrorMessage: " + e.getMessage());
-			if (tx != null)
-				 tx.rollback();
-			 throw e;
-		} finally {
-			session.close();
-		}
+		em.remove(resetPassword);
+		LOGGER.info("Deleted ResetPasswordToken: " + resetPasswordToken);
 	}
 
 	/**
@@ -424,27 +377,10 @@ public class UserAccountDAO {
 	 * @param user
 	 * @param token
 	 */
-	public static void createAdminToken(UserAccount user, String token){
-		Session session = null;
-		Transaction transaction = null;
-		
-		try {
-			session = openSession();
-			transaction = session.beginTransaction();
-			
-			AdminRole ar = new AdminRole(user.getId(), token);
-			session.save(ar);
-			
-			transaction.commit();
-			LOGGER.info("Created AdminRoleToken for UserAccount with ID: " + user.getId());
-		} catch (HibernateException e) {
-			LOGGER.error("Problem creating AdminRoleToken for UserAccount with ID: " + user.getId() + "ErrorMessage: " + e.getMessage());
-			 if (transaction != null)
-				 transaction.rollback();
-			 throw e;
-		} finally {
-			session.close();
-		}
+	public void createAdminToken(UserAccount user, String token){
+		AdminRole ar = new AdminRole(user.getId(), token);
+		em.persist(ar);
+		LOGGER.info("Created AdminRoleToken for UserAccount with ID: " + user.getId());
 	}
 
 	//TODO: mehmet Test & javadoc
@@ -454,14 +390,18 @@ public class UserAccountDAO {
 	 * @return
 	 * @throws VerificationTokenNotFoundException 
 	 */
-	public static AdminRole getCreateAdmin(String adminToken) throws VerificationTokenNotFoundException {
-		Session session = openSession();
-		session.beginTransaction();
-		AdminRole adminRole = (AdminRole) session.createCriteria(AdminRole.class).add(Restrictions.eq("token", adminToken)).uniqueResult();
+	public AdminRole getCreateAdmin(String token) throws VerificationTokenNotFoundException {
 		
-		session.close();
-		if (adminRole == null){
-			throw new VerificationTokenNotFoundException(adminToken);			
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<AdminRole> cq = cb.createQuery(AdminRole.class);
+		Root<AdminRole> root = cq.from(AdminRole.class);
+		Predicate condition = cb.equal(root.get("token"), token);
+		cq.where(condition);
+		
+		AdminRole adminRole = getSingle(cq, em);
+		
+		if (adminRole == null) {
+			throw new VerificationTokenNotFoundException(token);			
 		}
 		
 		return adminRole;
@@ -473,23 +413,25 @@ public class UserAccountDAO {
 	 * 
 	 * @return List<ResetPassword>
 	 */
-	public static List<ResetPassword> getAllResetPassword() {
-		Session session = openSession();
-		session.beginTransaction();
-		@SuppressWarnings("unchecked")
-		List<ResetPassword> list = (List<ResetPassword>) session.createCriteria(ResetPassword.class).list();
-		session.close();
-		
-		return list;
+	public List<ResetPassword> getAllResetPassword() {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ResetPassword> cq = cb.createQuery(ResetPassword.class);
+		cq.from(ResetPassword.class);
+		return em.createQuery(cq).getResultList();
 	}
 
-	public static UserAccount getByEmailIgnoreCaseAndDeletedFlag(String email) throws UserAccountNotFoundException {
-		Session session = openSession();
-		session.beginTransaction();
-		UserAccount userAccount = (UserAccount) session.createCriteria(UserAccount.class).add(Restrictions.eq("email", email).ignoreCase()).uniqueResult();
-		session.close();
-		if (userAccount == null)
+	public UserAccount getByEmailIgnoreCaseAndDeletedFlag(String email) throws UserAccountNotFoundException {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<UserAccount> cq = cb.createQuery(UserAccount.class);
+		Root<UserAccount> root = cq.from(UserAccount.class);
+		Expression<String> e = root.get("email");
+		Predicate condition = cb.equal(cb.upper(e), email.toUpperCase());
+		cq.where(condition);
+		UserAccount userAccount = getSingle(cq, em);
+		
+		if (userAccount == null) {
 			throw new UserAccountNotFoundException(email);
+		}
 		
 		return userAccount;
 	}
@@ -500,14 +442,11 @@ public class UserAccountDAO {
 	 * 
 	 * @return List<UserAccount>
 	 */
-	public static List<UserAccount> getAllUserAccounts() {
-		Session session = openSession();
-		session.beginTransaction();
-		@SuppressWarnings("unchecked")
-		List<UserAccount> list = (List<UserAccount>) session.createCriteria(UserAccount.class).list();
-		session.close();
-		
-		return list;
+	public List<UserAccount> getAllUserAccounts() {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<UserAccount> cq = cb.createQuery(UserAccount.class);
+		cq.from(UserAccount.class);
+		return em.createQuery(cq).getResultList();
 	}
 
 	//TODO: mehmet javadoc
@@ -516,15 +455,13 @@ public class UserAccountDAO {
 	 * @param role
 	 * @return
 	 */
-	public static List<UserAccount> getAllUsersByRoles(Role role){
-		System.out.println();
-		Session session = openSession();
-		session.beginTransaction();
-		@SuppressWarnings("unchecked")
-		List<UserAccount> list = (List<UserAccount>) session.createCriteria(UserAccount.class).add(Restrictions.eq("roles", role.getCode())).list();
-		session.close();
-		
-		return list;
+	public List<UserAccount> getAllUsersByRoles(Role role){
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<UserAccount> cq = cb.createQuery(UserAccount.class);
+		Root<UserAccount> root = cq.from(UserAccount.class);
+		Predicate condition = cb.equal(root.get("roles"), role.getCode());
+		cq.where(condition);
+		return em.createQuery(cq).getResultList();
 	}
 
 }

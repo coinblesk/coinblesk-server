@@ -3,7 +3,11 @@ package ch.uzh.csg.mbps.server.util;
 import java.math.BigDecimal;
 import java.util.Date;
 
+import javax.annotation.PostConstruct;
+
 import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
 
 import ch.uzh.csg.mbps.server.service.PayInTransactionService;
 import ch.uzh.csg.mbps.server.service.PayOutTransactionService;
@@ -14,17 +18,41 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinAcceptor;
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 import com.azazar.bitcoin.jsonrpcclient.BitcoinJSONRPCClient;
 import com.azazar.bitcoin.jsonrpcclient.ConfirmedPaymentListener;
+import com.google.bitcoin.core.Address;
+import com.google.bitcoin.core.AddressFormatException;
+import com.google.bitcoin.core.NetworkParameters;
 
 /**
  * Class for controlling Bitcoind-Client. 
  *
  */
+@Controller
 public class BitcoindController {
 	private static Logger LOGGER = Logger.getLogger(BitcoindController.class);
 	private static final Bitcoin BITCOIN = new BitcoinJSONRPCClient();
 	private static int keyPoolCounter = 0;
+	public static boolean TESTING = false;
 	
-	public BitcoindController() {
+	@Autowired
+	private PayInTransactionService payInTransactionService;
+	@Autowired
+	private PayOutTransactionService payOutTransactionService;
+	
+	private boolean listenTransactions;
+	
+	@PostConstruct
+	private void init() {
+		backupWallet();
+		if(isListenTransactions()) {
+			//activates receivePayIn/Out Listener
+			try {
+				listenIncomingTransactions();
+				listenOutgoingTransactions();
+			} catch (BitcoinException e) {
+				LOGGER.error("Bitcoind Exception: Couldn't initialize receivment of Bitcoin PayIN Transactions");
+				e.printStackTrace();
+			}
+		}
 	}
 
 	/**
@@ -36,6 +64,9 @@ public class BitcoindController {
 	 * @throws BitcoinException
 	 */
 	public static String sendCoins(String address, BigDecimal amount)throws BitcoinException {
+		if(TESTING) {
+			return "test-transaction-id";
+		}
 		try {
 			BITCOIN.unlockWallet(SecurityConfig.ENCRYPTION_PASSWORD, 2);
 		} catch (Exception e) {
@@ -55,7 +86,20 @@ public class BitcoindController {
 	 * @throws BitcoinException
 	 */
 	public static boolean validateAddress(String address) throws BitcoinException{
-		return BITCOIN.validateAddress(address).isValid();
+		if(TESTING) {
+			return offlineValidateAddress(address);
+		} else {
+			return BITCOIN.validateAddress(address).isValid();
+		}
+	}
+	
+	public static boolean offlineValidateAddress(String address)throws BitcoinException {
+		try {
+			Address.getParametersFromAddress(address);
+			return true;
+        } catch (AddressFormatException e) {
+	        throw new BitcoinException(e);
+        }
 	}
 	
 
@@ -77,7 +121,7 @@ public class BitcoindController {
 	 * 
 	 * @throws BitcoinException
 	 */
-	public static void listenIncomingTransactions() throws BitcoinException {
+	public void listenIncomingTransactions() throws BitcoinException {
 		listenIncomingBigTransactions();
 		
 		ConfirmedPaymentListener smallTx = new ConfirmedPaymentListener(Config.MIN_CONFIRMATIONS_SMALL_TRANSACTIONS) {
@@ -87,7 +131,7 @@ public class BitcoindController {
             	try {
 					if(transaction.category().equals("receive") && transaction.amount() <= Config.SMALL_TRANSACTION_LIMIT){
 						LOGGER.info("Incoming small transaction: amount: " + transaction.amount() + ", account: " + transaction.account() + ", address: " +  transaction.address());
-						PayInTransactionService.create(transaction);
+						payInTransactionService.create(transaction);
 					}
 				} catch (UserAccountNotFoundException e) {
 					LOGGER.error("Couldn't allocate incoming transaction. Useraccount not found. Transaction: " + transaction.toString());
@@ -109,7 +153,7 @@ public class BitcoindController {
 	 * 
 	 * @throws BitcoinException
 	 */
-	public static void listenIncomingBigTransactions() throws BitcoinException {
+	public void listenIncomingBigTransactions() throws BitcoinException {
 		ConfirmedPaymentListener bigTxListener = new ConfirmedPaymentListener(Config.MIN_CONFIRMATIONS_BIG_TRANSACTIONS) {
 
             @Override
@@ -118,7 +162,7 @@ public class BitcoindController {
 					if(transaction.category().equals("receive")){
 						if(transaction.amount() > Config.SMALL_TRANSACTION_LIMIT){
 							LOGGER.info("Incoming big transaction: amount: " + transaction.amount() + ", account: " + transaction.account() + ", address: " +  transaction.address());
-							PayInTransactionService.create(transaction);
+							payInTransactionService.create(transaction);
 						}
 					}
 				} catch (UserAccountNotFoundException e) {
@@ -140,14 +184,14 @@ public class BitcoindController {
 	 * 
 	 * @throws BitcoinException
 	 */
-	public static void listenOutgoingTransactions() throws BitcoinException {
+	public void listenOutgoingTransactions() throws BitcoinException {
 		ConfirmedPaymentListener outgoingTxListener = new ConfirmedPaymentListener(Config.MIN_CONFIRMATIONS_SMALL_TRANSACTIONS) {
 
             @Override
             public void confirmed(Bitcoin.Transaction transaction) {
 				 if (transaction.category().equals("send")){
 						LOGGER.info("Outgoing transaction: amount: " + transaction.amount() + ", account: " + transaction.account() + ", address: " +  transaction.address());
-						PayOutTransactionService.check(transaction);
+						payOutTransactionService.check(transaction);
 					}
             }
 
@@ -187,4 +231,12 @@ public class BitcoindController {
 			backupWallet();
 		}
 	}
+
+	public boolean isListenTransactions() {
+	    return listenTransactions;
+    }
+
+	public void setListenTransactions(boolean listenTransactions) {
+	    this.listenTransactions = listenTransactions;
+    }
 }

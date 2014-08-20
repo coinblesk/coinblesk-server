@@ -10,6 +10,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.PostConstruct;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.Transformer;
@@ -22,6 +23,7 @@ import net.minidev.json.parser.ParseException;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.stereotype.Controller;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -31,27 +33,19 @@ import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.keys.CustomKeyPair;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-
 /**
  * {@link Initializer} is taking care of starting necessary tasks after
  * successfully starting up Tomcat server application.
  */
-public class Initializer implements InitializingBean{
+@Controller
+public class Initializer {
 	private static Logger LOGGER = Logger.getLogger(Initializer.class);
 	
 	private static final String KEY_FILE_NAME = "ServerKeys.xml";
 
-	@SuppressWarnings("resource")
-	public void afterPropertiesSet() {
-		try {
-			BitcoindController.backupWallet();
-			//activates receivePayIn/Out Listener
-			BitcoindController.listenIncomingTransactions();
-			BitcoindController.listenOutgoingTransactions();
-			//activates Task for checking PayOutRules
-			new ClassPathXmlApplicationContext("HourlyQuartz.xml");
-			
+	@PostConstruct
+	public void init() {
+		
 			File serverKeys = null;
 			URI uri = null;
 			try {
@@ -77,9 +71,7 @@ public class Initializer implements InitializingBean{
 			} catch (Exception e) {
 				LOGGER.error("Problem reading Serverkeys from Input File", e);
 			}
-		} catch (BitcoinException e) {
-			LOGGER.error("Bitcoind Exception: Couldn't initialize receivment of Bitcoin PayIN Transactions");
-		}
+		
 
 		try {
 			ExchangeRates.updateExchangeRateUsdChf();

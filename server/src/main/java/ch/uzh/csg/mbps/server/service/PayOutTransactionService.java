@@ -1,12 +1,17 @@
 package ch.uzh.csg.mbps.server.service;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.mbps.model.HistoryPayOutTransaction;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.dao.PayOutTransactionDAO;
 import ch.uzh.csg.mbps.server.domain.PayOutTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
@@ -22,22 +27,14 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
  * Service class for {@link PayOutTransaction}s
  *
  */
+@Service
 public class PayOutTransactionService {
-	private static PayOutTransactionService payOutTransactionService;
-	private PayOutTransactionService() {
-	}
 	
-	/**
-	 * Returns new or existing instance of {@link PayOutTransactionService}.
-	 * 
-	 * @return instance of PayOutTransactionService
-	 */
-	public static PayOutTransactionService getInstance() {
-		if (payOutTransactionService == null)
-			payOutTransactionService = new PayOutTransactionService();
-		
-		return payOutTransactionService;
-	}
+	
+	@Autowired 
+	private PayOutTransactionDAO payOutTransactionDAO;
+	@Autowired
+	private IUserAccount userAccountService;
 
 	/**
 	 * Returns history of {@link PayOutTransaction}s of {@link UserAccount} with username. Only
@@ -48,8 +45,10 @@ public class PayOutTransactionService {
 	 * @return ArrayListy<PayOutTransaction>
 	 * @throws UserAccountNotFoundException
 	 */
-	public ArrayList<HistoryPayOutTransaction> getHistory(String username, int page) throws UserAccountNotFoundException {
-		return PayOutTransactionDAO.getHistory(username, page);
+	@Transactional(readOnly = true)
+	public List<HistoryPayOutTransaction> getHistory(String username, int page) throws UserAccountNotFoundException {
+		UserAccount user = userAccountService.getByUsername(username);
+		return payOutTransactionDAO.getHistory(user, page);
 	}
 	
 	/**
@@ -60,8 +59,10 @@ public class PayOutTransactionService {
 	 * @return number of PayOutTransaction
 	 * @throws UserAccountNotFoundException
 	 */
+	@Transactional(readOnly = true)
 	public long getHistoryCount(String username) throws UserAccountNotFoundException {
-		return PayOutTransactionDAO.getHistoryCount(username);
+		UserAccount user = userAccountService.getByUsername(username);
+		return payOutTransactionDAO.getHistoryCount(user);
 	}
 
 	/**
@@ -73,8 +74,9 @@ public class PayOutTransactionService {
 	 * @throws BitcoinException
 	 * @throws UserAccountNotFoundException
 	 */
+	@Transactional
 	public CustomResponseObject createPayOutTransaction(String username, PayOutTransaction pot) throws BitcoinException, UserAccountNotFoundException {
-		UserAccount user = UserAccountService.getInstance().getByUsername(username);
+		UserAccount user = userAccountService.getByUsername(username);
 		//make sure pot.id == user.id
 		pot.setUserID(user.getId());
 		
@@ -101,7 +103,7 @@ public class PayOutTransactionService {
 				pot.setAmount(pot.getAmount().add(Config.TRANSACTION_FEE));
 
 				//write payOut to DB
-				PayOutTransactionDAO.createPayOutTransaction(pot);
+				payOutTransactionDAO.createPayOutTransaction(pot);
 				return new CustomResponseObject(true, amount  + "BTC " + "(+" + Config.TRANSACTION_FEE + "BTC TxFee)");
 			} else {
 				return new CustomResponseObject(false, "Couldn't pay out the desired amount. The BTC Address is invalid.", Type.PAYOUT_ERROR_ADDRESS);	
@@ -117,10 +119,11 @@ public class PayOutTransactionService {
 	 * 
 	 * @param transaction
 	 */
-	public static void check(Transaction transaction) {
+	@Transactional
+	public void check(Transaction transaction) {
 		PayOutTransaction pot = new PayOutTransaction(transaction);
 		try {
-			PayOutTransactionDAO.verify(pot);
+			payOutTransactionDAO.verify(pot);
 		} catch (TransactionException e) {
 		}	
 	}
@@ -133,8 +136,16 @@ public class PayOutTransactionService {
 	 * @return ArrayListy<PayOutTransaction>
 	 * @throws UserAccountNotFoundException
 	 */
-	public ArrayList<HistoryPayOutTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
-		return PayOutTransactionDAO.getLast5Transactions(username);
+	@Transactional(readOnly = true)
+	public List<HistoryPayOutTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
+		UserAccount user = userAccountService.getByUsername(username);
+		return payOutTransactionDAO.getLast5Transactions(user);
 	}
+
+	@Transactional
+	public void createPayOutTransaction(PayOutTransaction tx) throws UserAccountNotFoundException {
+		payOutTransactionDAO.createPayOutTransaction(tx);
+	    
+    }
 	
 }

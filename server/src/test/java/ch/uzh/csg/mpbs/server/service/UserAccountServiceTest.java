@@ -10,22 +10,21 @@ import java.security.KeyPair;
 import java.util.Date;
 import java.util.List;
 
-import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
-
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
-import ch.uzh.csg.mbps.server.dao.UserPublicKeyDAO;
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.domain.UserPublicKey;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.CustomPasswordEncoder;
-import ch.uzh.csg.mbps.server.util.HibernateUtil;
 import ch.uzh.csg.mbps.server.util.UserRoles.Role;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
@@ -36,6 +35,10 @@ import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(locations = {
+		"classpath:context.xml",
+		"classpath:test-database.xml"})
 public class UserAccountServiceTest {
 	private static boolean initialized = false;
 	
@@ -49,6 +52,9 @@ public class UserAccountServiceTest {
 	private static UserAccount accountFive;
 	private static UserAccount accountSix;
 	private static UserAccount accountSeven;
+	
+	@Autowired
+	private IUserAccount userAccountService;
 
 	@Before
 	public void setUp() throws InvalidEmailException, EmailAlreadyExistsException {
@@ -75,13 +81,13 @@ public class UserAccountServiceTest {
 			accountSeven = new UserAccount("hans7", "hans7@bitcoin.csg.uzh.ch", "my-password-wurst");
 			accountSeven.setBalance(new BigDecimal(0.4));
 			try {
-				UserAccountService.getInstance().createAccount(accountOne);
-				UserAccountService.getInstance().createAccount(accountTwo);
-				UserAccountService.getInstance().createAccount(accountToDelete);
-				UserAccountService.getInstance().createAccount(accountToUpdate);
-				UserAccountService.getInstance().createAccount(accountToUpdate2);
-				UserAccountService.getInstance().createAccount(accountSix);
-				UserAccountService.getInstance().createAccount(accountSeven);
+				userAccountService.createAccount(accountOne);
+				userAccountService.createAccount(accountTwo);
+				userAccountService.createAccount(accountToDelete);
+				userAccountService.createAccount(accountToUpdate);
+				userAccountService.createAccount(accountToUpdate2);
+				userAccountService.createAccount(accountSix);
+				userAccountService.createAccount(accountSeven);
 			} catch (UsernameAlreadyExistsException | BitcoinException e) {
 				//do nothing
 			} catch (InvalidUsernameException e) {
@@ -99,49 +105,49 @@ public class UserAccountServiceTest {
 	
 	@Test
 	public void testCreateAccount() throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
-		int nofUsers = getAllUserAccounts().size();
+		int nofUsers = userAccountService.getAllUserAccounts().size();
 		UserAccount newUser = new UserAccount("hans80", "hans80@bitcoin.csg.uzh.ch", "my-password");
-		assertTrue(UserAccountService.getInstance().createAccount(newUser));
+		assertTrue(userAccountService.createAccount(newUser));
 		
-		newUser = UserAccountService.getInstance().getByUsername(newUser.getUsername());
+		newUser = userAccountService.getByUsername(newUser.getUsername());
 		assertNotNull(newUser);
-		assertEquals(nofUsers+1, getAllUserAccounts().size());
+		assertEquals(nofUsers+1, userAccountService.getAllUserAccounts().size());
 		
 		assertFalse(newUser.isEmailVerified());
 	}
 	
 	@Test
 	public void testVerifyEmail() throws Exception {
-		assertTrue(UserAccountService.getInstance().createAccount(accountFour));
-		UserAccount fromDB = UserAccountService.getInstance().getByUsername(accountFour.getUsername());
+		assertTrue(userAccountService.createAccount(accountFour));
+		UserAccount fromDB = userAccountService.getByUsername(accountFour.getUsername());
 		assertNotNull(fromDB);
 		
 		assertFalse(fromDB.isEmailVerified());
 		
-		String token = UserAccountDAO.getVerificationTokenByUserId(fromDB.getId());
-		assertTrue(UserAccountService.getInstance().verifyEmailAddress(token));
+		String token = userAccountService.getVerificationTokenByUserId(fromDB.getId());
+		assertTrue(userAccountService.verifyEmailAddress(token));
 		
-		fromDB = UserAccountService.getInstance().getByUsername(accountFour.getUsername());
+		fromDB = userAccountService.getByUsername(accountFour.getUsername());
 		assertTrue(fromDB.isEmailVerified());
 	}
 	
 	@Test
 	public void testVerifyEmail_failWrongToken() throws Exception {
-		assertTrue(UserAccountService.getInstance().createAccount(accountFive));
-		UserAccount fromDB = UserAccountService.getInstance().getByUsername(accountFive.getUsername());
+		assertTrue(userAccountService.createAccount(accountFive));
+		UserAccount fromDB = userAccountService.getByUsername(accountFive.getUsername());
 		assertNotNull(fromDB);
 		
 		assertFalse(fromDB.isEmailVerified());
 		
-		assertFalse(UserAccountService.getInstance().verifyEmailAddress("12345"));
+		assertFalse(userAccountService.verifyEmailAddress("12345"));
 		
-		fromDB = UserAccountService.getInstance().getByUsername(accountFive.getUsername());
+		fromDB = userAccountService.getByUsername(accountFive.getUsername());
 		assertFalse(fromDB.isEmailVerified());
 	}
 	
 	@Test(expected=UsernameAlreadyExistsException.class)
 	public void testCreateAccount_FailUsernameAlreadyExists() throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
-		UserAccountService.getInstance().createAccount(accountOne);
+		userAccountService.createAccount(accountOne);
 	}
 	
 	@Test
@@ -156,9 +162,9 @@ public class UserAccountServiceTest {
 		newAccount.setId(256);
 		newAccount.setRoles((byte) 2);
 		
-		assertTrue(UserAccountService.getInstance().createAccount(newAccount));
+		assertTrue(userAccountService.createAccount(newAccount));
 		
-		UserAccount fromDB = UserAccountService.getInstance().getByUsername("hans81");
+		UserAccount fromDB = userAccountService.getByUsername("hans81");
 		
 		assertEquals(newAccount.getUsername(), fromDB.getUsername());
 		assertEquals(newAccount.getEmail(), fromDB.getEmail());
@@ -175,7 +181,7 @@ public class UserAccountServiceTest {
 
 	@Test
 	public void testReadAccount() throws UserAccountNotFoundException, UsernameAlreadyExistsException {
-		UserAccount byUsername = UserAccountService.getInstance().getByUsername(accountOne.getUsername());
+		UserAccount byUsername = userAccountService.getByUsername(accountOne.getUsername());
 		assertNotNull(byUsername);
 		assertTrue(byUsername.getUsername().equals(accountOne.getUsername()));
 		assertTrue(byUsername.getEmail().equals(accountOne.getEmail()));
@@ -186,12 +192,12 @@ public class UserAccountServiceTest {
 	
 	@Test(expected=UserAccountNotFoundException.class)
 	public void testReadAccount_FailUserAccountNotFound() throws UserAccountNotFoundException {
-		UserAccountService.getInstance().getByUsername("not-existing");
+		userAccountService.getByUsername("not-existing");
 	}
 	
 	@Test
 	public void testUpdateAccount() throws UserAccountNotFoundException, UsernameAlreadyExistsException {
-		UserAccount beforeUpdate = UserAccountService.getInstance().getByUsername(accountToUpdate.getUsername());
+		UserAccount beforeUpdate = userAccountService.getByUsername(accountToUpdate.getUsername());
 		assertNotNull(beforeUpdate);
 		BigDecimal balance = beforeUpdate.getBalance();
 		Date creationDate = beforeUpdate.getCreationDate();
@@ -209,8 +215,8 @@ public class UserAccountServiceTest {
 		beforeUpdate.setUsername("useruser");
 		beforeUpdate.setRoles(Role.BOTH.getCode());
 		
-		UserAccountService.getInstance().updateAccount(username, beforeUpdate);
-		UserAccount afterUpdate = UserAccountService.getInstance().getByUsername(username);
+		userAccountService.updateAccount(username, beforeUpdate);
+		UserAccount afterUpdate = userAccountService.getByUsername(username);
 		
 		assertNotNull(afterUpdate);
 		
@@ -236,69 +242,58 @@ public class UserAccountServiceTest {
 	
 	@Test(expected=UserAccountNotFoundException.class)
 	public void testDeleteAccount() throws UserAccountNotFoundException, UsernameAlreadyExistsException, BalanceNotZeroException {
-		int nofUsers = getAllUserAccounts().size();
-		UserAccountService.getInstance().delete(accountToDelete.getUsername());
-		assertEquals(nofUsers, getAllUserAccounts().size());
-		UserAccountService.getInstance().getByUsername(accountToDelete.getUsername());
+		int nofUsers = userAccountService.getAllUserAccounts().size();
+		userAccountService.delete(accountToDelete.getUsername());
+		assertEquals(nofUsers, userAccountService.getAllUserAccounts().size());
+		userAccountService.getByUsername(accountToDelete.getUsername());
 	}
 	
 	@Test
 	public void testSavePublicKeys() throws Exception {
-		UserAccount loadedSix = UserAccountService.getInstance().getByUsername(accountSix.getUsername());
+		UserAccount loadedSix = userAccountService.getByUsername(accountSix.getUsername());
 		
-		List<UserPublicKey> userPublicKeys = UserPublicKeyDAO.getUserPublicKeys(loadedSix.getId());
+		List<UserPublicKey> userPublicKeys = userAccountService.getUserPublicKeys(loadedSix.getId());
 		assertEquals(0, userPublicKeys.size());
 		
 		KeyPair keyPair = KeyHandler.generateKeyPair();
 		String encodedPublicKey = KeyHandler.encodePublicKey(keyPair.getPublic());
 		
-		byte keyNumber = UserAccountService.getInstance().saveUserPublicKey(loadedSix.getId(), PKIAlgorithm.DEFAULT, encodedPublicKey);
+		byte keyNumber = userAccountService.saveUserPublicKey(loadedSix.getId(), PKIAlgorithm.DEFAULT, encodedPublicKey);
 		assertEquals(1, keyNumber);
 		
 		
-		UserAccount loadedSeven = UserAccountService.getInstance().getByUsername(accountSeven.getUsername());
-		userPublicKeys = UserPublicKeyDAO.getUserPublicKeys(loadedSeven.getId());
+		UserAccount loadedSeven = userAccountService.getByUsername(accountSeven.getUsername());
+		userPublicKeys = userAccountService.getUserPublicKeys(loadedSeven.getId());
 		assertEquals(0, userPublicKeys.size());
 		
 		keyPair = KeyHandler.generateKeyPair();
 		encodedPublicKey = KeyHandler.encodePublicKey(keyPair.getPublic());
 		
-		keyNumber = UserAccountService.getInstance().saveUserPublicKey(loadedSix.getId(), PKIAlgorithm.DEFAULT, encodedPublicKey);
+		keyNumber = userAccountService.saveUserPublicKey(loadedSix.getId(), PKIAlgorithm.DEFAULT, encodedPublicKey);
 		assertEquals(2, keyNumber);
 		
-		userPublicKeys = UserPublicKeyDAO.getUserPublicKeys(loadedSix.getId());
+		userPublicKeys = userAccountService.getUserPublicKeys(loadedSix.getId());
 		assertEquals(2, userPublicKeys.size());
-		userPublicKeys = UserPublicKeyDAO.getUserPublicKeys(loadedSeven.getId());
+		userPublicKeys = userAccountService.getUserPublicKeys(loadedSeven.getId());
 		assertEquals(0, userPublicKeys.size());
 		
-		loadedSix = UserAccountService.getInstance().getByUsername(accountSix.getUsername());
+		loadedSix = userAccountService.getByUsername(accountSix.getUsername());
 		assertEquals(2, loadedSix.getNofKeys());
 	}
 	
 	@Test
 	public void testGetAllUserAccounts(){
-		BigDecimal balance = UserAccountService.getInstance().getSumOfAllAccounts();
+		BigDecimal balance = userAccountService.getSumOfAllAccounts();
 		
 		assertNotNull(balance);
 		
-		List<UserAccount> userList = getAllUserAccounts();
+		List<UserAccount> userList = userAccountService.getAllUserAccounts();
 		BigDecimal sum = BigDecimal.ZERO;
 		for(UserAccount user: userList){
 			sum = sum.add(user.getBalance());
 		}
 		
 		assertEquals(balance, sum);
-	}
-	
-	@SuppressWarnings("unchecked")
-	private List<UserAccount> getAllUserAccounts() {
-		SessionFactory sessionFactory = HibernateUtil.getSessionFactory();
-		Session session = sessionFactory.openSession();
-		session.beginTransaction();
-		List<UserAccount> list = session.createQuery("from USER_ACCOUNT").list();
-		
-		session.close();
-		return list;
 	}
 
 }

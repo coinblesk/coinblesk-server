@@ -35,8 +35,8 @@ public class UserPublicKey implements Serializable {
 	public UserPublicKey() {
 	}
 	
-	public UserPublicKey(long userid, byte keyNumber, byte pkiAlgorithm, String publicKey) {
-		this.userId = userid;
+	public UserPublicKey(long userId, byte keyNumber, byte pkiAlgorithm, String publicKey) {
+		this.userId = userId;
 		this.keyNumber = keyNumber;
 		this.pkiAlgorithm = pkiAlgorithm;
 		this.publicKey = publicKey;

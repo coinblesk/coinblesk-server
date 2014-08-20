@@ -8,21 +8,26 @@ import java.math.BigDecimal;
 import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.keys.CustomKeyPair;
 import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
-import ch.uzh.csg.mbps.server.dao.PayInTransactionDAO;
-import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.PayInTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.PayInTransactionService;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
+import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
@@ -35,14 +40,25 @@ import com.azazar.bitcoin.jsonrpcclient.Bitcoin.RawTransaction;
 import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(locations = {
+		"classpath:context.xml",
+		"classpath:test-database.xml"})
 public class PayInTransactionServiceTest {
 
 	private static boolean initialized = false;
 	private static UserAccount test61;
 	private static UserAccount test62;
+	
+	@Autowired
+	private IUserAccount userAccountService;
+	
+	@Autowired
+	private PayInTransactionService payInTransactionService;
 
 	@Before
 	public void setUp() throws Exception {
+		BitcoindController.TESTING = true;
 		UserAccountService.enableTestingMode();
 
 		if (!initialized) {
@@ -63,20 +79,20 @@ public class PayInTransactionServiceTest {
 	}
 
 	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
-		assertTrue(UserAccountService.getInstance().createAccount(userAccount));
-		userAccount = UserAccountService.getInstance().getByUsername(userAccount.getUsername());
+		assertTrue(userAccountService.createAccount(userAccount));
+		userAccount = userAccountService.getByUsername(userAccount.getUsername());
 		userAccount.setEmailVerified(true);
 		userAccount.setBalance(balance);
-		UserAccountDAO.updateAccount(userAccount);
+		userAccountService.updateAccount(userAccount);
 	}
 
 	@Test
 	public void testCheck() throws Exception{
 		createAccountAndVerifyAndReload(test61,BigDecimal.ZERO);
-		UserAccount userAccount = UserAccountService.getInstance().getByUsername(test61.getUsername());
+		UserAccount userAccount = userAccountService.getByUsername(test61.getUsername());
 		userAccount.setPaymentAddress("asdfjklqwertuiopyxcvb");
-		UserAccountDAO.updateAccount(userAccount);
-		UserAccount fromDB = UserAccountService.getInstance().getByUsername(test61.getUsername());
+		userAccountService.updateAccount(userAccount);
+		UserAccount fromDB = userAccountService.getByUsername(test61.getUsername());
 		final String paymentAddress = fromDB.getPaymentAddress();
 		Transaction transaction = new Transaction() {
 
@@ -158,9 +174,9 @@ public class PayInTransactionServiceTest {
 
 		assertTrue(BigDecimal.ZERO.compareTo(fromDB.getBalance())==0);
 
-		PayInTransactionService.create(transaction);
+		payInTransactionService.create(transaction);
 		
-		fromDB = UserAccountService.getInstance().getByUsername(test61.getUsername());
+		fromDB = userAccountService.getByUsername(test61.getUsername());
 		assertTrue(BigDecimal.ONE.compareTo(fromDB.getBalance())==0);
 	}
 	
@@ -168,19 +184,19 @@ public class PayInTransactionServiceTest {
 	public void testGetHistory() throws Exception {
 		createAccountAndVerifyAndReload(test62, BigDecimal.ZERO); 
 		
-		UserAccount fromDB = UserAccountService.getInstance().getByUsername(test62.getUsername());
+		UserAccount fromDB = userAccountService.getByUsername(test62.getUsername());
 		
-		assertEquals(0, PayInTransactionService.getInstance().getHistory(fromDB.getUsername(), 0).size());
+		assertEquals(0, payInTransactionService.getHistory(fromDB.getUsername(), 0).size());
 		
-		PayInTransaction tx;
+		
 		
 		ArrayList<Date> dates = new ArrayList<Date>();
 		int nofTransactions = 0;
 		int additionalTx = 2;
 		
 		while (nofTransactions < Config.PAY_INS_MAX_RESULTS+additionalTx) {
-			tx = new PayInTransaction();
-			tx.setId(nofTransactions);
+			PayInTransaction tx = new PayInTransaction();
+			//tx.setId(nofTransactions);
 			Date d = new Date();
 			dates.add(d);
 			tx.setTimestamp(d);
@@ -188,13 +204,15 @@ public class PayInTransactionServiceTest {
 			tx.setUserID(fromDB.getId());
 			tx.setTransactionID(Integer.toString(nofTransactions));
 			
-			PayInTransactionDAO.createPayInTransaction(tx);
+			payInTransactionService.createPayInTransaction(tx);
 			
 			nofTransactions++;
 		}
 		
+		System.err.println("created "+nofTransactions);
+		
 		assertTrue(nofTransactions > Config.PAY_INS_MAX_RESULTS);
-		ArrayList<HistoryPayInTransaction> history = PayInTransactionService.getInstance().getHistory(fromDB.getUsername(), 0);
+		List<HistoryPayInTransaction> history = payInTransactionService.getHistory(fromDB.getUsername(), 0);
 		assertEquals(Config.PAY_INS_MAX_RESULTS, history.size());
 		
 		//assert that the list is in descending order
@@ -210,7 +228,7 @@ public class PayInTransactionServiceTest {
 		}
 		
 		//get the secod page
-		ArrayList<HistoryPayInTransaction> history2 = PayInTransactionService.getInstance().getHistory(fromDB.getUsername(), 1);
+		List<HistoryPayInTransaction> history2 = payInTransactionService.getHistory(fromDB.getUsername(), 1);
 		assertEquals(additionalTx, history2.size());
 		
 		//assert that the first and the second tx are now in the list, since we fetched the second page
@@ -226,7 +244,7 @@ public class PayInTransactionServiceTest {
 		}
 		
 		//test get the number of results
-		long historyCount = PayInTransactionService.getInstance().getHistoryCount(fromDB.getUsername());
+		long historyCount = payInTransactionService.getHistoryCount(fromDB.getUsername());
 		assertEquals(Config.PAY_INS_MAX_RESULTS+additionalTx, historyCount);
 	}
 

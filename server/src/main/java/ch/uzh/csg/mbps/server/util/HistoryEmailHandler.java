@@ -4,16 +4,19 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
 
 import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
 import ch.uzh.csg.mbps.model.HistoryPayOutTransaction;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
+import ch.uzh.csg.mbps.server.clientinterface.ITransaction;
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.service.PayInTransactionService;
 import ch.uzh.csg.mbps.server.service.PayOutTransactionService;
-import ch.uzh.csg.mbps.server.service.TransactionService;
-import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 
 /**
@@ -21,7 +24,17 @@ import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
  * {@link ch.uzh.csg.mbps.server.util.Emailer} to send the email
  * asynchronously.
  */
+@Controller
 public class HistoryEmailHandler {
+	
+	@Autowired
+	private IUserAccount userAccountService;
+	@Autowired
+	private ITransaction transactionService;
+	@Autowired
+	private PayInTransactionService payInTransactionService;
+	@Autowired
+	private PayOutTransactionService payOutTransactionService;
 	
 	/**
 	 * Sends the transaction history to the registered email address belonging
@@ -38,7 +51,7 @@ public class HistoryEmailHandler {
 	 *             if no user with the given username is found, or IOException
 	 *             while creating/writing the local file
 	 */
-	public static void sendHistoryByEmail(String username, int type) throws Exception {
+	public void sendHistoryByEmail(String username, int type) throws Exception {
 		File f = createFile(username);
 		
 		FileWriter fileWriter = new FileWriter(f);
@@ -63,10 +76,10 @@ public class HistoryEmailHandler {
 		}
 		
 		bufferedWriter.close();
-		Emailer.sendHistoryCSV(username, UserAccountService.getInstance().getByUsername(username).getEmail(), f);
+		Emailer.sendHistoryCSV(username, userAccountService.getByUsername(username).getEmail(), f);
 	}
 
-	private static File createFile(String username) throws Exception {
+	private File createFile(String username) throws Exception {
 		Properties properties = System.getProperties();
 		String home = properties.get("user.home").toString();
 		String separator = properties.get("file.separator").toString();
@@ -90,11 +103,11 @@ public class HistoryEmailHandler {
 		bufferedWriter.write(header+"\n");	
 	}
 
-	private static void writeTransactions(BufferedWriter bufferedWriter, String username) throws UserAccountNotFoundException, IOException {
+	private void writeTransactions(BufferedWriter bufferedWriter, String username) throws UserAccountNotFoundException, IOException {
 		boolean hasMore = true;
 		
 		for (int page=0; hasMore; page++) {
-			ArrayList<HistoryTransaction> history = TransactionService.getInstance().getHistory(username, page);
+			List<HistoryTransaction> history = transactionService.getHistory(username, page);
 			for (HistoryTransaction htx : history) {
 				bufferedWriter.write(htx.getTimestamp().toString() + ", " + htx.getBuyer() + ", " + htx.getSeller() + ", " + htx.getAmount().toString() + "\n");
 			}
@@ -102,11 +115,11 @@ public class HistoryEmailHandler {
 		}
 	}
 
-	private static void writePayInTransactions(BufferedWriter bufferedWriter, String username) throws UserAccountNotFoundException, IOException {
+	private void writePayInTransactions(BufferedWriter bufferedWriter, String username) throws UserAccountNotFoundException, IOException {
 		boolean hasMore = true;
 		
 		for (int page=0; hasMore; page++) {
-			ArrayList<HistoryPayInTransaction> history = PayInTransactionService.getInstance().getHistory(username, page);
+			List<HistoryPayInTransaction> history = payInTransactionService.getHistory(username, page);
 			for (HistoryPayInTransaction htx : history) {
 				bufferedWriter.write(htx.getTimestamp().toString() + ", " + htx.getAmount().toString() + "\n");
 			}
@@ -114,11 +127,11 @@ public class HistoryEmailHandler {
 		}
 	}
 
-	private static void writePayOutTransactions(BufferedWriter bufferedWriter, String username) throws UserAccountNotFoundException, IOException {
+	private void writePayOutTransactions(BufferedWriter bufferedWriter, String username) throws UserAccountNotFoundException, IOException {
 		boolean hasMore = true;
 		
 		for (int page=0; hasMore; page++) {
-			ArrayList<HistoryPayOutTransaction> history = PayOutTransactionService.getInstance().getHistory(username, page);
+			List<HistoryPayOutTransaction> history = payOutTransactionService.getHistory(username, page);
 			for (HistoryPayOutTransaction htx : history) {
 				bufferedWriter.write(htx.getTimestamp().toString() + ", " + htx.getBtcAddress() + ", " + htx.getAmount().toString() + "\n");
 			}

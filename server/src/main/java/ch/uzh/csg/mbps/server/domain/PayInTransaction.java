@@ -13,7 +13,6 @@ import javax.persistence.SequenceGenerator;
 
 import org.hibernate.annotations.Index;
 
-import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 
 import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
@@ -42,9 +41,9 @@ public class PayInTransaction implements Serializable {
 	
 	public PayInTransaction() {
 	}
-		
-	public PayInTransaction(Transaction transaction) throws UserAccountNotFoundException {
-		this.userID = UserAccountDAO.getByBTCAddress(transaction.address()).getId();
+	
+	public PayInTransaction(long userID, Transaction transaction) throws UserAccountNotFoundException {
+		this.userID = userID;
 		this.timestamp = transaction.timeReceived();
 		this.amount = BigDecimal.valueOf(transaction.amount());
 		this.transactionID = transaction.txId();

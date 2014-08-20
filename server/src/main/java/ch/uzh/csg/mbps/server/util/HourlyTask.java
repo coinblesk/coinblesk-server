@@ -5,6 +5,7 @@ import java.io.IOException;
 import net.minidev.json.parser.ParseException;
 
 import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import ch.uzh.csg.mbps.server.domain.PayOutRule;
 import ch.uzh.csg.mbps.server.service.PayOutRuleService;
@@ -15,13 +16,16 @@ import ch.uzh.csg.mbps.server.service.PayOutRuleService;
  */
 public class HourlyTask {
 	private static Logger LOGGER = Logger.getLogger(HourlyTask.class);
+	
+	@Autowired
+	private PayOutRuleService payOutRuleService;
 
 	/**
 	 * Update is executed every 60minutes.
 	 */
 	public void update() {
 		//check payout rules
-		PayOutRuleService.getInstance().checkAllRules();
+		payOutRuleService.checkAllRules();
 		LOGGER.info("Cronjob is executing PayOutRules-Task.");
 		
 		// update USD/CHF-ExchangeRate

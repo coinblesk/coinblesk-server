@@ -7,24 +7,20 @@ import static org.junit.Assert.assertTrue;
 
 import java.math.BigDecimal;
 import java.util.Date;
-import java.util.List;
 
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
-import org.springframework.test.context.support.DirtiesContextTestExecutionListener;
-import org.springframework.test.context.transaction.TransactionalTestExecutionListener;
 
+import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.service.ServerAccountService;
-import ch.uzh.csg.mbps.server.util.HibernateUtil;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidPublicKeyException;
@@ -41,14 +37,19 @@ import com.github.springtestdbunit.annotation.DbUnitConfiguration;
 import com.github.springtestdbunit.annotation.ExpectedDatabase;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(locations={"classpath:test-applicationContext.xml",
-		"classpath:applicationContext.xml"})
+@ContextConfiguration(locations = {
+		"classpath:context.xml",
+		"classpath:test-database.xml"})
+
 @DbUnitConfiguration(databaseConnection="dataSource")
 @TestExecutionListeners({ 
 	DependencyInjectionTestExecutionListener.class,
 	DbUnitTestExecutionListener.class })
 public class ServerAccountServiceTest {
 	private static boolean initialized = false;
+	
+	@Autowired
+	private IServerAccount serverAccountService;
 	
 	@Before
 	public void setUp() throws Exception {
@@ -67,38 +68,38 @@ public class ServerAccountServiceTest {
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
 	@ExpectedDatabase(value="classpath:DbUnitFiles/Services/serverAccountExpectedCreateData.xml", table="server_account")
 	public void testCreateAccount() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException, ServerAccountNotFoundException {
-		int numberOfServerAccount = getAllServerAccounts().size();
+		int numberOfServerAccount = serverAccountService.getAll().size();
 		ServerAccount newServer = new ServerAccount("www.test-test.ch", "test6@mail.com", "publicKey");
-		assertTrue(ServerAccountService.getInstance().createAccount(newServer));
+		assertTrue(serverAccountService.createAccount(newServer));
 		
-		newServer = ServerAccountService.getInstance().getByUrl(newServer.getUrl());
+		newServer = serverAccountService.getByUrl(newServer.getUrl());
 		assertNotNull(newServer);
-		assertEquals(numberOfServerAccount+1, getAllServerAccounts().size());
+		assertEquals(numberOfServerAccount+1, serverAccountService.getAll().size());
 	}
 	
 	@Test(expected=UrlAlreadyExistsException.class)
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
 	public void testCreateAccount_FailUrlAlreadyExists() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException{
 		ServerAccount newServer = new ServerAccount("https://www.my_url.ch", "test@mail.ch", "my public key");
-		ServerAccountService.getInstance().createAccount(newServer);
+		serverAccountService.createAccount(newServer);
 	}
 	
 	@Test(expected=InvalidUrlException.class)
 	public void testCreateAccount_FailInvalidUrl() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException {
 		ServerAccount serverAccount = new ServerAccount("abcd", "test@mail.ch", "blabla");
-		ServerAccountService.getInstance().createAccount(serverAccount);
+		serverAccountService.createAccount(serverAccount);
 	}
 	
 	@Test(expected=InvalidEmailException.class)
 	public void testCreateAccount_FailInvalidEmail() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException {
 		ServerAccount serverAccount = new ServerAccount("www.url.ch", "mail.ch", "blabla");
-		ServerAccountService.getInstance().createAccount(serverAccount);
+		serverAccountService.createAccount(serverAccount);
 	}
 	
 	@Test(expected=ServerAccountNotFoundException.class)
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
 	public void testReadAccount_FailUserAccountNotFound() throws ServerAccountNotFoundException {
-		ServerAccountService.getInstance().getByUrl("www.notexisting.ch");
+		serverAccountService.getByUrl("www.notexisting.ch");
 	}
 	
 	@Test
@@ -113,8 +114,8 @@ public class ServerAccountServiceTest {
 		newAccount.setDeleted(false);
 		
 		
-		assertTrue(ServerAccountService.getInstance().createAccount(newAccount));
-		ServerAccount fromDB = ServerAccountService.getInstance().getByUrl("www.insert.com");
+		assertTrue(serverAccountService.createAccount(newAccount));
+		ServerAccount fromDB = serverAccountService.getByUrl("www.insert.com");
 		
 //		assertEquals(newAccount.getUrl(), fromDB.getUrl());
 //		assertEquals(newAccount.getEmail(), fromDB.getEmail());
@@ -127,7 +128,7 @@ public class ServerAccountServiceTest {
 	@Test
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
 	public void testReadAccount() throws ServerAccountNotFoundException, UrlAlreadyExistsException {
-		ServerAccount byUrl = ServerAccountService.getInstance().getByUrl("https://www.my_url.ch");
+		ServerAccount byUrl = serverAccountService.getByUrl("https://www.my_url.ch");
 		assertNotNull(byUrl);
 		assertTrue(byUrl.getUrl().equals("https://www.my_url.ch"));
 		assertTrue(byUrl.getEmail().equals("test@mail.ch"));
@@ -137,8 +138,8 @@ public class ServerAccountServiceTest {
 	@Test
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
 	public void testTrustLevel() throws ServerAccountNotFoundException {
-		ServerAccount serverUrl1 = ServerAccountService.getInstance().getByUrl("www.haus.ch");
-		ServerAccount serverUrl2 = ServerAccountService.getInstance().getByUrl("https://www.my_url.ch");
+		ServerAccount serverUrl1 = serverAccountService.getByUrl("www.haus.ch");
+		ServerAccount serverUrl2 = serverAccountService.getByUrl("https://www.my_url.ch");
 		
 		serverUrl1.setTrustLevel(1);
 		
@@ -150,7 +151,7 @@ public class ServerAccountServiceTest {
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
 	@ExpectedDatabase(value="classpath:DbUnitFiles/Services/serverAccountExpectedUpdatedData.xml", table="server_account")
 	public void testUpdatedAccount() throws ServerAccountNotFoundException {
-		ServerAccount beforeUpdateAccount = ServerAccountService.getInstance().getByUrl("www.mbps.com");
+		ServerAccount beforeUpdateAccount = serverAccountService.getByUrl("www.mbps.com");
 		assertNotNull(beforeUpdateAccount);
 		
 		BigDecimal activeBalance = beforeUpdateAccount.getActiveBalance();
@@ -168,8 +169,8 @@ public class ServerAccountServiceTest {
 		beforeUpdateAccount.setUrl("www.update.com");
 		beforeUpdateAccount.setBalanceLimit(new BigDecimal(1000.0));
 		
-		ServerAccountService.getInstance().updateAccount(url, beforeUpdateAccount);
-		ServerAccount afterUpdateAccount = ServerAccountService.getInstance().getByUrl(beforeUpdateAccount.getUrl());
+		serverAccountService.updateAccount(url, beforeUpdateAccount);
+		ServerAccount afterUpdateAccount = serverAccountService.getByUrl(beforeUpdateAccount.getUrl());
 		
 		assertNotNull(afterUpdateAccount);
 		
@@ -200,14 +201,4 @@ public class ServerAccountServiceTest {
 		//TODO: mehmet write test
 	}
 	
-	@SuppressWarnings("unchecked")
-	private List<ServerAccount> getAllServerAccounts() {
-		SessionFactory sessionFactory = HibernateUtil.getSessionFactory();
-		Session session = sessionFactory.openSession();
-		session.beginTransaction();
-		List<ServerAccount> list = session.createQuery("from SERVER_ACCOUNT").list();
-		
-		session.close();
-		return list;
-	}	
 }

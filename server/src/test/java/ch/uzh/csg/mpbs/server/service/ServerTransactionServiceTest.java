@@ -10,14 +10,15 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
 
 import ch.uzh.csg.mbps.model.HistoryServerAccountTransaction;
+import ch.uzh.csg.mbps.server.clientinterface.IServerTransaction;
 import ch.uzh.csg.mbps.server.service.ServerAccountService;
-import ch.uzh.csg.mbps.server.service.ServerTransactionService;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseOperation;
@@ -26,7 +27,9 @@ import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import com.github.springtestdbunit.annotation.DbUnitConfiguration;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(locations={"classpath:test-applicationContext.xml"})
+@ContextConfiguration(locations = {
+		"classpath:context.xml",
+		"classpath:test-database.xml"})
 @DbUnitConfiguration(databaseConnection="dataSource")
 @TestExecutionListeners({ 
 	DependencyInjectionTestExecutionListener.class,
@@ -36,6 +39,9 @@ import com.github.springtestdbunit.annotation.DbUnitConfiguration;
 public class ServerTransactionServiceTest {
 
 	private static boolean initialized = false;
+	
+	@Autowired
+	private IServerTransaction serverTransactionService;
 	
 	@Before
 	public void setUp() throws Exception {
@@ -63,7 +69,7 @@ public class ServerTransactionServiceTest {
 	
 	@Test
 	public void testGetPayeeHistory() {
-		ArrayList<HistoryServerAccountTransaction> payeeList = ServerTransactionService.getInstance().getPayeeHistory(0);
+		ArrayList<HistoryServerAccountTransaction> payeeList = serverTransactionService.getPayeeHistory(0);
 		System.out.println("*************************** " + payeeList.size());
 		assertNotNull(payeeList);
 		assertThat(payeeList.size(), is(5));
@@ -71,7 +77,7 @@ public class ServerTransactionServiceTest {
 	
 	@Test
 	public void testGetPayerHistory() {
-		ArrayList<HistoryServerAccountTransaction> payerList = ServerTransactionService.getInstance().getPayerHistory(0);
+		ArrayList<HistoryServerAccountTransaction> payerList = serverTransactionService.getPayerHistory(0);
 		System.out.println("*************************** " + payerList.size());
 		assertNotNull(payerList);
 		assertThat(payerList.size(), is(4));

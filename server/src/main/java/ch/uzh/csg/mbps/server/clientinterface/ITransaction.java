@@ -1,11 +1,12 @@
 package ch.uzh.csg.mbps.server.clientinterface;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
+import ch.uzh.csg.mbps.server.domain.DbTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.exceptions.TransactionException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
@@ -27,7 +28,7 @@ public interface ITransaction {
 	 * @throws UserAccountNotFoundException
 	 *             if the username is not found in the database
 	 */
-	public ArrayList<HistoryTransaction> getHistory(String username, int page) throws UserAccountNotFoundException;
+	public List<HistoryTransaction> getHistory(String username, int page) throws UserAccountNotFoundException;
 	
 	/**
 	 * Creates a new Transaction on the server/database.
@@ -60,6 +61,12 @@ public interface ITransaction {
 	 * @return ArrayList<HistoryTransaction>
 	 * @throws UserAccountNotFoundException
 	 */
-	public ArrayList<HistoryTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException;
+	public List<HistoryTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException;
+
+	public long getHistoryCount(String username) throws UserAccountNotFoundException;
+
+	public List<HistoryTransaction> getAll();
+
+	public void createTransaction(DbTransaction tx, UserAccount fromDB, UserAccount fromDB2);
 	
 }
