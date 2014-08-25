@@ -21,8 +21,6 @@ import javax.xml.transform.stream.StreamResult;
 import net.minidev.json.parser.ParseException;
 
 import org.apache.log4j.Logger;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.stereotype.Controller;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -57,8 +55,8 @@ public class Initializer {
 			serverKeys = new File(uri);
 			
 			try {
-				CustomKeyPair ckp;
 				FileReader fr = new FileReader(serverKeys);
+				CustomKeyPair ckp;
 				if (fr.read() == -1) {
 					// this means the file is empty
 					KeyPair keyPair = KeyHandler.generateKeyPair();
@@ -67,12 +65,11 @@ public class Initializer {
 				} else {
 					ckp = loadFromXml(serverKeys, (byte) 1);
 				}
+				fr.close();
 				Constants.SERVER_KEY_PAIR = ckp;
 			} catch (Exception e) {
 				LOGGER.error("Problem reading Serverkeys from Input File", e);
 			}
-		
-
 		try {
 			ExchangeRates.updateExchangeRateUsdChf();
 		} catch (ParseException | IOException e) {

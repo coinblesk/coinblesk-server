@@ -1,15 +1,11 @@
 package ch.uzh.csg.mbps.server.dao;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Expression;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
@@ -18,10 +14,8 @@ import org.hibernate.HibernateException;
 import org.springframework.stereotype.Repository;
 
 import ch.uzh.csg.mbps.customserialization.Currency;
-import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
 import ch.uzh.csg.mbps.server.domain.DbTransaction;
-import ch.uzh.csg.mbps.server.domain.PayInTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;

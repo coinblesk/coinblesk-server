@@ -20,7 +20,6 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinJSONRPCClient;
 import com.azazar.bitcoin.jsonrpcclient.ConfirmedPaymentListener;
 import com.google.bitcoin.core.Address;
 import com.google.bitcoin.core.AddressFormatException;
-import com.google.bitcoin.core.NetworkParameters;
 
 /**
  * Class for controlling Bitcoind-Client. 

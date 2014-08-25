@@ -15,7 +15,6 @@ import org.apache.log4j.Logger;
 import org.springframework.stereotype.Repository;
 
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
-import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 

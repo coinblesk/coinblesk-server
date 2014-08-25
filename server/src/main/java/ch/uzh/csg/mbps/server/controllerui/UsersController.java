@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
-import ch.uzh.csg.mbps.server.service.UserAccountService;
 
 @Controller
 @RequestMapping("/users")
