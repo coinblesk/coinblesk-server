@@ -60,7 +60,7 @@ public interface IServerAccount {
 	 * @throws UserAccountNotFoundException
 	 * @throws BalanceNotZeroException
 	 */
-	public boolean delete(String url) throws ServerAccountNotFoundException, BalanceNotZeroException;
+	public boolean deleteAccount(String url) throws ServerAccountNotFoundException, BalanceNotZeroException;
 	
 	/**
 	 * 
@@ -73,4 +73,7 @@ public interface IServerAccount {
 	 * @return
 	 */
 	public List<ServerAccount> getAll();
+
+	List<ch.uzh.csg.mbps.model.ServerAccount> getAllAccounts(String username, int urlPage);
+
 }

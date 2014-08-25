@@ -174,7 +174,7 @@ public class ServerAccountService implements IServerAccount {
 
 	@Override
 	@Transactional
-	public boolean delete(String url) throws ServerAccountNotFoundException, BalanceNotZeroException {
+	public boolean deleteAccount(String url) throws ServerAccountNotFoundException, BalanceNotZeroException {
 		try {
 			serverAccountDAO.delete(url);
 			return true;
@@ -193,5 +193,17 @@ public class ServerAccountService implements IServerAccount {
 	@Transactional(readOnly = true)
 	public List<ServerAccount> getAll() {
 		return serverAccountDAO.getAllServerAccounts();
+	}
+
+	@Override
+	@Transactional
+	public List<ch.uzh.csg.mbps.model.ServerAccount> getAllAccounts(String username, int urlPage) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public int getAccountsCount() {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 }
