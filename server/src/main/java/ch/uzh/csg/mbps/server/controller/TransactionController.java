@@ -193,7 +193,7 @@ public class TransactionController {
 	 * @return CustomResponseObject showing if the action was successful or not
 	 *         and the appropriate message to show on the client
 	 */
-	@RequestMapping(value = "/history/getByEmail", params = { "type" }, method = RequestMethod.POST, produces = "application/json")
+	@RequestMapping(value = "/history/getByEmail", method = RequestMethod.POST, produces = "application/json")
 	@ResponseBody
 	public TransferObject getHistoryByEmail(@RequestBody TransferObject transferObject) {
 		TransferObject response = new TransferObject();
