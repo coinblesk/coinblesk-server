@@ -8,9 +8,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import ch.uzh.csg.mbps.model.HistoryServerAccountTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IServerTransaction;
-import ch.uzh.csg.mbps.server.service.ServerTransactionService;
+import ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction;
 
 @Controller
 @RequestMapping("/history")
