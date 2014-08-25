@@ -12,14 +12,12 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import ch.uzh.csg.mbps.model.HistoryServerAccountTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IServerTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
-import ch.uzh.csg.mbps.server.service.ServerTransactionService;
-import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.UserModel;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
+import ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction;
 
 @Controller
 @RequestMapping("/home")

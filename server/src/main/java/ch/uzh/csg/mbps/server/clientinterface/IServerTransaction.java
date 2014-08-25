@@ -2,9 +2,9 @@ package ch.uzh.csg.mbps.server.clientinterface;
 
 import java.util.ArrayList;
 
-import ch.uzh.csg.mbps.model.HistoryServerAccountTransaction;
 import ch.uzh.csg.mbps.server.domain.ServerTransaction;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
+import ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction;
 
 public interface IServerTransaction {
 
