@@ -1,6 +1,7 @@
 package ch.uzh.csg.mbps.server.controller;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.List;
 
 import net.minidev.json.parser.ParseException;
@@ -11,24 +12,25 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import ch.uzh.csg.mbps.customserialization.DecoderFactory;
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.customserialization.PaymentResponse;
+import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
 import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
 import ch.uzh.csg.mbps.model.HistoryPayOutTransaction;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
-import ch.uzh.csg.mbps.responseobject.CreateTransactionTransferObject;
-import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
-import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
 import ch.uzh.csg.mbps.responseobject.GetHistoryTransferObject;
+import ch.uzh.csg.mbps.responseobject.HistoryTransferRequestObject;
+import ch.uzh.csg.mbps.responseobject.PayOutTransactionObject;
+import ch.uzh.csg.mbps.responseobject.TransactionObject;
+import ch.uzh.csg.mbps.responseobject.TransferObject;
 import ch.uzh.csg.mbps.server.clientinterface.ITransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
-import ch.uzh.csg.mbps.server.domain.PayOutTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.PayInTransactionService;
@@ -51,7 +53,6 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 @RequestMapping("/transaction")
 public class TransactionController {
 	private static Logger LOGGER = Logger.getLogger(TransactionController.class);
-	private static final String SUCCESS = "The transaction has been successfully created.";
 
 	@Autowired
 	private PayInTransactionService payInTransactionService;
@@ -80,21 +81,22 @@ public class TransactionController {
 	 */
 	@RequestMapping(value = "/create", method = RequestMethod.POST, consumes = "application/json", produces = "application/json")
 	@ResponseBody
-	public CustomResponseObject createTransaction(@RequestBody CreateTransactionTransferObject requestObject) {
+	public TransactionObject createTransaction(@RequestBody TransactionObject requestObject) {
 		long start = System.currentTimeMillis();
-		CustomResponseObject responseObject;
+		TransactionObject responseObject = new TransactionObject();
 		try {
+			ServerPaymentRequest spr = DecoderFactory.decode(ServerPaymentRequest.class, requestObject.getServerPaymentResponse());
 			try {
 				String username = AuthenticationInfo.getPrincipalUsername();
-				ServerPaymentResponse serverPaymentResponse = transactionService.createTransaction(username, requestObject.getServerPaymentRequest());
-				responseObject = new CustomResponseObject(true, SUCCESS, Type.CREATE_TRANSACTION);
+				ServerPaymentResponse serverPaymentResponse = transactionService.createTransaction(username, spr);
+				responseObject.setSuccessful(true);
 				responseObject.setServerPaymentResponse(serverPaymentResponse.encode());
-				responseObject.setBalance(userAccountService.getByUsername(username).getBalance().toPlainString());
+				responseObject.setBalanceBTC(userAccountService.getByUsername(username).getBalance());
 				long diff = System.currentTimeMillis() - start;
 				System.err.println("server time1:"+diff+"ms");
 				return responseObject;
 			} catch (TransactionException | UserAccountNotFoundException e) {
-				PaymentRequest paymentRequestPayer = requestObject.getServerPaymentRequest().getPaymentRequestPayer();
+				PaymentRequest paymentRequestPayer = spr.getPaymentRequestPayer();
 				PaymentResponse paymentResponsePayer = new PaymentResponse(
 						PKIAlgorithm.getPKIAlgorithm(Constants.SERVER_KEY_PAIR.getPkiAlgorithm()),
 						Constants.SERVER_KEY_PAIR.getKeyNumber(),
@@ -107,19 +109,19 @@ public class TransactionController {
 						paymentRequestPayer.getTimestamp());
 				paymentResponsePayer.sign(KeyHandler.decodePrivateKey(Constants.SERVER_KEY_PAIR.getPrivateKey()));
 				
-				responseObject = new CustomResponseObject(true, null, Type.CREATE_TRANSACTION);
+				responseObject.setSuccessful(true);
 				responseObject.setServerPaymentResponse(new ServerPaymentResponse(paymentResponsePayer).encode());
-				
-				LOGGER.error(e.getMessage());
 				long diff = System.currentTimeMillis() - start;
 				System.err.println("server time2:"+diff+"ms");
-				return responseObject;
+				
 			}
-		} catch (Exception e) {
+		} catch (Throwable e) {
 			e.printStackTrace();
 			LOGGER.error(e.getMessage());
-			return new CustomResponseObject(false, Constants.INTERNAL_SERVER_ERROR + ": " + e.getMessage(), Type.CREATE_TRANSACTION);
+			responseObject.setSuccessful(false);
+			responseObject.setMessage(Constants.INTERNAL_SERVER_ERROR + ": " + e.getMessage());
 		}
+		return responseObject;
 	}
 	
 	/**
@@ -138,16 +140,21 @@ public class TransactionController {
 	 * @return CustomResponseObject with the ordered transactions and
 	 *         information about success/non success of request.
 	 */
-	@RequestMapping(value = "/history", params = { "txPage", "txPayInPage", "txPayOutPage" }, method = RequestMethod.GET, produces = "application/json")
+	@RequestMapping(value = "/history", method = RequestMethod.POST, produces = "application/json")
 	@ResponseBody
-	public CustomResponseObject getHistory(
-			@RequestParam(value="txPage") int txPage,
-			@RequestParam(value="txPayInPage") int txPayInPage,
-			@RequestParam(value="txPayOutPage") int txPayOutPage ) {
-		
+	public GetHistoryTransferObject getHistory(@RequestBody HistoryTransferRequestObject request) {
+		GetHistoryTransferObject response = new GetHistoryTransferObject();
+		if(!request.isComplete()) {
+			response.setSuccessful(false);
+			response.setMessage("request has missing parameters");
+			return response;
+		}
 		try {
 			String username = AuthenticationInfo.getPrincipalUsername();
 			
+			int txPage = request.getTxPage().intValue();
+			int txPayInPage = request.getTxPayInPage().intValue();
+			int txPayOutPage = request.getTxPayOutPage().intValue();
 			List<HistoryTransaction> history = transactionService.getHistory(username, txPage);
 			long nofTx = (txPage < 0) ? 0 : transactionService.getHistoryCount(username);
 			
@@ -157,16 +164,21 @@ public class TransactionController {
 			List<HistoryPayOutTransaction> payOutHistory = payOutTransactionService.getHistory(username, txPayOutPage);
 			long nofPayOutTx = (txPayOutPage < 0) ? 0 : payOutTransactionService.getHistoryCount(username);
 			
-			CustomResponseObject responseObject = new CustomResponseObject(true, "");
-			responseObject.setGetHistoryTO(new GetHistoryTransferObject(history, payInHistory, payOutHistory, nofTx, nofPayInTx, nofPayOutTx));
+			response.setSuccessful(true);
+			response.setTransactionHistory(history);
+			response.setPayInTransactionHistory(payInHistory);
+			response.setPayOutTransactionHistory(payOutHistory);
 			
-			return responseObject;
-		} catch (UserAccountNotFoundException e) {
-			return new CustomResponseObject(false, e.getMessage());
-		}
-		catch (Exception e) {
+			response.setNofPayInTransactions(nofPayInTx);
+			response.setNofPayOutTransactions(nofPayOutTx);
+			response.setNofTransactions(nofTx);
+			
+			return response;
+		} catch (Exception e) {
+			response.setSuccessful(false);
+			response.setMessage(e.getMessage());
 			LOGGER.error(e.getMessage());
-			return new CustomResponseObject(false, Constants.INTERNAL_SERVER_ERROR + ": " + e.getMessage());
+			return response;
 		}
 	}
 	
@@ -183,24 +195,52 @@ public class TransactionController {
 	 */
 	@RequestMapping(value = "/history/getByEmail", params = { "type" }, method = RequestMethod.POST, produces = "application/json")
 	@ResponseBody
-	public CustomResponseObject getHistoryByEmail(@RequestParam(value="type") int type) {
-		if (type < 0 || type > 3)
-			return new CustomResponseObject(false, "parameter is not valid", Type.HISTORY_EMAIL);
+	public TransferObject getHistoryByEmail(@RequestBody TransferObject transferObject) {
+		TransferObject response = new TransferObject();
+		String sType = transferObject.getMessage();
+		
+		
+		if(sType == null) {
+			response.setSuccessful(false);
+			response.setMessage("not type specified");
+			return response;
+		}
+		
+		int type;
+		try {
+			type = Integer.parseInt(sType);
+		} catch (NumberFormatException nfe) {
+			response.setSuccessful(false);
+			response.setMessage(nfe.getMessage());
+			return response;
+		}
+		
+		if (type < 0 || type > 3) {
+			response.setSuccessful(false);
+			response.setMessage("parameter is not valid");
+			return response;
+		}
 		
 		String username = AuthenticationInfo.getPrincipalUsername();
 		try {
 			historyEmailHandler.sendHistoryByEmail(username, type);
 			String msg;
-			if (type == 0)
+			if (type == 0) {
 				msg = "Transaction history has successfully been send to your email address.";
-			else if (type == 1)
+			} else if (type == 1) {
 				msg = "Pay In history has successfully been send to your email address.";
-			else
+			} else {
 				msg = "Pay Out history has successfully been send to your email address.";
+			}
 			
-			return new CustomResponseObject(true, msg, Type.HISTORY_EMAIL);
+			response.setSuccessful(true);
+			response.setMessage(msg);
+			return response;
+			
 		} catch (Exception e) {
-			return new CustomResponseObject(false, "History could not be send due to an internal error. Please try again later.", Type.HISTORY_EMAIL);
+			response.setSuccessful(false);
+			response.setMessage("History could not be send due to an internal error. Please try again later.");
+			return response;
 		}
 	}
 	
@@ -211,13 +251,20 @@ public class TransactionController {
 	 */
 	@RequestMapping(value = "/exchange-rate", method = RequestMethod.GET, produces = "application/json")
 	@ResponseBody
-	public CustomResponseObject getExchangeRate() {
+	public TransferObject getExchangeRate() {
+		TransferObject transferObject = new TransferObject();
 		try {
-			return new CustomResponseObject(true, ExchangeRates.getExchangeRate().toString(), Type.EXCHANGE_RATE);
+			transferObject.setSuccessful(true);
+			transferObject.setMessage(ExchangeRates.getExchangeRate().toString());
 		} catch (ParseException | IOException e) {
 			LOGGER.error("Couldn't get exchange rate. Response: " + e.getMessage());
-			return new CustomResponseObject(false, "0.0", Type.EXCHANGE_RATE);
+			transferObject.setSuccessful(false);
+			transferObject.setMessage(e.getMessage());
+		}  catch (Throwable t) {
+			transferObject.setSuccessful(false);
+			transferObject.setMessage("Unexpected: "+t.getMessage());
 		}
+		return transferObject;
 	}
 	
 	/**
@@ -230,15 +277,25 @@ public class TransactionController {
 	 */
 	@RequestMapping(value = "/payOut", method = RequestMethod.POST, consumes = "application/json", produces = "application/json")
 	@ResponseBody
-	public CustomResponseObject payOut(@RequestBody PayOutTransaction pot){
+	public TransferObject payOut(@RequestBody PayOutTransactionObject pot){
+		TransferObject transferObject = new TransferObject();
 		try {
 			String username = AuthenticationInfo.getPrincipalUsername();
-			return payOutTransactionService.createPayOutTransaction(username, pot);
+			BigDecimal amount = pot.getAmount();
+			String address = pot.getBtcAddress();
+			
+			transferObject = payOutTransactionService.createPayOutTransaction(username, amount, address);
 		} catch (UserAccountNotFoundException e) {
-			return new CustomResponseObject(false, "UserAccount not found.");
+			transferObject.setSuccessful(false);
+			transferObject.setMessage("UserAccount not found.");
 		} catch (BitcoinException e) {
-			return  new CustomResponseObject(false, "Error: Transaction could not be sent to the BTC Network.");
+			transferObject.setSuccessful(false);
+			transferObject.setMessage("Error: Transaction could not be sent to the BTC Network.");
+		} catch (Throwable t) {
+			transferObject.setSuccessful(false);
+			transferObject.setMessage("Unexpected: "+t.getMessage());
 		}
+		return transferObject;
 	}
 	
 	/**
@@ -248,15 +305,21 @@ public class TransactionController {
 	 * @return {@link CustomResponseObject} with information about
 	 *         successful/non successful request
 	 */
-	@RequestMapping(value = "/payIn/getByEmail", method = RequestMethod.POST, produces = "application/json")
+	@RequestMapping(value = "/payIn/getByEmail", method = RequestMethod.GET, produces = "application/json")
 	@ResponseBody
-	public CustomResponseObject sendPayInByEmail(){
+	public TransferObject sendPayInByEmail(){
+		TransferObject transferObject = new TransferObject();
 		try{
 			UserAccount userAccount = userAccountService.getByUsername(AuthenticationInfo.getPrincipalUsername());
-			return payInTransactionService.sendPayInAddressByEmail(userAccount.getUsername(), userAccount.getEmail(), userAccount.getPaymentAddress());
+			transferObject = payInTransactionService.sendPayInAddressByEmail(userAccount.getUsername(), userAccount.getEmail(), userAccount.getPaymentAddress());
 		} catch(UserAccountNotFoundException e){
-			return new CustomResponseObject(false, "UserAccount not found.");
+			transferObject.setSuccessful(false);
+			transferObject.setMessage("UserAccount not found.");
+		}  catch (Throwable t) {
+			transferObject.setSuccessful(false);
+			transferObject.setMessage("Unexpected: "+t.getMessage());
 		}
+		return transferObject;
 	}
 	
 }

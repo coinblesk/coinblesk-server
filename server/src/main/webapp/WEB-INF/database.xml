@@ -9,7 +9,7 @@
       http://www.springframework.org/schema/tx
       http://www.springframework.org/schema/tx/spring-tx-3.2.xsd
       http://www.springframework.org/schema/util 
-      http://www.springframework.org/schema/util/spring-util-3.0.xsd">
+      http://www.springframework.org/schema/util/spring-util-3.2.xsd">
 
 	<bean id="entityManagerFactory"
 		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
@@ -48,28 +48,5 @@
 	
 	<bean id="persistenceExceptionTranslationPostProcessor"
       class="org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor" />
-	
-	<!-- performance metrics -->
-	<bean id="jmxExporter" class="org.springframework.jmx.export.MBeanExporter">
-    	<property name="beans">
-        	<map>
-            	<entry key="Hibernate:application=Statistics" value-ref="hibernateStatisticsBean"/>
-        	</map>
-    	</property>
-	</bean>
-
-	<bean id="hibernateStatisticsBean" class="org.hibernate.jmx.StatisticsService">
-    	<property name="statisticsEnabled" value="true"/>
-    	<property name="sessionFactory">
-    	<!-- Uncomment the following when using Hibernate directly -->
-        <!-- ref local="sessionFactory"/ -->
-
-        <!-- Uncomment the following when using Hibernate via JPA
-             (Assuming the managed EMF is named 'entityManagerFactory'.
-              Namespace is: xmlns:util="http://www.springframework.org/schema/util")
-        -->
-        <util:property-path path="entityManagerFactory.sessionFactory" />
-    	</property>
-	</bean>
     
 </beans>

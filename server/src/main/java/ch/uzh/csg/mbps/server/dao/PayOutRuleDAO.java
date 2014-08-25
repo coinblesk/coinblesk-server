@@ -1,6 +1,5 @@
 package ch.uzh.csg.mbps.server.dao;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.persistence.EntityManager;
@@ -29,9 +28,13 @@ public class PayOutRuleDAO {
 	
 	private static PayOutRule transform(ch.uzh.csg.mbps.model.PayOutRule por) {
 		PayOutRule por2 = new PayOutRule();
-		por2.setBalanceLimit(por.getBalanceLimit());
-		por2.setDay(por.getDay());
-		por2.setHour(por.getHour());
+		por2.setBalanceLimit(por.getBalanceLimitBTC());
+		if(por.getDay() != null) {
+			por2.setDay(por.getDay());
+		}
+		if(por.getHour() != null) {
+			por2.setHour(por.getHour());
+		}
 		por2.setPayoutAddress(por.getPayoutAddress());
 		por2.setUserId(por.getUserId());
 		return por2;
@@ -41,7 +44,7 @@ public class PayOutRuleDAO {
 	 * Saves a new {@link PayOutRule} object in the database. 
 	 * @param list with {@link PayOutRule}
 	 */
-	public void createPayOutRules(ArrayList<ch.uzh.csg.mbps.model.PayOutRule> list) {
+	public void createPayOutRules(List<ch.uzh.csg.mbps.model.PayOutRule> list) {
 		for(ch.uzh.csg.mbps.model.PayOutRule po:list) {
 			em.persist(transform(po));
 		}

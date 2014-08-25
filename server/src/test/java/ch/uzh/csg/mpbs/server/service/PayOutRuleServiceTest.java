@@ -99,7 +99,7 @@ public class PayOutRuleServiceTest {
 		UserAccount fromDB = userAccountService.getByUsername(test51.getUsername());
 
 		ch.uzh.csg.mbps.model.PayOutRule por = new ch.uzh.csg.mbps.model.PayOutRule();
-		por.setBalanceLimit(BigDecimal.ONE);
+		por.setBalanceLimitBTC(BigDecimal.ONE);
 		por.setUserId(fromDB.getId());
 		por.setPayoutAddress("msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW");
 

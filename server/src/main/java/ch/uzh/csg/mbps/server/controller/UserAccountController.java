@@ -1,6 +1,8 @@
 package ch.uzh.csg.mbps.server.controller;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.Calendar;
 import java.util.List;
 
 import net.minidev.json.parser.ParseException;
@@ -18,22 +20,23 @@ import org.springframework.web.servlet.ModelAndView;
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.customserialization.exceptions.UnknownPKIAlgorithmException;
 import ch.uzh.csg.mbps.keys.CustomPublicKey;
-import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
-import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
+import ch.uzh.csg.mbps.responseobject.CustomPublicKeyObject;
 import ch.uzh.csg.mbps.responseobject.GetHistoryTransferObject;
-import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;
+import ch.uzh.csg.mbps.responseobject.MainRequestObject;
+import ch.uzh.csg.mbps.responseobject.ReadRequestObject;
+import ch.uzh.csg.mbps.responseobject.TransferObject;
+import ch.uzh.csg.mbps.responseobject.UserAccountObject;
 import ch.uzh.csg.mbps.server.clientinterface.ITransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.domain.UserPublicKey;
 import ch.uzh.csg.mbps.server.service.PayInTransactionService;
 import ch.uzh.csg.mbps.server.service.PayOutTransactionService;
-import ch.uzh.csg.mbps.server.service.TransactionService;
-import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.ExchangeRates;
 import ch.uzh.csg.mbps.server.util.PasswordMatcher;
+import ch.uzh.csg.mbps.server.util.UserRoles.Role;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
@@ -87,24 +90,48 @@ public class UserAccountController {
 	 */
 	@RequestMapping(value = "/create", method = RequestMethod.POST, consumes = "application/json")
 	@ResponseBody
-	public CustomResponseObject createAccount(@RequestBody UserAccount userAccount) {
+	public TransferObject createAccount(@RequestBody UserAccountObject userAccountObject) {
+		TransferObject response = new TransferObject();
 		try {
+			UserAccount userAccount = new UserAccount();
+			userAccount.setBalance(BigDecimal.ZERO);
+			userAccount.setCreationDate(Calendar.getInstance().getTime());
+			userAccount.setDeleted(false);
+			userAccount.setEmail(userAccountObject.getEmail());
+			userAccount.setEmailVerified(false);
+			userAccount.setPassword(userAccountObject.getPassword());
+			userAccount.setPaymentAddress(userAccountObject.getPaymentAddress());
+			userAccount.setRoles(Role.USER.getCode());
+			userAccount.setUsername(userAccountObject.getUsername());
 			boolean success = userAccountService.createAccount(userAccount);
-			if (success)
-				return new CustomResponseObject(true, CREATION_SUCCESS);
-			else
-				return new CustomResponseObject(false, CREATION_ERROR);
+			if (success) {
+				response.setSuccessful(true);
+				response.setMessage(CREATION_SUCCESS);
+			}
+			else {
+				response.setSuccessful(false);
+				response.setMessage(CREATION_ERROR);
+			}
 		} catch (UsernameAlreadyExistsException e) {
-			return new CustomResponseObject(false, USERNAME_ALREADY_EXISTS);
+			response.setSuccessful(false);
+			response.setMessage(USERNAME_ALREADY_EXISTS);
 		} catch (BitcoinException e) {
-			return new CustomResponseObject(false, BITCOIN_ADDRESS_ERROR);
+			response.setSuccessful(false);
+			response.setMessage(BITCOIN_ADDRESS_ERROR);
 		} catch (InvalidUsernameException e) {
-			return new CustomResponseObject(false, INVALID_USERNAME);
+			response.setSuccessful(false);
+			response.setMessage(INVALID_USERNAME);
 		} catch (InvalidEmailException e) {
-			return new CustomResponseObject(false, INVALID_EMAIL);
+			response.setSuccessful(false);
+			response.setMessage(INVALID_EMAIL);
 		} catch (EmailAlreadyExistsException e) {
-			return new CustomResponseObject(false, EMAIL_ALREADY_EXISTS);
+			response.setSuccessful(false);
+			response.setMessage(EMAIL_ALREADY_EXISTS);
+		} catch (Throwable t) {
+			response.setSuccessful(false);
+			response.setMessage("Unexpected: "+t.getMessage());
 		}
+		return response;
 	}
 
 	/**
@@ -115,19 +142,30 @@ public class UserAccountController {
 	 */
 	@RequestMapping(value = "/afterLogin", method = RequestMethod.GET, produces = "application/json")
 	@ResponseBody
-	public CustomResponseObject getUserAccount() {
+	public ReadRequestObject getUserAccount() {
 		try {
 			UserAccount userAccount = userAccountService.getByUsername(AuthenticationInfo.getPrincipalUsername());
 			List<UserPublicKey> pubList = userAccountService.getUserPublicKey(userAccount.getId());
 			
-			CustomResponseObject responseObject = new CustomResponseObject(true, pubList.isEmpty()? null: Integer.toString(pubList.size()), Type.AFTER_LOGIN);
 			CustomPublicKey cpk = new CustomPublicKey(Constants.SERVER_KEY_PAIR.getKeyNumber(), Constants.SERVER_KEY_PAIR.getPkiAlgorithm(), Constants.SERVER_KEY_PAIR.getPublicKey());
-			responseObject.setServerPublicKey(cpk);
-			responseObject.setReadAccountTO(new ReadAccountTransferObject(transform(userAccount)));
-			responseObject.setClientVersion(Constants.CLIENT_VERSION);
-			return responseObject;
+			CustomPublicKeyObject c = new CustomPublicKeyObject();
+			c.setCustomPublicKey(cpk);
+			ReadRequestObject response = new ReadRequestObject();
+			
+			response.setMessage( pubList.isEmpty()? null: Integer.toString(pubList.size()));
+			response.setCustomPublicKey(c);
+			
+			
+			UserAccountObject uao = transform1(userAccount); 
+					
+			response.setUserAccount(uao);
+			response.setSuccessful(true);
+			return response;
 		} catch (UserAccountNotFoundException e) {
-			return new CustomResponseObject(false, ACCOUNT_NOT_FOUND);
+			ReadRequestObject failed = new ReadRequestObject();
+			failed.setMessage(ACCOUNT_NOT_FOUND);
+			failed.setSuccessful(false);
+			return failed;
 		}
 	}
 
@@ -154,6 +192,17 @@ public class UserAccountController {
 		ua.setRoles(userAccount.getRoles());
 		return ua;
 	}
+	
+	private UserAccountObject transform1(UserAccount userAccount) {
+		UserAccountObject o = new UserAccountObject();
+		o.setBalanceBTC(userAccount.getBalance());
+		o.setEmail(userAccount.getEmail());
+		o.setId(userAccount.getId());
+		o.setPassword(userAccount.getPassword());
+		o.setPaymentAddress(userAccount.getPaymentAddress());
+		o.setUsername(userAccount.getUsername());
+		return o;
+	}
 
 	/**
 	 * Updates a emailaddress or password for a  {@link UserAccount}. Can not update
@@ -165,16 +214,36 @@ public class UserAccountController {
 	 */
 	@RequestMapping(value = "/update", method = RequestMethod.POST, consumes = "application/json")
 	@ResponseBody
-	public CustomResponseObject updateAccount(@RequestBody UserAccount updatedAccount){
+	public TransferObject updateAccount(@RequestBody UserAccountObject userAccountObject){
+		TransferObject response = new TransferObject();
 		try {
-			boolean success = userAccountService.updateAccount(AuthenticationInfo.getPrincipalUsername(), updatedAccount);
-			if (success)
-				return new CustomResponseObject(true, UPDATE_SUCCESS);
-			else
-				return new CustomResponseObject(false, UPDATE_ERROR);
+			UserAccount userAccount = new UserAccount();
+			userAccount.setBalance(BigDecimal.ZERO);
+			userAccount.setCreationDate(Calendar.getInstance().getTime());
+			userAccount.setDeleted(false);
+			userAccount.setEmail(userAccountObject.getEmail());
+			userAccount.setEmailVerified(false);
+			userAccount.setPassword(userAccountObject.getPassword());
+			userAccount.setPaymentAddress(userAccountObject.getPaymentAddress());
+			userAccount.setRoles(Role.USER.getCode());
+			userAccount.setUsername(userAccountObject.getUsername());
+			boolean success = userAccountService.updateAccount(AuthenticationInfo.getPrincipalUsername(), userAccount);
+			if (success) {
+				response.setSuccessful(true);
+				response.setMessage(UPDATE_SUCCESS);
+			}
+			else {
+				response.setSuccessful(false);
+				response.setMessage(UPDATE_ERROR);
+			}
 		} catch (UserAccountNotFoundException e) {
-			return new CustomResponseObject(false, ACCOUNT_NOT_FOUND);
-		}		
+			response.setSuccessful(false);
+			response.setMessage(ACCOUNT_NOT_FOUND);
+		} catch (Throwable t) {
+			response.setSuccessful(false);
+			response.setMessage("Unexpected: "+t.getMessage());
+		}
+		return response;	
 	}
 
 	/**
@@ -185,20 +254,31 @@ public class UserAccountController {
 	 * @return CustomResopnseObject with information if operation was
 	 *         successful/unsucessful.
 	 */
-	@RequestMapping(value = "/delete", method = RequestMethod.POST, produces = "application/json")
+	@RequestMapping(value = "/delete", method = RequestMethod.GET, produces = "application/json")
 	@ResponseBody
-	public CustomResponseObject deleteUserAccount() {
+	public TransferObject deleteUserAccount() {
+		TransferObject response = new TransferObject();
 		try {
 			boolean success = userAccountService.delete(AuthenticationInfo.getPrincipalUsername());
-			if (success)
-				return new CustomResponseObject(true, DELETE_SUCCESS);
-			else
-				return new CustomResponseObject(false, TRY_AGAIN);
+			if (success) {
+				response.setSuccessful(true);
+				response.setMessage(DELETE_SUCCESS);
+			}
+			else {
+				response.setSuccessful(false);
+				response.setMessage(TRY_AGAIN);
+			}
 		} catch (UserAccountNotFoundException e) {
-			return new CustomResponseObject(false, ACCOUNT_NOT_FOUND);
+			response.setSuccessful(false);
+			response.setMessage(ACCOUNT_NOT_FOUND);
 		} catch (BalanceNotZeroException e) {
-			return new CustomResponseObject(false, BALANCE_NOT_ZERO);
+			response.setSuccessful(false);
+			response.setMessage(BALANCE_NOT_ZERO);
+		}   catch (Throwable t) {
+			response.setSuccessful(false);
+			response.setMessage("Unexpected: "+t.getMessage());
 		}
+		return response;
 	}
 
 	/**
@@ -226,16 +306,23 @@ public class UserAccountController {
 	 *         been successfully/non successfully sent to the users email
 	 *         address
 	 */
-	@RequestMapping(value = "/resetPasswordRequest", method = RequestMethod.POST, produces = "application/json")
+	@RequestMapping(value = "/resetPasswordRequest", method = RequestMethod.GET, produces = "application/json")
 	@ResponseBody
-	public CustomResponseObject resetPasswordRequest(@RequestBody String emailAddress) {
+	public TransferObject resetPasswordRequest(@RequestBody TransferObject request) {
+		TransferObject response = new TransferObject();
 		try {
-			emailAddress = emailAddress.substring(1, emailAddress.length()-1);
-			userAccountService.resetPasswordRequest(emailAddress);
-			return new CustomResponseObject(true, PASSWORD_RESET_LINK_SENT);
+			UserAccount userAccount = userAccountService.getByEmail(request.getMessage());
+			userAccountService.resetPasswordRequest(userAccount.getEmail());
+			response.setSuccessful(true);
+			response.setMessage(PASSWORD_RESET_LINK_SENT);
 		} catch (UserAccountNotFoundException e) {
-			return new CustomResponseObject(false, e.getMessage());
+			response.setSuccessful(false);
+			response.setMessage( e.getMessage());
+		}  catch (Throwable t) {
+			response.setSuccessful(false);
+			response.setMessage("Unexpected: "+t.getMessage());
 		}
+		return response;
 	}	
 
 	/**
@@ -287,28 +374,33 @@ public class UserAccountController {
 	 */
 	@RequestMapping(value = "/mainActivityRequests", method = RequestMethod.GET, produces = "application/json")
 	@ResponseBody
-	public CustomResponseObject mainActivityRequests() {
+	public MainRequestObject mainActivityRequests() {
+		MainRequestObject response = new MainRequestObject();
 		try {
 			String username = AuthenticationInfo.getPrincipalUsername();
 			UserAccount userAccount = userAccountService.getByUsername(username);
-			CustomResponseObject response = new CustomResponseObject();
+			
 			response.setSuccessful(true);
-			response.setType(Type.MAIN_ACTIVITY);
 
 			// set ExchangeRate
-			response.setMessage(ExchangeRates.getExchangeRate().toString());
+			response.setExchangeRate(ExchangeRates.getExchangeRate(), "CHF");
+			response.setBalanceBTC(userAccount.getBalance());
 			//set History
 			GetHistoryTransferObject ghto = new GetHistoryTransferObject();
 			ghto.setTransactionHistory(transactionService.getLast5Transactions(username));
 			ghto.setPayInTransactionHistory(payInTransactionService.getLast5Transactions(username));
 			ghto.setPayOutTransactionHistory(payOutTransactionService.getLast5Transactions(username));
-			response.setGetHistoryTO(ghto);
+			response.setGetHistoryTransferObject(ghto);
+			UserAccountObject uao = transform1(userAccount);
+			response.setUserAccount(uao);
 			//set Balance
-			response.setBalance(userAccount.getBalance().toString());
+			response.setBalanceBTC(userAccount.getBalance());
 
 			return response;
 		} catch (ParseException | IOException | UserAccountNotFoundException e) {
-			return new CustomResponseObject(false, "0.0", Type.MAIN_ACTIVITY);
+			response.setSuccessful(false);
+			response.setMessage("0.0");
+			return response;
 		}
 	}
 
@@ -323,17 +415,25 @@ public class UserAccountController {
 	 */
 	@RequestMapping(value = "/savePublicKey", method = RequestMethod.POST, produces = "application/json")
 	@ResponseBody
-	public CustomResponseObject savePublicKey(@RequestBody CustomPublicKey userPublicKey) {
+	public TransferObject savePublicKey(@RequestBody CustomPublicKeyObject userPublicKey) {
+		TransferObject response = new TransferObject();
 		try {
 			UserAccount userAccount = userAccountService.getByUsername(AuthenticationInfo.getPrincipalUsername());
-			PKIAlgorithm pkiAlgorithm = PKIAlgorithm.getPKIAlgorithm(userPublicKey.getPkiAlgorithm());
-			byte keyNumber = userAccountService.saveUserPublicKey(userAccount.getId(), pkiAlgorithm, userPublicKey.getPublicKey());
-			return new CustomResponseObject(true, Byte.toString(keyNumber), Type.SAVE_PUBLIC_KEY);
+			PKIAlgorithm pkiAlgorithm = PKIAlgorithm.getPKIAlgorithm(userPublicKey.getCustomPublicKey().getPkiAlgorithm());
+			byte keyNumber = userAccountService.saveUserPublicKey(userAccount.getId(), pkiAlgorithm, userPublicKey.getCustomPublicKey().getPublicKey());
+			response.setSuccessful(true);
+			response.setMessage(Byte.toString(keyNumber));
 		} catch (UserAccountNotFoundException e) {
-			return new CustomResponseObject(false, ACCOUNT_NOT_FOUND, Type.SAVE_PUBLIC_KEY);
+			response.setSuccessful(false);
+			response.setMessage(ACCOUNT_NOT_FOUND);
 		} catch (UnknownPKIAlgorithmException e) {
-			return new CustomResponseObject(false, UPDATE_ERROR, Type.SAVE_PUBLIC_KEY);
+			response.setSuccessful(false);
+			response.setMessage(UPDATE_ERROR);
+		}  catch (Throwable t) {
+			response.setSuccessful(false);
+			response.setMessage("Unexpected: "+t.getMessage());
 		}
+		return response;
 	}
 	
 	//TODO: mehmet create Account should be called

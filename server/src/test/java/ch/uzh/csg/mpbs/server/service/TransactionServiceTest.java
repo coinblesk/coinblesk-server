@@ -459,7 +459,6 @@ public class TransactionServiceTest {
 		
 		while (nofTransactions < Config.TRANSACTIONS_MAX_RESULTS+additionalTx) {
 			DbTransaction tx = new DbTransaction();
-			tx.setId(nofTransactions);
 			Date d = new Date();
 			dates.add(d);
 			tx.setTimestamp(d);

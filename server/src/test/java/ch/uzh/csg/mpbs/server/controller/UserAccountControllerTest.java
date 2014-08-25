@@ -43,14 +43,17 @@ import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
 import ch.uzh.csg.mbps.keys.CustomPublicKey;
-import ch.uzh.csg.mbps.responseobject.CreateTransactionTransferObject;
-import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
-import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
+import ch.uzh.csg.mbps.responseobject.CustomPublicKeyObject;
 import ch.uzh.csg.mbps.responseobject.GetHistoryTransferObject;
-import ch.uzh.csg.mbps.responseobject.ReadAccountTransferObject;
+import ch.uzh.csg.mbps.responseobject.MainRequestObject;
+import ch.uzh.csg.mbps.responseobject.ReadRequestObject;
+import ch.uzh.csg.mbps.responseobject.TransactionObject;
+import ch.uzh.csg.mbps.responseobject.TransferObject;
+import ch.uzh.csg.mbps.responseobject.UserAccountObject;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.ResetPassword;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.json.CustomObjectMapper;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
@@ -61,7 +64,6 @@ import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
 import ch.uzh.csg.mbps.util.Converter;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
@@ -108,7 +110,7 @@ public class UserAccountControllerTest {
 			test22 = new UserAccount("test22", "chuck22@bitcoin.csg.uzh.ch", "i-don't-need-one");
 			test23 = new UserAccount("test23", "chuck23@bitcoin.csg.uzh.ch", "i-don't-need-one");
 			test23_2 = new UserAccount("test23", "chuck23@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test24 = new UserAccount("test24", "chuck24@bitcoin.csg.uzh.ch", "i-don't-need-one");
+			test24 = new UserAccount("xtest24", "xchuck24@bitcoin.csg.uzh.ch", "xi-don't-need-one");
 			test25 = new UserAccount("test25", "chuck25@bitcoin.csg.uzh.ch", "i-don't-need-one");
 			test26 = new UserAccount("test26", "chuck26@bitcoin.csg.uzh.ch", "i-don't-need-one");
 			test26_1 = new UserAccount("test26_1", "chuck261@bitcoin.csg.uzh.ch", "i-don't-need-one");
@@ -127,17 +129,25 @@ public class UserAccountControllerTest {
 	public void tearDown() {
 		UserAccountService.disableTestingMode();
 	}
+	
+	private UserAccountObject convert(UserAccount account) {
+		UserAccountObject u = new UserAccountObject();
+		u.setUsername(account.getUsername());
+		u.setEmail(account.getEmail());
+		u.setPassword(account.getPassword());
+		return u;
+	}
 
 	@Test
 	public void testCreateUserAccount() throws Exception {
-		ObjectMapper mapper = new ObjectMapper();
-		String asString = mapper.writeValueAsString(test22);
+		CustomObjectMapper mapper = new CustomObjectMapper();
+		String asString = mapper.writeValueAsString(convert(test22));
 
 		MvcResult mvcResult = mockMvc.perform(post("/user/create").secure(false).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isOk()).andReturn();
 
 		String contentAsString = mvcResult.getResponse().getContentAsString();
-		CustomResponseObject receivedObject = mapper.readValue(contentAsString, CustomResponseObject.class);
+		UserAccountObject receivedObject = mapper.readValue(contentAsString, UserAccountObject.class);
 
 		assertNotNull(receivedObject);
 		assertEquals(true, receivedObject.isSuccessful());
@@ -147,14 +157,14 @@ public class UserAccountControllerTest {
 	public void testCreateUserAccount_UsernameNotUnique() throws Exception {
 		assertTrue(userAccountService.createAccount(test23));
 
-		ObjectMapper mapper = new ObjectMapper();
-		String asString = mapper.writeValueAsString(test23_2);
+		CustomObjectMapper mapper = new CustomObjectMapper();
+		String asString = mapper.writeValueAsString(convert(test23_2));
 
 		//this will fail since the username is not unique
 		MvcResult mvcResult = mockMvc.perform(post("/user/create").secure(false).contentType(MediaType.APPLICATION_JSON).content(asString)).andReturn();
 
 		String contentAsString = mvcResult.getResponse().getContentAsString();
-		CustomResponseObject receivedObject = mapper.readValue(contentAsString, CustomResponseObject.class);
+		UserAccountObject receivedObject = mapper.readValue(contentAsString, UserAccountObject.class);
 
 		assertNotNull(receivedObject);
 		assertEquals(false, receivedObject.isSuccessful());
@@ -191,14 +201,12 @@ public class UserAccountControllerTest {
 
 		String asString = mvcResult.getResponse().getContentAsString();
 
-		ObjectMapper mapper = new ObjectMapper();
-		CustomResponseObject transferObject = mapper.readValue(asString, CustomResponseObject.class);
+		CustomObjectMapper mapper = new CustomObjectMapper();
+		ReadRequestObject readAccountTO = mapper.readValue(asString, ReadRequestObject.class);
 
-		assertEquals(true, transferObject.isSuccessful());
-		assertNotNull(transferObject.getServerPublicKey());
-		assertNotNull(transferObject.getReadAccountTO());
-
-		ReadAccountTransferObject readAccountTO = transferObject.getReadAccountTO();
+		assertEquals(true, readAccountTO.isSuccessful());
+		assertNotNull(readAccountTO.getCustomPublicKey().getCustomPublicKey());
+		assertNotNull(readAccountTO.getUserAccount());
 
 		assertEquals(test29.getUsername(), readAccountTO.getUserAccount().getUsername());
 		assertEquals(test29.getEmail(), readAccountTO.getUserAccount().getEmail());
@@ -224,14 +232,13 @@ public class UserAccountControllerTest {
 
 		String asString = mvcResult.getResponse().getContentAsString();
 
-		ObjectMapper mapper = new ObjectMapper();
-		CustomResponseObject transferObject = mapper.readValue(asString, CustomResponseObject.class);
+		CustomObjectMapper mapper = new CustomObjectMapper();
+		ReadRequestObject readAccountTO = mapper.readValue(asString, ReadRequestObject.class);
 
-		assertEquals(true, transferObject.isSuccessful());
-		assertNotNull(transferObject.getServerPublicKey());
-		assertNotNull(transferObject.getReadAccountTO());
+		assertEquals(true, readAccountTO.isSuccessful());
+		assertNotNull(readAccountTO.getCustomPublicKey());
+		assertNotNull(readAccountTO.getUserAccount());
 
-		ReadAccountTransferObject readAccountTO = transferObject.getReadAccountTO();
 
 		assertEquals(test24.getUsername(), readAccountTO.getUserAccount().getUsername());
 		assertEquals(test24.getEmail(), readAccountTO.getUserAccount().getEmail());
@@ -241,8 +248,8 @@ public class UserAccountControllerTest {
 
 	@Test
 	public void testUpdateUserAccount_FailNotAuthorized() throws Exception {
-		ObjectMapper mapper = new ObjectMapper();
-		String asString = mapper.writeValueAsString(new UserAccount("test99", "email99", "password99"));
+		CustomObjectMapper mapper = new CustomObjectMapper();
+		String asString = mapper.writeValueAsString(convert(new UserAccount("test99", "email99", "password99")));
 
 		mockMvc.perform(post("/user/update").secure(false).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isUnauthorized());
@@ -255,8 +262,8 @@ public class UserAccountControllerTest {
 		HttpSession session = loginAndGetSession(test25.getUsername(), plainTextPassword);
 
 		String newEmail = "fancy-new-email";
-		ObjectMapper mapper = new ObjectMapper();
-		String asString = mapper.writeValueAsString(new UserAccount("newname", newEmail, test25.getPassword()));
+		CustomObjectMapper mapper = new CustomObjectMapper();
+		String asString = mapper.writeValueAsString(convert(new UserAccount("newname", newEmail, test25.getPassword())));
 
 		mockMvc.perform(post("/user/update").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isOk());
@@ -268,14 +275,14 @@ public class UserAccountControllerTest {
 
 		String response = mvcResult.getResponse().getContentAsString();
 
-		mapper = new ObjectMapper();
-		CustomResponseObject transferObject = mapper.readValue(response, CustomResponseObject.class);
+		mapper = new CustomObjectMapper();
+		ReadRequestObject readAccountTO = mapper.readValue(response, ReadRequestObject.class);
 
-		assertEquals(true, transferObject.isSuccessful());
-		assertNotNull(transferObject.getServerPublicKey());
-		assertNotNull(transferObject.getReadAccountTO());
+		assertEquals(true, readAccountTO.isSuccessful());
+		assertNotNull(readAccountTO.getCustomPublicKey());
+		assertNotNull(readAccountTO.getUserAccount());
 
-		ReadAccountTransferObject readAccountTO = transferObject.getReadAccountTO();
+
 		assertEquals(test25.getUsername(), readAccountTO.getUserAccount().getUsername());
 		assertEquals(newEmail, readAccountTO.getUserAccount().getEmail());
 
@@ -285,7 +292,7 @@ public class UserAccountControllerTest {
 				.andExpect(status().isOk())
 				.andReturn();
 
-		CustomResponseObject response2 = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
+		TransferObject response2 = mapper.readValue(mvcResult.getResponse().getContentAsString(), TransferObject.class);
 
 		assertFalse(response2.isSuccessful());
 
@@ -304,31 +311,29 @@ public class UserAccountControllerTest {
 		createAccountAndVerifyAndReload(test26, new BigDecimal(0.0));
 		HttpSession session = loginAndGetSession(test26.getUsername(), plainTextPassword);
 
-		mockMvc.perform(post("/user/delete").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON))
+		mockMvc.perform(get("/user/delete").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON))
 				.andExpect(status().isOk());
 
 		MvcResult mvcResult = mockMvc.perform(get("/user/afterLogin").secure(false).session((MockHttpSession) session)).andReturn();
 
 		String contentAsString = mvcResult.getResponse().getContentAsString();
 
-		ObjectMapper mapper = new ObjectMapper();
-		CustomResponseObject cro = mapper.readValue(contentAsString, CustomResponseObject.class);
+		CustomObjectMapper mapper = new CustomObjectMapper();
+		ReadRequestObject cro = mapper.readValue(contentAsString, ReadRequestObject.class);
 
 		assertNotNull(cro);
-		assertNull(cro.getReadAccountTO());
-		assertNull(cro.getGetHistoryTO());
-		assertNull(cro.getCreateTransactionTO());
+		assertNull(cro.getUserAccount());
 		assertEquals(false, cro.isSuccessful());
 		assertEquals("UserAccount not found.", cro.getMessage());
 
-		mvcResult = mockMvc.perform(post("/user/delete").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON))
+		mvcResult = mockMvc.perform(get("/user/delete").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON))
 				.andExpect(status().isOk())
 				.andReturn();
 
 		contentAsString = mvcResult.getResponse().getContentAsString();
-		cro = mapper.readValue(contentAsString, CustomResponseObject.class);
-		assertFalse(cro.isSuccessful());
-		assertEquals("UserAccount not found.", cro.getMessage());
+		TransferObject to = mapper.readValue(contentAsString, TransferObject.class);
+		assertFalse(to.isSuccessful());
+		assertEquals("UserAccount not found.", to.getMessage());
 	}
 
 	@Test
@@ -337,19 +342,16 @@ public class UserAccountControllerTest {
 		createAccountAndVerifyAndReload(test26_1, BigDecimal.ONE);
 		HttpSession session = loginAndGetSession(test26_1.getUsername(), plainTextPassword);
 
-		MvcResult mvcResult = mockMvc.perform(post("/user/delete").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON))
+		MvcResult mvcResult = mockMvc.perform(get("/user/delete").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON))
 				.andExpect(status().isOk())
 				.andReturn();
 
 		String contentAsString = mvcResult.getResponse().getContentAsString();
 
-		ObjectMapper mapper = new ObjectMapper();
-		CustomResponseObject cro = mapper.readValue(contentAsString, CustomResponseObject.class);
+		CustomObjectMapper mapper = new CustomObjectMapper();
+		TransferObject cro = mapper.readValue(contentAsString, TransferObject.class);
 
 		assertNotNull(cro);
-		assertNull(cro.getReadAccountTO());
-		assertNull(cro.getGetHistoryTO());
-		assertNull(cro.getCreateTransactionTO());
 		assertFalse(cro.isSuccessful());
 	}
 
@@ -377,24 +379,27 @@ public class UserAccountControllerTest {
 
 		UserAccount fromDB = userAccountService.getByUsername(test30.getUsername());
 
-		ObjectMapper mapper = new ObjectMapper();
+		CustomObjectMapper mapper = new CustomObjectMapper();
 		String emailAddress = fromDB.getEmail();
-		String mappedString = mapper.writeValueAsString(emailAddress);
+		TransferObject t = new TransferObject();
+		t.setMessage(emailAddress);
+		String mappedString = mapper.writeValueAsString(t);
 
-		MvcResult result = mockMvc.perform(post("/user/resetPasswordRequest").secure(false).contentType(MediaType.APPLICATION_JSON).content(mappedString))
+		MvcResult result = mockMvc.perform(get("/user/resetPasswordRequest").secure(false).contentType(MediaType.APPLICATION_JSON).content(mappedString))
 				.andExpect(status().isOk())
 				.andReturn();
 
 		String resultAsString = result.getResponse().getContentAsString();
-		CustomResponseObject transferObject = mapper.readValue(resultAsString, CustomResponseObject.class);		
+		TransferObject transferObject = mapper.readValue(resultAsString, TransferObject.class);		
 		assertTrue(transferObject.isSuccessful());
 
-		mappedString = mapper.writeValueAsString("wrong-email@noemail.com");
-		result = mockMvc.perform(post("/user/resetPasswordRequest").secure(false).contentType(MediaType.APPLICATION_JSON).content(mappedString))
+		t.setMessage("wrong-email@noemail.com");
+		mappedString = mapper.writeValueAsString(t);
+		result = mockMvc.perform(get("/user/resetPasswordRequest").secure(false).contentType(MediaType.APPLICATION_JSON).content(mappedString))
 				.andExpect(status().isOk())
 				.andReturn();
 		resultAsString = result.getResponse().getContentAsString();
-		transferObject = mapper.readValue(resultAsString, CustomResponseObject.class);		
+		transferObject = mapper.readValue(resultAsString, TransferObject.class);		
 		assertFalse(transferObject.isSuccessful());
 
 		List<ResetPassword> list = userAccountService.getAllResetPassword();
@@ -422,13 +427,11 @@ public class UserAccountControllerTest {
 
 		String asString = mvcResult3.getResponse().getContentAsString();
 
-		CustomResponseObject transferObject2 = mapper.readValue(asString, CustomResponseObject.class);
+		ReadRequestObject readAccountTO = mapper.readValue(asString, ReadRequestObject.class);
 
-		assertEquals(true, transferObject2.isSuccessful());
-		assertNotNull(transferObject2.getServerPublicKey());
-		assertNotNull(transferObject2.getReadAccountTO());
-
-		ReadAccountTransferObject readAccountTO = transferObject2.getReadAccountTO();
+		assertEquals(true, readAccountTO.isSuccessful());
+		assertNotNull(readAccountTO.getCustomPublicKey());
+		assertNotNull(readAccountTO.getUserAccount());
 
 		assertEquals(test30.getUsername(), readAccountTO.getUserAccount().getUsername());
 		assertEquals(test30.getEmail(), readAccountTO.getUserAccount().getEmail());
@@ -446,8 +449,11 @@ public class UserAccountControllerTest {
 		String encodedPublicKey = KeyHandler.encodePublicKey(keyPair.getPublic());
 		CustomPublicKey upk = new CustomPublicKey((byte) 1, PKIAlgorithm.DEFAULT.getCode(), encodedPublicKey);
 		
-		ObjectMapper mapper = new ObjectMapper();
-		String mappedString = mapper.writeValueAsString(upk);
+		CustomPublicKeyObject co = new CustomPublicKeyObject();
+		co.setCustomPublicKey(upk);
+		
+		CustomObjectMapper mapper = new CustomObjectMapper();
+		String mappedString = mapper.writeValueAsString(co);
 		
 		MvcResult result = mockMvc.perform(post("/user/savePublicKey").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(mappedString))
 				.andExpect(status().isOk())
@@ -455,10 +461,9 @@ public class UserAccountControllerTest {
 
 		String asString = result.getResponse().getContentAsString();
 
-		CustomResponseObject transferObject = mapper.readValue(asString, CustomResponseObject.class);
+		TransferObject transferObject = mapper.readValue(asString, TransferObject.class);
 
 		assertEquals(true, transferObject.isSuccessful());
-		assertEquals(Type.SAVE_PUBLIC_KEY, transferObject.getType());
 		assertEquals(1, Byte.parseByte(transferObject.getMessage()));
 	}
 	
@@ -481,7 +486,7 @@ public class UserAccountControllerTest {
 		KeyPair keyPairPayer = KeyHandler.generateKeyPair();
 		byte keyNumberPayer = userAccountService.saveUserPublicKey(test32.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairPayer.getPublic()));
 		
-		ObjectMapper mapper = null;
+		CustomObjectMapper mapper = null;
 		
 		HttpSession session = loginAndGetSession(test32.getUsername(), plainTextPw);
 		MvcResult mvcResult = null;
@@ -497,16 +502,18 @@ public class UserAccountControllerTest {
 			paymentRequestPayer.sign(keyPairPayer.getPrivate());
 			
 			ServerPaymentRequest request = new ServerPaymentRequest(paymentRequestPayer);
-			CreateTransactionTransferObject ctto = new CreateTransactionTransferObject(request);
+			TransactionObject t = new TransactionObject();
+			t.setServerPaymentResponse(request.encode());
+			//CreateTransactionTransferObject ctto = new CreateTransactionTransferObject(request);
 			
-			mapper = new ObjectMapper();
-			String asString = mapper.writeValueAsString(ctto);
+			mapper = new CustomObjectMapper();
+			String asString = mapper.writeValueAsString(t);
 			
 			mvcResult = mockMvc.perform(post("/transaction/create").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
 					.andExpect(status().isOk())
 					.andReturn();
 			
-			CustomResponseObject cro = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
+			TransactionObject cro = mapper.readValue(mvcResult.getResponse().getContentAsString(), TransactionObject.class);
 			assertTrue(cro.isSuccessful());
 			assertNotNull(cro.getServerPaymentResponse());
 			ServerPaymentResponse response = DecoderFactory.decode(ServerPaymentResponse.class, cro.getServerPaymentResponse());
@@ -520,14 +527,14 @@ public class UserAccountControllerTest {
 				.andExpect(status().isOk())
 				.andReturn();
 		
-		CustomResponseObject cro2 = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
+		MainRequestObject cro2 = mapper.readValue(mvcResult.getResponse().getContentAsString(), MainRequestObject.class);
 		assertTrue(cro2.isSuccessful());
 		BigDecimal exchangeRate = new BigDecimal(cro2.getMessage());
 		assertTrue(exchangeRate.compareTo(BigDecimal.ZERO) >= 0);
 		
-		assertNotNull(cro2.getBalance());
+		assertNotNull(cro2.getBalanceBTC());
 		
-		GetHistoryTransferObject ghto = cro2.getGetHistoryTO();
+		GetHistoryTransferObject ghto = cro2.getGetHistoryTransferObject();
 		assertNotNull(ghto);
 		assertEquals(5, ghto.getTransactionHistory().size());
 		assertEquals(0, ghto.getPayInTransactionHistory().size());

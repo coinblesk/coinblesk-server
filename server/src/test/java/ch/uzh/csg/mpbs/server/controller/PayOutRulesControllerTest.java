@@ -34,11 +34,12 @@ import org.springframework.web.context.WebApplicationContext;
 
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.keys.CustomKeyPair;
-import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
+import ch.uzh.csg.mbps.model.PayOutRule;
 import ch.uzh.csg.mbps.responseobject.PayOutRulesTransferObject;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.controller.PayOutRulesController;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.json.CustomObjectMapper;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.BitcoindController;
@@ -50,7 +51,6 @@ import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
@@ -115,18 +115,19 @@ public class PayOutRulesControllerTest {
 		String plainTextPw = test41.getPassword();
 
 		HttpSession session = loginAndGetSession(test41.getUsername(), plainTextPw);
-		ObjectMapper mapper = new ObjectMapper();
+		
+		CustomObjectMapper mapper = new CustomObjectMapper();
 
 		MvcResult mvcResult = mockMvc.perform(get("/rules/get").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andReturn();
 
-		CustomResponseObject cro = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
-		assertFalse(cro.isSuccessful());
+		PayOutRulesTransferObject por = mapper.readValue(mvcResult.getResponse().getContentAsString(), PayOutRulesTransferObject.class);
+		assertFalse(por.isSuccessful());
 
-		PayOutRulesTransferObject por = cro.getPayOutRulesTO();
+		List<PayOutRule> por2 = por.getPayOutRulesList();
 
-		assertNull(por);
+		assertNull(por2);
 
 	}
 
@@ -137,12 +138,10 @@ public class PayOutRulesControllerTest {
 
 		createAccountAndVerifyAndReload(test42,BigDecimal.ONE);
 		String plainTextPw = test42.getPassword();
-		UserAccount fromDB = userAccountService.getByUsername(test42.getUsername());
 
 		ch.uzh.csg.mbps.model.PayOutRule por = new ch.uzh.csg.mbps.model.PayOutRule();
 		por.setDay(2);
 		por.setHour(17);
-		por.setUserId(fromDB.getId());
 		por.setPayoutAddress("msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW");
 
 		PayOutRulesTransferObject porto = new PayOutRulesTransferObject();
@@ -153,7 +152,7 @@ public class PayOutRulesControllerTest {
 		HttpSession session = loginAndGetSession(test42.getUsername(), plainTextPw);
 
 
-		ObjectMapper mapper = new ObjectMapper();
+		CustomObjectMapper mapper = new CustomObjectMapper();
 		String asString = mapper.writeValueAsString(porto);
 
 		MvcResult mvcResult = mockMvc.perform(post("/rules/create").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
@@ -164,13 +163,14 @@ public class PayOutRulesControllerTest {
 				.andExpect(status().isOk())
 				.andReturn();
 
-		CustomResponseObject cro = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
-		assertTrue(cro.isSuccessful());
+		PayOutRulesTransferObject porto2 = mapper.readValue(mvcResult.getResponse().getContentAsString(), PayOutRulesTransferObject.class);
+		assertTrue(porto2.isSuccessful());
 
-		PayOutRulesTransferObject porto2 = cro.getPayOutRulesTO();
+
 		assertNotNull(porto2.getPayOutRulesList().get(0));
-
-		assertEquals(porto2.getPayOutRulesList().get(0).toString(),por.toString());
+		String s1 = porto2.getPayOutRulesList().get(0).toString();
+		String s2 = por.toString();
+		assertEquals(s1, s2);
 
 		logout(mvcResult);
 	}
@@ -182,12 +182,10 @@ public class PayOutRulesControllerTest {
 
 		createAccountAndVerifyAndReload(test43,BigDecimal.ONE);
 		String plainTextPw = test43.getPassword();
-		UserAccount fromDB = userAccountService.getByUsername(test43.getUsername());
 
 		ch.uzh.csg.mbps.model.PayOutRule por = new ch.uzh.csg.mbps.model.PayOutRule();
 		por.setDay(2);
 		por.setHour(17);
-		por.setUserId(fromDB.getId());
 		por.setPayoutAddress("msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW");
 
 		PayOutRulesTransferObject porto = new PayOutRulesTransferObject();
@@ -198,7 +196,7 @@ public class PayOutRulesControllerTest {
 		HttpSession session = loginAndGetSession(test43.getUsername(), plainTextPw);
 
 
-		ObjectMapper mapper = new ObjectMapper();
+		CustomObjectMapper mapper = new CustomObjectMapper();
 		String asString = mapper.writeValueAsString(porto);
 
 		MvcResult mvcResult = mockMvc.perform(post("/rules/create").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON).content(asString))
@@ -210,15 +208,14 @@ public class PayOutRulesControllerTest {
 				.andReturn();
 
 		String result = mvcResult.getResponse().getContentAsString();
-		CustomResponseObject cro = mapper.readValue(result, CustomResponseObject.class);
-		assertTrue(cro.isSuccessful());
+		PayOutRulesTransferObject porto2 = mapper.readValue(result, PayOutRulesTransferObject.class);
+		assertTrue(porto2.isSuccessful());
 
-		PayOutRulesTransferObject porto2 = cro.getPayOutRulesTO();
 		assertNotNull(porto2.getPayOutRulesList().get(0));
 
 		assertEquals(porto2.getPayOutRulesList().get(0).toString(),por.toString());
 
-		mvcResult = mockMvc.perform(post("/rules/reset").secure(false).session((MockHttpSession) session))
+		mvcResult = mockMvc.perform(get("/rules/reset").secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andReturn();
 
@@ -226,12 +223,10 @@ public class PayOutRulesControllerTest {
 				.andExpect(status().isOk())
 				.andReturn();
 
-		CustomResponseObject cro2 = mapper.readValue(mvcResult3.getResponse().getContentAsString(), CustomResponseObject.class);
-		assertFalse(cro2.isSuccessful());
+		PayOutRulesTransferObject porto3 = mapper.readValue(mvcResult3.getResponse().getContentAsString(), PayOutRulesTransferObject.class);
+		assertFalse(porto3.isSuccessful());
 
-		PayOutRulesTransferObject por2 = cro2.getPayOutRulesTO();
-
-		assertNull(por2);
+		assertNull(porto3.getPayOutRulesList());
 
 
 		logout(mvcResult);
@@ -259,16 +254,14 @@ public class PayOutRulesControllerTest {
 		List<ch.uzh.csg.mbps.model.PayOutRule> list2 = controller.transform(list);
 		ch.uzh.csg.mbps.model.PayOutRule por3 = list2.get(0);
 		ch.uzh.csg.mbps.model.PayOutRule por4 = list2.get(1);
-		assertEquals(por3.getBalanceLimit(), por.getBalanceLimit());
-		assertEquals(por3.getDay(), por.getDay());
-		assertEquals(por3.getHour(), por.getHour());
-		assertEquals(por3.getUserId(), por.getUserId());
+		assertEquals(por3.getBalanceLimitBTC(), por.getBalanceLimit());
+		assertEquals(por3.getDay().intValue(), por.getDay());
+		assertEquals(por3.getHour().intValue(), por.getHour());
 		assertEquals(por3.getPayoutAddress(), por.getPayoutAddress());
 
-		assertEquals(por4.getBalanceLimit(), por2.getBalanceLimit());
-		assertEquals(por4.getDay(), por2.getDay());
-		assertEquals(por4.getHour(), por2.getHour());
-		assertEquals(por4.getUserId(), por2.getUserId());
+		assertEquals(por4.getBalanceLimitBTC(), por2.getBalanceLimit());
+		assertEquals(por4.getDay().intValue(), por2.getDay());
+		assertEquals(por4.getHour().intValue(), por2.getHour());
 		assertEquals(por4.getPayoutAddress(), por2.getPayoutAddress());
 	}
 

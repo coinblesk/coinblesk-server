@@ -9,6 +9,7 @@ import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.Security;
 import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -16,6 +17,7 @@ import java.security.spec.X509EncodedKeySpec;
 
 import org.apache.commons.codec.binary.Base64;
 import org.bouncycastle.jce.ECNamedCurveTable;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jce.spec.ECParameterSpec;
 
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
@@ -40,6 +42,10 @@ public class KeyHandler {
 	 * In order to work, edit java.security and copy the bouncycastle jars to
 	 * /usr/lib/jvm/java-1.7.0-openjdk-amd64/jre/lib/ext/
 	 */
+	
+	static {
+		Security.addProvider(new BouncyCastleProvider());
+	}
 	
 	/**
 	 * Generates a new PKI key pair using the default {@link PKIAlgorithm}.

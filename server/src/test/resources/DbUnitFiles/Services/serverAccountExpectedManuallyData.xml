@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dataset>
-    <server_account id="1" url="www.insert.com" creation_date="2014-06-19 14:35:54.0" email="insert@mail.ch" payin_address="fake-address" trust_level="0" public_key="fake-insert" deleted="FALSE" active_balance="0.0" balance_limit="0.0"/>
+    <server_account url="www.insert.com" creation_date="2014-06-19 14:35:54.0" email="insert@mail.ch" payin_address="fake-address" trust_level="0" public_key="fake-insert" deleted="FALSE" active_balance="0.0" balance_limit="0.0"/>
     <server_account id="10" url="https://www.my_url.ch" creation_date="2014-06-19 14:35:54.0" email="test@mail.ch" payin_address="fake-address" trust_level="0" public_key="my public key" deleted="FALSE" active_balance="0.0" balance_limit="0.0"/>
     <server_account id="11" url="www.haus.ch" creation_date="2014-06-19 14:35:54.0" email="test2@mail.ch" payin_address="fake-address" trust_level="0" public_key="fake_public_key" deleted="FALSE" active_balance="0.0" balance_limit="0.0"/>
     <server_account id="12" url="www.mbps.com" creation_date="2014-06-19 14:35:54.0" email="mbps@mail.ch" payin_address="fake-address" trust_level="0" public_key="fake_fake_fake" deleted="FALSE" active_balance="0.0" balance_limit="0.0"/>

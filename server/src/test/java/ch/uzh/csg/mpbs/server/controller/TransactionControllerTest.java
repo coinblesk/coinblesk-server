@@ -38,12 +38,14 @@ import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
 import ch.uzh.csg.mbps.keys.CustomKeyPair;
-import ch.uzh.csg.mbps.responseobject.CreateTransactionTransferObject;
-import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
 import ch.uzh.csg.mbps.responseobject.GetHistoryTransferObject;
+import ch.uzh.csg.mbps.responseobject.HistoryTransferRequestObject;
+import ch.uzh.csg.mbps.responseobject.PayOutTransactionObject;
+import ch.uzh.csg.mbps.responseobject.TransactionObject;
+import ch.uzh.csg.mbps.responseobject.TransferObject;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
-import ch.uzh.csg.mbps.server.domain.PayOutTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.json.CustomObjectMapper;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.TransactionService;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
@@ -57,7 +59,6 @@ import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
 import ch.uzh.csg.mbps.util.Converter;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
@@ -160,10 +161,11 @@ public class TransactionControllerTest {
 		paymentRequestPayer.sign(keyPairPayer.getPrivate());
 		
 		ServerPaymentRequest request = new ServerPaymentRequest(paymentRequestPayer);
-		CreateTransactionTransferObject ctto = new CreateTransactionTransferObject(request);
+		TransactionObject t = new TransactionObject();
+		t.setServerPaymentResponse(request.encode());
 		
-		ObjectMapper mapper = new ObjectMapper();
-		String asString = mapper.writeValueAsString(ctto);
+		CustomObjectMapper mapper = new CustomObjectMapper();
+		String asString = mapper.writeValueAsString(t);
 		
 		mockMvc.perform(post("/transaction/create").secure(false).contentType(MediaType.APPLICATION_JSON).content(asString))
 				.andExpect(status().isUnauthorized());
@@ -202,13 +204,14 @@ public class TransactionControllerTest {
 		
 		ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer);
 		
-		CreateTransactionTransferObject ctto = new CreateTransactionTransferObject(spr);
+		TransactionObject t = new TransactionObject();
+		t.setServerPaymentResponse(spr.encode());
 		
 		BigDecimal payerBalanceBefore = payerAccount.getBalance();
 		BigDecimal payeeBalanceBefore = payeeAccount.getBalance();
 		
-		ObjectMapper mapper = new ObjectMapper();
-		String asString = mapper.writeValueAsString(ctto);
+		CustomObjectMapper mapper = new CustomObjectMapper();
+		String asString = mapper.writeValueAsString(t);
 		
 		HttpSession session = loginAndGetSession(test2_1.getUsername(), password);
 		
@@ -216,7 +219,7 @@ public class TransactionControllerTest {
 				.andExpect(status().isOk())
 				.andReturn();
 		
-		CustomResponseObject result = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
+		TransactionObject result = mapper.readValue(mvcResult.getResponse().getContentAsString(), TransactionObject.class);
 		
 		byte[] serverPaymentResponseEncoded = result.getServerPaymentResponse();
 		ServerPaymentResponse serverPaymentResponse = DecoderFactory.decode(ServerPaymentResponse.class, serverPaymentResponseEncoded);
@@ -272,13 +275,14 @@ public class TransactionControllerTest {
 		
 		ServerPaymentRequest spr = new ServerPaymentRequest(paymentRequestPayer);
 		
-		CreateTransactionTransferObject ctto = new CreateTransactionTransferObject(spr);
+		TransactionObject t = new TransactionObject();
+		t.setServerPaymentResponse(spr.encode());
 		
 		BigDecimal payerBalanceBefore = payerAccount.getBalance();
 		BigDecimal payeeBalanceBefore = payeeAccount.getBalance();
 		
-		ObjectMapper mapper = new ObjectMapper();
-		String asString = mapper.writeValueAsString(ctto);
+		CustomObjectMapper mapper = new CustomObjectMapper();
+		String asString = mapper.writeValueAsString(t);
 		
 		HttpSession session = loginAndGetSession(test3_2.getUsername(), password);
 		
@@ -286,7 +290,7 @@ public class TransactionControllerTest {
 				.andExpect(status().isOk())
 				.andReturn();
 		
-		CustomResponseObject result = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
+		TransactionObject result = mapper.readValue(mvcResult.getResponse().getContentAsString(), TransactionObject.class);
 		
 		byte[] serverPaymentResponseEncoded = result.getServerPaymentResponse();
 		ServerPaymentResponse serverPaymentResponse = DecoderFactory.decode(ServerPaymentResponse.class, serverPaymentResponseEncoded);
@@ -353,10 +357,12 @@ public class TransactionControllerTest {
 		paymentRequestPayee.sign(keyPairPayee.getPrivate());
 		
 		ServerPaymentRequest request = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
-		CreateTransactionTransferObject ctto = new CreateTransactionTransferObject(request);
 		
-		ObjectMapper mapper = new ObjectMapper();
-		String asString = mapper.writeValueAsString(ctto);
+		TransactionObject t = new TransactionObject();
+		t.setServerPaymentResponse(request.encode());
+		
+		CustomObjectMapper mapper = new CustomObjectMapper();
+		String asString = mapper.writeValueAsString(t);
 		
 		BigDecimal payerBalanceBefore = userAccountService.getByUsername(test4_1.getUsername()).getBalance();
 		BigDecimal payeeBalanceBefore = userAccountService.getByUsername(test4_2.getUsername()).getBalance();
@@ -368,7 +374,7 @@ public class TransactionControllerTest {
 				.andExpect(status().isOk())
 				.andReturn();
 		
-		CustomResponseObject result = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
+		TransactionObject result = mapper.readValue(mvcResult.getResponse().getContentAsString(), TransactionObject.class);
 		assertTrue(result.isSuccessful());
 		assertNotNull(result.getServerPaymentResponse());
 		ServerPaymentResponse response = DecoderFactory.decode(ServerPaymentResponse.class, result.getServerPaymentResponse());
@@ -421,10 +427,12 @@ public class TransactionControllerTest {
 		paymentRequestPayer.sign(keyPairPayer.getPrivate());
 		
 		ServerPaymentRequest request = new ServerPaymentRequest(paymentRequestPayer);
-		CreateTransactionTransferObject ctto = new CreateTransactionTransferObject(request);
 		
-		ObjectMapper mapper = new ObjectMapper();
-		String asString = mapper.writeValueAsString(ctto);
+		TransactionObject t = new TransactionObject();
+		t.setServerPaymentResponse(request.encode());
+		
+		CustomObjectMapper mapper = new CustomObjectMapper();
+		String asString = mapper.writeValueAsString(t);
 		
 		
 		HttpSession session = loginAndGetSession(test6_1.getUsername(), plainTextPw);
@@ -433,7 +441,7 @@ public class TransactionControllerTest {
 				.andExpect(status().isOk())
 				.andReturn();
 		
-		CustomResponseObject result = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
+		TransactionObject result = mapper.readValue(mvcResult.getResponse().getContentAsString(), TransactionObject.class);
 		assertEquals(true, result.isSuccessful());
 		assertNotNull(result.getServerPaymentResponse());
 		ServerPaymentResponse response = DecoderFactory.decode(ServerPaymentResponse.class, result.getServerPaymentResponse());
@@ -441,24 +449,31 @@ public class TransactionControllerTest {
 		assertNotNull(response.getPaymentResponsePayer());
 		assertEquals(ServerResponseStatus.SUCCESS, response.getPaymentResponsePayer().getStatus());
 		
-		mvcResult = mockMvc.perform(get("/transaction/history")
-				.param("txPage", "0")
-				.param("txPayInPage", "0")
-				.param("txPayOutPage", "0")
+		HistoryTransferRequestObject req = new HistoryTransferRequestObject();
+		req.setTxPage(0);
+		req.setTxPayInPage(0);
+		req.setTxPayOutPage(0);
+		
+		
+		asString = mapper.writeValueAsString(req);
+		
+		mvcResult = mockMvc.perform(post("/transaction/history")
+				.contentType(MediaType.APPLICATION_JSON).content(asString)
 				.secure(false).session((MockHttpSession) session))
 				.andExpect(status().isOk())
 				.andReturn();
 		
-		CustomResponseObject cro = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
-		assertTrue(cro.isSuccessful());
+		GetHistoryTransferObject ghto = mapper.readValue(mvcResult.getResponse().getContentAsString(), GetHistoryTransferObject.class);
+		assertTrue(ghto.isSuccessful());
 		
-		GetHistoryTransferObject ghto = cro.getGetHistoryTO();
 		assertNotNull(ghto);
 		assertEquals(1, ghto.getTransactionHistory().size());
 		
 		logout(mvcResult);
 		
-		mvcResult = mockMvc.perform(get("/transaction/history").secure(false).session((MockHttpSession) session))
+		mvcResult = mockMvc.perform(post("/transaction/history")
+				.contentType(MediaType.APPLICATION_JSON).content(asString)
+				.secure(false).session((MockHttpSession) session))
 				.andExpect(status().isUnauthorized())
 				.andReturn();
 	}
@@ -491,7 +506,7 @@ public class TransactionControllerTest {
 		String plainTextPw = test7_1.getPassword();
 		
 		
-		ObjectMapper mapper = new ObjectMapper();
+		CustomObjectMapper mapper = new CustomObjectMapper();
 		
 		HttpSession session = loginAndGetSession(test7_1.getUsername(), plainTextPw);
 		
@@ -499,7 +514,7 @@ public class TransactionControllerTest {
 				.andExpect(status().isOk())
 				.andReturn();
 		
-		CustomResponseObject cro2 = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
+		TransferObject cro2 = mapper.readValue(mvcResult.getResponse().getContentAsString(), TransferObject.class);
 		
 		assertTrue(cro2.isSuccessful());
 		
@@ -514,14 +529,12 @@ public class TransactionControllerTest {
 		BitcoindController.TESTING = true;
 		createAccountAndVerifyAndReload(test8_1, BigDecimal.ONE);
 		String plainTextPw = test8_1.getPassword();
-		UserAccount fromDB = userAccountService.getByUsername(test8_1.getUsername());
 		
-		PayOutTransaction pot = new PayOutTransaction();
-		pot.setUserID(fromDB.getId());
+		PayOutTransactionObject pot = new PayOutTransactionObject();
 		pot.setBtcAddress("mtSKrDw1f1NfstiiwEWzhwYdt96dNQGa1S");
 		pot.setAmount(new BigDecimal("0.5"));
 		
-		ObjectMapper mapper = new ObjectMapper();
+		CustomObjectMapper mapper = new CustomObjectMapper();
 		String asString = mapper.writeValueAsString(pot);
 		
 		HttpSession session = loginAndGetSession(test8_1.getUsername(), plainTextPw);
@@ -530,7 +543,7 @@ public class TransactionControllerTest {
 				.andExpect(status().isOk())
 				.andReturn();
 		
-		CustomResponseObject result = mapper.readValue(mvcResult.getResponse().getContentAsString(), CustomResponseObject.class);
+		TransferObject result = mapper.readValue(mvcResult.getResponse().getContentAsString(), TransferObject.class);
 		
 		assertTrue(result.isSuccessful());
 	}

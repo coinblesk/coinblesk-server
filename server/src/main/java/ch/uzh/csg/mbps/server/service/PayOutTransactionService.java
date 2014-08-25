@@ -9,8 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.mbps.model.HistoryPayOutTransaction;
-import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
-import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
+import ch.uzh.csg.mbps.responseobject.TransferObject;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.dao.PayOutTransactionDAO;
 import ch.uzh.csg.mbps.server.domain.PayOutTransaction;
@@ -75,9 +74,12 @@ public class PayOutTransactionService {
 	 * @throws UserAccountNotFoundException
 	 */
 	@Transactional
-	public CustomResponseObject createPayOutTransaction(String username, PayOutTransaction pot) throws BitcoinException, UserAccountNotFoundException {
+	public TransferObject createPayOutTransaction(String username, BigDecimal amount, String address) throws BitcoinException, UserAccountNotFoundException {
+		TransferObject transferObject = new TransferObject();
 		UserAccount user = userAccountService.getByUsername(username);
-		//make sure pot.id == user.id
+		PayOutTransaction pot = new PayOutTransaction();
+		pot.setAmount(amount);
+		pot.setBtcAddress(address);
 		pot.setUserID(user.getId());
 		
 		BigDecimal userBalance = user.getBalance();
@@ -88,7 +90,10 @@ public class PayOutTransactionService {
 			if (payOutAmount.compareTo(BigDecimal.ZERO) > 0){
 				pot.setAmount(payOutAmount);
 			} else {
-				return new CustomResponseObject(false, "Couldn't pay out the desired amount. Your balance is too low.", Type.PAYOUT_ERROR_BALANCE);
+				transferObject.setSuccessful(false);
+				//"Couldn't pay out the desired amount. Your balance is too low."
+				transferObject.setMessage("PAYOUT_ERROR_BALANCE");
+				return transferObject;
 			}
 		}
 		
@@ -99,17 +104,26 @@ public class PayOutTransactionService {
 				String transactionID = BitcoindController.sendCoins(pot.getBtcAddress(), pot.getAmount());
 				pot.setTransactionID(transactionID);
 				
-				BigDecimal amount = pot.getAmount();
+				amount = pot.getAmount();
 				pot.setAmount(pot.getAmount().add(Config.TRANSACTION_FEE));
 
 				//write payOut to DB
 				payOutTransactionDAO.createPayOutTransaction(pot);
-				return new CustomResponseObject(true, amount  + "BTC " + "(+" + Config.TRANSACTION_FEE + "BTC TxFee)");
+				transferObject.setSuccessful(true);
+				transferObject.setMessage(amount  + "BTC " + "(+" + Config.TRANSACTION_FEE + "BTC TxFee)");
+				return transferObject;
 			} else {
-				return new CustomResponseObject(false, "Couldn't pay out the desired amount. The BTC Address is invalid.", Type.PAYOUT_ERROR_ADDRESS);	
+				transferObject.setSuccessful(false);
+				//"Couldn't pay out the desired amount. The BTC Address is invalid."
+				transferObject.setMessage("PAYOUT_ERROR_ADDRESS");
+				return transferObject;
+				
 			}
 		} else{
-			return new CustomResponseObject(false, "Couldn't pay out the desired amount. Your balance is lower than your specified PayOut amount.", Type.PAYOUT_ERROR_BALANCE);
+			transferObject.setSuccessful(false);
+			//"Couldn't pay out the desired amount. Your balance is lower than your specified PayOut amount."
+			transferObject.setMessage("PAYOUT_ERROR_BALANCE");
+			return transferObject;
 		}
 	}
 
@@ -147,5 +161,7 @@ public class PayOutTransactionService {
 		payOutTransactionDAO.createPayOutTransaction(tx);
 	    
     }
+
+	
 	
 }

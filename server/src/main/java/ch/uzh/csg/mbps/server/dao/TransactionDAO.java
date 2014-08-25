@@ -135,12 +135,11 @@ public class TransactionDAO {
 	 * @throws HibernateException
 	 */
 	public void createTransaction(DbTransaction tx, UserAccount buyerAccount, UserAccount sellerAccount) {
-		
+		em.persist(tx);
 		buyerAccount.setBalance(buyerAccount.getBalance().subtract(tx.getAmount()));
 		em.merge(buyerAccount);
 		sellerAccount.setBalance(sellerAccount.getBalance().add(tx.getAmount()));
 		em.merge(sellerAccount);
-		em.persist(tx);
 		LOGGER.info("Transaction created: " + tx.toString());
 	}
 	

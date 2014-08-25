@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
-import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
+import ch.uzh.csg.mbps.responseobject.TransferObject;
 import ch.uzh.csg.mbps.server.dao.PayInTransactionDAO;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.PayInTransaction;
@@ -89,9 +89,12 @@ public class PayInTransactionService {
 	}
 	
 	//TODO: does this need to be here?
-	public CustomResponseObject sendPayInAddressByEmail(String username, String email, String payInAddress) {	
+	public TransferObject sendPayInAddressByEmail(String username, String email, String payInAddress) {	
 		Emailer.sendPayInAddressAsEmail(username, email, payInAddress);
-		return new CustomResponseObject(true, "Pay in address is send to your email address.");
+		TransferObject transferObject = new TransferObject();
+		transferObject.setSuccessful(true);
+		transferObject.setMessage("Pay in address is send to your email address.");
+		return transferObject;
 	}
 	
 	@Transactional

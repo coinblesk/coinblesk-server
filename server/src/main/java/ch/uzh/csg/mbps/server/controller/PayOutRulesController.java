@@ -10,9 +10,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import ch.uzh.csg.mbps.responseobject.CustomResponseObject;
-import ch.uzh.csg.mbps.responseobject.CustomResponseObject.Type;
 import ch.uzh.csg.mbps.responseobject.PayOutRulesTransferObject;
+import ch.uzh.csg.mbps.responseobject.TransferObject;
 import ch.uzh.csg.mbps.server.domain.PayOutRule;
 import ch.uzh.csg.mbps.server.service.PayOutRuleService;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
@@ -49,16 +48,25 @@ public class PayOutRulesController {
 	 */
 	@RequestMapping(value = "/create", method = RequestMethod.POST, consumes = "application/json")
 	@ResponseBody
-	public CustomResponseObject createRule(@RequestBody PayOutRulesTransferObject porto) {
+	public TransferObject createRule(@RequestBody PayOutRulesTransferObject porto) {
+		TransferObject reply = new TransferObject();
 		try {
 			payOutRuleService.createRule(porto, AuthenticationInfo.getPrincipalUsername());
-			return new CustomResponseObject(true, CREATION_SUCCESS);
+			reply.setSuccessful(true);
+			reply.setMessage(CREATION_SUCCESS);
+			return reply;
 		} catch (UserAccountNotFoundException e) {
-			return new CustomResponseObject(false, ACCOUNT_NOT_FOUND);
+			reply.setSuccessful(false);
+			reply.setMessage(ACCOUNT_NOT_FOUND);
+			return reply;
 		} catch (BitcoinException e) {
-			return new CustomResponseObject(false, INVALID_ADDRESS);
+			reply.setSuccessful(false);
+			reply.setMessage(INVALID_ADDRESS);
+			return reply;
 		} catch (PayOutRulesAlreadyDefinedException e) {
-			return new CustomResponseObject(false, RULES_ALREADY_DEFINED);
+			reply.setSuccessful(false);
+			reply.setMessage(RULES_ALREADY_DEFINED);
+			return reply;
 		}
 	}
 
@@ -70,19 +78,24 @@ public class PayOutRulesController {
 	 */
 	@RequestMapping(value = "/get", method = RequestMethod.GET, produces = "application/json")
 	@ResponseBody
-	public CustomResponseObject getRules() {
+	public PayOutRulesTransferObject getRules() {
+		PayOutRulesTransferObject response = new PayOutRulesTransferObject();
 		try {
 			List<PayOutRule> list = payOutRuleService.getRules(AuthenticationInfo.getPrincipalUsername());
-			PayOutRulesTransferObject porto = new PayOutRulesTransferObject();
-			porto.setPayOutRulesList(transform(list));
-			CustomResponseObject cro = new CustomResponseObject(true, "", Type.PAYOUT_RULE);
-			cro.setPayOutRulesTO(porto);
-			return cro;
+			response.setPayOutRulesList(transform(list));
+			response.setSuccessful(true);
 		} catch (UserAccountNotFoundException e) {
-			return new CustomResponseObject(false, ACCOUNT_NOT_FOUND);
+			response.setSuccessful(false);
+			response.setMessage(ACCOUNT_NOT_FOUND);
 		} catch (PayOutRuleNotFoundException e) {
-			return new CustomResponseObject(false, NO_RULES);
+			response.setSuccessful(false);
+			response.setMessage(NO_RULES);
+		} catch (Throwable e) {
+			response.setSuccessful(false);
+			response.setMessage("Unexpected" + e.getMessage());
+			e.printStackTrace();
 		}
+		return response;
 	}
 
 	/**
@@ -98,11 +111,11 @@ public class PayOutRulesController {
 		for(int i=0; i<list.size();i++){
 			PayOutRule por = list.get(i);
 			por2 = new ch.uzh.csg.mbps.model.PayOutRule();
-			por2.setBalanceLimit(por.getBalanceLimit());
+			por2.setBalanceLimitBTC(por.getBalanceLimit());
 			por2.setDay(por.getDay());
 			por2.setHour(por.getHour());
 			por2.setPayoutAddress(por.getPayoutAddress());
-			por2.setUserId(por.getUserId());
+			//never transfer the userid over the network
 			list2.add(por2);
 		}
 		return list2;
@@ -114,14 +127,19 @@ public class PayOutRulesController {
 	 * @return CustomResponseObject with information about success/non success
 	 *         of deletion
 	 */
-	@RequestMapping(value = "/reset", method = RequestMethod.POST, produces = "application/json")
+	@RequestMapping(value = "/reset", method = RequestMethod.GET, produces = "application/json")
 	@ResponseBody
-	public CustomResponseObject resetRules() {
+	public TransferObject resetRules() {
+		TransferObject reply = new TransferObject();
 		try {
 			payOutRuleService.deleteRules(AuthenticationInfo.getPrincipalUsername());
-			return new CustomResponseObject(true, RESET_SUCCESS);
+			reply.setSuccessful(true);
+			reply.setMessage(RESET_SUCCESS);
+			return reply;
 		} catch (UserAccountNotFoundException e) {
-			return new CustomResponseObject(false, ACCOUNT_NOT_FOUND);
+			reply.setSuccessful(false);
+			reply.setMessage(ACCOUNT_NOT_FOUND);
+			return reply;
 		}
 	}
 	

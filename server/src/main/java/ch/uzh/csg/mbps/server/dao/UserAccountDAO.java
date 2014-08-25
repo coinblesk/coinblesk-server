@@ -47,6 +47,7 @@ public class UserAccountDAO {
 	public void createAccount(UserAccount userAccount, String token) {
 		em.persist(userAccount);
 		em.flush();
+		em.refresh(userAccount);
 		long id = userAccount.getId();
 		EmailVerification ev = new EmailVerification(id, token);
 		em.persist(ev);

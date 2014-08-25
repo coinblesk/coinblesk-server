@@ -1,5 +1,6 @@
 package ch.uzh.csg.mbps.server.service;
 
+import java.math.BigDecimal;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -13,7 +14,6 @@ import ch.uzh.csg.mbps.responseobject.PayOutRulesTransferObject;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.dao.PayOutRuleDAO;
 import ch.uzh.csg.mbps.server.domain.PayOutRule;
-import ch.uzh.csg.mbps.server.domain.PayOutTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Config;
@@ -120,12 +120,10 @@ public class PayOutRuleService {
 		for (int i=0; i < rules.size(); i++){
 			tempRule = rules.get(i);
 			if(tempRule.getBalanceLimit() != null && sellerAccount.getBalance().compareTo(tempRule.getBalanceLimit()) == 1){
-				PayOutTransaction pot = new PayOutTransaction();
 				//set amount to account balance (minus transaction fee)
-				pot.setAmount(sellerAccount.getBalance().subtract(Config.TRANSACTION_FEE));
-				pot.setBtcAddress(tempRule.getPayoutAddress());
-				pot.setUserID(sellerAccount.getId());
-				payOutTransactionService.createPayOutTransaction(sellerAccount.getUsername(), pot);
+				BigDecimal amount = sellerAccount.getBalance().subtract(Config.TRANSACTION_FEE); 
+				String address = tempRule.getPayoutAddress();
+				payOutTransactionService.createPayOutTransaction(sellerAccount.getUsername(), amount, address);
 			}
 		}		
 	}
@@ -163,11 +161,9 @@ public class PayOutRuleService {
 				try {
 					UserAccount user = userAccountService.getById(tempRule.getUserId());
 					if (user.getBalance().compareTo(Config.TRANSACTION_FEE) == 1) {
-						PayOutTransaction pot = new PayOutTransaction();
-						pot.setUserID(user.getId());
-						pot.setBtcAddress(tempRule.getPayoutAddress());
-						pot.setAmount(user.getBalance().subtract(Config.TRANSACTION_FEE));
-						payOutTransactionService.createPayOutTransaction(user.getUsername(),pot);
+						BigDecimal amount = user.getBalance().subtract(Config.TRANSACTION_FEE);
+						String address = tempRule.getPayoutAddress();
+						payOutTransactionService.createPayOutTransaction(user.getUsername(), amount, address);
 					}
 				} catch (UserAccountNotFoundException | BitcoinException e) {
 				}
