@@ -13,11 +13,11 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import ch.uzh.csg.mbps.model.HistoryServerAccountTransaction;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.ServerTransaction;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.TransactionException;
+import ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction;
 
 /**
  * DatabaseAccessObject for {@link ServerTransaction}s. Handles all DB operations
