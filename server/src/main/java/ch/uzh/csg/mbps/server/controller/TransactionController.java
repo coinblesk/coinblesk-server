@@ -284,6 +284,7 @@ public class TransactionController {
 			BigDecimal amount = pot.getAmount();
 			String address = pot.getBtcAddress();
 			
+			transferObject.setSuccessful(true);
 			transferObject = payOutTransactionService.createPayOutTransaction(username, amount, address);
 		} catch (UserAccountNotFoundException e) {
 			transferObject.setSuccessful(false);
@@ -311,6 +312,8 @@ public class TransactionController {
 		TransferObject transferObject = new TransferObject();
 		try{
 			UserAccount userAccount = userAccountService.getByUsername(AuthenticationInfo.getPrincipalUsername());
+			
+			transferObject.setSuccessful(true);
 			transferObject = payInTransactionService.sendPayInAddressByEmail(userAccount.getUsername(), userAccount.getEmail(), userAccount.getPaymentAddress());
 		} catch(UserAccountNotFoundException e){
 			transferObject.setSuccessful(false);
