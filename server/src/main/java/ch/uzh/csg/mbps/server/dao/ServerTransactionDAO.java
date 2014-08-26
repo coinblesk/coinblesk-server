@@ -200,7 +200,6 @@ public class ServerTransactionDAO {
 	 */
 	public List<HistoryServerAccountTransaction> getLast5ServerAccountTransaction(String url) throws ServerAccountNotFoundException{
 		
-		
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<ServerTransaction> cq = cb.createQuery(ServerTransaction.class);
 		Root<ServerTransaction> root = cq.from(ServerTransaction.class);
@@ -268,9 +267,19 @@ public class ServerTransactionDAO {
 		return resultWithAliasedBean;
 	}
 	
-	public List<HistoryServerAccountTransaction> getLastAccountTransactions(String url, int page) {
+	public List<HistoryServerAccountTransaction> getServerAccountTransactions(String url, int page) throws ServerAccountNotFoundException {
 		if (page < 0)
 			return null;
+		
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ServerTransaction> cq = cb.createQuery(ServerTransaction.class);
+		Root<ServerTransaction> root = cq.from(ServerTransaction.class);
+		Predicate condition = cb.equal(root.get("url"), url);
+		cq.where(condition);
+		ServerTransaction existingServerTransaction = em.createQuery(cq).getSingleResult();
+
+		if(existingServerTransaction == null)
+			throw new ServerAccountNotFoundException(url);
 		
 		@SuppressWarnings("unchecked")
         List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
@@ -279,7 +288,8 @@ public class ServerTransactionDAO {
 				+ "WHERE st.server_url = :serverUrl "
 				+ "ORDER BY st.timestamp DESC")
 				.setParameter("serverUrl", url)
-				.setMaxResults(5)
+				.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
+				.setMaxResults(Config.TRANSACTIONS_MAX_RESULTS)
 				.getResultList();
 		
 		return resultWithAliasedBean;

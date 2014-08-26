@@ -130,6 +130,24 @@ public class ServerPayOutTransactionDAO {
 	}
 	
 	/**
+	 * Returns history of 5 newest {@link ServerPayOutTransaction}s assigned
+	 * 
+	 * @return List<HistoryServerPayOutTransaction> (an array list with the last 5 PayOutTransactions)
+	 */
+	public List<HistoryServerPayOutTransaction> getLast5Transactions() {
+
+		@SuppressWarnings("unchecked")
+		List<HistoryServerPayOutTransaction> resultWithAliasedBean = eManager.createQuery(""
+				  + "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerPayOutTransaction((pot.timestamp, pot.amount, pot.payout_address, pot.server_account_id) "
+				  + "FROM server_pay_out_transaction pot "
+				  + "ORDER BY pot.timestamp DESC")
+				  .setMaxResults(5)
+				  .getResultList();
+
+		return resultWithAliasedBean;
+	}
+	
+	/**
 	 * Returns history of 5 newest {@link ServerPayOutTransaction}s assigned to the
 	 * 
 	 * @return ArrayList<HistoryServerPayOutTransaction> (an array list with the last 5 PayOutTransactions)
