@@ -1,6 +1,6 @@
 package ch.uzh.csg.mbps.server.clientinterface;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import ch.uzh.csg.mbps.server.domain.ServerTransaction;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
@@ -21,7 +21,7 @@ public interface IServerTransaction {
 	 * 
 	 * @return
 	 */
-	public ArrayList<HistoryServerAccountTransaction> getLast3Transactions();
+	public List<HistoryServerAccountTransaction> getLast5Transactions();
 	
 	/**
 	 * 
@@ -29,26 +29,35 @@ public interface IServerTransaction {
 	 * @return
 	 * @throws ServerAccountNotFoundException
 	 */
-	public ArrayList<HistoryServerAccountTransaction> getLast3ServerAccountTransaction(String url) throws ServerAccountNotFoundException;
+	public List<HistoryServerAccountTransaction> getLast5ServerAccountTransaction(String url) throws ServerAccountNotFoundException;
 	
 	/**
 	 * 
 	 * @param page
 	 * @return
 	 */
-	public ArrayList<HistoryServerAccountTransaction> getHistory(int page);
+	public List<HistoryServerAccountTransaction> getHistory(int page);
 	
 	/**
 	 * 
 	 * @param page
 	 * @return
 	 */
-	public ArrayList<HistoryServerAccountTransaction> getPayeeHistory(int page);
+	public List<HistoryServerAccountTransaction> getPayeeHistory(int page);
 
 	/**
 	 * 
 	 * @param page
 	 * @return
 	 */
-	public ArrayList<HistoryServerAccountTransaction> getPayerHistory(int page);
+	public List<HistoryServerAccountTransaction> getPayerHistory(int page);
+
+	/**
+	 * 
+	 * @param url
+	 * @param page
+	 * @return
+	 * @throws ServerAccountNotFoundException 
+	 */
+	List<HistoryServerAccountTransaction> getServerAccountTransactions(String url, int page) throws ServerAccountNotFoundException;
 }

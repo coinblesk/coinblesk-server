@@ -2,6 +2,8 @@ package ch.uzh.csg.mbps.server.clientinterface;
 
 import java.util.List;
 
+import org.hibernate.HibernateException;
+
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
@@ -74,6 +76,9 @@ public interface IServerAccount {
 	 */
 	public List<ServerAccount> getAll();
 
-	List<ch.uzh.csg.mbps.model.ServerAccount> getAllAccounts(String username, int urlPage);
+	List<ch.uzh.csg.mbps.model.ServerAccount> getServerAccounts(String username, int urlPage);
 
+	long getAccountsCount();
+
+	boolean checkPredefinedDeleteArguments(String url) throws ServerAccountNotFoundException, BalanceNotZeroException, HibernateException;
 }
