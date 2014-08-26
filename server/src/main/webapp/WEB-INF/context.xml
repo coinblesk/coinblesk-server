@@ -39,7 +39,7 @@
 	
 	<!-- Here you can set to connect to your Bitcoind server -->
 	<bean id="bitcoindController" class="ch.uzh.csg.mbps.server.util.BitcoindController" >
-	    <property name="listenTransactions" value="false" />
+	    <property name="listenTransactions" value="true" />
 	</bean>
 	
 	<bean id="dummyData" class="ch.uzh.csg.mbps.server.local.DummyData" />
