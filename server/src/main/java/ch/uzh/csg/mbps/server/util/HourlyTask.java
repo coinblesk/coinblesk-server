@@ -30,6 +30,8 @@ public class HourlyTask {
 		
 		// update USD/CHF-ExchangeRate
 		updateUsdChf();
+		
+		//TODO: mehmet include server payout rules hourly task
 	}
 
 	/**
