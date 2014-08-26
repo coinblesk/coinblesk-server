@@ -51,8 +51,9 @@ public class RelationController {
 	@RequestMapping(value = { "/createNewAccount" }, method = RequestMethod.GET, produces = "application/json")
 	public @ResponseBody
 	void createAccount(@RequestParam(value = "url", required = false) String url, @RequestParam(value = "email", required = false) String email) {
+		ServerAccount account = new ServerAccount(url,email, null);
 		try {
-			serverAccountService.createAccount(url, email);
+			serverAccountService.createAccount(account);
 		} catch (UrlAlreadyExistsException | BitcoinException e) {
 			// TODO: mehmet should throw exception?
 		} catch (InvalidEmailException | InvalidPublicKeyException | InvalidUrlException e) {

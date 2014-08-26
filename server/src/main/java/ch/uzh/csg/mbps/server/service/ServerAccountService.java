@@ -59,9 +59,8 @@ public class ServerAccountService implements IServerAccount {
 	
 	@Override
 	@Transactional
-	public boolean createAccount(String url, String email) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException {
+	public boolean createAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException {
 		Date date = new Date();
-		ServerAccount serverAccount = new ServerAccount(url, email, null);
 		if (TESTING_MODE){
 			String strDate = "2014-06-19 14:35:54.0";
 			try {

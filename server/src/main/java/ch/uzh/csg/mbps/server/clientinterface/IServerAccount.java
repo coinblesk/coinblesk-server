@@ -20,8 +20,7 @@ public interface IServerAccount {
 	//TODO: mehmet: javadoc
 	/**
 	 * 
-	 * @param url
-	 * @param email
+	 * @param serverAccount
 	 * @return
 	 * @throws UrlAlreadyExistsException
 	 * @throws BitcoinException
@@ -29,7 +28,7 @@ public interface IServerAccount {
 	 * @throws InvalidEmailException
 	 * @throws InvalidPublicKeyException 
 	 */
-	public boolean createAccount(String url, String email) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException;
+	public boolean createAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException;
 	
 	/**
 	 * 
