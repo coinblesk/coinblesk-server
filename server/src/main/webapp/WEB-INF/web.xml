@@ -14,10 +14,10 @@
 		<param-name>contextConfigLocation</param-name>
 		<param-value>
 		    /WEB-INF/security.xml
-		    /WEB-INF/database.xml
+		    /WEB-INF/${env}database.xml
 		    /WEB-INF/cron.xml
 		    /WEB-INF/context.xml
-		    /WEB-INF/local-context.xml
+		    /WEB-INF/${env}context.xml
 		</param-value>
 	</context-param>
 	

@@ -12,7 +12,6 @@ import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.CustomPasswordEncoder;
 
-
 @Transactional
 public class DummyData implements ApplicationListener<ContextRefreshedEvent>{
 	
@@ -32,19 +31,19 @@ public class DummyData implements ApplicationListener<ContextRefreshedEvent>{
 		UserAccount userAccount = new UserAccount();
 		userAccount.setBalance(new BigDecimal(111.11d));
 		userAccount.setCreationDate(Calendar.getInstance().getTime());
-		userAccount.setEmail("tom.mbps1@bocek.ch");
+		userAccount.setEmail("tom.pfischer1@bocek.ch");
 		userAccount.setPassword(CustomPasswordEncoder.getEncodedPassword("wwww"));
-		userAccount.setUsername("tom11");
+		userAccount.setUsername("palomafischer");
 		userAccount.setEmailVerified(true);
-		userAccountDAO.createAccount(userAccount,"dummy");
+		userAccountDAO.createAccount(userAccount,"dummy-token1");
 		//
 		userAccount = new UserAccount();
 		userAccount.setBalance(new BigDecimal(222.22d));
 		userAccount.setCreationDate(Calendar.getInstance().getTime());
-		userAccount.setEmail("tom.mbps2@bocek.ch");
+		userAccount.setEmail("tom.pfischer2@bocek.ch");
 		userAccount.setPassword(CustomPasswordEncoder.getEncodedPassword("wwww"));
-		userAccount.setUsername("tom22");
+		userAccount.setUsername("palomafischer2");
 		userAccount.setEmailVerified(true);
-		userAccountDAO.createAccount(userAccount,"dummy");
+		userAccountDAO.createAccount(userAccount,"dummy-token2");
 	}
 }
