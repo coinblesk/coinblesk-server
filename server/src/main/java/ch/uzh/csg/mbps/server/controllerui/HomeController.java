@@ -1,7 +1,6 @@
 package ch.uzh.csg.mbps.server.controllerui;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,8 +40,8 @@ public class HomeController {
 	}
 	
 	@RequestMapping(value={"/lastThreeTransaction"}, method=RequestMethod.GET, produces="application/json")
-	public @ResponseBody ArrayList<HistoryServerAccountTransaction> getLastThreeTransaction(){
-		return serverTransactionService.getLast3Transactions();
+	public @ResponseBody List<HistoryServerAccountTransaction> getLastThreeTransaction(){
+		return serverTransactionService.getLast5Transactions();
 	}
 	
 	@RequestMapping(value={"/admins"}, method=RequestMethod.GET, produces="application/json")
@@ -92,7 +91,7 @@ public class HomeController {
 		}
 		
 		if(admin != null){
-			userAccountService.changeRoleBoth(email);
+			userAccountService.changeRoleBoth(admin);
 		}else{
 			userAccountService.changeRoleAdmin(email);
 		}
