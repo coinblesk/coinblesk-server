@@ -35,6 +35,7 @@ public class DummyData implements ApplicationListener<ContextRefreshedEvent>{
 		userAccount.setPassword(CustomPasswordEncoder.getEncodedPassword("wwww"));
 		userAccount.setUsername("palomafischer");
 		userAccount.setEmailVerified(true);
+		userAccount.setPaymentAddress("fake-address1");
 		userAccountDAO.createAccount(userAccount,"dummy-token1");
 		//
 		userAccount = new UserAccount();
@@ -44,6 +45,7 @@ public class DummyData implements ApplicationListener<ContextRefreshedEvent>{
 		userAccount.setPassword(CustomPasswordEncoder.getEncodedPassword("wwww"));
 		userAccount.setUsername("palomafischer2");
 		userAccount.setEmailVerified(true);
+		userAccount.setPaymentAddress("fake-address2");
 		userAccountDAO.createAccount(userAccount,"dummy-token2");
 	}
 }
