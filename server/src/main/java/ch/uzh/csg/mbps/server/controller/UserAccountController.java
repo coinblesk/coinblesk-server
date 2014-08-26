@@ -32,6 +32,7 @@ import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.domain.UserPublicKey;
 import ch.uzh.csg.mbps.server.service.PayInTransactionService;
 import ch.uzh.csg.mbps.server.service.PayOutTransactionService;
+import ch.uzh.csg.mbps.server.util.AdminObject;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.ExchangeRates;
@@ -435,14 +436,14 @@ public class UserAccountController {
 		}
 		return response;
 	}
-	
-	//TODO: mehmet create Account should be called
-	@RequestMapping(value = "/createAdmin/{adminPasswordToken}", method = RequestMethod.GET)
-	public ModelAndView createAdminProcessing(@PathVariable String adminPasswordToken) {
-		if (userAccountService.isValidResetPasswordLink(adminPasswordToken)) {
-			UserAccount account = new UserAccount();
-			ModelAndView mv = new ModelAndView("AdminRole", "command", account);
-			mv.addObject("token", adminPasswordToken);
+
+	// TODO: mehmet create Account should be called
+	@RequestMapping(value = "/createAdmin/{adminRoleToken}", method = RequestMethod.GET)
+	public ModelAndView createAdminProcessing(@PathVariable String adminRoleToken) {
+		if (userAccountService.isValidResetPasswordLink(adminRoleToken)) {
+			AdminObject admin = new AdminObject();
+			ModelAndView mv = new ModelAndView("RegisterAdmin", "command",admin);
+			mv.addObject("token", adminRoleToken);
 			return mv;
 		} else {
 			return new ModelAndView("WrongToken", "command", null);

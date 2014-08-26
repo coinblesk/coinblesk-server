@@ -49,7 +49,7 @@ public class ServerAccountsController {
 			String username = AuthenticationInfo.getPrincipalUsername();
 			
 			int urlPage = request.getUrlPage();
-			List<ServerAccount> accounts = serverAccountService.getAllAccounts(username, urlPage);
+			List<ServerAccount> accounts = serverAccountService.getServerAccounts(username, urlPage);
 			long nofSA = (urlPage < 0) ? 0 : serverAccountService.getAccountsCount();
 			
 			response.setSuccessful(true);
