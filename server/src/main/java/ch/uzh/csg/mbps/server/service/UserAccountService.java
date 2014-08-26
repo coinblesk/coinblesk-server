@@ -136,10 +136,6 @@ public class UserAccountService implements IUserAccount {
 		return true;
 	}
 	
-	private String getNewPaymentAddress() throws BitcoinException {
-		return BitcoindController.getNewAddress();
-	}
-	
 	private void sendEmailVerificationLink(String token, String email){
 		Emailer.sendEmailConfirmationLink(token, email);
 	}
@@ -158,6 +154,10 @@ public class UserAccountService implements IUserAccount {
 			} catch (HibernateException e1) { 
 			}
 		}
+	}
+
+	private String getNewPaymentAddress() throws BitcoinException {
+		return BitcoindController.getNewAddress();
 	}
 
 	@Override
@@ -381,7 +381,7 @@ public class UserAccountService implements IUserAccount {
 	 */
 	@Transactional(readOnly = true)
 	public List<UserAccount> getUsers(){
-		List<UserAccount> users = new ArrayList<UserAccount>(); 
+		List<UserAccount> users; 
 		users = userAccountDAO.getAllUsersByRoles(Role.USER);
 		users.addAll(userAccountDAO.getAllUsersByRoles(Role.BOTH));
 		return users;
@@ -417,18 +417,20 @@ public class UserAccountService implements IUserAccount {
 		return userAccountDAO.getByEmail(email);
 	}
 
-	//TODO: mehmet test & javadoc
+	// TODO: mehmet test & javadoc
 	/**
 	 * 
 	 * @param email
-	 * @throws UserAccountNotFoundException 
+	 * @throws UserAccountNotFoundException
 	 */
+	@Override
 	@Transactional
-	public void changeRoleBoth(String emailAddress) throws UserAccountNotFoundException {
-		UserAccount user = userAccountDAO.getByEmail(emailAddress);
-		Emailer.sendUpdateRoleBothLink(user);
+	public void changeRoleBoth(UserAccount admin) throws UserAccountNotFoundException {
+		admin.setRoles(Role.BOTH.getCode());
+		userAccountDAO.updateAccount(admin);
+		Emailer.sendUpdateRoleBothLink(admin);
 	}
-
+	
 	//TODO: mehmet Test & javadoc
 	/**
 	 * 
@@ -503,4 +505,58 @@ public class UserAccountService implements IUserAccount {
     public List<UserPublicKey> getUserPublicKeys(long id) {
 	    return userPublicKeyDAO.getUserPublicKeys(id);
     }
+
+	/**
+	 * Checks if token is saved in table and still valid (younger than 1h)
+	 * 
+	 * @param adminToken
+	 * @return
+	 */
+	@Override
+	@Transactional
+	public boolean isValidAdminRoleLink(String adminToken) {
+		try {
+			AdminRole adminRole = userAccountDAO.getCreateAdmin(adminToken);
+			if (adminRole == null) {
+				return false;
+			} else {
+				// checks if token has been created during the last 1h
+				if (adminRole.getCreationDate().getTime() >= (new Date()
+						.getTime() - Config.VALID_TOKEN_LIMIT)) {
+					return true;
+				} else {
+					return false;
+				}
+			}
+		} catch (VerificationTokenNotFoundException e) {
+			return false;
+		}
+	}
+
+	/**
+	 * 
+	 * @param subject
+	 * @param text
+	 */
+	@Override
+	@Transactional
+	public void sendMailToAll(String subject, String text) {
+		List<String> emails = getEmailOfAllUsers();
+		String emailToSend = "";
+		for (String email : emails) {
+			emailToSend += email + ",";
+		}
+		Emailer.sendMessageToAllUsers(emailToSend, subject, text);
+	}
+
+	/**
+	 * 
+	 * @return
+	 */
+	private List<String> getEmailOfAllUsers() {
+		List<String> emails = new ArrayList<String>();
+		emails = userAccountDAO.getEmailOfAllUsersByRoles(Role.USER);
+		emails.addAll(userAccountDAO.getEmailOfAllUsersByRoles(Role.BOTH));
+		return emails;
+	}
 }
