@@ -28,8 +28,6 @@
 	<listener>
 		<listener-class>org.springframework.security.web.session.HttpSessionEventPublisher</listener-class>
 	</listener>
-	
-
 
 	<!--  Enconding helper reads request input using UTF-8 encoding  -->
     <filter>
