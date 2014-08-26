@@ -20,7 +20,8 @@ public interface IServerAccount {
 	//TODO: mehmet: javadoc
 	/**
 	 * 
-	 * @param serverAccount
+	 * @param url
+	 * @param email
 	 * @return
 	 * @throws UrlAlreadyExistsException
 	 * @throws BitcoinException
@@ -28,8 +29,8 @@ public interface IServerAccount {
 	 * @throws InvalidEmailException
 	 * @throws InvalidPublicKeyException 
 	 */
-	public boolean createAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException;
-
+	public boolean createAccount(String url, String email) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException;
+	
 	/**
 	 * 
 	 * @param url
@@ -76,9 +77,9 @@ public interface IServerAccount {
 	 */
 	public List<ServerAccount> getAll();
 
-	List<ch.uzh.csg.mbps.model.ServerAccount> getServerAccounts(String username, int urlPage);
+	public List<ch.uzh.csg.mbps.model.ServerAccount> getServerAccounts(String username, int urlPage);
 
-	long getAccountsCount();
+	public long getAccountsCount();
 
-	boolean checkPredefinedDeleteArguments(String url) throws ServerAccountNotFoundException, BalanceNotZeroException, HibernateException;
+	public boolean checkPredefinedDeleteArguments(String url) throws ServerAccountNotFoundException, BalanceNotZeroException, HibernateException;
 }

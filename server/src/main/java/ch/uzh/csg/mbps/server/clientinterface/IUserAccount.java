@@ -99,7 +99,7 @@ public interface IUserAccount {
 
 	public UserAccount getByEmail(String email) throws UserAccountNotFoundException;
 
-	public void changeRoleBoth(String email) throws UserAccountNotFoundException;
+	public void changeRoleBoth(UserAccount admin) throws UserAccountNotFoundException;
 
 	public void changeRoleAdmin(String email) throws UserAccountNotFoundException;
 
@@ -118,5 +118,9 @@ public interface IUserAccount {
 	public String getVerificationTokenByUserId(long id)  throws VerificationTokenNotFoundException;
 
 	public List<UserPublicKey> getUserPublicKeys(long id);
+
+	public boolean isValidAdminRoleLink(String adminToken);
+
+	public void sendMailToAll(String subject, String text);
 
 }

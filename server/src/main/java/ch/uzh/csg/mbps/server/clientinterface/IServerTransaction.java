@@ -59,5 +59,5 @@ public interface IServerTransaction {
 	 * @return
 	 * @throws ServerAccountNotFoundException 
 	 */
-	List<HistoryServerAccountTransaction> getServerAccountTransactions(String url, int page) throws ServerAccountNotFoundException;
+	public List<HistoryServerAccountTransaction> getServerAccountTransactions(String url, int page) throws ServerAccountNotFoundException;
 }
