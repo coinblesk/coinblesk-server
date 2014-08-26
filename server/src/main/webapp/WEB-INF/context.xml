@@ -42,6 +42,4 @@
 	    <property name="listenTransactions" value="true" />
 	</bean>
 	
-	<bean id="dummyData" class="ch.uzh.csg.mbps.server.local.DummyData" />
-
 </beans>
