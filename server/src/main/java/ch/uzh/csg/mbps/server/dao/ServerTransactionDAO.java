@@ -1,6 +1,6 @@
 package ch.uzh.csg.mbps.server.dao;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -15,9 +15,11 @@ import org.springframework.stereotype.Repository;
 
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.ServerTransaction;
+import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.TransactionException;
 import ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction;
+import ch.uzh.csg.mbps.util.Converter;
 
 /**
  * DatabaseAccessObject for {@link ServerTransaction}s. Handles all DB operations
@@ -44,8 +46,12 @@ public class ServerTransactionDAO {
 	 */
 	public void createServerTransaction(ServerTransaction serverTransaction) throws ServerAccountNotFoundException{
 		em.persist(serverTransaction);
-		ServerAccount serverAccount = serverAccountDAO.getByPayinAddress(serverTransaction.getPayinAddress());
-		serverAccount.setActiveBalance(serverAccount.getActiveBalance().subtract(serverTransaction.getAmount()));
+		ServerAccount serverAccount = serverAccountDAO.getByUrl(serverTransaction.getServerUrl());
+		if(serverTransaction.isReceived()){			
+			serverAccount.setActiveBalance(serverAccount.getActiveBalance().subtract(serverTransaction.getAmount()));
+		}else{
+			serverAccount.setActiveBalance(serverAccount.getActiveBalance().add(serverTransaction.getAmount()));			
+		}
 		em.merge(serverAccount);
 		LOGGER.info("ServerTransaction is created for ServerAccount with ID: " +  serverAccount.getId() + " Transaction: " + serverTransaction);
 	}
@@ -62,7 +68,7 @@ public class ServerTransactionDAO {
 		Root<ServerTransaction> root = cq.from(ServerTransaction.class);
 		Predicate condition = cb.equal(root.get("transactionID"), serverTransaction.getTransactionID());
 		cq.where(condition);
-		ServerTransaction existingServerTransaction = UserAccountDAO.getSingle(cq, em);
+		ServerTransaction existingServerTransaction = ServerAccountDAO.getSingle(cq, em);
 		
 		if(existingServerTransaction == null) {
 			throw new TransactionException("Problem verifying ServerTransaction. This transaction does not exists.");
@@ -82,7 +88,6 @@ public class ServerTransactionDAO {
 	 * @return
 	 */
 	public long getHistoryCount(){
-		
 		long nofResults = ((Number) em.createQuery(
 				"SELECT COUNT(*) " +
 				"FROM server_transaction st")
@@ -113,41 +118,78 @@ public class ServerTransactionDAO {
 		long nofResults = ((Number) em.createQuery(
 				  "SELECT COUNT(*) " +
 				  "FROM server_transaction st " +
-				  "WHERE st.user_id = :userid")
-				  .setParameter("userid", existingServerTransaction.getId())
+				  "WHERE st.server_url = :serverUrl")
+				  .setParameter("serverUrl", url)
 				  .getSingleResult())
 				  .longValue();
 
 		return nofResults;
+	}
+
+	/**
+	 * 
+	 * @param page
+	 * @return
+	 */
+	public List<HistoryServerAccountTransaction> getHistory(int page){
+		if (page < 0) {
+			return null;
+		}
+		
+		@SuppressWarnings("unchecked")
+        List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
+				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.server_url, st.received) "
+				+ "FROM server_transaction st "
+				+ "ORDER BY st.timestamp DESC")
+				.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
+				.setMaxResults(Config.TRANSACTIONS_MAX_RESULTS)
+				.getResultList();
+		
+		return resultWithAliasedBean;
+	}
+	
+	/**
+	 * Checks if a ServerTransaction with the given parameters does already exist.
+	 * 
+	 * @param url the other server's url
+	 * @param amount the amount
+	 * @param timestamp the other server's timestamp
+	 * @return
+	 */
+	public boolean exists(String url, long amount, long timestamp) {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<Long> cq = cb.createQuery(Long.class);
+		
+		Root<ServerTransaction> root = cq.from(ServerTransaction.class);
+		cq.select(cb.count(root));
+				
+		Predicate condition1 = cb.equal(root.get("serverUrl"), url);
+		Predicate condition2 = cb.equal(root.get("amount"), Converter.getBigDecimalFromLong(amount));
+		Predicate condition3= cb.equal(root.get("timestamp"), timestamp);
+		
+		Predicate condition4 = cb.and(condition1, condition2, condition3);
+		
+		cq.where(condition4);
+		Long count = em.createQuery(cq).getSingleResult();
+		
+		return count > 0;
 	}
 	
 	/**
 	 * 
 	 * @return
 	 */
-	public ArrayList<HistoryServerAccountTransaction> getLast3Transactions(){
-		
-		
-		/*Query query = session.createSQLQuery(
-				  "SELECT st.timestamp, st.amount, st.payin_address as payinAddress " +
-				  "FROM server_transaction st " +
-				  "ORDER BY st.timestamp DESC")
-				  .addScalar("timestamp")
-				  .addScalar("amount")
-				  .addScalar("payinAddress")
-				  .setMaxResults(3)
-				  .setFetchSize(3)
-				  .setResultTransformer(Transformers.aliasToBean(HistoryServerAccountTransaction.class));
+	public List<HistoryServerAccountTransaction> getLast5Transactions(){
 		
 		@SuppressWarnings("unchecked")
-		List<HistoryServerAccountTransaction> resultWithAliasedBean = query.list();
+        List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
+				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.server_url, st.received) "
+				+ "FROM server_transaction st "
+				+ "ORDER BY st.timestamp DESC")
+				.setMaxResults(5)
+				.getResultList();
 		
-		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;*/
-		
-		//TODO: rewrite with JPA, not Hibernate!
-		
-		
-		return new ArrayList<HistoryServerAccountTransaction>();
+		return resultWithAliasedBean;
 	}
 	
 	/**
@@ -156,7 +198,7 @@ public class ServerTransactionDAO {
 	 * @return
 	 * @throws ServerAccountNotFoundException
 	 */
-	public ArrayList<HistoryServerAccountTransaction> getLast3ServerAccountTransaction(String url) throws ServerAccountNotFoundException{
+	public List<HistoryServerAccountTransaction> getLast5ServerAccountTransaction(String url) throws ServerAccountNotFoundException{
 		
 		
 		CriteriaBuilder cb = em.getCriteriaBuilder();
@@ -169,121 +211,77 @@ public class ServerTransactionDAO {
 		if(existingServerTransaction == null)
 			throw new ServerAccountNotFoundException(url);
 		
-		
-		/*Query query = session.createSQLQuery(
-				  "SELECT st.timestamp, st.amount, st.payin_address as payinAddress " +
-				  "FROM server_transaction st " +
-				  "WHERE st.user_id = :userid " +
-				  "ORDER BY st.timestamp DESC")
-				  .addScalar("timestamp")
-				  .addScalar("amount")
-				  .addScalar("payinAddress")
-				  .setLong("userid",  serverAccount.getId())
-				  .setMaxResults(3)
-				  .setFetchSize(3)
-				  .setResultTransformer(Transformers.aliasToBean(HistoryServerAccountTransaction.class));
-		
 		@SuppressWarnings("unchecked")
-		List<HistoryServerAccountTransaction> resultWithAliasedBean = query.list();
+        List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
+				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.server_url, st.received) "
+				+ "FROM server_transaction st "
+				+ "WHERE st.server_url = :serverUrl "
+				+ "ORDER BY st.timestamp DESC")
+				.setParameter("serverUrl", url)
+				.setMaxResults(5)
+				.getResultList();
 		
-		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;*/
-		//TODO: rewrite with JPA, not Hibernate!
-		
-		
-		return new ArrayList<HistoryServerAccountTransaction>(0);
+		return resultWithAliasedBean;
 	}
+	
 	
 	/**
 	 * 
 	 * @param page
 	 * @return
 	 */
-	public ArrayList<HistoryServerAccountTransaction> getHistory(int page){
+	public List<HistoryServerAccountTransaction> getPayeeHistory(int page){
 		if (page < 0) {
 			return null;
 		}
 
-		
-				
-		/*Query query = session.createSQLQuery(
-				  "SELECT st.timestamp, st.amount, st.payin_address as payinAddress " +
-				  "FROM server_transaction st " +
-				  "ORDER BY st.timestamp DESC")
-				  .addScalar("timestamp")
-				  .addScalar("amount")
-				  .addScalar("payinAddress")
-				  .setFirstResult(page * Config.SEREVER_TRANSACTION_MAX_RESULTS)
-				  .setMaxResults(Config.SEREVER_TRANSACTION_MAX_RESULTS)
-				  .setFetchSize(Config.SEREVER_TRANSACTION_MAX_RESULTS)
-				  .setResultTransformer(Transformers.aliasToBean(HistoryServerAccountTransaction.class));
-		
 		@SuppressWarnings("unchecked")
-		List<HistoryServerAccountTransaction> resultWithAliasedBean = query.list();
+        List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
+				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.server_url, st.received) "
+				+ "FROM server_transaction st "
+				+ "WHERE (st.received = :received and st.verified = :verified) "
+				+ "ORDER BY st.timestamp DESC")
+				.setParameter("received", true)
+				.setParameter("verified", true)
+				.setMaxResults(5)
+				.getResultList();
 		
-		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;*/
-		//TODO: rewrite with JPA, not Hibernate!
-		
-		return new ArrayList<HistoryServerAccountTransaction>();
+		return resultWithAliasedBean;
 	}
 	
-	/**
-	 * 
-	 * @param page
-	 * @return
-	 */
-	public ArrayList<HistoryServerAccountTransaction> getPayeeHistory(int page){
+	public List<HistoryServerAccountTransaction> getPayerHistory(int page){
 		if (page < 0) {
 			return null;
 		}
-
-		/*Query query= session.createSQLQuery(
-				  "SELECT st.timestamp, st.amount, st.payin_address as payinAddress " +
-				  "FROM server_transaction st " +
-				  "WHERE st.received = 'TRUE' "+
-				  "AND st.verified = 'TRUE' "+ 
-				  "ORDER BY st.timestamp DESC")
-				  .addScalar("timestamp")
-				  .addScalar("amount")
-				  .addScalar("payinAddress", StandardBasicTypes.STRING)
-				  .setFirstResult(page * Config.SEREVER_TRANSACTION_MAX_RESULTS)
-				  .setMaxResults(Config.SEREVER_TRANSACTION_MAX_RESULTS)
-				  .setFetchSize(Config.SEREVER_TRANSACTION_MAX_RESULTS)
-				  .setResultTransformer(Transformers.aliasToBean(HistoryServerAccountTransaction.class));
 		
 		@SuppressWarnings("unchecked")
-		List<HistoryServerAccountTransaction> resultWithAliasedBean = query.list();
+        List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
+				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.server_url, st.received) "
+				+ "FROM server_transaction st "
+				+ "WHERE (st.received = :received and st.verified = :verified) "
+				+ "ORDER BY st.timestamp DESC")
+				.setParameter("received", false)
+				.setParameter("verified", true)
+				.setMaxResults(5)
+				.getResultList();
 		
-		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;*/
-		//TODO: rewrite with JPA, not Hibernate!
-		
-		return new ArrayList<HistoryServerAccountTransaction>();
+		return resultWithAliasedBean;
 	}
 	
-	public ArrayList<HistoryServerAccountTransaction> getPayerHistory(int page){
-		if (page < 0) {
+	public List<HistoryServerAccountTransaction> getLastAccountTransactions(String url, int page) {
+		if (page < 0)
 			return null;
-		}
-
-		/*Query query= session.createSQLQuery(
-				  "SELECT st.timestamp, st.amount, st.payin_address as payinAddress " +
-				  "FROM server_transaction st " +
-				  "WHERE st.received = 'FALSE' "+
-				  "AND st.verified = 'TRUE' "+ 
-				  "ORDER BY st.timestamp DESC")
-				  .addScalar("timestamp")
-				  .addScalar("amount")
-				  .addScalar("payinAddress", StandardBasicTypes.STRING)
-				  .setFirstResult(page * Config.SEREVER_TRANSACTION_MAX_RESULTS)
-				  .setMaxResults(Config.SEREVER_TRANSACTION_MAX_RESULTS)
-				  .setFetchSize(Config.SEREVER_TRANSACTION_MAX_RESULTS)
-				  .setResultTransformer(Transformers.aliasToBean(HistoryServerAccountTransaction.class));
 		
 		@SuppressWarnings("unchecked")
-		List<HistoryServerAccountTransaction> resultWithAliasedBean = query.list();
+        List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
+				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.server_url, st.received) "
+				+ "FROM server_transaction st "
+				+ "WHERE st.server_url = :serverUrl "
+				+ "ORDER BY st.timestamp DESC")
+				.setParameter("serverUrl", url)
+				.setMaxResults(5)
+				.getResultList();
 		
-		List<HistoryServerAccountTransaction> results = resultWithAliasedBean;*/
-		//TODO: rewrite with JPA, not Hibernate!
-		
-		return new ArrayList<HistoryServerAccountTransaction>();
+		return resultWithAliasedBean;
 	}
 }

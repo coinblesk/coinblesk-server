@@ -460,7 +460,7 @@ public class UserAccountDAO {
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<UserAccount> cq = cb.createQuery(UserAccount.class);
 		Root<UserAccount> root = cq.from(UserAccount.class);
-		Predicate condition = cb.equal(root.get("roles"), role.getCode());
+		Predicate condition = cb.and(cb.equal(root.get("roles"), role.getCode()), cb.equal(root.get("deleted"), false));
 		cq.where(condition);
 		return em.createQuery(cq).getResultList();
 	}
