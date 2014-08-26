@@ -306,7 +306,7 @@ public class UserAccountController {
 	 *         been successfully/non successfully sent to the users email
 	 *         address
 	 */
-	@RequestMapping(value = "/resetPasswordRequest", method = RequestMethod.GET, produces = "application/json")
+	@RequestMapping(value = "/resetPasswordRequest", method = RequestMethod.POST, produces = "application/json")
 	@ResponseBody
 	public TransferObject resetPasswordRequest(@RequestBody TransferObject request) {
 		TransferObject response = new TransferObject();
@@ -317,13 +317,13 @@ public class UserAccountController {
 			response.setMessage(PASSWORD_RESET_LINK_SENT);
 		} catch (UserAccountNotFoundException e) {
 			response.setSuccessful(false);
-			response.setMessage( e.getMessage());
+			response.setMessage(e.getMessage());
 		}  catch (Throwable t) {
 			response.setSuccessful(false);
 			response.setMessage("Unexpected: "+t.getMessage());
 		}
 		return response;
-	}	
+	}
 
 	/**
 	 * Resets {@link UserAccount} password if passwords match. Returns java server page
