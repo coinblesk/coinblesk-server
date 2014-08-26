@@ -118,12 +118,12 @@ public class ServerAccountServiceTest {
 		assertTrue(serverAccountService.createAccount(newAccount));
 		ServerAccount fromDB = serverAccountService.getByUrl("www.insert.com");
 		
-//		assertEquals(newAccount.getUrl(), fromDB.getUrl());
-//		assertEquals(newAccount.getEmail(), fromDB.getEmail());
-//		assertEquals(newAccount.getTrustLevel(), fromDB.getTrustLevel());
+		assertEquals(newAccount.getUrl(), fromDB.getUrl());
+		assertEquals(newAccount.getEmail(), fromDB.getEmail());
+		assertEquals(newAccount.getTrustLevel(), fromDB.getTrustLevel());
 		
-//		assertEquals(0, fromDB.getActiveBalance().compareTo(BigDecimal.ZERO));
-//		assertFalse(fromDB.isDeleted());
+		assertEquals(0, fromDB.getActiveBalance().compareTo(BigDecimal.ZERO));
+		assertFalse(fromDB.isDeleted());
 	}
 	
 	@Test

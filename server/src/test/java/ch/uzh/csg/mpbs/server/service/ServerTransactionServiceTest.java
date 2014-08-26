@@ -4,7 +4,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
@@ -69,16 +69,14 @@ public class ServerTransactionServiceTest {
 	
 	@Test
 	public void testGetPayeeHistory() {
-		ArrayList<HistoryServerAccountTransaction> payeeList = serverTransactionService.getPayeeHistory(0);
-		System.out.println("*************************** " + payeeList.size());
+		List<HistoryServerAccountTransaction> payeeList = serverTransactionService.getPayeeHistory(0);
 		assertNotNull(payeeList);
 		assertThat(payeeList.size(), is(5));
 	}
 	
 	@Test
 	public void testGetPayerHistory() {
-		ArrayList<HistoryServerAccountTransaction> payerList = serverTransactionService.getPayerHistory(0);
-		System.out.println("*************************** " + payerList.size());
+		List<HistoryServerAccountTransaction> payerList = serverTransactionService.getPayerHistory(0);
 		assertNotNull(payerList);
 		assertThat(payerList.size(), is(4));
 	}
