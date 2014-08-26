@@ -16,6 +16,7 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.hibernate.annotations.Index;
 
+
 @Entity(name="SERVER_ACCOUNT")
 public class ServerAccount {
 	
@@ -34,6 +35,8 @@ public class ServerAccount {
 	private String email;
 	@Column(name = "PAYIN_ADDRESS")
 	private String payinAddress;
+	@Column(name = "PAYOUT_ADDRESS")
+	private String payoutAddress;
 	@Column(name = "TRUST_LEVEL", nullable = false)
 	private int trustLevel;
 	@Column(name = "PUBLIC_KEY", length = 1024, nullable = false)
@@ -104,6 +107,14 @@ public class ServerAccount {
 
 	public String getPayinAddress() {
 		return payinAddress;
+	}
+
+	public void setPayouAddress(String btcAddress) {
+		this.payoutAddress = btcAddress;
+	}
+	
+	public String getPayoutAddress() {
+		return payoutAddress;
 	}
 
 	public void setPayinAddress(String btcAddress) {
