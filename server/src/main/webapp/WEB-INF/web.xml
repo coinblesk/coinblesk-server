@@ -10,6 +10,10 @@
 		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
 	</listener>
 
+	<!-- Add to context.xml in /etc/tomcat the following line:
+		<Environment name="MBPS_EVN" value="" type="java.lang.String" override="false"/>
+		
+		if you plan to run it locall, add -DMBPS_ENV="local-" to your run configuration -->
 	<context-param>
 		<param-name>contextConfigLocation</param-name>
 		<param-value>
