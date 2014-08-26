@@ -35,11 +35,11 @@
 
  	<mvc:view-controller path="/" view-name="html/index"/>
 	<mvc:view-controller path="/login" view-name="html/login"/>
-	<mvc:view-controller path="/relation/serveraccount/**" view-name="html/serveraccount"/>
 	
 	<!-- Here you can set to connect to your Bitcoind server -->
 	<bean id="bitcoindController" class="ch.uzh.csg.mbps.server.util.BitcoindController" >
 	    <property name="listenTransactions" value="true" />
 	</bean>
-	
+
 </beans>
+

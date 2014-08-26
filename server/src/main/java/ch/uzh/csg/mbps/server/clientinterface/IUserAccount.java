@@ -10,7 +10,6 @@ import ch.uzh.csg.mbps.server.domain.ResetPassword;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.domain.UserPublicKey;
 import ch.uzh.csg.mbps.server.util.PasswordMatcher;
-import ch.uzh.csg.mbps.server.util.UserModel;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
@@ -18,6 +17,7 @@ import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.VerificationTokenNotFoundException;
+import ch.uzh.csg.mbps.server.util.web.model.UserModel;
 
 public interface IUserAccount {
 	
@@ -99,7 +99,7 @@ public interface IUserAccount {
 
 	public UserAccount getByEmail(String email) throws UserAccountNotFoundException;
 
-	public void changeRoleBoth(String email) throws UserAccountNotFoundException;
+	public void changeRoleBoth(UserAccount admin) throws UserAccountNotFoundException;
 
 	public void changeRoleAdmin(String email) throws UserAccountNotFoundException;
 
@@ -118,5 +118,9 @@ public interface IUserAccount {
 	public String getVerificationTokenByUserId(long id)  throws VerificationTokenNotFoundException;
 
 	public List<UserPublicKey> getUserPublicKeys(long id);
+
+	public boolean isValidAdminRoleLink(String adminToken);
+
+	public void sendMailToAll(String subject, String text);
 
 }

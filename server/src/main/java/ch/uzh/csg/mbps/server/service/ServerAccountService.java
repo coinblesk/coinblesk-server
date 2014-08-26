@@ -1,5 +1,6 @@
 package ch.uzh.csg.mbps.server.service;
 
+import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -163,6 +164,9 @@ public class ServerAccountService implements IServerAccount {
 		if (updatedAccount.getTrustLevel() != serverAccount.getTrustLevel())
 			serverAccount.setTrustLevel(updatedAccount.getTrustLevel());
 		
+		if (updatedAccount.getBalanceLimit() != serverAccount.getBalanceLimit())
+			serverAccount.setBalanceLimit(updatedAccount.getBalanceLimit());
+		
 		try{
 			serverAccountDAO.updatedAccount(serverAccount);
 		} catch (HibernateException e) {
@@ -174,7 +178,7 @@ public class ServerAccountService implements IServerAccount {
 
 	@Override
 	@Transactional
-	public boolean delete(String url) throws ServerAccountNotFoundException, BalanceNotZeroException {
+	public boolean deleteAccount(String url) throws ServerAccountNotFoundException, BalanceNotZeroException {
 		try {
 			serverAccountDAO.delete(url);
 			return true;
@@ -193,5 +197,45 @@ public class ServerAccountService implements IServerAccount {
 	@Transactional(readOnly = true)
 	public List<ServerAccount> getAll() {
 		return serverAccountDAO.getAllServerAccounts();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<ch.uzh.csg.mbps.model.ServerAccount> getServerAccounts(String username, int urlPage) {
+		return serverAccountDAO.getServerAccounts(username,urlPage);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public long getAccountsCount() {
+		return serverAccountDAO.getAccountCount();
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	public boolean checkPredefinedDeleteArguments(String url) throws ServerAccountNotFoundException, BalanceNotZeroException, HibernateException{
+		return serverAccountDAO.checkPredefinedDeleteArguments(url);
+	}
+
+	//TODO: tests
+	/**
+	 * 
+	 * @param url
+	 * @param oldLevel
+	 * @param newLevel
+	 * @throws ServerAccountNotFoundException
+	 */
+	public static void updateTrustLevel(String url, int oldLevel, int newLevel) throws ServerAccountNotFoundException {
+		//TODO: check if upgrade or downgrade
+	}
+	
+	/**
+	 * 
+	 * @param url
+	 * @param oldLimit
+	 * @param newLimit
+	 */
+	public static void updateBalanceLimit(String url, BigDecimal oldLimit, BigDecimal newLimit) {
+		//TODO: communicate balance limit asymmetric balance limits
 	}
 }

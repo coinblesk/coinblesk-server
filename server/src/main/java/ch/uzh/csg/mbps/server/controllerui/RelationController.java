@@ -7,11 +7,18 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
 import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidPublicKeyException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
+import ch.uzh.csg.mbps.server.util.exceptions.UrlAlreadyExistsException;
 
 @Controller
 @RequestMapping("/relation")
@@ -36,8 +43,21 @@ public class RelationController {
     }
 	
 	@RequestMapping(value={"/account/{id}"}, method = RequestMethod.GET)
-	public @ResponseBody ServerAccount  account(@PathVariable("id") long id) throws ServerAccountNotFoundException{
+	public @ResponseBody ServerAccount account(@PathVariable("id") long id) throws ServerAccountNotFoundException{
 		ServerAccount account = serverAccountService.getById(id);
 		return account;
+	}
+	
+	@RequestMapping(value = { "/createNewAccount" }, method = RequestMethod.GET, produces = "application/json")
+	public @ResponseBody
+	void createAccount(@RequestParam(value = "url", required = false) String url, @RequestParam(value = "email", required = false) String email) {
+		ServerAccount account = new ServerAccount(url,email, null);
+		try {
+			serverAccountService.createAccount(account);
+		} catch (UrlAlreadyExistsException | BitcoinException e) {
+			// TODO: mehmet should throw exception?
+		} catch (InvalidEmailException | InvalidPublicKeyException | InvalidUrlException e) {
+			//TODO: mehmet should throw exception?
+		}
 	}
 }

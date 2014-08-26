@@ -33,7 +33,7 @@ public class PayOutRulesController {
 	private static final String ACCOUNT_NOT_FOUND = "UserAccount not found.";
 	private static final String NO_RULES = "No payout rules defined for this user.";
 	private static final String RESET_SUCCESS = "Your payout rules have successfully been reseted.";
-	private static final String INVALID_ADDRESS = "Your defined payout adress is not a valid bitcoin address.";
+	private static final String INVALID_ADDRESS = "Your defined payout address is not a valid bitcoin address.";
 	private static final String RULES_ALREADY_DEFINED = "You already defined your payout rules. Please reset first to create new rules.";
 	
 	@Autowired

@@ -28,7 +28,7 @@ App.config(['$routeProvider', '$httpProvider', '$provide', function($routeProvid
         templateUrl: 'relation',
         controller: RelationController
     });
-    $routeProvider.when('/relation/serveraccount/:serverId', {
+    $routeProvider.when('/serveraccount/:serverId', {
     	templateUrl: 'serveraccount',
     	controller: ServerAccountController
     });
@@ -119,7 +119,7 @@ App.run(function($rootScope, $http, $location, $cookieStore, $injector, base64Fa
      */
     $rootScope.requests401 = [];
     $rootScope.initialized = null;
-
+    
     $rootScope.$on('event:loginRequired', function () {
     	if ($location.path().indexOf("/login") == -1) {
 			$rootScope.error = "Please enter a valid username / password";

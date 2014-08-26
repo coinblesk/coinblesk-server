@@ -10,12 +10,18 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.SequenceGenerator;
+import javax.persistence.Index;
 
-import org.hibernate.annotations.Index;
+
+import javax.persistence.Table;
 
 import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 
 @Entity(name = "SERVER_PAY_OUT_TRANSACTION")
+@Table(indexes={
+		@Index(name="SERVER_ACCOUNT_ID_INDEX_PAY_OUT_TX", columnList="SERVER_ACCOUNT_ID"),
+		@Index(name="SERVER_TRANSACTION_ID_INDEX_PAY_OUT_TX", columnList="SERVER_TRANSACTION_ID")
+})
 public class ServerPayOutTransaction implements Serializable{
 	private static final long serialVersionUID = -8174904243568625313L;
 	
@@ -25,7 +31,6 @@ public class ServerPayOutTransaction implements Serializable{
 	@Column(name="ID")
 	private long id;
 	@Column(name="SERVER_ACCOUNT_ID")
-	@Index(name = "SERVER_ACCOUNT_ID_INDEX_PAY_OUT_TX")
 	private long serverAccountID;
 	@Column(name="TIMESTAMP")
 	private Date timestamp;
@@ -36,7 +41,6 @@ public class ServerPayOutTransaction implements Serializable{
 	@Column(name="VERIFIED")
 	private boolean verified;
 	@Column(name="SERVER_TRANSACTION_ID")
-	@Index(name = "SERVER_TRANSACTION_ID_INDEX_PAY_OUT_TX")
 	private String serverTransactionID;
 	
 	public ServerPayOutTransaction() {
