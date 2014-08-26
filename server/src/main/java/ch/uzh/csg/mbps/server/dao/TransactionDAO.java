@@ -63,35 +63,6 @@ public class TransactionDAO {
 				.getResultList();
 		
 		return resultWithAliasedBean;
-		
-		//TODO: why so many joins?
-		//UserAccount userAccount = UserAccountService.getInstance().getByUsername(username);
-		
-		/*List<HistoryTransaction> resultWithAliasedBean = session
-				.createSQLQuery(
-						"SELECT transaction.timestamp, u2.username as buyer, u1.username as seller, transaction.amount, transaction.input_currency as inputCurrency, transaction.input_currency_amount as inputCurrencyAmount "
-								+ "FROM DB_TRANSACTION transaction "
-								+ "INNER JOIN user_account u1 on transaction.username_payee = u1.username "
-								+ "INNER JOIN user_account u2 on transaction.username_payer = u2.username "
-								+ "WHERE transaction.username_payer = :username OR transaction.username_payee = :username "
-								+ "ORDER BY transaction.timestamp DESC")
-				.addScalar("timestamp")
-				.addScalar("buyer")
-				.addScalar("seller")
-				.addScalar("amount")
-				.addScalar("inputCurrency")
-				.addScalar("inputCurrencyAmount")
-				.setString("username", userAccount.getUsername())
-				.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
-				.setMaxResults(Config.TRANSACTIONS_MAX_RESULTS)
-				.setFetchSize(Config.TRANSACTIONS_MAX_RESULTS)
-				.setResultTransformer(Transformers.aliasToBean(HistoryTransaction.class))
-				.list();
-
-		List<HistoryTransaction> results = resultWithAliasedBean;*/
-		//TODO: rewrite with JPA, not Hibernate!
-		
-		//return new ArrayList<HistoryTransaction>();
 	}
 
 	/**

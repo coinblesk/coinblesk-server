@@ -131,7 +131,6 @@ public class TransactionService implements ITransaction {
 			throw new TransactionException(PAYMENT_REFUSE);
 		}
 		
-		//TODO: numberOfSignatures == 3?
 		if (numberOfSignatures == 2) {
 			if (!payerRequest.requestsIdentic(payeeRequest)) {
 				throw new TransactionException(PAYMENT_REFUSE);
