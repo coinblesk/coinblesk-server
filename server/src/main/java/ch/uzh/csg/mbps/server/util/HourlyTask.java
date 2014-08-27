@@ -7,8 +7,8 @@ import net.minidev.json.parser.ParseException;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import ch.uzh.csg.mbps.server.clientinterface.IPayOutRule;
 import ch.uzh.csg.mbps.server.domain.PayOutRule;
-import ch.uzh.csg.mbps.server.service.PayOutRuleService;
 
 /**
  * Task executed by cron job for checking all {@link PayOutRule}s.
@@ -18,7 +18,7 @@ public class HourlyTask {
 	private static Logger LOGGER = Logger.getLogger(HourlyTask.class);
 	
 	@Autowired
-	private PayOutRuleService payOutRuleService;
+	private IPayOutRule payOutRuleService;
 
 	/**
 	 * Update is executed every 60minutes.
