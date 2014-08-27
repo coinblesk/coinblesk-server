@@ -154,6 +154,7 @@ public class ServerPayOutTransactionService {
 	 */
 	@Transactional(readOnly=true)
 	public List<HistoryServerPayOutTransaction> getLast5ServerAccountTransactions(String url) throws ServerAccountNotFoundException {
+		serverAccountService.getByUrl(url);
 		return serverPayOutTransactionDAO.getLast5ServerAccountTransactions(url);
 	}
 }
