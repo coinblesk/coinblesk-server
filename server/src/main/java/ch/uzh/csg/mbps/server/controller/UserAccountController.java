@@ -307,7 +307,7 @@ public class UserAccountController {
 	 *         been successfully/non successfully sent to the users email
 	 *         address
 	 */
-	@RequestMapping(value = "/resetPasswordRequest", method = RequestMethod.POST, produces = "application/json")
+	@RequestMapping(value = "/resetPasswordRequest", method = RequestMethod.GET, produces = "application/json")
 	@ResponseBody
 	public TransferObject resetPasswordRequest(@RequestBody TransferObject request) {
 		TransferObject response = new TransferObject();
