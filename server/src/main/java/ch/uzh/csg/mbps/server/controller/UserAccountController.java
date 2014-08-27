@@ -26,12 +26,12 @@ import ch.uzh.csg.mbps.responseobject.MainRequestObject;
 import ch.uzh.csg.mbps.responseobject.ReadRequestObject;
 import ch.uzh.csg.mbps.responseobject.TransferObject;
 import ch.uzh.csg.mbps.responseobject.UserAccountObject;
+import ch.uzh.csg.mbps.server.clientinterface.IPayInTransaction;
+import ch.uzh.csg.mbps.server.clientinterface.IPayOutTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.ITransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.domain.UserPublicKey;
-import ch.uzh.csg.mbps.server.service.PayInTransactionService;
-import ch.uzh.csg.mbps.server.service.PayOutTransactionService;
 import ch.uzh.csg.mbps.server.util.AdminObject;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.Constants;
@@ -71,10 +71,10 @@ public class UserAccountController {
 	private static final String EMAIL_ALREADY_EXISTS = 	"An account with this email address already exists.";
 	
 	@Autowired
-	private PayInTransactionService payInTransactionService;
+	private IPayInTransaction payInTransactionService;
 	
 	@Autowired
-	private PayOutTransactionService payOutTransactionService;
+	private IPayOutTransaction payOutTransactionService;
 	
 	@Autowired
 	private ITransaction transactionService;

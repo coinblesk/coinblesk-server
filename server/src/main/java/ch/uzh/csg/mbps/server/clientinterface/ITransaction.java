@@ -68,5 +68,4 @@ public interface ITransaction {
 	public List<HistoryTransaction> getAll();
 
 	public void createTransaction(DbTransaction tx, UserAccount fromDB, UserAccount fromDB2);
-	
 }

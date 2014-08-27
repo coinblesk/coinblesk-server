@@ -119,8 +119,18 @@ public interface IUserAccount {
 
 	public List<UserPublicKey> getUserPublicKeys(long id);
 
+	/**
+	 * Checks if token is saved in table and still valid (younger than 1h)
+	 * 
+	 * @param adminToken
+	 * @return
+	 */
 	public boolean isValidAdminRoleLink(String adminToken);
 
+	/**
+	 * 
+	 * @param subject
+	 * @param text
+	 */
 	public void sendMailToAll(String subject, String text);
-
 }

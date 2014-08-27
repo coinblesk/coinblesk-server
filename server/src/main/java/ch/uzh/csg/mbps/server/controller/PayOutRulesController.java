@@ -12,8 +12,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import ch.uzh.csg.mbps.responseobject.PayOutRulesTransferObject;
 import ch.uzh.csg.mbps.responseobject.TransferObject;
+import ch.uzh.csg.mbps.server.clientinterface.IPayOutRule;
 import ch.uzh.csg.mbps.server.domain.PayOutRule;
-import ch.uzh.csg.mbps.server.service.PayOutRuleService;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.exceptions.PayOutRuleNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.PayOutRulesAlreadyDefinedException;
@@ -37,7 +37,7 @@ public class PayOutRulesController {
 	private static final String RULES_ALREADY_DEFINED = "You already defined your payout rules. Please reset first to create new rules.";
 	
 	@Autowired
-	private PayOutRuleService payOutRuleService;
+	private IPayOutRule payOutRuleService;
 
 	/**
 	 * Creates one/multiple new PayOutRules. Returns failure message when

@@ -418,11 +418,6 @@ public class UserAccountService implements IUserAccount {
 	}
 
 	// TODO: mehmet test & javadoc
-	/**
-	 * 
-	 * @param email
-	 * @throws UserAccountNotFoundException
-	 */
 	@Override
 	@Transactional
 	public void changeRoleBoth(UserAccount admin) throws UserAccountNotFoundException {
@@ -506,12 +501,6 @@ public class UserAccountService implements IUserAccount {
 	    return userPublicKeyDAO.getUserPublicKeys(id);
     }
 
-	/**
-	 * Checks if token is saved in table and still valid (younger than 1h)
-	 * 
-	 * @param adminToken
-	 * @return
-	 */
 	@Override
 	@Transactional
 	public boolean isValidAdminRoleLink(String adminToken) {
@@ -533,11 +522,6 @@ public class UserAccountService implements IUserAccount {
 		}
 	}
 
-	/**
-	 * 
-	 * @param subject
-	 * @param text
-	 */
 	@Override
 	@Transactional
 	public void sendMailToAll(String subject, String text) {

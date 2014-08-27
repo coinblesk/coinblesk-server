@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
+import ch.uzh.csg.mbps.server.clientinterface.IServerPayOutRule;
+import ch.uzh.csg.mbps.server.clientinterface.IServerPayOutTransaction;
 import ch.uzh.csg.mbps.server.dao.ServerPayOutRuleDAO;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.ServerPayOutRule;
@@ -20,7 +22,6 @@ import ch.uzh.csg.mbps.server.util.exceptions.PayOutRuleNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerPayOutRuleNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerPayOutRulesAlreadyDefinedException;
-import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.web.ServerPayOutRulesTransferObject;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
@@ -30,28 +31,19 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
  * 
  */
 @Service
-public class ServerPayOutRuleService {
+public class ServerPayOutRuleService implements IServerPayOutRule {
 	//TODO: mehmet Tests
 	
 	@Autowired
 	private ServerPayOutRuleDAO serverPayOutRuleDAO;
 	@Autowired
-	private ServerPayOutTransactionService serverPayOutTransactionService;
+	private IServerPayOutTransaction serverPayOutTransactionService;
 	@Autowired
 	private IServerAccount serverAccountService;
 	
 	public static Boolean testingMode = false;
 
-	/**
-	 * Creates a new set of {@link ServerPayOutRule}s for assigned
-	 * ServerAccount. The rules are unlimited.
-	 * 
-	 * @param porto ServerPayOutRulesTransferObject containing list of ServerPayOutRules
-	 * @param url
-	 * @throws ServerAccountNotFoundException
-	 * @throws BitcoinException
-	 * @throws ServerPayOutRulesAlreadyDefinedException 
-	 */
+	@Override
 	@Transactional
 	public void createRule(ServerPayOutRulesTransferObject sporto, String url) throws ServerAccountNotFoundException, BitcoinException, ServerPayOutRulesAlreadyDefinedException {
 
@@ -78,57 +70,27 @@ public class ServerPayOutRuleService {
 		serverPayOutRuleDAO.createPayOutRules(sporto.getPayOutRulesList());
 	}
 
-	/**
-	 * Returns List with all {@link ServerPayOutRule}s for ServerAccount
-	 * with url.
-	 * 
-	 * @param url
-	 * @return List<ServerPayOutRules>
-	 * @throws ServerAccountNotFoundException
-	 * @throws ServerPayOutRuleNotFoundException 
-	 */
+	@Override
 	@Transactional(readOnly = true)
 	public List<ServerPayOutRule> getRulesByUrl(String url) throws ServerAccountNotFoundException, ServerPayOutRuleNotFoundException {
 		ServerAccount serverAccount = serverAccountService.getByUrl(url);
 		return serverPayOutRuleDAO.getByServerAccountId(serverAccount.getId());
 	}
 
-	/**
-	 * Returns all {@link ServerPayOutRule}s assigned to {@link ServerAccount}
-	 * with serverAccountId
-	 * 
-	 * @param serverAccountId
-	 * @return List<ServerPayOutRule>
-	 * @throws ServerPayOutRuleNotFoundException 
-	 */
+	@Override
 	@Transactional(readOnly = true)
 	public List<ServerPayOutRule> getRulesById(long serverAccountId) throws ServerPayOutRuleNotFoundException {
 		return serverPayOutRuleDAO.getByServerAccountId(serverAccountId);
 	}
 
-	/**
-	 * Deletes all {@link ServerPayOutRule}s for ServerAccount with url.
-	 * 
-	 * @param url
-	 * @throws ServerAccountNotFoundException
-	 */
+	@Override
 	@Transactional
 	public void deleteRules(String url) throws ServerAccountNotFoundException {
 		ServerAccount serverAccount = serverAccountService.getByUrl(url);
 		serverPayOutRuleDAO.deleteRules(serverAccount.getId());
 	}
 
-	/**
-	 * Checks if {@link ServerPayOutRule} is assigned for serverAccount. If
-	 * rules exist for serverAccount they are checked if the balance of
-	 * serverAccount exceeds the one defined in the rule. If yes a new PayOut is
-	 * initiated according to the PayOutRule.
-	 * 
-	 * @param serverAccount
-	 * @throws UserAccountNotFoundException
-	 * @throws BitcoinException
-	 * @throws ServerPayOutRuleNotFoundException 
-	 */
+	@Override
 	@Transactional
 	public void checkBalanceLimitRules(ServerAccount serverAccount) throws ServerAccountNotFoundException, BitcoinException, ServerPayOutRuleNotFoundException {
 		serverAccount = serverAccountService.getById(serverAccount.getId());
@@ -145,10 +107,7 @@ public class ServerPayOutRuleService {
 		}
 	}
 
-	/**
-	 * Checks if Rules exist for the current hour and day. If yes these
-	 * {@link ServerPayOutRule}s are executed.
-	 */
+	@Override
 	@Transactional
 	public void checkAllRules() {
 		Date date = new Date();

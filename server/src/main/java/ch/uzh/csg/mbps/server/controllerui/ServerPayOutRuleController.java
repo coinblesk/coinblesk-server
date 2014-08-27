@@ -9,9 +9,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import ch.uzh.csg.mbps.server.clientinterface.IServerPayOutRule;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.ServerPayOutRule;
-import ch.uzh.csg.mbps.server.service.ServerPayOutRuleService;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerPayOutRuleNotFoundException;
@@ -38,7 +38,7 @@ public class ServerPayOutRuleController {
 	private static final String INVALID_ADDRESS = "Your defined payout address is not a valid bitcoin address.";
 
 	@Autowired
-	private ServerPayOutRuleService serverPayOutRuleService;
+	private IServerPayOutRule serverPayOutRuleService;
 	@Autowired
 	private IUserAccount userAccountService;
 	
