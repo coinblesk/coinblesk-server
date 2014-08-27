@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.mbps.responseobject.TransferObject;
@@ -22,6 +23,7 @@ import ch.uzh.csg.mbps.server.util.web.model.HistoryServerPayOutTransaction;
 import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
+@Service
 public class ServerPayOutTransactionService implements IServerPayOutTransaction {
 
 	@Autowired 
