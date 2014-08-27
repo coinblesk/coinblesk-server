@@ -26,6 +26,7 @@ import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
@@ -50,7 +51,7 @@ public class PayOutTransactionServiceTest {
 	@Before
 	public void setUp() throws Exception {
 		UserAccountService.enableTestingMode();
-		test71 = new UserAccount("test71", "test71@bitcoin.csg.uzh.ch", "asdf");
+		test71 = new UserAccount("test71@https://mbps.csg.uzh.ch", "test71@bitcoin.csg.uzh.ch", "asdf");
 	}
 	
 	@After
@@ -58,7 +59,7 @@ public class PayOutTransactionServiceTest {
 		UserAccountService.disableTestingMode();
 	}
 
-	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
+	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		assertTrue(userAccountService.createAccount(userAccount));
 		userAccount = userAccountService.getByUsername(userAccount.getUsername());
 		userAccount.setEmailVerified(true);
