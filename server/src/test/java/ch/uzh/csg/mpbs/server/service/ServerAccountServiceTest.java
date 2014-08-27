@@ -36,13 +36,14 @@ import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DbUnitConfiguration;
 import com.github.springtestdbunit.annotation.ExpectedDatabase;
 import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
+import com.github.springtestdbunit.dataset.ReplacementDataSetLoader;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
 		"classpath:context.xml",
 		"classpath:test-database.xml"})
 
-@DbUnitConfiguration(databaseConnection="dataSource")
+@DbUnitConfiguration(databaseConnection="dataSource", dataSetLoader = ReplacementDataSetLoader.class)
 @TestExecutionListeners({ 
 	DependencyInjectionTestExecutionListener.class,
 	DbUnitTestExecutionListener.class })
@@ -123,7 +124,8 @@ public class ServerAccountServiceTest {
 		
 		assertEquals(newAccount.getUrl(), fromDB.getUrl());
 		assertEquals(newAccount.getEmail(), fromDB.getEmail());
-		assertEquals(newAccount.getTrustLevel(), fromDB.getTrustLevel());
+		assertFalse(newAccount.getTrustLevel()==fromDB.getTrustLevel());
+		assertFalse(newAccount.getId()==fromDB.getId());
 		
 		assertEquals(0, fromDB.getActiveBalance().compareTo(BigDecimal.ZERO));
 		assertFalse(fromDB.isDeleted());
