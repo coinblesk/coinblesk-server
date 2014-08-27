@@ -1,34 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dataset>
-	<server_transaction id="1" amount="4.5555"
-		timestamp="2014-06-19 14:35:54.0" tx_id="2222"
-		payin_address="fake-address" verified="TRUE" received="TRUE" />
-	<server_transaction id="2" amount="2.0005" timestamp="2014-06-19 14:35:54.0"
-		tx_id="test2@mail.ch" payin_address="fake-address" verified="TRUE" received="FALSE" />
-	<server_transaction id="3" amount="0.4545"
-		timestamp="2014-06-19 14:35:54.0" tx_id="125"
-		payin_address="fake-address" verified="TRUE" received="TRUE" />
-	<server_transaction id="4" amount="0.2" timestamp="2014-06-19 14:35:54.0"
-		tx_id="test3@mail.com" payin_address="fake-address" verified="FALSE" received="FALSE" />
-	<server_transaction id="5" amount="1.5565"
-		timestamp="2014-06-19 14:35:54.0" tx_id="225"
-		payin_address="fake-address" verified="TRUE" received="FALSE" />
-	<server_transaction id="6" amount="1.0"
-		timestamp="2014-06-19 14:35:54.0" tx_id="23"
-		payin_address="fake-address" verified="TRUE" received="TRUE" />
-	<server_transaction id="7" amount="1.0"
-		timestamp="2014-06-19 14:35:54.0" tx_id="453"
-		payin_address="fake-address" verified="TRUE" received="TRUE" />
-	<server_transaction id="8" amount="1.5"
-		timestamp="2014-06-19 14:35:54.0" tx_id="785"
-		payin_address="fake-address" verified="TRUE" received="TRUE" />
-	<server_transaction id="9" amount="0.08"
-		timestamp="2014-06-19 14:35:54.0" tx_id="45654"
-		payin_address="fake-address" verified="TRUE" received="FALSE" />
-	<server_transaction id="10" amount="1.4"
-		timestamp="2014-06-19 14:35:54.0" tx_id="1212"
-		payin_address="fake-address" verified="FALSE" received="TRUE" />
-	<server_transaction id="11" amount="2.0"
-		timestamp="2014-06-19 14:35:54.0" tx_id="333"
-		payin_address="fake-address" verified="TRUE" received="FALSE" />
+	<server_transaction id="20" amount="4.5555" timestamp="2014-06-19 14:35:54.0" tx_id="2222"
+		btc_address="fake-address" verified="TRUE" received="TRUE" />
+	<server_transaction id="21" amount="2.0005" timestamp="2014-06-19 14:35:54.0" tx_id="test2@mail.ch" 
+	    btc_address="fake-address" verified="TRUE" received="FALSE" />
+	<server_transaction id="22" amount="0.4545" timestamp="2014-06-19 14:35:54.0" tx_id="125"
+		btc_address="fake-address" verified="TRUE" received="TRUE" />
+	<server_transaction id="23" amount="0.2" timestamp="2014-06-19 14:35:54.0" tx_id="test3@mail.com" 
+	    btc_address="fake-address" verified="FALSE" received="FALSE" />
+	<server_transaction id="24" amount="1.5565" timestamp="2014-06-19 14:35:54.0" tx_id="225"
+		btc_address="fake-address" verified="TRUE" received="FALSE" />
+	<server_transaction id="25" amount="1.0" timestamp="2014-06-19 14:35:54.0" tx_id="23"
+		btc_address="fake-address" verified="TRUE" received="TRUE" />
+	<server_transaction id="26" amount="1.0" timestamp="2014-06-19 14:35:54.0" tx_id="453"
+		btc_address="fake-address" verified="TRUE" received="TRUE" />
+	<server_transaction id="27" amount="1.5" timestamp="2014-06-19 14:35:54.0" tx_id="785"
+		btc_address="fake-address" verified="TRUE" received="TRUE" />
+	<server_transaction id="28" amount="0.08" timestamp="2014-06-19 14:35:54.0" tx_id="45654"
+		btc_address="fake-address" verified="TRUE" received="FALSE" />
+	<server_transaction id="29" amount="1.4" timestamp="2014-06-19 14:35:54.0" tx_id="1212"
+		btc_address="fake-address" verified="FALSE" received="TRUE" />
+	<server_transaction id="30" amount="2.0" timestamp="2014-06-19 14:35:54.0" tx_id="333"
+		btc_address="fake-address" verified="TRUE" received="FALSE" />
 </dataset>

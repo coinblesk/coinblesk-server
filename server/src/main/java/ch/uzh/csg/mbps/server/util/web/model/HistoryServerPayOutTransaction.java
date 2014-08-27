@@ -26,6 +26,13 @@ public class HistoryServerPayOutTransaction extends AbstractServerHistory {
 		this.amount = amount;
 	}
 	
+	public HistoryServerPayOutTransaction(Date timestamp, BigDecimal amount, String btcAddress, long serverId) {
+		this.timestamp = timestamp;
+		this.amount = amount;
+		this.btcAddress = btcAddress;
+		this.serverId = serverId;
+	}
+	
 	public String getBtcAddress() {
 		return btcAddress;
 	}

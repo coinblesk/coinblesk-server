@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
 import ch.uzh.csg.mbps.responseobject.TransferObject;
+import ch.uzh.csg.mbps.server.clientinterface.IPayInTransaction;
 import ch.uzh.csg.mbps.server.dao.PayInTransactionDAO;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.PayInTransaction;
@@ -22,22 +23,15 @@ import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
  * 
  */
 @Service
-public class PayInTransactionService {
+public class PayInTransactionService implements IPayInTransaction{
 	@Autowired
 	private PayInTransactionDAO payInTransactionDAO;
 	@Autowired
 	private UserAccountDAO userAccountDAO;
 
-	/**
-	 * Creates a new {@link PayInTransaction} for {@link UserAccount} with BTC Address defined
-	 * in transaction.
-	 * 
-	 * @param transaction
-	 * @throws UserAccountNotFoundException
-	 */
+	@Override
 	@Transactional
-	public void create(Transaction transaction)
-			throws UserAccountNotFoundException {
+	public void create(Transaction transaction) throws UserAccountNotFoundException {
 		long userID = userAccountDAO.getByBTCAddress(transaction.address()).getId();
 		PayInTransaction pit = new PayInTransaction(userID, transaction);
 		if (payInTransactionDAO.isNew(pit)) {
@@ -45,43 +39,20 @@ public class PayInTransactionService {
 		}
 	}
 
-	/**
-	 * Returns history of {@link PayInTransaction} of UserAccount with username. Only
-	 * the Transactions defined by page are returned, not all transactions.
-	 * 
-	 * @param username
-	 * @param page defining which PayInTransactions shall be returned
-	 * @return ArrayList of HistoryPayInTransactions
-	 * @throws UserAccountNotFoundException
-	 */
+	@Override
 	@Transactional(readOnly = true)
-	public List<HistoryPayInTransaction> getHistory(String username,
-			int page) throws UserAccountNotFoundException {
+	public List<HistoryPayInTransaction> getHistory(String username, int page) throws UserAccountNotFoundException {
 		return payInTransactionDAO.getHistory(username, page);
 	}
 
-	/**
-	 * Counts and returns number of {@link PayInTransaction}s which are saved in the DB
-	 * for {@link UserAccount} with username.
-	 * 
-	 * @param username of UserAccount
-	 * @return number of PayInTrasactions
-	 * @throws UserAccountNotFoundException
-	 */
+	@Override
 	@Transactional(readOnly = true)
-	public long getHistoryCount(String username)
-			throws UserAccountNotFoundException {
+	public long getHistoryCount(String username) throws UserAccountNotFoundException {
 		UserAccount userAccount = userAccountDAO.getByUsername(username);
 		return payInTransactionDAO.getHistoryCount(userAccount);
 	}
 
-	/**
-	 * Returns 5 newest {@link PayInTransaction}s for specified username in descending order.
-	 * 
-	 * @param username
-	 * @return ArrayList<{@link HistoryPayInTransaction>
-	 * @throws UserAccountNotFoundException
-	 */
+	@Override
 	@Transactional(readOnly = true)
 	public List<HistoryPayInTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
 		UserAccount userAccount = userAccountDAO.getByUsername(username);
@@ -89,6 +60,7 @@ public class PayInTransactionService {
 	}
 	
 	//TODO: does this need to be here?
+	@Override
 	public TransferObject sendPayInAddressByEmail(String username, String email, String payInAddress) {	
 		Emailer.sendPayInAddressAsEmail(username, email, payInAddress);
 		TransferObject transferObject = new TransferObject();
@@ -97,6 +69,7 @@ public class PayInTransactionService {
 		return transferObject;
 	}
 	
+	@Override
 	@Transactional
 	public void createPayInTransaction(PayInTransaction tx) throws UserAccountNotFoundException {
 	    payInTransactionDAO.createPayInTransaction(tx);

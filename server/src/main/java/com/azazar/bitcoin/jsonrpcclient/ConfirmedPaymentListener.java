@@ -10,7 +10,7 @@ import java.util.Set;
 
 /**
  *
- * @author Mikhail Yevchenko <m.ṥῥẚɱ.ѓѐḿởύḙ@azazar.com>
+ * @author Mikhail Yevchenko <m?@azazar.com>
  */
 public abstract class ConfirmedPaymentListener extends SimpleBitcoinPaymentListener {
 

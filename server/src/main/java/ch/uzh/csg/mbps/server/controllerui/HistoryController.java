@@ -1,6 +1,6 @@
 package ch.uzh.csg.mbps.server.controllerui;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -24,7 +24,7 @@ public class HistoryController {
     }
 	
 	@RequestMapping(value={"/transactions"}, method = RequestMethod.GET)
-	public @ResponseBody ArrayList<HistoryServerAccountTransaction> getHistory(){
+	public @ResponseBody List<HistoryServerAccountTransaction> getHistory(){
 		return serverTransactionService.getHistory(0);
 	}
 }

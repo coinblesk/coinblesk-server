@@ -73,6 +73,14 @@ AppServices.factory('serverTransactionsFactory', function($http, $q) {
 		return (request.then(serverTransactionsFactory.handleSucess, serverTransactionsFactory.handleError));
 	};
 	
+	serverTransactionsFactory.getLastAccountTransactions = function(id) {
+		var request = $http({
+			method: 'GET',
+			url: 'serveraccount/lastAccountTransaction/' + id
+		});
+		return (request.then(serverTransactionsFactory.handleSucess, serverTransactionsFactory.handleError));
+	};
+	
 	serverTransactionsFactory.getHistory = function() {
 		var request = $http({
 			method: 'GET',
@@ -156,6 +164,18 @@ AppServices.factory('userAccountFactory', function($http, $q) {
 		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
 	};
 	
+	userAccountFactory.sendMailToAll = function(emailContent){
+		var request = $http({
+			method: 'GET',
+			url: 'users/sendMailToAll',
+			params:{
+				"subject": emailContent.subject,
+				"text": emailContent.text
+			}
+		});
+		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
+	};
+	
 	userAccountFactory.handleSuccess = function( response ){
 		return(response.data);
 	};
@@ -185,16 +205,64 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 	serverAccountFactory.getServerAccount = function(id){
 		var request = $http({
 			method: 'GET',
-			url: 'relation/account/' + id
+			url: 'serveraccount/account/' + id
 		});
 		return (request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError));
 	};
 	
-	serverAccountFactory.handleSuccess = function( response ){
+	serverAccountFactory.createNewAccount = function(url){
+		var request = $http({
+			method: 'GET',
+			url: 'relation/createNewAccount',
+			params:{
+				"url": url
+			}
+		});
+		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
+	};
+	
+	serverAccountFactory.deletedAccount = function(url){
+		var request= $http({
+			method: 'GET',
+			url: 'serveraccount/deleteAccount',
+			params:{
+				"url": url
+			}
+		});
+		request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError);
+	};
+	
+	serverAccountFactory.updateTrustLevel = function(serverAccount, trustLevel){
+		var request = $http({
+			method: 'GET',
+			url: 'serveraccount/updateTrustLevel',
+			params: {
+				"url": serverAccount.url,
+				"oldLevel": serverAccount.trustLevel,
+				"newLevel": trustLevel
+			}
+		});
+		request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError);
+	};
+	
+	serverAccountFactory.updateBalanceLimit  = function(serverAccount, balanceLimit){
+		var request = $http({
+			method: 'GET',
+			url: 'serveraccount/updateBalanceLimit',
+			params: {
+				"url": serverAccount.url,
+				"oldLimit": serverAccount.balanceLimit,
+				"newLimit": balanceLimit
+			}
+		});
+		request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError);
+	};
+	
+	serverAccountFactory.handleSuccess = function(response){
 		return(response.data);
 	};
 	
-	serverAccountFactory.handleError = function( response ){
+	serverAccountFactory.handleError = function(response){
 		if(!angular.isObject(response.data) || !response.data.message){
 			return($q.reject("Request failed"));
 		}

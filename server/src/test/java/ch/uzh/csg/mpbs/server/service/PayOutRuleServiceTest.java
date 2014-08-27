@@ -21,6 +21,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.keys.CustomKeyPair;
 import ch.uzh.csg.mbps.responseobject.PayOutRulesTransferObject;
+import ch.uzh.csg.mbps.server.clientinterface.IPayOutRule;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.PayOutRule;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
@@ -31,6 +32,7 @@ import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.PayOutRuleNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.PayOutRulesAlreadyDefinedException;
@@ -50,7 +52,7 @@ public class PayOutRuleServiceTest {
 	private IUserAccount userAccountService;
 	
 	@Autowired
-	private PayOutRuleService payOutRuleService;
+	private IPayOutRule payOutRuleService;
 	
 	private static boolean initialized = false;
 	private static UserAccount test51;
@@ -67,10 +69,10 @@ public class PayOutRuleServiceTest {
 		UserAccountService.enableTestingMode();
 		
 		if (!initialized) {
-			test51 = new UserAccount("test51", "chuck51@bitcoin.csg.uzh.ch", "asdf");
-			test52 = new UserAccount("test52", "chuck52@bitcoin.csg.uzh.ch", "asdf");
-			test53 = new UserAccount("test53", "chuck53@bitcoin.csg.uzh.ch", "asdf");
-			test54 = new UserAccount("test54", "chuck54@bitcoin.csg.uzh.ch", "asdf");
+			test51 = new UserAccount("test51@https://mbps.csg.uzh.ch", "chuck51@bitcoin.csg.uzh.ch", "asdf");
+			test52 = new UserAccount("test52@https://mbps.csg.uzh.ch", "chuck52@bitcoin.csg.uzh.ch", "asdf");
+			test53 = new UserAccount("test53@https://mbps.csg.uzh.ch", "chuck53@bitcoin.csg.uzh.ch", "asdf");
+			test54 = new UserAccount("test54@https://mbps.csg.uzh.ch", "chuck54@bitcoin.csg.uzh.ch", "asdf");
 
 			KeyPair keypair = KeyHandler.generateKeyPair();
 
@@ -85,7 +87,7 @@ public class PayOutRuleServiceTest {
 		UserAccountService.disableTestingMode();
 	}
 
-	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
+	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		assertTrue(userAccountService.createAccount(userAccount));
 		userAccount = userAccountService.getByUsername(userAccount.getUsername());
 		userAccount.setEmailVerified(true);
@@ -204,7 +206,7 @@ public class PayOutRuleServiceTest {
 	}
 	
 	@Test
-	public void checkDeleteRules() throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, PayOutRulesAlreadyDefinedException, PayOutRuleNotFoundException, InvalidEmailException, EmailAlreadyExistsException {
+	public void checkDeleteRules() throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, PayOutRulesAlreadyDefinedException, PayOutRuleNotFoundException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		createAccountAndVerifyAndReload(test54,BigDecimal.ONE.add(BigDecimal.ONE));
 		UserAccount fromDB = userAccountService.getByUsername(test54.getUsername());
 

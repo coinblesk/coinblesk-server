@@ -12,6 +12,7 @@ import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
 import org.apache.log4j.Logger;
+import org.hibernate.HibernateException;
 import org.springframework.stereotype.Repository;
 
 import ch.uzh.csg.mbps.server.domain.AdminRole;
@@ -460,9 +461,27 @@ public class UserAccountDAO {
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<UserAccount> cq = cb.createQuery(UserAccount.class);
 		Root<UserAccount> root = cq.from(UserAccount.class);
-		Predicate condition = cb.equal(root.get("roles"), role.getCode());
+		Predicate condition = cb.and(cb.equal(root.get("roles"), role.getCode()), cb.equal(root.get("deleted"), false));
 		cq.where(condition);
 		return em.createQuery(cq).getResultList();
 	}
 
+	// TODO: mehmet javadoc
+	/**
+	 * 
+	 * @param role
+	 * @return
+	 */
+	public List<String> getEmailOfAllUsersByRoles(Role role) {
+		
+		@SuppressWarnings("unchecked")
+        List<String> resultWithAliasedBean = em.createQuery(
+				  "SELECT user.email "
+				+ "FROM USER_ACCOUNT user")
+				.setParameter("roles", role)
+				.setParameter("deleted", false)
+				.getResultList();
+		
+		return resultWithAliasedBean;
+	}
 }
