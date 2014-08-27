@@ -28,6 +28,7 @@ import ch.uzh.csg.mbps.server.util.UserRoles.Role;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
@@ -69,14 +70,14 @@ public class UserAccountService implements IUserAccount {
 
 	@Override
 	@Transactional
-	public boolean createAccount(UserAccount userAccount) throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
+	public boolean createAccount(UserAccount userAccount) throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		if (TESTING_MODE)
 			return createAccount(userAccount, "fake-address");
 		else
 			return createAccount(userAccount, getNewPaymentAddress());
 	}
 	
-	private boolean createAccount(UserAccount userAccount, String paymentAddress) throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
+	private boolean createAccount(UserAccount userAccount, String paymentAddress) throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		UserAccount fromDB = null;
 		
 		userAccount.setUsername(userAccount.getUsername().trim());
@@ -90,8 +91,18 @@ public class UserAccountService implements IUserAccount {
 		if (email == null)
 			throw new InvalidEmailException();
 
-		if (!username.matches(Config.USERNAME_REGEX))
+		int splitIndex = username.indexOf(Config.SPLIT_USERNAME);
+		String userName = username.substring(0, splitIndex);
+		String userUrl = username.substring(splitIndex + 1);
+		
+		if(!userName.matches(Config.USERNAME_REGEX))
 			throw new InvalidUsernameException();
+		
+		if (!userUrl.matches(Config.URL_NAME_REGEX))
+			throw new InvalidUrlException();
+		
+//		if (!username.matches(Config.USERNAME_REGEX))
+//			throw new InvalidUsernameException();
 		
 		if (!email.matches(Config.EMAIL_REGEX))
 			throw new InvalidEmailException();

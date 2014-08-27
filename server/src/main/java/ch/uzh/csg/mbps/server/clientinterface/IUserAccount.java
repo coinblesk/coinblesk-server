@@ -13,6 +13,7 @@ import ch.uzh.csg.mbps.server.util.PasswordMatcher;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
@@ -31,8 +32,9 @@ public interface IUserAccount {
 	 * @throws InvalidUsernameException
 	 * @throws InvalidEmailException 
 	 * @throws EmailAlreadyExistsException 
+	 * @throws InvalidUrlException 
 	 */
-	public boolean createAccount(UserAccount userAccount) throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException;
+	public boolean createAccount(UserAccount userAccount) throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException;
 
 	/**
 	 * Returns the UserAccount belonging to the given username.
