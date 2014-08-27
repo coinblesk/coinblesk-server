@@ -20,7 +20,7 @@ import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 
 @Entity(name = "SERVER_TRANSACTION")
 @Table(indexes = {
-		@Index(name = "PAYIN_ADDRESS_INDEX", columnList = "PAYIN_ADDRESS"),
+		@Index(name = "BTC_ADDRESS_INDEX", columnList = "BTC_ADDRESS"),
 		@Index(name = "TX_ID_INDEX_SERVER_TX", columnList = "TX_ID"),
 		@Index(name = "SERVER_URL_INDEX", columnList = "SERVER_URL") })
 public class ServerTransaction {
