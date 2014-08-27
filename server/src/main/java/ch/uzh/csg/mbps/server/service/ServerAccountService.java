@@ -225,7 +225,9 @@ public class ServerAccountService implements IServerAccount {
 	 * @param newLevel
 	 * @throws ServerAccountNotFoundException
 	 */
-	public static void updateTrustLevel(String url, int oldLevel, int newLevel) throws ServerAccountNotFoundException {
+	@Override
+	@Transactional
+	public void updateTrustLevel(String url, int oldLevel, int newLevel) throws ServerAccountNotFoundException {
 		//TODO: check if upgrade or downgrade
 	}
 	
@@ -235,7 +237,9 @@ public class ServerAccountService implements IServerAccount {
 	 * @param oldLimit
 	 * @param newLimit
 	 */
-	public static void updateBalanceLimit(String url, BigDecimal oldLimit, BigDecimal newLimit) {
+	@Override
+	@Transactional
+	public void updateBalanceLimit(String url, BigDecimal oldLimit, BigDecimal newLimit) {
 		//TODO: communicate balance limit asymmetric balance limits
 	}
 }
