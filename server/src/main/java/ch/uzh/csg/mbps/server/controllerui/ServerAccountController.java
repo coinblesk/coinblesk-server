@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
 import ch.uzh.csg.mbps.server.clientinterface.IServerTransaction;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
-import ch.uzh.csg.mbps.server.service.ServerAccountService;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction;
@@ -69,7 +68,7 @@ public class ServerAccountController {
 			@RequestParam(value = "url", required = false) String url,
 			@RequestParam(value = "oldLevel", required = false) int oldLevel,
 			@RequestParam(value = "newLevel", required = false) int newLevel) throws ServerAccountNotFoundException {
-		ServerAccountService.updateTrustLevel(url, oldLevel, newLevel);
+		serverAccountService.updateTrustLevel(url, oldLevel, newLevel);
 	}
 
 	@RequestMapping(value = { "/updateBalanceLimit}" }, method = RequestMethod.GET)
@@ -78,6 +77,6 @@ public class ServerAccountController {
 			@RequestParam(value = "url", required = false) String url,
 			@RequestParam(value = "oldLimit", required = false) BigDecimal oldLimit,
 			@RequestParam(value = "newLimit", required = false) BigDecimal newLimit) throws ServerAccountNotFoundException {
-		ServerAccountService.updateBalanceLimit(url, oldLimit, newLimit);
+		serverAccountService.updateBalanceLimit(url, oldLimit, newLimit);
 	}
 }

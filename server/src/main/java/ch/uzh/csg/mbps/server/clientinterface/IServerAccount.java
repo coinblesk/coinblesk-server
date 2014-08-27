@@ -1,5 +1,6 @@
 package ch.uzh.csg.mbps.server.clientinterface;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.hibernate.HibernateException;
@@ -81,4 +82,8 @@ public interface IServerAccount {
 	public long getAccountsCount();
 
 	public boolean checkPredefinedDeleteArguments(String url) throws ServerAccountNotFoundException, BalanceNotZeroException, HibernateException;
+
+	public void updateTrustLevel(String url, int oldLevel, int newLevel) throws ServerAccountNotFoundException;
+
+	public void updateBalanceLimit(String url, BigDecimal oldLimit, BigDecimal newLimit);
 }

@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import ch.uzh.csg.mbps.model.ServerAccount;
 import ch.uzh.csg.mbps.responseobject.ServerAccountTransferObject;
 import ch.uzh.csg.mbps.responseobject.ServerAccountsRequestObject;
-import ch.uzh.csg.mbps.server.service.ServerAccountService;
+import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 
 /**
@@ -26,7 +26,7 @@ public class ServerAccountsController {
 	private static Logger LOGGER = Logger.getLogger(ServerAccountsController.class);
 
 	@Autowired
-	private ServerAccountService serverAccountService;
+	private IServerAccount serverAccountService;
 	/**
 	 * Returns server accounts that have trust relation with the server. If a
 	 * parameter is negative, server accounts are not returned. If a page number

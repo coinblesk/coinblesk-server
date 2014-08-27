@@ -9,9 +9,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.ServerPayOutRule;
 import ch.uzh.csg.mbps.server.service.ServerPayOutRuleService;
-import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerPayOutRuleNotFoundException;
@@ -40,7 +40,7 @@ public class ServerPayOutRuleController {
 	@Autowired
 	private ServerPayOutRuleService serverPayOutRuleService;
 	@Autowired
-	private UserAccountService userAccountService;
+	private IUserAccount userAccountService;
 	
 	/**
 	 * Creates one/multiple new ServerPayOutRules.
