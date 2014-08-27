@@ -21,6 +21,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.keys.CustomKeyPair;
 import ch.uzh.csg.mbps.responseobject.PayOutRulesTransferObject;
+import ch.uzh.csg.mbps.server.clientinterface.IPayOutRule;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.PayOutRule;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
@@ -50,7 +51,7 @@ public class PayOutRuleServiceTest {
 	private IUserAccount userAccountService;
 	
 	@Autowired
-	private PayOutRuleService payOutRuleService;
+	private IPayOutRule payOutRuleService;
 	
 	private static boolean initialized = false;
 	private static UserAccount test51;

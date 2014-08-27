@@ -18,10 +18,10 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import ch.uzh.csg.mbps.model.HistoryPayOutTransaction;
+import ch.uzh.csg.mbps.server.clientinterface.IPayOutTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.PayOutTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
-import ch.uzh.csg.mbps.server.service.PayOutTransactionService;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
@@ -43,7 +43,7 @@ public class PayOutTransactionServiceTest {
 	private IUserAccount userAccountService;
 	
 	@Autowired
-	private PayOutTransactionService payOutTransactionService;
+	private IPayOutTransaction payOutTransactionService;
 	
 	private static UserAccount test71;
 

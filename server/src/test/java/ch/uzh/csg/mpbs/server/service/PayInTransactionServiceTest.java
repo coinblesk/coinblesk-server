@@ -21,11 +21,11 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.keys.CustomKeyPair;
 import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
+import ch.uzh.csg.mbps.server.clientinterface.IPayInTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.PayInTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
-import ch.uzh.csg.mbps.server.service.PayInTransactionService;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Config;
@@ -54,7 +54,7 @@ public class PayInTransactionServiceTest {
 	private IUserAccount userAccountService;
 	
 	@Autowired
-	private PayInTransactionService payInTransactionService;
+	private IPayInTransaction payInTransactionService;
 
 	@Before
 	public void setUp() throws Exception {

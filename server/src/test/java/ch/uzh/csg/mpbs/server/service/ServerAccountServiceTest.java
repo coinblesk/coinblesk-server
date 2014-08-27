@@ -40,8 +40,7 @@ import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
 		"classpath:context.xml",
-		"classpath:test-database.xml",
-		"classpath:test-context.xml"})
+		"classpath:test-database.xml"})
 
 @DbUnitConfiguration(databaseConnection="dataSource")
 @TestExecutionListeners({ 
