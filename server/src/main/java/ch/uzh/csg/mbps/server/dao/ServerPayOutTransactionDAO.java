@@ -16,7 +16,6 @@ import org.springframework.stereotype.Repository;
 
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.ServerPayOutTransaction;
-import ch.uzh.csg.mbps.server.service.ServerAccountService;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.TransactionException;
@@ -37,8 +36,6 @@ public class ServerPayOutTransactionDAO {
 	@Autowired
 	private ServerAccountDAO serverAccountDAO;
 	
-	@Autowired
-	private ServerAccountService serverAccountService;
 	
 	/**
 	 * Returns defined amount of {@link ServerPayOutTransaction}s as an ArrayList. 
@@ -154,8 +151,6 @@ public class ServerPayOutTransactionDAO {
 	 * @throws ServerAccountNotFoundException 
 	 */
 	public List<HistoryServerPayOutTransaction> getLast5ServerAccountTransactions(String url) throws ServerAccountNotFoundException {
-		serverAccountService.getByUrl(url);
-		
 		@SuppressWarnings("unchecked")
 		List<HistoryServerPayOutTransaction> resultWithAliasedBean = eManager.createQuery(""
 				  + "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerPayOutTransaction((pot.timestamp, pot.amount, pot.payout_address, pot.server_account_id) "
