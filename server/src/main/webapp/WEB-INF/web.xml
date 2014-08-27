@@ -18,9 +18,9 @@
 		<param-name>contextConfigLocation</param-name>
 		<param-value>
 		    /WEB-INF/security.xml
-		    /WEB-INF/${MBPS_ENV}database.xml
+		    /WEB-INF/context-${MBPS_ENV}.xml
+		    /WEB-INF/database-${MBPS_ENV}.xml
 		    /WEB-INF/cron.xml
-		    /WEB-INF/${MBPS_ENV}context.xml
 		</param-value>
 	</context-param>
 	

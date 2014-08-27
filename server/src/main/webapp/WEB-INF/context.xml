@@ -42,4 +42,11 @@
 	    <property name="listenTransactions" value="true" />
 	</bean>
 	
+	<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="ignoreResourceNotFound" value="true" />
+ 		<property name="location">
+			<value>/WEB-INF/database-${MBPS_ENV}.properties</value>
+		</property>
+	</bean>
+	
 </beans>

@@ -312,6 +312,7 @@
 							<addClasspath>true</addClasspath>
 						</manifest>
 					</archive>
+					<packagingExcludes>${excludes}</packagingExcludes>
 				</configuration>
 			</plugin>
 

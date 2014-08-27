@@ -5,6 +5,7 @@
         http://www.springframework.org/schema/beans     
         http://www.springframework.org/schema/beans/spring-beans-3.2.xsd">
 	
+	<import resource="context.xml" />
 	<bean id="dummyData" class="ch.uzh.csg.mbps.server.local.DummyData" />
 
 </beans>

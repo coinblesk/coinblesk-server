@@ -11,6 +11,8 @@
       http://www.springframework.org/schema/util 
       http://www.springframework.org/schema/util/spring-util-3.2.xsd">
 
+	<import resource="database.xml" />
+	
 	<bean id="entityManagerFactory"
 		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
 		<property name="persistenceUnitName" value="localdb" />
@@ -39,14 +41,5 @@
 		<property name="username" value="sa" />
 		<property name="password" value="" />
 	</bean>
-	
-	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
-        <property name="entityManagerFactory" ref="entityManagerFactory" />
-    </bean>
-    
-	<tx:annotation-driven transaction-manager="transactionManager"/>
-	
-	<bean id="persistenceExceptionTranslationPostProcessor"
-      class="org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor" />
     
 </beans>
