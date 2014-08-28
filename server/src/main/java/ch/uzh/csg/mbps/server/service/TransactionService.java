@@ -1,8 +1,12 @@
 package ch.uzh.csg.mbps.server.service;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 
+import net.minidev.json.parser.ParseException;
+
+import org.apache.log4j.Logger;
 import org.hibernate.HibernateException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,13 +27,18 @@ import ch.uzh.csg.mbps.server.dao.UserPublicKeyDAO;
 import ch.uzh.csg.mbps.server.domain.DbTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
+import ch.uzh.csg.mbps.server.util.BitstampController;
 import ch.uzh.csg.mbps.server.util.Constants;
+import ch.uzh.csg.mbps.server.util.Emailer;
 import ch.uzh.csg.mbps.server.util.exceptions.PayOutRuleNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.TransactionException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.util.Converter;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
+import com.xeiam.xchange.ExchangeException;
+import com.xeiam.xchange.NotAvailableFromExchangeException;
+import com.xeiam.xchange.NotYetImplementedForExchangeException;
 
 /**
  * Service class for {@link DbTransaction} between two {@link UserAccount}s.
@@ -46,6 +55,7 @@ public class TransactionService implements ITransaction {
 	public static final String PAYMENT_REFUSE = "The server refused the payment.";
 	public static final String NOT_AUTHENTICATED_USER = "Only the authenticated user can act as the payer in the payment.";
 
+	private static Logger LOGGER = Logger.getLogger(TransactionService.class);
 
 	@Autowired 
 	private TransactionDAO transactionDAO;
@@ -178,6 +188,7 @@ public class TransactionService implements ITransaction {
 				}
 			}
 			transactionDAO.createTransaction(dbTransaction, payerUserAccount, payeeUserAccount);
+			checkForMensaOrExchangePointTransactions(dbTransaction, payerUserAccount, payeeUserAccount);
 		} catch (HibernateException e) {
 			throw new TransactionException(HIBERNATE_ERROR);
 		}
@@ -208,6 +219,30 @@ public class TransactionService implements ITransaction {
 		}
 
 		return signedResponse;
+	}
+
+	//TODO: for Mensa Test Run only, delete afterwards
+	private void checkForMensaOrExchangePointTransactions(DbTransaction dbTransaction, UserAccount payerUserAccount, UserAccount payeeUserAccount) {
+		String transactionID = "";
+		if (payerUserAccount.getUsername().equals("ExchangePoint") || payerUserAccount.getUsername().equals("MensaBinz")) {
+			try {
+				transactionID = BitstampController.buyBTC(dbTransaction.getAmount());
+			} catch (ExchangeException | NotAvailableFromExchangeException
+					| NotYetImplementedForExchangeException | IOException| ParseException e) {
+				LOGGER.error("Bitstamp Transaction Error: failed to do buyBTC limit order (ID: " + transactionID + "): " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
+				Emailer.send("bitcoin@ifi.uzh.ch", "Bitstamp Transaction Error", "Bitstamp Transaction Error: failed to do buyBTC limit order: " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
+			}
+		}
+		
+		if (payeeUserAccount.getUsername().equals("MensaBinz")) {
+			try {
+				transactionID = BitstampController.sellBTC(dbTransaction.getAmount());
+			} catch (ExchangeException | NotAvailableFromExchangeException
+					| NotYetImplementedForExchangeException | IOException e) {
+				LOGGER.error("Bitstamp Transaction Error: failed to do sellBTC limit order (ID: " + transactionID + "): " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
+				Emailer.send("bitcoin@ifi.uzh.ch", "Bitstamp Transaction Error", "Bitstamp Transaction Error: failed to do sellBTC limit order: " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
+			}
+		}
 	}
 
 	@Transactional(readOnly = true)
