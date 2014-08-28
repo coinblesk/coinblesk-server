@@ -61,10 +61,10 @@ public class TransactionService implements ITransaction {
 	private TransactionDAO transactionDAO;
 	@Autowired 
 	private UserPublicKeyDAO userPublicKeyDAO;
-	
+
 	@Autowired
 	private PayOutRuleService payOutRuleService;
-	
+
 	@Autowired
 	private IUserAccount userAccountService;
 
@@ -102,20 +102,20 @@ public class TransactionService implements ITransaction {
 	public ServerPaymentResponse createTransaction(String authenticatedUser, ServerPaymentRequest serverPaymentRequest) throws TransactionException, UserAccountNotFoundException {
 		if (authenticatedUser == null || authenticatedUser.isEmpty() || serverPaymentRequest == null)
 			throw new TransactionException(PAYMENT_REFUSE);
-		
+
 		int numberOfSignatures = serverPaymentRequest.getNofSignatures();
 		PaymentRequest payerRequest = serverPaymentRequest.getPaymentRequestPayer();
 		PaymentRequest payeeRequest = serverPaymentRequest.getPaymentRequestPayee();
-		
+
 		if (Converter.getBigDecimalFromLong(payerRequest.getAmount()).compareTo(BigDecimal.ZERO) <= 0)
 			throw new TransactionException(NEGATIVE_AMOUNT);
-		
+
 		String payerUsername = payerRequest.getUsernamePayer();
 		String payeeUsername = payerRequest.getUsernamePayee();
-		
+
 		if (payerUsername.equals(payeeUsername))
 			throw new TransactionException(PAYMENT_REFUSE);
-		
+
 		/*
 		 * Assure that only the authenticated user can act as the payer!
 		 * Otherwise, the send money use-case is vulnerable to send money to
@@ -123,7 +123,7 @@ public class TransactionService implements ITransaction {
 		 */
 		if (numberOfSignatures == 1 && !payerUsername.equals(authenticatedUser))
 			throw new TransactionException(NOT_AUTHENTICATED_USER);
-		
+
 		UserAccount payerUserAccount = null;
 		UserAccount payeeUserAccount = null;
 		try {
@@ -132,7 +132,7 @@ public class TransactionService implements ITransaction {
 		} catch (UserAccountNotFoundException e) {
 			throw new TransactionException(PAYMENT_REFUSE);
 		}
-		
+
 		try {
 			if (!payerRequest.verify(KeyHandler.decodePublicKey(userPublicKeyDAO.getUserPublicKey(payerUserAccount.getId(), (byte) payerRequest.getKeyNumber()).getPublicKey()))) {
 				throw new TransactionException(PAYMENT_REFUSE);
@@ -140,7 +140,7 @@ public class TransactionService implements ITransaction {
 		} catch (Exception e) {
 			throw new TransactionException(PAYMENT_REFUSE);
 		}
-		
+
 		if (numberOfSignatures == 2) {
 			if (!payerRequest.requestsIdentic(payeeRequest)) {
 				throw new TransactionException(PAYMENT_REFUSE);
@@ -153,10 +153,10 @@ public class TransactionService implements ITransaction {
 				throw new TransactionException(PAYMENT_REFUSE);
 			}
 		}
-		
+
 		if ((payerUserAccount.getBalance().subtract(Converter.getBigDecimalFromLong(payerRequest.getAmount()))).compareTo(BigDecimal.ZERO) < 0)
 			throw new TransactionException(BALANCE);
-		
+
 		if (transactionDAO.exists(payerRequest.getUsernamePayer(), payerRequest.getUsernamePayee(), payerRequest.getCurrency(), payerRequest.getAmount(), payerRequest.getTimestamp())) {
 			try {
 				PaymentResponse paymentResponsePayer = new PaymentResponse(
@@ -177,7 +177,7 @@ public class TransactionService implements ITransaction {
 				throw new TransactionException(INTERNAL_ERROR);
 			}
 		}
-		
+
 		DbTransaction dbTransaction = null;
 		try {
 			dbTransaction = new DbTransaction(payerRequest);
@@ -221,39 +221,73 @@ public class TransactionService implements ITransaction {
 		return signedResponse;
 	}
 
+	private static BigDecimal openSellOrders = BigDecimal.ZERO;
+	private static BigDecimal openBuyOrders = BigDecimal.ZERO;
+
 	//TODO: for Mensa Test Run only, delete afterwards
+	//TODO simon: test
 	private void checkForMensaOrExchangePointTransactions(DbTransaction dbTransaction, UserAccount payerUserAccount, UserAccount payeeUserAccount) {
+		BigDecimal amount = dbTransaction.getAmount();
 		String transactionID = "";
+
 		if (payerUserAccount.getUsername().equals("ExchangePoint") || payerUserAccount.getUsername().equals("MensaBinz")) {
+			BigDecimal totalAmountBTC = amount.add(openBuyOrders);
+			BigDecimal totalAmountUSD = BigDecimal.ZERO;
 			try {
-				transactionID = BitstampController.buyBTC(dbTransaction.getAmount());
+				totalAmountUSD = totalAmountBTC.multiply(BitstampController.getExchangeRate());
 			} catch (ExchangeException | NotAvailableFromExchangeException
-					| NotYetImplementedForExchangeException | IOException| ParseException e) {
-				LOGGER.error("Bitstamp Transaction Error: failed to do buyBTC limit order (ID: " + transactionID + "): " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
-				Emailer.send("bitcoin@ifi.uzh.ch", "Bitstamp Transaction Error", "Bitstamp Transaction Error: failed to do buyBTC limit order: " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
+					| NotYetImplementedForExchangeException | IOException e1) {
+				LOGGER.error("Bitstamp Transaction Error: Couldn't get Bitstamp ExchangeRate.");
+			}
+
+			if (totalAmountUSD.compareTo(new BigDecimal(5)) == 1) {
+				try {
+					transactionID = BitstampController.buyBTC(totalAmountBTC);
+					LOGGER.info("Bitstamp Transaction Successful: A Limitorder to buy " + totalAmountBTC + " BTC has been placed on Bitstamp with ID: " + transactionID);
+					openBuyOrders = BigDecimal.ZERO;
+				} catch (ExchangeException | NotAvailableFromExchangeException
+						| NotYetImplementedForExchangeException | IOException| ParseException e) {
+					LOGGER.error("Bitstamp Transaction Error: failed to do buyBTC limit order (ID: " + transactionID + "): " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
+					Emailer.send("simon.kaeser@uzh.ch", "Bitstamp Transaction Error", "Bitstamp Transaction Error: failed to do buyBTC limit order: " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
+					openBuyOrders = openBuyOrders.add(amount);
+				}
 			}
 		}
-		
-		if (payeeUserAccount.getUsername().equals("MensaBinz")) {
+
+		if (payeeUserAccount.getUsername().equals("MensaBinz") || payeeUserAccount.getUsername().equals("ExchangePoint")) {
+			BigDecimal totalAmountBTC = amount.add(openSellOrders);
+			BigDecimal totalAmountUSD = BigDecimal.ZERO;
 			try {
-				transactionID = BitstampController.sellBTC(dbTransaction.getAmount());
+				totalAmountUSD = totalAmountBTC.multiply(BitstampController.getExchangeRate());
 			} catch (ExchangeException | NotAvailableFromExchangeException
-					| NotYetImplementedForExchangeException | IOException e) {
-				LOGGER.error("Bitstamp Transaction Error: failed to do sellBTC limit order (ID: " + transactionID + "): " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
-				Emailer.send("bitcoin@ifi.uzh.ch", "Bitstamp Transaction Error", "Bitstamp Transaction Error: failed to do sellBTC limit order: " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
+					| NotYetImplementedForExchangeException | IOException e1) {
+				LOGGER.error("Bitstamp Transaction Error: Couldn't get Bitstamp ExchangeRate.");
+			}
+
+			if (totalAmountUSD.compareTo(new BigDecimal(5)) == 1) {
+				try {
+					transactionID = BitstampController.sellBTC(totalAmountBTC);
+					LOGGER.info("Bitstamp Transaction Successful: A Limitorder to sell " + totalAmountBTC + " BTC has been placed on Bitstamp with ID: " + transactionID);
+					openSellOrders = BigDecimal.ZERO;
+				} catch (ExchangeException | NotAvailableFromExchangeException
+						| NotYetImplementedForExchangeException | IOException e) {
+					LOGGER.error("Bitstamp Transaction Error: failed to do sellBTC limit order (ID: " + transactionID + "): " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
+					Emailer.send("simon.kaeser@uzh.ch", "Bitstamp Transaction Error", "Bitstamp Transaction Error: failed to do sellBTC limit order: " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
+					openSellOrders = openSellOrders.add(amount);
+				}
 			}
 		}
 	}
 
 	@Transactional(readOnly = true)
 	public List<HistoryTransaction> getAll() {
-	    return transactionDAO.getAll();
-    }
+		return transactionDAO.getAll();
+	}
 
 	@Transactional
 	public void createTransaction(DbTransaction tx, UserAccount fromDB, UserAccount fromDB2) {
 		transactionDAO.createTransaction(tx, fromDB, fromDB2);
-	    
-    }
+
+	}
 
 }
