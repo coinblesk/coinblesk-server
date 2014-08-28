@@ -315,42 +315,17 @@
 					<packagingExcludes>${excludes}</packagingExcludes>
 				</configuration>
 			</plugin>
-
+			
+			<!-- if you see ssl exceptions add the bitcoin cert (password is changeit): keytool -import -alias bitcoin.csg.uzh.ch.crt -keystore cacerts -file bitcoin.csg.uzh.ch.crt -->
 			<plugin>
-				<groupId>org.codehaus.cargo</groupId>
-				<artifactId>cargo-maven2-plugin</artifactId>
-				<version>1.4.8</version>
-				<configuration>
-
-					<container>
-						<containerId>tomcat7x</containerId>
-						<type>remote</type>
-					</container>
-
-					<configuration>
-						<type>runtime</type>
-						<properties>
-							<cargo.hostname>${remote.hostname}</cargo.hostname>
-							<cargo.protocol>${remote.protocol}</cargo.protocol>
-							<cargo.servlet.port>${remote.port}</cargo.servlet.port>
-							<cargo.remote.username>${remote.user}</cargo.remote.username>
-							<cargo.remote.password>${remote.pass}</cargo.remote.password>
-						</properties>
-					</configuration>
-					<deployables>
-						<deployable>
-							<groupId>${project.groupId}</groupId>
-							<artifactId>${project.artifactId}</artifactId>
-							<type>war</type>
-							<properties>
-								<context>${remote.context}</context>
-							</properties>
-						</deployable>
-					</deployables>
-					<deployer>
-						<type>remote</type>
-					</deployer>
-				</configuration>
+  				<groupId>org.apache.tomcat.maven</groupId>
+				<artifactId>tomcat7-maven-plugin</artifactId>
+				<version>2.2</version>
+  				<configuration>
+    				<url>${server}</url>
+    				<server>${deployment}</server>
+    				<path>/server</path>
+  				</configuration>
 			</plugin>
 
 		</plugins>
