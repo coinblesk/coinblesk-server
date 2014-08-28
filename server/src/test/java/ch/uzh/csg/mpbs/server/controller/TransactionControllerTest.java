@@ -53,6 +53,7 @@ import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
@@ -105,19 +106,19 @@ public class TransactionControllerTest {
 		
 		if (!initialized) {
 			mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();
-			test1_1 = new UserAccount("test1_1", "test1_1@bitcoin.csg.uzh.ch", password);
-			test1_2 = new UserAccount("test1_2", "test1_2@bitcoin.csg.uzh.ch", password);
-			test2_1 = new UserAccount("test2_1", "test2_1@bitcoin.csg.uzh.ch", password);
-			test2_2 = new UserAccount("test2_2", "test2_2@bitcoin.csg.uzh.ch", password);
-			test3_1 = new UserAccount("test3_1", "test3_1@bitcoin.csg.uzh.ch", password);
-			test3_2 = new UserAccount("test3_2", "test3_2@bitcoin.csg.uzh.ch", password);
-			test4_1 = new UserAccount("test4_1", "test4_1@bitcoin.csg.uzh.ch", password);
-			test4_2 = new UserAccount("test4_2", "test4_2@bitcoin.csg.uzh.ch", password);
-			test5_1 = new UserAccount("test5_1", "test5_1@bitcoin.csg.uzh.ch", password);
-			test6_1 = new UserAccount("test6_1", "test6_1@bitcoin.csg.uzh.ch", password);
-			test6_2 = new UserAccount("test6_2", "test6_2@bitcoin.csg.uzh.ch", password);
-			test7_1 = new UserAccount("test7_1", "test7_1@bitcoin.csg.uzh.ch", password);
-			test8_1 = new UserAccount("test8_1", "test8_1@bitcoin.csg.uzh.ch", password);
+			test1_1 = new UserAccount("test1_1@https://mbps.csg.uzh.ch", "test1_1@bitcoin.csg.uzh.ch", password);
+			test1_2 = new UserAccount("test1_2@https://mbps.csg.uzh.ch", "test1_2@bitcoin.csg.uzh.ch", password);
+			test2_1 = new UserAccount("test2_1@https://mbps.csg.uzh.ch", "test2_1@bitcoin.csg.uzh.ch", password);
+			test2_2 = new UserAccount("test2_2@https://mbps.csg.uzh.ch", "test2_2@bitcoin.csg.uzh.ch", password);
+			test3_1 = new UserAccount("test3_1@https://mbps.csg.uzh.ch", "test3_1@bitcoin.csg.uzh.ch", password);
+			test3_2 = new UserAccount("test3_2@https://mbps.csg.uzh.ch", "test3_2@bitcoin.csg.uzh.ch", password);
+			test4_1 = new UserAccount("test4_1@https://mbps.csg.uzh.ch", "test4_1@bitcoin.csg.uzh.ch", password);
+			test4_2 = new UserAccount("test4_2@https://mbps.csg.uzh.ch", "test4_2@bitcoin.csg.uzh.ch", password);
+			test5_1 = new UserAccount("test5_1@https://mbps.csg.uzh.ch", "test5_1@bitcoin.csg.uzh.ch", password);
+			test6_1 = new UserAccount("test6_1@https://mbps.csg.uzh.ch", "test6_1@bitcoin.csg.uzh.ch", password);
+			test6_2 = new UserAccount("test6_2@https://mbps.csg.uzh.ch", "test6_2@bitcoin.csg.uzh.ch", password);
+			test7_1 = new UserAccount("test7_1@https://mbps.csg.uzh.ch", "test7_1@bitcoin.csg.uzh.ch", password);
+			test8_1 = new UserAccount("test8_1@https://mbps.csg.uzh.ch", "test8_1@bitcoin.csg.uzh.ch", password);
 			
 			KeyPair keypair = KeyHandler.generateKeyPair();
 			
@@ -492,7 +493,7 @@ public class TransactionControllerTest {
 		return session;
 	}
 	
-	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
+	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		assertTrue(userAccountService.createAccount(userAccount));
 		userAccount = userAccountService.getByUsername(userAccount.getUsername());
 		userAccount.setEmailVerified(true);

@@ -1,23 +1,34 @@
 package ch.uzh.csg.mbps.server.util.web;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import ch.uzh.csg.mbps.server.domain.ServerPayOutRule;
 
 public class ServerPayOutRulesTransferObject {
-	private ArrayList<ServerPayOutRule> serverPayOutRulesList;
-	private String message;
-	
-	public ServerPayOutRulesTransferObject(){
-		serverPayOutRulesList = new ArrayList<ServerPayOutRule>();
-		message = "";
+	public enum Status {
+		REQUEST, REPLY_SUCCESS, REPLY_FAILED
 	}
 	
-	public ArrayList<ServerPayOutRule> getPayOutRulesList() {
+	private Status status = Status.REQUEST;
+	private List<ServerPayOutRule> serverPayOutRulesList;
+	private String message;
+
+	public ServerPayOutRulesTransferObject(){
+	}
+	
+	public boolean isSuccessful() {
+		return status == Status.REPLY_SUCCESS;
+	}
+
+	public void setSuccessful(boolean successful) {
+		this.status = successful ? Status.REPLY_SUCCESS : Status.REPLY_FAILED;
+	}
+	
+	public List<ServerPayOutRule> getPayOutRulesList() {
 		return serverPayOutRulesList;
 	}
 
-	public void setPayOutRulesList(ArrayList<ServerPayOutRule> list) {
+	public void setPayOutRulesList(List<ServerPayOutRule> list) {
 		this.serverPayOutRulesList = list;
 	}
 	

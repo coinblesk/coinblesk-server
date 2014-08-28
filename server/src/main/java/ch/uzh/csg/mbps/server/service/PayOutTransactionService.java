@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.mbps.model.HistoryPayOutTransaction;
 import ch.uzh.csg.mbps.responseobject.TransferObject;
+import ch.uzh.csg.mbps.server.clientinterface.IPayOutTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.dao.PayOutTransactionDAO;
 import ch.uzh.csg.mbps.server.domain.PayOutTransaction;
@@ -27,7 +28,7 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
  *
  */
 @Service
-public class PayOutTransactionService {
+public class PayOutTransactionService implements IPayOutTransaction {
 	
 	
 	@Autowired 
@@ -35,44 +36,21 @@ public class PayOutTransactionService {
 	@Autowired
 	private IUserAccount userAccountService;
 
-	/**
-	 * Returns history of {@link PayOutTransaction}s of {@link UserAccount} with username. Only
-	 * the Transactions defined by page are returned, not all {@link PayOutTransaction}s.
-	 * 
-	 * @param username
-	 * @param page
-	 * @return ArrayListy<PayOutTransaction>
-	 * @throws UserAccountNotFoundException
-	 */
+	@Override
 	@Transactional(readOnly = true)
 	public List<HistoryPayOutTransaction> getHistory(String username, int page) throws UserAccountNotFoundException {
 		UserAccount user = userAccountService.getByUsername(username);
 		return payOutTransactionDAO.getHistory(user, page);
 	}
 	
-	/**
-	 * Counts and returns number of {@link PayOutTransaction}s which are saved in the DB
-	 * for {@link UserAccount} with username.
-	 * 
-	 * @param username
-	 * @return number of PayOutTransaction
-	 * @throws UserAccountNotFoundException
-	 */
+	@Override
 	@Transactional(readOnly = true)
 	public long getHistoryCount(String username) throws UserAccountNotFoundException {
 		UserAccount user = userAccountService.getByUsername(username);
 		return payOutTransactionDAO.getHistoryCount(user);
 	}
 
-	/**
-	 * Creates a new {@link PayOutTransaction} for {@link UserAccount} with username.
-	 * 
-	 * @param username
-	 * @param pot PayOutTransaction
-	 * @return CustomResponseObject with information about success/non success of creation and notification message.
-	 * @throws BitcoinException
-	 * @throws UserAccountNotFoundException
-	 */
+	@Override
 	@Transactional
 	public TransferObject createPayOutTransaction(String username, BigDecimal amount, String address) throws BitcoinException, UserAccountNotFoundException {
 		TransferObject transferObject = new TransferObject();
@@ -127,12 +105,7 @@ public class PayOutTransactionService {
 		}
 	}
 
-	/**
-	 * Checks if {@link PayOutTransaction} which has min-confirmations from the Bitcoin
-	 * network is already verified. If no it set isVerified to true.
-	 * 
-	 * @param transaction
-	 */
+	@Override
 	@Transactional
 	public void check(Transaction transaction) {
 		PayOutTransaction pot = new PayOutTransaction(transaction);
@@ -142,20 +115,14 @@ public class PayOutTransactionService {
 		}	
 	}
 
-	/**
-	 * Returns five last {@link PayOutTransaction}s for {@link UserAccount}
-	 * specified by given username.
-	 * 
-	 * @param username
-	 * @return ArrayListy<PayOutTransaction>
-	 * @throws UserAccountNotFoundException
-	 */
+	@Override
 	@Transactional(readOnly = true)
 	public List<HistoryPayOutTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
 		UserAccount user = userAccountService.getByUsername(username);
 		return payOutTransactionDAO.getLast5Transactions(user);
 	}
 
+	@Override
 	@Transactional
 	public void createPayOutTransaction(PayOutTransaction tx) throws UserAccountNotFoundException {
 		payOutTransactionDAO.createPayOutTransaction(tx);

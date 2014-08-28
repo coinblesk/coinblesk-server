@@ -74,8 +74,8 @@ public class TransactionServiceTest {
 	
 	@Test
 	public void testCreateTransaction() throws Exception {
-		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_1", "TDAOT_1@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.add(new BigDecimal("1.00000000")));
-		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_2", "TDAOT_2@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
+		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_1@https://mbps.csg.uzh.ch", "TDAOT_1@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.add(new BigDecimal("1.00000000")));
+		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_2@https://mbps.csg.uzh.ch", "TDAOT_2@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
 		
 		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
 		KeyPair payeeKeyPair = KeyHandler.generateKeyPair();
@@ -139,8 +139,8 @@ public class TransactionServiceTest {
 	
 	@Test
 	public void testCreateDirectSendTransaction() throws Exception {
-		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_3", "TDAOT_3@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.add(new BigDecimal("1.00000000")));
-		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_4", "TDAOT_4@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
+		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_3@https://mbps.csg.uzh.ch", "TDAOT_3@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.add(new BigDecimal("1.00000000")));
+		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_4@https://mbps.csg.uzh.ch", "TDAOT_4@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
 		
 		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
 	
@@ -187,8 +187,8 @@ public class TransactionServiceTest {
 	
 	@Test
 	public void testCreateTransaction_FailDuplicateRequest() throws Exception {
-		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_5", "TDAOT_5@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.multiply(new BigDecimal(3)));
-		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_6", "TDAOT_6@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
+		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_5@https://mbps.csg.uzh.ch", "TDAOT_5@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.multiply(new BigDecimal(3)));
+		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_6@https://mbps.csg.uzh.ch", "TDAOT_6@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
 		
 		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
 		byte keyNumberPayer = userAccountService.saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
@@ -256,8 +256,8 @@ public class TransactionServiceTest {
 	
 	@Test
 	public void testCreateTransaction_FailNegativeBalance() throws Exception {
-		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_7", "TDAOT_7@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.subtract(new BigDecimal(1)));
-		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_8", "TDAOT_8@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
+		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_7@https://mbps.csg.uzh.ch", "TDAOT_7@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.subtract(new BigDecimal(1)));
+		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_8@https://mbps.csg.uzh.ch", "TDAOT_8@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
 		
 		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
 		byte keyNumberPayer = userAccountService.saveUserPublicKey(payerAccount.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(payerKeyPair.getPublic()));
@@ -300,8 +300,8 @@ public class TransactionServiceTest {
 	
 	@Test
 	public void testCreateTransaction_FailInvalidSignature() throws Exception {
-		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_9", "TDAOT_9@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT);
-		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_10", "TDAOT_10@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
+		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_9@https://mbps.csg.uzh.ch", "TDAOT_9@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT);
+		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_10@https://mbps.csg.uzh.ch", "TDAOT_10@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
 		
 		KeyPair payerKeyPair = KeyHandler.generateKeyPair();
 		
@@ -342,8 +342,8 @@ public class TransactionServiceTest {
 	
 	@Test
 	public void testGetHistory() throws Exception {
-		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_11", "TDAOT_11@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.multiply(new BigDecimal(4)));
-		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_12", "TDAOT_12@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
+		UserAccount payerAccount = createAccountAndVerifyAndReload("TDAOT_11@https://mbps.csg.uzh.ch", "TDAOT_11@bitcoin.csg.uzh.ch", "my-password", TRANSACTION_AMOUNT.multiply(new BigDecimal(4)));
+		UserAccount payeeAccount = createAccountAndVerifyAndReload("TDAOT_12@https://mbps.csg.uzh.ch", "TDAOT_12@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
 		
 		KeyPair keyPairPayer = KeyHandler.generateKeyPair();
 		KeyPair keyPairPayee = KeyHandler.generateKeyPair();
@@ -406,7 +406,7 @@ public class TransactionServiceTest {
 		assertEquals(2, nofTransactionsPayee);
 		
 		
-		UserAccount account3 = createAccountAndVerifyAndReload("TDAOT_13", "TDAOT_13@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
+		UserAccount account3 = createAccountAndVerifyAndReload("TDAOT_13@https://mbps.csg.uzh.ch", "TDAOT_13@bitcoin.csg.uzh.ch", "my-password", BigDecimal.ZERO);
 		KeyPair keyPairAccount3 = KeyHandler.generateKeyPair();
 		
 		byte keyNumberAccount3 = userAccountService.saveUserPublicKey(account3.getId(), PKIAlgorithm.DEFAULT, KeyHandler.encodePublicKey(keyPairAccount3.getPublic()));
@@ -435,20 +435,20 @@ public class TransactionServiceTest {
 		request = new ServerPaymentRequest(paymentRequestPayer, paymentRequestPayee);
 		transactionService.createTransaction(payerAccount.getUsername(), request);
 		
-		int nofTransactions11 = transactionService.getHistory("TDAOT_11", 0).size();
+		int nofTransactions11 = transactionService.getHistory("TDAOT_11@https://mbps.csg.uzh.ch", 0).size();
 		assertEquals(3, nofTransactions11);
 		
-		int nofTransactions12 = transactionService.getHistory("TDAOT_12", 0).size();
+		int nofTransactions12 = transactionService.getHistory("TDAOT_12@https://mbps.csg.uzh.ch", 0).size();
 		assertEquals(2, nofTransactions12);
 		
-		int nofTransactions13 = transactionService.getHistory("TDAOT_13", 0).size();
+		int nofTransactions13 = transactionService.getHistory("TDAOT_13@https://mbps.csg.uzh.ch", 0).size();
 		assertEquals(1, nofTransactions13);
 	}
 	
 	@Test
 	public void testGetHistory_testMaximumResult() throws Exception {
-		UserAccount fromDB = createAccountAndVerifyAndReload("TDAOT_14", "TDAOT_14@bitcoin.csg.uzh.ch", "my-password", new BigDecimal("0.0"));
-		UserAccount fromDB2 = createAccountAndVerifyAndReload("TDAOT_15", "TDAOT_15@bitcoin.csg.uzh.ch", "my-password", new BigDecimal("0.0"));
+		UserAccount fromDB = createAccountAndVerifyAndReload("TDAOT_14@https://mbps.csg.uzh.ch", "TDAOT_14@bitcoin.csg.uzh.ch", "my-password", new BigDecimal("0.0"));
+		UserAccount fromDB2 = createAccountAndVerifyAndReload("TDAOT_15@https://mbps.csg.uzh.ch", "TDAOT_15@bitcoin.csg.uzh.ch", "my-password", new BigDecimal("0.0"));
 		
 		assertEquals(0, transactionService.getHistory(fromDB.getUsername(), 0).size());
 		

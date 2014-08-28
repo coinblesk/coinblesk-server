@@ -20,6 +20,7 @@ import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
+import ch.uzh.csg.mbps.server.clientinterface.IPayOutRule;
 import ch.uzh.csg.mbps.server.clientinterface.ITransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.dao.TransactionDAO;
@@ -63,7 +64,7 @@ public class TransactionService implements ITransaction {
 	private UserPublicKeyDAO userPublicKeyDAO;
 
 	@Autowired
-	private PayOutRuleService payOutRuleService;
+	private IPayOutRule payOutRuleService;
 
 	@Autowired
 	private IUserAccount userAccountService;

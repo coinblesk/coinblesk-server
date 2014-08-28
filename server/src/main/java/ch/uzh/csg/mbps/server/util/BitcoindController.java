@@ -9,8 +9,8 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 
-import ch.uzh.csg.mbps.server.service.PayInTransactionService;
-import ch.uzh.csg.mbps.server.service.PayOutTransactionService;
+import ch.uzh.csg.mbps.server.clientinterface.IPayInTransaction;
+import ch.uzh.csg.mbps.server.clientinterface.IPayOutTransaction;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 
 import com.azazar.bitcoin.jsonrpcclient.Bitcoin;
@@ -33,9 +33,9 @@ public class BitcoindController {
 	public static boolean TESTING = false;
 	
 	@Autowired
-	private PayInTransactionService payInTransactionService;
+	private IPayInTransaction payInTransactionService;
 	@Autowired
-	private PayOutTransactionService payOutTransactionService;
+	private IPayOutTransaction payOutTransactionService;
 	
 	private boolean listenTransactions;
 	

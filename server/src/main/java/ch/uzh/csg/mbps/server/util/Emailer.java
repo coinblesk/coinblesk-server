@@ -177,11 +177,23 @@ public class Emailer {
 	 * @param user
 	 * @param token
 	 */
-	public static void sendCreateRoleAdminLink(UserAccount user, String adminPWToken) {
+	public static void sendCreateRoleAdminLink(UserAccount user, String adminRoleToken) {
 		String server = SecurityConfig.BASE_URL;
-		String link = SecurityConfig.BASE_URL + "/user/createAdmin/" + adminPWToken;
+		String link = SecurityConfig.BASE_URL + "/user/createAdmin/" + adminRoleToken;
 		messageText = "Dear " + user.getUsername() + ",<br><br>You are invited to adminsitred the following website: <a href = \"" + server + "\">" + server + "</a>. To create an account, please enter your credentials on the follwowing link: <a href = \"" + link + "\">" + link + "</a>";
 		subject = "MBPS Admin Account";
 		sendEmail(user.getEmail(), null);
+	}
+
+	/**
+	 * 
+	 * @param emailsToSend
+	 * @param subjectToSend
+	 * @param messageToSend
+	 */
+	public static void sendMessageToAllUsers(String emailsToSend, String subjectToSend, String messageToSend) {
+		messageText = messageToSend;
+		subject = subjectToSend;
+		sendEmail(emailsToSend, null);
 	}
 }

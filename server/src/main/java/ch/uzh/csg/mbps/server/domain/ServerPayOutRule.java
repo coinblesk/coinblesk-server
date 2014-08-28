@@ -7,11 +7,13 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
 
-import org.hibernate.annotations.Index;
 
 @Entity(name = "SERVER_PAYOUT_RULES")
+@Table(indexes={@Index(name="SERVER_ACCOUNT_ID_INDEX_PAYOUTRULES", columnList="SERVER_ACCOUNT_ID")})
 public class ServerPayOutRule {
 
 	@Id
@@ -24,7 +26,6 @@ public class ServerPayOutRule {
 	@Column(name = "DAY")
 	private int day;
 	@Column(name = "SERVER_ACCOUNT_ID")
-	@Index(name = "SERVER_ACCOUNT_ID_INDEX_PAYOUTRULES")
 	private long serverAccountId;
 	@Column(name = "BALANCE_LIMIT", precision = 25, scale = 8)
 	private BigDecimal balanceLimit;

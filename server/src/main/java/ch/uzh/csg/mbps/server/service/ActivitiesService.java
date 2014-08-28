@@ -6,11 +6,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import ch.uzh.csg.mbps.server.clientinterface.IActivities;
 import ch.uzh.csg.mbps.server.dao.ActivitiesDAO;
 import ch.uzh.csg.mbps.server.domain.Activities;
 
 @Service
-public class ActivitiesService {
+public class ActivitiesService implements IActivities{
 
 	public static final String IVITE_ADMIN = "Invitation for administration rights";
 	public static final String UPDATE_EMAIL = "Email is update";
@@ -30,25 +31,14 @@ public class ActivitiesService {
 	@Autowired
 	private ActivitiesDAO activitiesDAO;
 	
-	//TODO: mehmet test & javadoc
-	
-	/**
-	 * 
-	 * @param username
-	 * @param title
-	 * @param message
-	 */
+	@Override
 	@Transactional
 	public void activityLog (String username, String title, String message){
 		Activities activity = new Activities(username, title, message);
 		activitiesDAO.createActivityLog(activity);
 	}
 	
-	/**
-	 * 
-	 * @param page
-	 * @return
-	 */
+	@Override
 	@Transactional(readOnly = true)
 	public List<Activities> getLogs(int page){
 		return activitiesDAO.getLogs(page);
