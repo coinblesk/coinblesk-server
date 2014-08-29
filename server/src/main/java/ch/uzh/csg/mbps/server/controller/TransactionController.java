@@ -29,12 +29,12 @@ import ch.uzh.csg.mbps.responseobject.HistoryTransferRequestObject;
 import ch.uzh.csg.mbps.responseobject.PayOutTransactionObject;
 import ch.uzh.csg.mbps.responseobject.TransactionObject;
 import ch.uzh.csg.mbps.responseobject.TransferObject;
+import ch.uzh.csg.mbps.server.clientinterface.IPayInTransaction;
+import ch.uzh.csg.mbps.server.clientinterface.IPayOutTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.ITransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
-import ch.uzh.csg.mbps.server.service.PayInTransactionService;
-import ch.uzh.csg.mbps.server.service.PayOutTransactionService;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.ExchangeRates;
@@ -55,10 +55,10 @@ public class TransactionController {
 	private static Logger LOGGER = Logger.getLogger(TransactionController.class);
 
 	@Autowired
-	private PayInTransactionService payInTransactionService;
+	private IPayInTransaction payInTransactionService;
 	
 	@Autowired
-	private PayOutTransactionService payOutTransactionService;
+	private IPayOutTransaction payOutTransactionService;
 	
 	@Autowired
 	private ITransaction transactionService;

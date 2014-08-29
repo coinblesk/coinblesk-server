@@ -8,15 +8,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import ch.uzh.csg.mbps.server.clientinterface.IActivities;
 import ch.uzh.csg.mbps.server.domain.Activities;
-import ch.uzh.csg.mbps.server.service.ActivitiesService;
 
 @Controller
 @RequestMapping("/activities")
 public class ActivitiesController {
 	
 	@Autowired
-	private ActivitiesService activitiesService;
+	private IActivities activitiesService;
 
 	@RequestMapping(method = RequestMethod.GET)
 	public String history() {

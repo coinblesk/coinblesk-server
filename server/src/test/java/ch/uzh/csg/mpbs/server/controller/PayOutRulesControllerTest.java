@@ -46,6 +46,7 @@ import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
@@ -83,9 +84,9 @@ public class PayOutRulesControllerTest {
 		if (!initialized) {
 			mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();
 
-			test41 = new UserAccount("test41", "test41@bitcoin.csg.uzh.ch", "asdf");
-			test42 = new UserAccount("test42", "test42@bitcoin.csg.uzh.ch", "asdf");
-			test43 = new UserAccount("test43", "test43@bitcoin.csg.uzh.ch", "asdf");
+			test41 = new UserAccount("test41@https://mbps.csg.uzh.ch", "test41@bitcoin.csg.uzh.ch", "asdf");
+			test42 = new UserAccount("test42@https://mbps.csg.uzh.ch", "test42@bitcoin.csg.uzh.ch", "asdf");
+			test43 = new UserAccount("test43@https://mbps.csg.uzh.ch", "test43@bitcoin.csg.uzh.ch", "asdf");
 
 			KeyPair keypair = KeyHandler.generateKeyPair();
 
@@ -100,7 +101,7 @@ public class PayOutRulesControllerTest {
 		UserAccountService.disableTestingMode();
 	}
 
-	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
+	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		assertTrue(userAccountService.createAccount(userAccount));
 		userAccount = userAccountService.getByUsername(userAccount.getUsername());
 		userAccount.setEmailVerified(true);

@@ -9,14 +9,18 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+import javax.persistence.Index;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.hibernate.annotations.Index;
+
 
 @Entity(name="SERVER_ACCOUNT")
+@Table(indexes={
+		@Index(name="URL_INDEX", columnList="URL")})
 public class ServerAccount {
 	
 	@Id
@@ -25,7 +29,6 @@ public class ServerAccount {
 	@Column(name = "ID", nullable = false)
 	private long id;
 	@Column(name = "URL", unique = true, nullable = false)
-	@Index(name = "URL_INDEX")
 	private String url;
 	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name = "CREATION_DATE", nullable = false)
@@ -34,6 +37,8 @@ public class ServerAccount {
 	private String email;
 	@Column(name = "PAYIN_ADDRESS")
 	private String payinAddress;
+	@Column(name = "PAYOUT_ADDRESS")
+	private String payoutAddress;
 	@Column(name = "TRUST_LEVEL", nullable = false)
 	private int trustLevel;
 	@Column(name = "PUBLIC_KEY", length = 1024, nullable = false)
@@ -68,6 +73,17 @@ public class ServerAccount {
 		this.creationDate = new Date();
 		this.publicKey = publicKey;
 		this.trustLevel = 0;
+	}
+	
+	public ServerAccount(String url, String email, String publicKey, int trustLevel, BigDecimal balanceLimit){
+		this.url = url;
+		this.email = email;
+		this.deleted = false;
+		this.balanceLimit = balanceLimit;
+		this.activeBalance = new BigDecimal(0.0);
+		this.creationDate = new Date();
+		this.publicKey = publicKey;
+		this.trustLevel = trustLevel;
 	}
 
 	public long getId() {
@@ -104,6 +120,14 @@ public class ServerAccount {
 
 	public String getPayinAddress() {
 		return payinAddress;
+	}
+
+	public void setPayoutAddress(String btcAddress) {
+		this.payoutAddress = btcAddress;
+	}
+	
+	public String getPayoutAddress() {
+		return payoutAddress;
 	}
 
 	public void setPayinAddress(String btcAddress) {

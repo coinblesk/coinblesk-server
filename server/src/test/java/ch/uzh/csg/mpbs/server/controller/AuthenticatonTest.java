@@ -29,6 +29,7 @@ import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
@@ -69,10 +70,10 @@ public class AuthenticatonTest {
 		if (!initialized) {
 			mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();
 
-			test60 = new UserAccount("test60", "test60@bitcoin.csg.uzh.ch", "asdf");
-			test61 = new UserAccount("test61_1", "test61@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test62 = new UserAccount("test62_1", "test62_1@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test63 = new UserAccount("test63", "test63@bitcoin.csg.uzh.ch", "i-don't-need-one");
+			test60 = new UserAccount("test60@https://mbps.csg.uzh.ch", "test60@bitcoin.csg.uzh.ch", "asdf");
+			test61 = new UserAccount("test61_1@https://mbps.csg.uzh.ch", "test61@bitcoin.csg.uzh.ch", "i-don't-need-one");
+			test62 = new UserAccount("test62_1@https://mbps.csg.uzh.ch", "test62_1@bitcoin.csg.uzh.ch", "i-don't-need-one");
+			test63 = new UserAccount("test63@https://mbps.csg.uzh.ch", "test63@bitcoin.csg.uzh.ch", "i-don't-need-one");
 
 			initialized = true;
 		}
@@ -142,7 +143,7 @@ public class AuthenticatonTest {
 		mockMvc.perform(get("/user/afterLogin").secure(false)).andExpect(status().isUnauthorized());
 	}
 	
-	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
+	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		assertTrue(userAccountService.createAccount(userAccount));
 		userAccount = userAccountService.getByUsername(userAccount.getUsername());
 		userAccount.setEmailVerified(true);

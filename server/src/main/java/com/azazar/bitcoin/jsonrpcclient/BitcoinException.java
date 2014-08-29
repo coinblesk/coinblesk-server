@@ -20,7 +20,7 @@ package com.azazar.bitcoin.jsonrpcclient;
 
 /**
  *
- * @author Mikhail Yevchenko <m.ṥῥẚɱ.ѓѐḿởύḙ@azazar.com>
+ * @author Mikhail Yevchenko <m?@azazar.com>
  */
 public class BitcoinException extends Exception {
 
