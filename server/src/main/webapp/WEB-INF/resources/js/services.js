@@ -20,7 +20,7 @@ AppServices.service('accessTokenCookieService', function($cookies, $cookieStore)
 	
 	function initCookies() {
 //		var jsessionid = $cookies.JSESSIONID;
-//		$cookieStore.put('JSESSIONID', jsessionid);
+//		$cookieStore.put('JSESSIONID', jsessionid);create
 		console.log("Add Cookies");
 	};
 	
@@ -212,7 +212,7 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 	
 	serverAccountFactory.createNewAccount = function(url){
 		var request = $http({
-			method: 'GET',
+			method: 'POST',
 			url: 'relation/createNewAccount',
 			params:{
 				"url": url
