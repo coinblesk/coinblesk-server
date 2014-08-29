@@ -11,17 +11,25 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import ch.uzh.csg.mbps.server.clientinterface.IActivities;
 import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
 import ch.uzh.csg.mbps.server.dao.ServerAccountDAO;
+import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
+import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.util.ActivitiesTitle;
+import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Config;
+import ch.uzh.csg.mbps.server.util.Constants;
+import ch.uzh.csg.mbps.server.util.SecurityConfig;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidPublicKeyException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UrlAlreadyExistsException;
+import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
@@ -36,6 +44,12 @@ public class ServerAccountService implements IServerAccount {
 	
 	@Autowired
 	private ServerAccountDAO serverAccountDAO;
+	
+	@Autowired
+	private UserAccountDAO userAccountDAO;
+	
+	@Autowired
+	private IActivities activitiesService;
 
 	//TODO: mehmet: javadoc
 	
@@ -55,11 +69,68 @@ public class ServerAccountService implements IServerAccount {
 	 */
 	public static void disableTestingMode() {
 		TESTING_MODE = false;
-	}
+	}	
 	
 	@Override
+	@Transactional(readOnly = true)
+	public boolean checkIfExistsByUrl(String url) throws UrlAlreadyExistsException{
+		try {
+			//see for matches in db ignoring cases and deletion status
+			getByUrlIgnoreCaseAndDeletedFlag(url);
+			throw new UrlAlreadyExistsException(url);
+		} catch (ServerAccountNotFoundException e) {
+			return true;
+		}
+	}
+
+	@Override
 	@Transactional
-	public boolean createAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException {
+	public ServerAccount prepareAccount(ServerAccount otherAccount) throws UserAccountNotFoundException, InvalidPublicKeyException, InvalidUrlException, InvalidEmailException {
+		if (TESTING_MODE){
+			return prepareAccount(otherAccount, "fake-keys");
+		} else {
+			String publicKey = Constants.SERVER_KEY_PAIR.getPublicKey();
+			//CustomPublicKey cpk = new CustomPublicKey(Constants.SERVER_KEY_PAIR.getKeyNumber(), Constants.SERVER_KEY_PAIR.getPkiAlgorithm(), Constants.SERVER_KEY_PAIR.getPublicKey());
+			return prepareAccount(otherAccount, publicKey);
+		}
+	}
+	
+	/**
+	 * 
+	 * @param serverAccount
+	 * @param newPayinAddress
+	 * @param date
+	 * @return
+	 * @throws InvalidUrlException 
+	 * @throws InvalidEmailException 
+	 * @throws InvalidPublicKeyException 
+	 * @throws UrlAlreadyExistsException 
+	 * @throws UserAccountNotFoundException 
+	 */
+	private ServerAccount prepareAccount(ServerAccount otherAccount, String publicKey) throws UserAccountNotFoundException, InvalidPublicKeyException, InvalidUrlException, InvalidEmailException {
+		String otherUrl = otherAccount.getUrl();
+		String otherEmail = otherAccount.getEmail();
+		
+		UserAccount user = userAccountDAO.getByUsername(AuthenticationInfo.getPrincipalUsername());
+		ServerAccount serverAccount = new ServerAccount(SecurityConfig.BASE_URL, user.getEmail(), publicKey);
+
+		if (serverAccount.getPublicKey() == null)
+			throw new InvalidPublicKeyException();
+
+		if (!otherUrl.matches(Config.URL_REGEX))
+			throw new InvalidUrlException();
+		
+		if (!otherEmail.matches(Config.EMAIL_REGEX))
+			throw new InvalidEmailException();
+		
+		activitiesService.activityLog(user.getUsername(), ActivitiesTitle.CREATE_SERVER_ACCOUNT,"Create a new relation with the server " + otherUrl + " and email " + otherEmail);
+		
+		return serverAccount;
+	}
+
+	@Override
+	@Transactional
+	public boolean persistAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException {
 		Date date = new Date();
 		if (TESTING_MODE){
 			String strDate = "2014-06-19 14:35:54.0";
@@ -117,15 +188,16 @@ public class ServerAccountService implements IServerAccount {
 		
 		serverAccount = new ServerAccount(serverAccount.getUrl(), serverAccount.getEmail(), serverAccount.getPublicKey());
 		
-		serverAccount.setPayinAddress(payinAddress);
+		serverAccount.setPayoutAddress(payinAddress);
 		serverAccount.setCreationDate(date);
-		
-		String token = java.util.UUID.randomUUID().toString();
+
 		try {
-			serverAccountDAO.createAccount(serverAccount, token);
+			serverAccountDAO.createAccount(serverAccount);
 		} catch (HibernateException e) {
 			return false;
 		}
+		
+		activitiesService.activityLog("n.V.", ActivitiesTitle.CREATE_SERVER_ACCOUNT,"Create a new relation with the server " + url + " and email " + email);
 		return true;
 	}
 
@@ -241,5 +313,17 @@ public class ServerAccountService implements IServerAccount {
 	@Transactional
 	public void updateBalanceLimit(String url, BigDecimal oldLimit, BigDecimal newLimit) {
 		//TODO: communicate balance limit asymmetric balance limits
+	}
+	
+	@Override
+	@Transactional(readOnly=true)
+	public boolean isDeletedByUrl(String url) {
+		return serverAccountDAO.isDeletedByUrl(url);
+	}
+	
+	@Override
+	@Transactional(readOnly=true)
+	public boolean isDeletedById(long id) {
+		return serverAccountDAO.isDeletedById(id);
 	}
 }

@@ -122,7 +122,7 @@ public class ServerAccount {
 		return payinAddress;
 	}
 
-	public void setPayouAddress(String btcAddress) {
+	public void setPayoutAddress(String btcAddress) {
 		this.payoutAddress = btcAddress;
 	}
 	

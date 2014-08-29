@@ -29,7 +29,7 @@ public interface IServerAccount {
 	 * @throws InvalidEmailException
 	 * @throws InvalidPublicKeyException 
 	 */
-	public boolean createAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException;
+	public boolean persistAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException;
 	
 	/**
 	 * 
@@ -86,4 +86,39 @@ public interface IServerAccount {
 	public void updateTrustLevel(String url, int oldLevel, int newLevel) throws ServerAccountNotFoundException;
 
 	public void updateBalanceLimit(String url, BigDecimal oldLimit, BigDecimal newLimit);
+
+	/**
+	 * Collects the the own url, email and public key and creates a 
+	 * Server Account which will be send.
+	 * 
+	 * @param account
+	 * @return Server Account
+	 * @throws InvalidEmailException 
+	 * @throws InvalidUrlException 
+	 * @throws InvalidPublicKeyException 
+	 * @throws UserAccountNotFoundException 
+	 */
+	public ServerAccount prepareAccount(ServerAccount account) throws UserAccountNotFoundException, InvalidPublicKeyException, InvalidUrlException, InvalidEmailException;
+
+	/**
+	 * Checks if Url is allready existing
+	 * @param url
+	 * @return boolean
+	 * @throws UrlAlreadyExistsException
+	 */
+	public boolean checkIfExistsByUrl(String url) throws UrlAlreadyExistsException;
+
+	/**
+	 * 
+	 * @param url
+	 * @return boolean
+	 */
+	boolean isDeletedByUrl(String url);
+
+	/**
+	 * 
+	 * @param id
+	 * @return booelan
+	 */
+	boolean isDeletedById(long id);
 }

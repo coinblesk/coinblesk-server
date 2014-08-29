@@ -37,9 +37,8 @@ public class ServerAccountDAO {
 	/**
 	 * 
 	 * @param serverAccount
-	 * @param token
 	 */
-	public void createAccount(ServerAccount serverAccount, String token){
+	public void createAccount(ServerAccount serverAccount){
 		em.persist(serverAccount);
 		LOGGER.info("ServerAccount created: " + serverAccount.toString());
 	}
@@ -114,7 +113,7 @@ public class ServerAccountDAO {
 	 * @return
 	 * @throws ServerAccountNotFoundException
 	 */
-	public ServerAccount getById(Long id) throws ServerAccountNotFoundException{
+	public ServerAccount getById(long id) throws ServerAccountNotFoundException{
 		
 		
 		CriteriaBuilder cb = em.getCriteriaBuilder();
@@ -335,6 +334,55 @@ public class ServerAccountDAO {
 	public void updateTrustLevel(ServerAccount serverAccount) {
 		em.merge(serverAccount);
 		LOGGER.info("Updated ServerAccount: " + serverAccount.toString());
+	}
+	
+	/**
+	 * 
+	 * @param url
+	 * @return
+	 * @throws ServerAccountNotFoundException
+	 */
+	public boolean isDeletedByUrl(String url) {
+		
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ServerAccount> cq = cb.createQuery(ServerAccount.class);
+		Root<ServerAccount> root = cq.from(ServerAccount.class);
+		
+		Predicate condition = cb.equal(root.get("url"), url);
+		cq.where(condition);
+		
+		ServerAccount serverAccount = UserAccountDAO.getSingle(cq, em);
+		
+		if(serverAccount == null || !serverAccount.isDeleted()) {
+			return false;
+		}
+		
+		return true;
+	}
+	
+	/**
+	 * 
+	 * @param id
+	 * @return
+	 * @throws ServerAccountNotFoundException
+	 */
+	public boolean isDeletedById(long id) {
+		
+		
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ServerAccount> cq = cb.createQuery(ServerAccount.class);
+		Root<ServerAccount> root = cq.from(ServerAccount.class);
+		
+		Predicate condition = cb.equal(root.get("id"), id);
+		cq.where(condition);
+		
+		ServerAccount serverAccount = UserAccountDAO.getSingle(cq, em);
+		
+		if(serverAccount == null || !serverAccount.isDeleted()) {
+			return false;
+		}
+		
+		return true;
 	}
 	
 }
