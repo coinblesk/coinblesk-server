@@ -8,10 +8,11 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.SequenceGenerator;
-
-import org.hibernate.annotations.Index;
+import javax.persistence.Table;
+import javax.persistence.Index;
 
 @Entity(name = "ACTIVITIES")
+@Table(indexes={@Index(name="USERNAME_INDEX", columnList="USERNAME")})
 public class Activities {
 
 	@Id
@@ -20,7 +21,6 @@ public class Activities {
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "pk_sequence")
 	private long id;
 	@Column(name = "USERNAME")
-	@Index(name = "USERNAME_INDEX")
 	private String username;
 	@Column(name = "TITLE")
 	private String title;
