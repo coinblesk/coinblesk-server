@@ -244,13 +244,22 @@ public class TransactionService implements ITransaction {
 				try {
 					transactionID = BitstampController.buyBTC(totalAmountBTC);
 					LOGGER.info("Bitstamp Transaction Successful: A Limitorder to buy " + totalAmountBTC + " BTC has been placed on Bitstamp with ID: " + transactionID);
-					openBuyOrders = BigDecimal.ZERO;
+					synchronized (openBuyOrders) {
+						openBuyOrders = BigDecimal.ZERO;
+					}
 				} catch (ExchangeException | NotAvailableFromExchangeException
 						| NotYetImplementedForExchangeException | IOException| ParseException e) {
 					LOGGER.error("Bitstamp Transaction Error: failed to do buyBTC limit order (ID: " + transactionID + "): " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
 					Emailer.send("simon.kaeser@uzh.ch", "Bitstamp Transaction Error", "Bitstamp Transaction Error: failed to do buyBTC limit order: " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
-					openBuyOrders = openBuyOrders.add(amount);
+					synchronized (openBuyOrders) {
+						openBuyOrders = openBuyOrders.add(amount);	                    
+                    }
+					
 				}
+			} else {
+				synchronized (openBuyOrders) {
+					openBuyOrders = openBuyOrders.add(amount);	                    
+                }
 			}
 		}
 
@@ -268,11 +277,19 @@ public class TransactionService implements ITransaction {
 				try {
 					transactionID = BitstampController.sellBTC(totalAmountBTC);
 					LOGGER.info("Bitstamp Transaction Successful: A Limitorder to sell " + totalAmountBTC + " BTC has been placed on Bitstamp with ID: " + transactionID);
-					openSellOrders = BigDecimal.ZERO;
+					synchronized (openSellOrders) {
+						openSellOrders = BigDecimal.ZERO;
+					}
 				} catch (ExchangeException | NotAvailableFromExchangeException
 						| NotYetImplementedForExchangeException | IOException e) {
 					LOGGER.error("Bitstamp Transaction Error: failed to do sellBTC limit order (ID: " + transactionID + "): " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
 					Emailer.send("simon.kaeser@uzh.ch", "Bitstamp Transaction Error", "Bitstamp Transaction Error: failed to do sellBTC limit order: " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
+					synchronized (openSellOrders) {
+						openSellOrders = openSellOrders.add(amount);
+					}
+				}
+			} else {
+				synchronized (openSellOrders) {
 					openSellOrders = openSellOrders.add(amount);
 				}
 			}

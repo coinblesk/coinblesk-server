@@ -11,8 +11,8 @@ public class Config {
 	public static final BigDecimal TRANSACTION_FEE = new BigDecimal("0.0001");
 	
 	//BITSTAMP Controller configuration
-	public static final int MIN_CONFIRMATIONS_SMALL_TRANSACTIONS = 0; // recommended: 6
-	public static final int MIN_CONFIRMATIONS_BIG_TRANSACTIONS = 0; //recommended: 12
+	public static final int MIN_CONFIRMATIONS_SMALL_TRANSACTIONS = 6; // recommended: 6
+	public static final int MIN_CONFIRMATIONS_BIG_TRANSACTIONS = 12; //recommended: 12
 	protected static final double SMALL_TRANSACTION_LIMIT = 0.5;
 	
 	public static final int TRANSACTIONS_MAX_RESULTS = 50;
