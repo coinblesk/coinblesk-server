@@ -36,7 +36,7 @@ import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DbUnitConfiguration;
 import com.github.springtestdbunit.annotation.ExpectedDatabase;
 import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
-import com.github.springtestdbunit.dataset.ReplacementDataSetLoader;
+import ch.uzh.csg.mbps.server.util.ReplacementDataSetLoader;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
@@ -69,10 +69,10 @@ public class ServerAccountServiceTest {
 	@Test
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
 	@ExpectedDatabase(value="classpath:DbUnitFiles/Services/serverAccountExpectedCreateData.xml", table="server_account")
-	public void testCreateAccount() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException, ServerAccountNotFoundException {
+	public void testPersistAccount() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException, ServerAccountNotFoundException {
 		int numberOfServerAccount = serverAccountService.getAll().size();
 		ServerAccount newServer = new ServerAccount("https://www.test-test.ch", "test6@mail.com", "publicKey");
-		assertTrue(serverAccountService.createAccount(newServer));
+		assertTrue(serverAccountService.persistAccount(newServer));
 		
 		newServer = serverAccountService.getByUrl(newServer.getUrl());
 		assertNotNull(newServer);
@@ -81,21 +81,21 @@ public class ServerAccountServiceTest {
 	
 	@Test(expected=UrlAlreadyExistsException.class)
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	public void testCreateAccount_FailUrlAlreadyExists() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException{
+	public void testPersistsAccount_FailUrlAlreadyExists() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException{
 		ServerAccount newServer = new ServerAccount("https://www.my_url.ch", "test@mail.ch", "my public key");
-		serverAccountService.createAccount(newServer);
+		serverAccountService.persistAccount(newServer);
 	}
 	
 	@Test(expected=InvalidUrlException.class)
-	public void testCreateAccount_FailInvalidUrl() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException {
+	public void testPersistsAccount_FailInvalidUrl() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException {
 		ServerAccount serverAccount = new ServerAccount("abcd", "test@mail.ch", "blabla");
-		serverAccountService.createAccount(serverAccount);
+		serverAccountService.persistAccount(serverAccount);
 	}
 	
 	@Test(expected=InvalidEmailException.class)
-	public void testCreateAccount_FailInvalidEmail() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException {
+	public void testPersistsAccount_FailInvalidEmail() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException {
 		ServerAccount serverAccount = new ServerAccount("http://www.url.ch", "mail.ch", "blabla");
-		serverAccountService.createAccount(serverAccount);
+		serverAccountService.persistAccount(serverAccount);
 	}
 	
 	@Test(expected=ServerAccountNotFoundException.class)
@@ -119,7 +119,7 @@ public class ServerAccountServiceTest {
 		newAccount.setBalanceLimit(new BigDecimal(0.55));
 		
 		
-		assertTrue(serverAccountService.createAccount(newAccount));
+		assertTrue(serverAccountService.persistAccount(newAccount));
 		ServerAccount fromDB = serverAccountService.getByUrl("https://www.insert.com");
 		
 		assertEquals(newAccount.getUrl(), fromDB.getUrl());

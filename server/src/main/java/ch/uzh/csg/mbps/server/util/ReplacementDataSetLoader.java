@@ -1,14 +1,19 @@
-package com.github.springtestdbunit.dataset;
+package ch.uzh.csg.mbps.server.util;
 
 import org.dbunit.dataset.IDataSet;
 import org.dbunit.dataset.ReplacementDataSet;
 
+import com.github.springtestdbunit.dataset.DataSetLoader;
+import com.github.springtestdbunit.dataset.FlatXmlDataSetLoader;
+
+//, dataSetLoader = ReplacementDataSetLoader.class
+
 /**
- * A {@link DataSetLoader data set loader} that can be used to load
- * {@link org.dbunit.dataset.xml.FlatXmlDataSet xml datasets}, replacing
- * "[null]" with <code>null</code>.
+ * A data set loader that can be used to load
+ * xml datasets, replacing "[null]" with <code>null</code>.
  * 
  * @author Stijn Van Bael
+ * com.github.springtestdbunit.dataset
  */
 public class ReplacementDataSetLoader implements DataSetLoader {
 	private DataSetLoader delegate;
