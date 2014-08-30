@@ -77,7 +77,13 @@ public interface IServerAccount {
 	 */
 	public List<ServerAccount> getAll();
 
-	public List<ch.uzh.csg.mbps.model.ServerAccount> getServerAccounts(String username, int urlPage);
+	/**
+	 * All server account which have a trust relation
+	 * 
+	 * @param urlPage
+	 * @return List of server account
+	 */
+	public List<ch.uzh.csg.mbps.model.ServerAccount> getServerAccounts(int urlPage);
 
 	public long getAccountsCount();
 

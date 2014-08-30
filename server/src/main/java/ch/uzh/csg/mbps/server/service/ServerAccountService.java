@@ -273,8 +273,8 @@ public class ServerAccountService implements IServerAccount {
 
 	@Override
 	@Transactional(readOnly = true)
-	public List<ch.uzh.csg.mbps.model.ServerAccount> getServerAccounts(String username, int urlPage) {
-		return serverAccountDAO.getServerAccounts(username,urlPage);
+	public List<ch.uzh.csg.mbps.model.ServerAccount> getServerAccounts(int urlPage) {
+		return serverAccountDAO.getServerAccounts(urlPage);
 	}
 
 	@Override

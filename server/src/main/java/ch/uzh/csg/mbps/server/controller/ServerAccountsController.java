@@ -14,7 +14,6 @@ import ch.uzh.csg.mbps.model.ServerAccount;
 import ch.uzh.csg.mbps.responseobject.ServerAccountTransferObject;
 import ch.uzh.csg.mbps.responseobject.ServerAccountsRequestObject;
 import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
-import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 
 /**
  * REST Controller for client http requests regarding ServerAccount operations.
@@ -37,19 +36,18 @@ public class ServerAccountsController {
 	 *            the page number of server accounts
 	 * @return 
 	 */
-	@RequestMapping(value = "/accounts", method = RequestMethod.GET, produces = "application/json")
+	@RequestMapping(value = "/accounts", method = RequestMethod.POST, produces = "application/json")
 	@ResponseBody
 	public ServerAccountTransferObject getAccounts(@RequestBody ServerAccountsRequestObject request) {
 		ServerAccountTransferObject response = new ServerAccountTransferObject();
 		if(!request.isComplete()){
 			response.setSuccessful(false);
 			response.setMessage("request has missing parameters");
+			return response;
 		}
 		try {
-			String username = AuthenticationInfo.getPrincipalUsername();
-			
 			int urlPage = request.getUrlPage();
-			List<ServerAccount> accounts = serverAccountService.getServerAccounts(username, urlPage);
+			List<ServerAccount> accounts = serverAccountService.getServerAccounts(urlPage);
 			long nofSA = (urlPage < 0) ? 0 : serverAccountService.getAccountsCount();
 			
 			response.setSuccessful(true);

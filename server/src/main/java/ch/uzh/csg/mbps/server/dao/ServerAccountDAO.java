@@ -289,7 +289,7 @@ public class ServerAccountDAO {
 	 * @param page
 	 * @return
 	 */
-	public List<ch.uzh.csg.mbps.model.ServerAccount> getServerAccounts(String username, int page){
+	public List<ch.uzh.csg.mbps.model.ServerAccount> getServerAccounts(int page){
 		if (page < 0) {
 			return null;
 		}
