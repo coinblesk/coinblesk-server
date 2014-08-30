@@ -36,14 +36,13 @@ import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DbUnitConfiguration;
 import com.github.springtestdbunit.annotation.ExpectedDatabase;
 import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
-import ch.uzh.csg.mbps.server.util.ReplacementDataSetLoader;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
 		"classpath:context.xml",
 		"classpath:test-database.xml"})
 
-@DbUnitConfiguration(databaseConnection="dataSource", dataSetLoader = ReplacementDataSetLoader.class)
+@DbUnitConfiguration(databaseConnection="dataSource")
 @TestExecutionListeners({ 
 	DependencyInjectionTestExecutionListener.class,
 	DbUnitTestExecutionListener.class })
