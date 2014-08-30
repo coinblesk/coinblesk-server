@@ -107,7 +107,7 @@ public class UserAccountControllerTest {
 
 		if (!initialized) {
 			mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();
-
+			//
 			test22 = new UserAccount("test22@https://mbps.csg.uzh.ch", "chuck22@bitcoin.csg.uzh.ch", "i-don't-need-one");
 			test23 = new UserAccount("test23@https://mbps.csg.uzh.ch", "chuck23@bitcoin.csg.uzh.ch", "i-don't-need-one");
 			test23_2 = new UserAccount("test23@https://mbps.csg.uzh.ch", "chuck23@bitcoin.csg.uzh.ch", "i-don't-need-one");
