@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +40,14 @@ public class BitcoindController {
 	
 	private boolean listenTransactions;
 	
+	private BitcoinAcceptor incomingSmall;
+	private BitcoinAcceptor incomingBig;
+	private BitcoinAcceptor outgoing;
+	//
+	private Thread incomingSmallThread;
+	private Thread incomingBigThread;
+	private Thread outgoingThread;
+	
 	@PostConstruct
 	private void init() {
 		backupWallet();
@@ -53,6 +62,31 @@ public class BitcoindController {
 			}
 		}
 	}
+	
+	 @PreDestroy
+	 private void shutdown() {
+		 if(isListenTransactions()) {
+			 if(incomingSmall != null) {
+				 incomingSmall.stopAccepting();
+				 if(incomingSmallThread != null) {
+					 incomingSmallThread.interrupt();
+				 }
+			 }
+			 if(incomingBig != null) {
+				 incomingBig.stopAccepting();
+				 if(incomingBigThread != null) {
+					 incomingBigThread.interrupt();
+				 }
+			 }
+			 
+			 if(outgoing != null) {
+				 outgoing.stopAccepting();
+				 if(outgoingThread != null) {
+					 outgoingThread.interrupt();
+				 }
+			 }
+		 }
+	 }
 
 	/**
 	 * Send defined amount of Bitcoins to defined address.
@@ -139,10 +173,9 @@ public class BitcoindController {
 
         };
         
-        BitcoinAcceptor ba = new BitcoinAcceptor(BITCOIN, smallTx, false);
-        
-        Thread t = new Thread(ba);
-        t.start();
+        incomingSmall = new BitcoinAcceptor(BITCOIN, smallTx, false);
+        incomingSmallThread = new Thread(incomingSmall);
+        incomingSmallThread.start();
     }
 	
 	/**
@@ -171,10 +204,9 @@ public class BitcoindController {
 
         };
         
-        BitcoinAcceptor ba = new BitcoinAcceptor(BITCOIN, bigTxListener, false);
-        
-        Thread t = new Thread(ba);
-        t.start();
+        incomingBig = new BitcoinAcceptor(BITCOIN, bigTxListener, false);
+        incomingBigThread = new Thread(incomingBig);
+        incomingBigThread.start();
     }
 	
 	/**
@@ -196,10 +228,9 @@ public class BitcoindController {
 
         };
 		
-        BitcoinAcceptor ba = new BitcoinAcceptor(BITCOIN, outgoingTxListener, true);
-   
-        Thread t = new Thread(ba);
-        t.start();
+        outgoing = new BitcoinAcceptor(BITCOIN, outgoingTxListener, true);
+        outgoingThread = new Thread(outgoing);
+        outgoingThread.start();
     }
 
 	/**
