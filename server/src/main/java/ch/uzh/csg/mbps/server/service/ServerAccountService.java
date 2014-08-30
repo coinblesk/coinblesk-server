@@ -5,7 +5,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
-import org.hibernate.HibernateException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -120,11 +119,7 @@ public class ServerAccountService implements IServerAccount {
 		serverAccount.setCreationDate(date);
 		
 		String token = java.util.UUID.randomUUID().toString();
-		try {
-			serverAccountDAO.createAccount(serverAccount, token);
-		} catch (HibernateException e) {
-			return false;
-		}
+		serverAccountDAO.createAccount(serverAccount, token);
 		return true;
 	}
 
@@ -163,24 +158,15 @@ public class ServerAccountService implements IServerAccount {
 		if (updatedAccount.getTrustLevel() != serverAccount.getTrustLevel())
 			serverAccount.setTrustLevel(updatedAccount.getTrustLevel());
 		
-		try{
-			serverAccountDAO.updatedAccount(serverAccount);
-		} catch (HibernateException e) {
-			return false;
-		}
-		
+		serverAccountDAO.updatedAccount(serverAccount);
 		return true;
 	}
 
 	@Override
 	@Transactional
 	public boolean delete(String url) throws ServerAccountNotFoundException, BalanceNotZeroException {
-		try {
-			serverAccountDAO.delete(url);
-			return true;
-		} catch (HibernateException e) {
-			return false;
-		}
+		serverAccountDAO.delete(url);
+		return true;
 	}
 
 	@Override

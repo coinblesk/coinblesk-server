@@ -10,7 +10,6 @@ import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
 import org.apache.log4j.Logger;
-import org.hibernate.HibernateException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -89,7 +88,6 @@ public class PayOutTransactionDAO {
 	 * 
 	 * @param pot PayOutTransaction to save
 	 * @throws UserAccountNotFoundException if defined UserAccount is not found
-	 * @throws HibernateException
 	 */
 	public void createPayOutTransaction(PayOutTransaction pot) throws UserAccountNotFoundException {
 		em.persist(pot);
@@ -105,7 +103,6 @@ public class PayOutTransactionDAO {
 	 * 
 	 * @param pot PayOutTransation to be verified.
 	 * @throws TransactionException if PayOutTransaction with specified TransactionId does not exist in the database.
-	 * @throws HibernateException
 	 */
 	public void verify(PayOutTransaction pot) throws TransactionException {
 		

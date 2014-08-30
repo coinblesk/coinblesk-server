@@ -18,7 +18,6 @@ import java.util.List;
 
 import javax.servlet.http.HttpSession;
 
-import org.hibernate.HibernateException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -172,7 +171,7 @@ public class UserAccountControllerTest {
 	}
 
 	@Test(expected = InvalidEmailException.class)  
-	public void testCreateUserAccount_EmptyFields() throws HibernateException, UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
+	public void testCreateUserAccount_EmptyFields() throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
 		userAccountService.createAccount(test27);
 	}
 

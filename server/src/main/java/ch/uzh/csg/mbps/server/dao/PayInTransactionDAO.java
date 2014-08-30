@@ -10,7 +10,6 @@ import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
 import org.apache.log4j.Logger;
-import org.hibernate.HibernateException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -39,7 +38,6 @@ public class PayInTransactionDAO {
 	 * Saves a new {@link PayInTransaction} in the database.
 	 * 
 	 * @param tx (PayInTransaction)
-	 * @throws HibernateException
 	 * @throws UserAccountNotFoundException
 	 */
 	public void createPayInTransaction(PayInTransaction tx) throws UserAccountNotFoundException {

@@ -7,7 +7,6 @@ import java.util.List;
 import net.minidev.json.parser.ParseException;
 
 import org.apache.log4j.Logger;
-import org.hibernate.HibernateException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,7 +49,6 @@ public class TransactionService implements ITransaction {
 	//TODO: mehmet move to a config file
 	public static final String BALANCE = "BALANCE";
 	public static final String NEGATIVE_AMOUNT = "The transaction amount can't be negative or equals 0.";
-	public static final String HIBERNATE_ERROR = "An error occured while persisting the data. Please try again later.";
 	public static final String INTERNAL_ERROR = "An internal error occured. Please try again later.";
 	public static final String PAYMENT_REFUSE = "The server refused the payment.";
 	public static final String NOT_AUTHENTICATED_USER = "Only the authenticated user can act as the payer in the payment.";
@@ -70,7 +68,7 @@ public class TransactionService implements ITransaction {
 
 	@Override
 	@Transactional(readOnly = true)
-	public List<HistoryTransaction> getHistory(String username, int page) throws UserAccountNotFoundException, HibernateException {
+	public List<HistoryTransaction> getHistory(String username, int page) throws UserAccountNotFoundException {
 		UserAccount user = userAccountService.getByUsername(username);
 		return transactionDAO.getHistory(user, page);
 	}
@@ -178,20 +176,16 @@ public class TransactionService implements ITransaction {
 			}
 		}
 
-		DbTransaction dbTransaction = null;
-		try {
-			dbTransaction = new DbTransaction(payerRequest);
-			if (numberOfSignatures == 2) {
-				if (payeeRequest.getInputCurrency() != null) {
-					dbTransaction.setInputCurrency(payeeRequest.getInputCurrency().getCurrencyCode());
-					dbTransaction.setInputCurrencyAmount(Converter.getBigDecimalFromLong(payeeRequest.getInputAmount()));
-				}
+		DbTransaction dbTransaction = new DbTransaction(payerRequest);
+		if (numberOfSignatures == 2) {
+			if (payeeRequest.getInputCurrency() != null) {
+				dbTransaction.setInputCurrency(payeeRequest.getInputCurrency().getCurrencyCode());
+				dbTransaction.setInputCurrencyAmount(Converter.getBigDecimalFromLong(payeeRequest.getInputAmount()));
 			}
-			transactionDAO.createTransaction(dbTransaction, payerUserAccount, payeeUserAccount);
-			checkForMensaOrExchangePointTransactions(dbTransaction, payerUserAccount, payeeUserAccount);
-		} catch (HibernateException e) {
-			throw new TransactionException(HIBERNATE_ERROR);
 		}
+		transactionDAO.createTransaction(dbTransaction, payerUserAccount, payeeUserAccount);
+		checkForMensaOrExchangePointTransactions(dbTransaction, payerUserAccount, payeeUserAccount);
+		
 
 		//check if user account balance limit has been exceeded (according to PayOutRules)
 		try {

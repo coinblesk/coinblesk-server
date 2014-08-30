@@ -10,7 +10,6 @@ import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
 import org.apache.log4j.Logger;
-import org.hibernate.HibernateException;
 import org.springframework.stereotype.Repository;
 
 import ch.uzh.csg.mbps.customserialization.Currency;
@@ -97,7 +96,6 @@ public class TransactionDAO {
 	 *            UserAccount from which transaction-amount is subtracted.
 	 * @param sellerAccount
 	 *            UserAccount to which transaction-amount is added.
-	 * @throws HibernateException
 	 */
 	public void createTransaction(DbTransaction tx, UserAccount buyerAccount, UserAccount sellerAccount) {
 		em.persist(tx);

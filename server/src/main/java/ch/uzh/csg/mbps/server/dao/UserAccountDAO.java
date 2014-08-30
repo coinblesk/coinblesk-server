@@ -42,7 +42,6 @@ public class UserAccountDAO {
 	 * @param token
 	 *            VerificationToken to be saved which is used for
 	 *            email-verification.
-	 * @throws HibernateException
 	 */
 	public void createAccount(UserAccount userAccount, String token) {
 		em.persist(userAccount);
@@ -153,7 +152,6 @@ public class UserAccountDAO {
 	 * @throws UserAccountNotFoundException
 	 * @throws BalanceNotZeroException
 	 *             if balance of UserAccount is unequal zero.
-	 * @throws HibernateException
 	 */
 	public void delete(String username) throws UserAccountNotFoundException, BalanceNotZeroException {
 		UserAccount userAccount = getByUsername(username);
@@ -173,7 +171,6 @@ public class UserAccountDAO {
 	 * @param userAccount
 	 *            (updated UserAccount)
 	 * @throws UserAccountNotFoundException
-	 * @throws HibernateException
 	 */
 	public void updateAccount(UserAccount userAccount) throws UserAccountNotFoundException {
 		em.merge(userAccount);
@@ -186,7 +183,6 @@ public class UserAccountDAO {
 	 * @param verificationToken
 	 *            used for determine UserAccount to be verified
 	 * @throws UserAccountNotFoundException
-	 * @throws HibernateException
 	 * @throws VerificationTokenNotFoundException
 	 *             if token is not found in the DB
 	 */
@@ -327,7 +323,6 @@ public class UserAccountDAO {
 	 * @param userId
 	 *            for which verificationToken shall be saved
 	 * @param token
-	 * @throws HibernateException
 	 */
 	public void createEmailVerificationToken(long userId, String token) {
 		EmailVerification ev = new EmailVerification(userId, token);

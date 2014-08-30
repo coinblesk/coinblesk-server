@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import org.hibernate.HibernateException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -127,12 +126,9 @@ public class UserAccountService implements IUserAccount {
 		userAccount.setRoles(roles);
 		
 		String token = java.util.UUID.randomUUID().toString();
-		try {
-			userAccountDAO.createAccount(userAccount, token);
-			sendEmailVerificationLink(token, userAccount.getEmail());
-		} catch (HibernateException e) {
-			return false;
-		}
+		
+		userAccountDAO.createAccount(userAccount, token);
+		sendEmailVerificationLink(token, userAccount.getEmail());
 		return true;
 	}
 	
@@ -152,11 +148,9 @@ public class UserAccountService implements IUserAccount {
 			Emailer.sendEmailConfirmationLink(token, userAccount.getEmail());
 		} catch (VerificationTokenNotFoundException e) {
 			token = java.util.UUID.randomUUID().toString();
-			try {
-				userAccountDAO.createEmailVerificationToken(userAccount.getId(), token);
-				Emailer.sendEmailConfirmationLink(token, userAccount.getEmail());
-			} catch (HibernateException e1) { 
-			}
+			
+			userAccountDAO.createEmailVerificationToken(userAccount.getId(), token);
+			Emailer.sendEmailConfirmationLink(token, userAccount.getEmail());
 		}
 	}
 
@@ -195,23 +189,17 @@ public class UserAccountService implements IUserAccount {
 		if (UserRoles.isValidRole(updatedAccount.getRoles()))
 			userAccount.setRoles(updatedAccount.getRoles());
 
-		try {
-			userAccountDAO.updateAccount(userAccount);
-			return true;
-		} catch (HibernateException e) {
-			return false;
-		}
+		
+		userAccountDAO.updateAccount(userAccount);
+		return true;
 	}
 
 	@Override
 	@Transactional
 	public boolean delete(String username) throws UserAccountNotFoundException, BalanceNotZeroException {
-		try {
-			userAccountDAO.delete(username);
-			return true;
-		} catch (HibernateException e) {
-			return false;
-		}
+		
+		userAccountDAO.delete(username);
+		return true;
 	}
 
 	@Override
@@ -220,7 +208,7 @@ public class UserAccountService implements IUserAccount {
 		try {
 			userAccountDAO.verifyEmail(verificationToken);
 			return true;
-		} catch (UserAccountNotFoundException | HibernateException | VerificationTokenNotFoundException e) {
+		} catch (UserAccountNotFoundException | VerificationTokenNotFoundException e) {
 			return false;
 		} 
 	}
