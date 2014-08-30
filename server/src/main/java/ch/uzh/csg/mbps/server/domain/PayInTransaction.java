@@ -9,15 +9,17 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.SequenceGenerator;
-
-import org.hibernate.annotations.Index;
+import javax.persistence.Table;
 
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 
 import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 
-@Entity(name = "PAY_IN_TRANSACTION")
+@Entity
+@Table(name = "PAY_IN_TRANSACTION", indexes = {@Index(name = "USER_ID_INDEX_PAY_IN_TX",  columnList="USER_ID", unique = false),
+		@Index(name = "TX_ID_INDEX_PAY_IN_TX",  columnList="TX_ID", unique = false)})
 public class PayInTransaction implements Serializable {
 	private static final long serialVersionUID = -5777010150563320837L;
 	
@@ -27,14 +29,12 @@ public class PayInTransaction implements Serializable {
 	@Column(name="ID")
 	private long id;
 	@Column(name="USER_ID")
-	@Index(name = "USER_ID_INDEX_PAY_IN_TX")
 	private long userID;
 	@Column(name="TIMESTAMP")
 	private Date timestamp;
 	@Column(name="AMOUNT", precision = 25, scale=8)
 	private BigDecimal amount;
 	@Column(name="TX_ID")
-	@Index(name = "TX_ID_INDEX_PAY_IN_TX")
 	private String transactionID;
 	@Column(name="BTC_ADDRESS")
 	private String btcAddress;

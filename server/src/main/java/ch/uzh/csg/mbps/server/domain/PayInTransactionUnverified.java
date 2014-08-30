@@ -13,18 +13,19 @@ import javax.persistence.Index;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
+import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
+
 import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 
-
 @Entity
-@Table(name = "PAY_OUT_TRANSACTION", indexes = {
-		@Index(name = "USER_ID_INDEX_PAY_OUT_TX",  columnList="USER_ID"),
-		@Index(name = "TRANSACTION_ID_INDEX_PAY_OUT_TX",  columnList="TRANSACTION_ID")})
-public class PayOutTransaction implements Serializable {
-	private static final long serialVersionUID = -3754792381238747631L;
+@Table(name = "PAY_IN_TRANSACTION_UNVERIFIED", indexes = {
+		@Index(name = "USER_ID_INDEX_PAY_IN_TX_UN",  columnList="USER_ID"),
+		@Index(name = "TX_ID_INDEX_PAY_IN_TX_UN",  columnList="TX_ID")})
+public class PayInTransactionUnverified implements Serializable {
+	private static final long serialVersionUID = -5777010150563320837L;
 	
 	@Id
-	@SequenceGenerator(name="pk_sequence",sequenceName="pay_out_transaction_id_seq", allocationSize=1)
+	@SequenceGenerator(name="pk_sequence",sequenceName="pay_in_transaction_unverified_id_seq", allocationSize=1)
 	@GeneratedValue(strategy=GenerationType.SEQUENCE,generator="pk_sequence")
 	@Column(name="ID")
 	private long id;
@@ -34,38 +35,28 @@ public class PayOutTransaction implements Serializable {
 	private Date timestamp;
 	@Column(name="AMOUNT", precision = 25, scale=8)
 	private BigDecimal amount;
+	@Column(name="TX_ID")
+	private String transactionID;
 	@Column(name="BTC_ADDRESS")
 	private String btcAddress;
-	@Column(name="VERIFIED")
-	private boolean verified;
-	@Column(name="TRANSACTION_ID")
-	private String transactionID;
 	
-	public PayOutTransaction() {
+	public PayInTransactionUnverified() {
 	}
 	
-	public PayOutTransaction(Transaction tx) {
-		setTimestamp(tx.time());
-		setAmount(new BigDecimal(tx.amount()));
-		setBtcAddress(tx.address());
-		setVerified(false);
-		setTransactionID(tx.txId());
+	public PayInTransactionUnverified(long userID, Transaction transaction) throws UserAccountNotFoundException {
+		this.userID = userID;
+		this.timestamp = transaction.timeReceived();
+		this.amount = BigDecimal.valueOf(transaction.amount());
+		this.transactionID = transaction.txId();
+		this.btcAddress = transaction.address();
 	}
-	
+
 	public long getId() {
 		return id;
 	}
 
 	public void setId(long id) {
 		this.id = id;
-	}
-
-	public String getBtcAddress() {
-		return this.btcAddress;
-	}
-
-	public void setBtcAddress(String btcAddress) {
-		this.btcAddress = btcAddress;
 	}
 
 	public long getUserID() {
@@ -92,14 +83,6 @@ public class PayOutTransaction implements Serializable {
 		this.amount = amount;
 	}
 
-	public boolean isVerified() {
-		return verified;
-	}
-
-	public void setVerified(boolean verified) {
-		this.verified = verified;
-	}
-
 	public String getTransactionID() {
 		return transactionID;
 	}
@@ -108,6 +91,14 @@ public class PayOutTransaction implements Serializable {
 		this.transactionID = transactionID;
 	}
 	
+	public String getBtcAddress() {
+		return btcAddress;
+	}
+
+	public void setBtcAddress(String btcAddress) {
+		this.btcAddress = btcAddress;
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
@@ -119,12 +110,10 @@ public class PayOutTransaction implements Serializable {
 		sb.append(getTimestamp());
 		sb.append(" amount: ");
 		sb.append(getAmount());
-		sb.append(" address: ");
+		sb.append(" transactionID: ");
+		sb.append(getTransactionID());
+		sb.append(" BtcAddress: ");
 		sb.append(getBtcAddress());
-		sb.append(" verified: ");
-		sb.append(isVerified());
 		return sb.toString();
 	}
-
-
 }

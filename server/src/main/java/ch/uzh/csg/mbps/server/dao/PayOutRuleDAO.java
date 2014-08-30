@@ -83,7 +83,7 @@ public class PayOutRuleDAO {
 	 * @param userId
 	 */
 	public void deleteRules(long userId) {
-		String hql = "delete from PAYOUT_RULES where userId= :userId";
+		String hql = "DELETE FROM PayOutRule WHERE userId= :userId";
 		em.createQuery(hql).setParameter("userId", userId).executeUpdate();
 	}
 

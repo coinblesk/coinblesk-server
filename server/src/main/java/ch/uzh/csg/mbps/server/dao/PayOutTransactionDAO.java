@@ -54,7 +54,7 @@ public class PayOutTransactionDAO {
 		@SuppressWarnings("unchecked")
         List<HistoryPayOutTransaction> resultWithAliasedBean = em.createQuery(""
 				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayOutTransaction(pot.timestamp,  pot.amount, pot.btcAddress) "
-				+ "FROM PAY_OUT_TRANSACTION pot "
+				+ "FROM PayOutTransaction pot "
 				+ "WHERE pot.userID = :userid "
 				+ "ORDER BY pot.timestamp DESC")
 				.setFirstResult(page * Config.PAY_INS_MAX_RESULTS)
@@ -146,7 +146,7 @@ public class PayOutTransactionDAO {
 		@SuppressWarnings("unchecked")
         List<HistoryPayOutTransaction> resultWithAliasedBean = em.createQuery(""
 				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayOutTransaction(pot.timestamp,  pot.amount, pot.btcAddress) "
-				+ "FROM PAY_OUT_TRANSACTION pot "
+				+ "FROM PayOutTransaction pot "
 				+ "WHERE pot.userID = :userid "
 				+ "ORDER BY pot.timestamp DESC")
 				.setMaxResults(5)

@@ -8,11 +8,13 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
 
-import org.hibernate.annotations.Index;
 
-@Entity(name = "PAYOUT_RULES")
+@Entity
+@Table(name = "PAYOUT_RULES", indexes = {@Index(name = "USER_ID_INDEX_PAYOUTRULES",  columnList="USER_ID")})
 public class PayOutRule implements Serializable {
 	private static final long serialVersionUID = -6789290299273381688L;
 
@@ -26,7 +28,6 @@ public class PayOutRule implements Serializable {
 	@Column(name = "DAY")
 	private int day;
 	@Column(name = "USER_ID")
-	@Index(name = "USER_ID_INDEX_PAYOUTRULES")
 	private long userId;
 	@Column(name = "BALANCE_LIMIT", precision = 25, scale = 8)
 	private BigDecimal balanceLimit;

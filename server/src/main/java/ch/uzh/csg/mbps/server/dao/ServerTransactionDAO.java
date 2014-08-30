@@ -85,7 +85,7 @@ public class ServerTransactionDAO {
 		
 		long nofResults = ((Number) em.createQuery(
 				"SELECT COUNT(*) " +
-				"FROM server_transaction st")
+				"FROM ServerTransaction st")
 				.getSingleResult())
 				.longValue();
 		
@@ -112,7 +112,7 @@ public class ServerTransactionDAO {
 		
 		long nofResults = ((Number) em.createQuery(
 				  "SELECT COUNT(*) " +
-				  "FROM server_transaction st " +
+				  "FROM ServerTransaction st " +
 				  "WHERE st.user_id = :userid")
 				  .setParameter("userid", existingServerTransaction.getId())
 				  .getSingleResult())

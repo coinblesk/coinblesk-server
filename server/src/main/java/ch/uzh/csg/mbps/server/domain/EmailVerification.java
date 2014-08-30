@@ -5,11 +5,12 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
 
-import org.hibernate.annotations.Index;
-
-@Entity(name = "EMAILVERIFICATION")
+@Entity
+@Table(name = "EMAILVERIFICATION", indexes = {@Index(name = "USER_ID_INDEX",  columnList="USER_ID")})
 public class EmailVerification {
 	
 	@Id
@@ -18,7 +19,6 @@ public class EmailVerification {
 	@GeneratedValue(strategy=GenerationType.SEQUENCE,generator="pk_sequence")
 	private long id;
 	@Column(name="USER_ID")
-	@Index(name = "USER_ID_INDEX")
 	private long userID;
 	@Column(name="VERIFICATION_TOKEN")
 	private String verificationToken;

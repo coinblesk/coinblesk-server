@@ -9,20 +9,26 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.hibernate.annotations.Index;
 
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.util.Converter;
 
-@Entity(name = "DB_TRANSACTION")
+
+@Entity
+@Table(name = "DB_TRANSACTION", indexes = {
+		@Index(name = "USERNAME_PAYER_INDEX",  columnList="USERNAME_PAYER"), 
+		@Index(name = "USERNAME_PAYEE_INDEX",  columnList="USERNAME_PAYEE"), 
+		@Index(name = "TIMESTAMP_PAYER_INDEX",  columnList="TIMESTAMP_PAYER")})
 public class DbTransaction implements Serializable {
 	private static final long serialVersionUID = 6937127333699090182L;
 	
@@ -35,10 +41,8 @@ public class DbTransaction implements Serializable {
 	@Temporal(TemporalType.TIMESTAMP)
 	private Date timestamp;
 	@Column(name="USERNAME_PAYER")
-	@Index(name = "USERNAME_PAYER_INDEX")
 	private String usernamePayer;
 	@Column(name="USERNAME_PAYEE")
-	@Index(name = "USERNAME_PAYEE_INDEX")
 	private String usernamePayee;
 	@Column(name="CURRENCY")
 	private String currency;
@@ -49,7 +53,6 @@ public class DbTransaction implements Serializable {
 	@Column(name="INPUT_CURRENCY_AMOUNT", precision = 25, scale=2)
 	private BigDecimal inputCurrencyAmount;
 	@Column(name="TIMESTAMP_PAYER")
-	@Index(name="TIMESTAMP_PAYER_INDEX")
 	private long timestampPayer;
 	@Column(name="SIGNATURE")
 	private String signature;

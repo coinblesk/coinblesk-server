@@ -9,17 +9,19 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.hibernate.annotations.Index;
 
 import ch.uzh.csg.mbps.server.util.UserRoles.Role;
 
-@Entity(name = "USER_ACCOUNT")
+@Entity
+@Table(name = "USER_ACCOUNT", indexes = {@Index(name = "USERNAME_INDEX",  columnList="USERNAME")})
 public class UserAccount implements Serializable {
 	private static final long serialVersionUID = 1L;
 	
@@ -32,7 +34,6 @@ public class UserAccount implements Serializable {
 	@Column(name = "CREATIONDATE", nullable = false)
 	private Date creationDate;
 	@Column(name = "USERNAME", unique = true, nullable = false)
-	@Index(name = "USERNAME_INDEX")
 	private String username;
 	@Column(name = "EMAIL", unique = true, nullable = false)
 	private String email;

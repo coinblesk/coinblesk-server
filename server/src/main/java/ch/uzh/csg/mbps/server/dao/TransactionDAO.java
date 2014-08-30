@@ -54,7 +54,7 @@ public class TransactionDAO {
 		@SuppressWarnings("unchecked")
         List<HistoryTransaction> resultWithAliasedBean = em.createQuery(
 				  "SELECT NEW ch.uzh.csg.mbps.model.HistoryTransaction(dbt.timestamp, dbt.usernamePayer, dbt.usernamePayee, dbt.amount, dbt.inputCurrency, dbt.inputCurrencyAmount) "
-				+ "FROM DB_TRANSACTION dbt "
+				+ "FROM DbTransaction dbt "
 				+ "WHERE (dbt.usernamePayer = :username OR dbt.usernamePayee = :username) "
 				+ "ORDER BY dbt.timestamp DESC")
 				.setParameter("username", userAccount.getUsername())
@@ -158,7 +158,7 @@ public class TransactionDAO {
 		@SuppressWarnings("unchecked")
         List<HistoryTransaction> resultWithAliasedBean = em.createQuery(
 				  "SELECT NEW ch.uzh.csg.mbps.model.HistoryTransaction(dbt.timestamp, dbt.usernamePayer, dbt.usernamePayee, dbt.amount, dbt.inputCurrency, dbt.inputCurrencyAmount) "
-				+ "FROM DB_TRANSACTION dbt "
+				+ "FROM DbTransaction dbt "
 				+ "WHERE (dbt.usernamePayer = :username OR dbt.usernamePayee = :username) "
 				+ "ORDER BY dbt.timestamp DESC")
 				.setParameter("username", userAccount.getUsername())
@@ -172,7 +172,7 @@ public class TransactionDAO {
 		@SuppressWarnings("unchecked")
         List<HistoryTransaction> resultWithAliasedBean = em.createQuery(
 				  "SELECT NEW ch.uzh.csg.mbps.model.HistoryTransaction(dbt.timestamp,  dbt.usernamePayer, dbt.usernamePayee, dbt.amount, dbt.inputCurrency, dbt.inputCurrencyAmount) "
-				+ "FROM DB_TRANSACTION dbt")
+				+ "FROM DbTransaction dbt")
 				.getResultList();
 		
 		return resultWithAliasedBean;

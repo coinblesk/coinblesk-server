@@ -96,7 +96,7 @@ public class PayInTransactionDAO {
 		@SuppressWarnings("unchecked")
         List<HistoryPayInTransaction> resultWithAliasedBean = em.createQuery(""
 				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayInTransaction(pit.timestamp,  pit.amount) "
-				+ "FROM PAY_IN_TRANSACTION pit "
+				+ "FROM PayInTransaction pit "
 				+ "WHERE pit.userID = :userid "
 				+ "ORDER BY pit.timestamp DESC")
 				.setFirstResult(page * Config.PAY_INS_MAX_RESULTS)
@@ -140,7 +140,7 @@ public class PayInTransactionDAO {
 		@SuppressWarnings("unchecked")
         List<HistoryPayInTransaction> resultWithAliasedBean = em.createQuery(""
 				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayInTransaction(pit.timestamp,  pit.amount) "
-				+ "FROM PAY_IN_TRANSACTION pit "
+				+ "FROM PayInTransaction pit "
 				+ "WHERE pit.userID = :userid "
 				+ "ORDER BY pit.timestamp DESC")
 				.setMaxResults(5)

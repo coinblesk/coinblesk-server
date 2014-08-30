@@ -8,16 +8,21 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.hibernate.annotations.Index;
 
 import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 
-@Entity(name="SERVER_TRANSACTION")
+@Entity
+@Table(name = "SERVER_TRANSACTION", indexes = {
+		@Index(name = "PAYIN_ADDRESS_INDEX",  columnList="PAYIN_ADDRESS"),
+		@Index(name = "TX_ID_INDEX_SERVER_TX",  columnList="TX_ID")})
+
 public class ServerTransaction {
 
 	@Id
@@ -31,10 +36,8 @@ public class ServerTransaction {
 	@Column(name="AMOUNT", precision = 25, scale=8)
 	private BigDecimal amount;
 	@Column(name="PAYIN_ADDRESS")
-	@Index(name = "PAYIN_ADDRESS_INDEX")
 	private String payinAddress;
 	@Column(name="TX_ID")
-	@Index(name = "TX_ID_INDEX_SERVER_TX")
 	private String transactionID;
 	@Column(name="VERIFIED")
 	private boolean verified;

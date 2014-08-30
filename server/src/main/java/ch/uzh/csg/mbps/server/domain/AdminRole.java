@@ -7,11 +7,12 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
 
-import org.hibernate.annotations.Index;
-
-@Entity(name = "ADMINROLE")
+@Entity
+@Table(name = "ADMINROLE", indexes = {@Index(name = "TOKEN_INDEX",  columnList="TOKEN")})
 public class AdminRole {
 
 	@Id
@@ -22,7 +23,6 @@ public class AdminRole {
 	@Column(name = "USER_ID")
 	private long userID;
 	@Column(name = "TOKEN")
-	@Index(name = "TOKEN_INDEX")
 	private String token;
 	@Column(name = "CREATIONDATE", nullable = false)
 	private Date creationDate;

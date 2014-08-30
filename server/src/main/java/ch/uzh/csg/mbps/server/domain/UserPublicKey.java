@@ -7,13 +7,15 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.hibernate.annotations.Index;
 
-@Entity(name = "USER_PUBLIC_KEY")
+@Entity
+@Table(name = "USER_PUBLIC_KEY", indexes = {@Index(name = "USER_ID_INDEX_PKI",  columnList="USER_ID")})
 public class UserPublicKey implements Serializable {
 	private static final long serialVersionUID = -5668060751789666658L;
 	
@@ -23,7 +25,6 @@ public class UserPublicKey implements Serializable {
 	@Column(name = "ID", nullable = false)
 	private long id;
 	@Column(name = "USER_ID", nullable = false)
-	@Index(name = "USER_ID_INDEX_PKI")
 	private long userId;
 	@Column(name = "KEY_NUMBER", nullable = false)
 	private byte keyNumber;

@@ -8,15 +8,17 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.hibernate.annotations.Index;
 
-@Entity(name="SERVER_ACCOUNT")
+@Entity
+@Table(name = "SERVER_ACCOUNT", indexes = {@Index(name = "URL_INDEX",  columnList="URL")})
 public class ServerAccount {
 	
 	@Id
@@ -25,7 +27,6 @@ public class ServerAccount {
 	@Column(name = "ID", nullable = false)
 	private long id;
 	@Column(name = "URL", unique = true, nullable = false)
-	@Index(name = "URL_INDEX")
 	private String url;
 	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name = "CREATION_DATE", nullable = false)
