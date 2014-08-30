@@ -24,7 +24,7 @@
 		<intercept-url pattern="/activities/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" />
 		<intercept-url pattern="/**" access="isFullyAuthenticated()" />
 		<logout invalidate-session="true" 
-				logout-success-url="https://bitcoin.csg.uzh.ch/index.html"
+				logout-success-url="/"
 				delete-cookies="JSESSIONID"
 				logout-url="/spring_security_logout"/>
 		

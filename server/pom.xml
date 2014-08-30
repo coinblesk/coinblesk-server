@@ -324,7 +324,7 @@
   				<configuration>
     				<url>${server}</url>
     				<server>${deployment}</server>
-    				<path>/server</path>
+    				<path>${contextpath}</path>
   				</configuration>
 			</plugin>
 
