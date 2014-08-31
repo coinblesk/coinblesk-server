@@ -51,9 +51,9 @@ public class HourlyTask {
 			BigDecimal sumOfAccountBalances = userAccountService.getSumOfUserAccountBalances();
 			BigDecimal bitcoindAccountBalance = BitcoindController.getAccountBalance();
 			if(bitcoindAccountBalance.compareTo(sumOfAccountBalances) < 0)
-				Emailer.send("bitcoin@ifi.uzh.ch", "Sanity Check Test Error", "Warning! There are more Bitcoins assigned to user accounts than are stored on Bitcoind! " + "SumOfAccountBalances:  " + sumOfAccountBalances.toPlainString() + " BitcoindSum: " + bitcoindAccountBalance.toPlainString());
+				Emailer.send("bitcoin@ifi.uzh.ch", "[CoinBlesk] Error: Sanity Check failed - Intervention required!", "Important: possible worst case scenario happened! There are more Bitcoins assigned to user accounts than are stored on Bitcoind! " + "SumOfAccountBalances:  " + sumOfAccountBalances.toPlainString() + " BitcoindSum: " + bitcoindAccountBalance.toPlainString());
 		} catch (BitcoinException e) {
-			Emailer.send("bitcoin@ifi.uzh.ch", "Sanity Check Test Failed", "Couldn't compare useraccount balances to bitcoind balances. Exception: " + e.getMessage());
+			Emailer.send("bitcoin@ifi.uzh.ch", "[CoinBlesk] Warning: Problem creating sanity check", "Couldn't compare useraccount balances to bitcoind balances. Exception: " + e.getMessage());
 		}
 		
 	}
