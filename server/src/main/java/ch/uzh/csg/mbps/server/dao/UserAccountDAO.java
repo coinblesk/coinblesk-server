@@ -466,7 +466,8 @@ public class UserAccountDAO {
 	 * @return sumOfBalances
 	 */
 	public BigDecimal getSumOfAccountBalance() {
-		return (BigDecimal) em.createQuery("SELECT SUM(u.balance) FROM UserAccount u");
+		BigDecimal amount = new BigDecimal(em.createQuery("SELECT SUM(u.balance) FROM UserAccount u").getSingleResult().toString());
+		return amount;
 	}
 
 }
