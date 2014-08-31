@@ -8,6 +8,7 @@ import static org.junit.Assert.assertTrue;
 import java.math.BigDecimal;
 import java.util.Date;
 
+import org.hsqldb.Server;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,6 +29,8 @@ import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UrlAlreadyExistsException;
+import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
+import ch.uzh.csg.mbps.server.util.test.ReplacementDataSetLoader;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
@@ -42,7 +45,7 @@ import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
 		"classpath:context.xml",
 		"classpath:test-database.xml"})
 
-@DbUnitConfiguration(databaseConnection="dataSource")
+@DbUnitConfiguration(databaseConnection="dataSource", dataSetLoader = ReplacementDataSetLoader.class)
 @TestExecutionListeners({ 
 	DependencyInjectionTestExecutionListener.class,
 	DbUnitTestExecutionListener.class })
@@ -65,6 +68,13 @@ public class ServerAccountServiceTest {
 		ServerAccountService.disableTestingMode();
 	}
 
+	@Test
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	public void testPrepareGetAccount() throws UserAccountNotFoundException, InvalidPublicKeyException, InvalidUrlException, InvalidEmailException{
+		ServerAccount server = new ServerAccount("http://www.neu.ch", "neu@neu.ch", "fake-key");
+		ServerAccount sendAccount = serverAccountService.prepareAccount(server);
+	}
+	
 	@Test
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
 	@ExpectedDatabase(value="classpath:DbUnitFiles/Services/serverAccountExpectedCreateData.xml", table="server_account")
