@@ -22,8 +22,10 @@ public interface IServerAccount {
 	//TODO: mehmet: javadoc
 	/**
 	 * 
-	 * @param serverAccount
-	 * @return
+	 * Stores the server account into the DB
+	 * 
+	 * @param serverAccount Data of the new server
+	 * @return Server account
 	 * @throws UrlAlreadyExistsException
 	 * @throws BitcoinException
 	 * @throws InvalidUrlException
@@ -35,7 +37,7 @@ public interface IServerAccount {
 	/**
 	 * 
 	 * @param url
-	 * @return
+	 * @return Server Account
 	 * @throws ServerAccountNotFoundException
 	 */
 	public ServerAccount getByUrl(String url) throws ServerAccountNotFoundException;
@@ -43,24 +45,27 @@ public interface IServerAccount {
 	/**
 	 * 
 	 * @param id
-	 * @return
+	 * @return Server Account
 	 * @throws UserAccountNotFoundException
 	 */
 	public ServerAccount getById(long id) throws ServerAccountNotFoundException;
 
 	/**
 	 * 
+	 * Updates the server url or email address or balance limit or trust level  
+	 * 
 	 * @param url
 	 * @param updatedAccount
-	 * @return
+	 * @return boolean
 	 * @throws UserAccountNotFoundException
 	 */
 	public boolean updateAccount(String url, ServerAccount updatedAccount) throws ServerAccountNotFoundException;
 
 	/**
+	 * Sets the deleted flag
 	 * 
 	 * @param url
-	 * @return
+	 * @return boolean
 	 * @throws UserAccountNotFoundException
 	 * @throws BalanceNotZeroException
 	 */
@@ -68,13 +73,13 @@ public interface IServerAccount {
 	
 	/**
 	 * 
-	 * @return
+	 * @return list of {@link ServerAccount}s
 	 */
 	public List<ServerAccount> getByTrustLevel(int trustlevel);
 	
 	/**
 	 * 
-	 * @return
+	 * @return list of {@link ServerAccount}s
 	 */
 	public List<ServerAccount> getAll();
 
@@ -86,8 +91,22 @@ public interface IServerAccount {
 	 */
 	public List<ch.uzh.csg.mbps.model.ServerAccount> getServerAccounts(int urlPage);
 
+	/**
+	 * 
+	 * @return long
+	 */
 	public long getAccountsCount();
 
+	/**
+	 * Checks all conditions that have to be set before
+	 * delete an account.
+	 * 
+	 * @param url
+	 * @return boolean
+	 * @throws ServerAccountNotFoundException
+	 * @throws BalanceNotZeroException
+	 * @throws HibernateException
+	 */
 	public boolean checkPredefinedDeleteArguments(String url) throws ServerAccountNotFoundException, BalanceNotZeroException, HibernateException;
 
 	/**
@@ -124,6 +143,7 @@ public interface IServerAccount {
 
 	/**
 	 * Checks if Url is allready existing
+	 * 
 	 * @param url
 	 * @return boolean
 	 * @throws UrlAlreadyExistsException
@@ -140,7 +160,7 @@ public interface IServerAccount {
 	/**
 	 * 
 	 * @param id
-	 * @return booelan
+	 * @return boolean
 	 */
 	boolean isDeletedById(long id);
 }
