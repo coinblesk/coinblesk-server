@@ -1,7 +1,6 @@
 package ch.uzh.csg.mbps.server.controllerui;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,9 +14,9 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import ch.uzh.csg.mbps.server.clientinterface.IServerTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
-import ch.uzh.csg.mbps.server.util.UserModel;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction;
+import ch.uzh.csg.mbps.server.util.web.model.UserModel;
 
 @Controller
 @RequestMapping("/home")
@@ -36,13 +35,13 @@ public class HomeController {
 	
 	@RequestMapping(value={"/balance"}, method=RequestMethod.GET, produces="application/json")
 	public 	@ResponseBody double getBalanceSum(){
-		BigDecimal balance =userAccountService.getSumOfAllAccounts();
+		BigDecimal balance =userAccountService.getSumOfUserAccountBalances();
 		return balance.doubleValue();
 	}
 	
 	@RequestMapping(value={"/lastThreeTransaction"}, method=RequestMethod.GET, produces="application/json")
-	public @ResponseBody ArrayList<HistoryServerAccountTransaction> getLastThreeTransaction(){
-		return serverTransactionService.getLast3Transactions();
+	public @ResponseBody List<HistoryServerAccountTransaction> getLastThreeTransaction(){
+		return serverTransactionService.getLast5Transactions();
 	}
 	
 	@RequestMapping(value={"/admins"}, method=RequestMethod.GET, produces="application/json")
@@ -92,7 +91,7 @@ public class HomeController {
 		}
 		
 		if(admin != null){
-			userAccountService.changeRoleBoth(email);
+			userAccountService.changeRoleBoth(admin);
 		}else{
 			userAccountService.changeRoleAdmin(email);
 		}

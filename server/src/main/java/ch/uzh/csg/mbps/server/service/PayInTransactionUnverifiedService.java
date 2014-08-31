@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.mbps.model.HistoryPayInTransactionUnverified;
+import ch.uzh.csg.mbps.server.clientinterface.IPayInTransactionUnverified;
 import ch.uzh.csg.mbps.server.dao.PayInTransactionUnverifiedDAO;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.PayInTransactionUnverified;
@@ -16,13 +17,14 @@ import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 
 @Service
-public class PayInTransactionUnverifiedService {
+public class PayInTransactionUnverifiedService implements  IPayInTransactionUnverified {
 
 	@Autowired
 	private PayInTransactionUnverifiedDAO payInTransactionUnverifiedDAODAO;
 	@Autowired
 	private UserAccountDAO userAccountDAO;
 	
+	@Override
 	@Transactional
 	public void create(Transaction transaction) throws UserAccountNotFoundException {
 		long userID = userAccountDAO.getByBTCAddress(transaction.address()).getId();
@@ -32,23 +34,23 @@ public class PayInTransactionUnverifiedService {
 		}
     }
 	
+	@Override
 	@Transactional(readOnly = true)
-	public List<HistoryPayInTransactionUnverified> getHistory(String username,
-			int page) throws UserAccountNotFoundException {
+	public List<HistoryPayInTransactionUnverified> getHistory(String username, int page) throws UserAccountNotFoundException {
 		return payInTransactionUnverifiedDAODAO.getHistory(username, page);
 	}
 
+	@Override
 	@Transactional(readOnly = true)
-	public long getHistoryCount(String username)
-			throws UserAccountNotFoundException {
+	public long getHistoryCount(String username) throws UserAccountNotFoundException {
 		UserAccount userAccount = userAccountDAO.getByUsername(username);
 		return payInTransactionUnverifiedDAODAO.getHistoryCount(userAccount);
 	}
 
+	@Override
 	@Transactional(readOnly = true)
 	public List<HistoryPayInTransactionUnverified> getLast5Transactions(String username) throws UserAccountNotFoundException {
 		UserAccount userAccount = userAccountDAO.getByUsername(username);
 		return payInTransactionUnverifiedDAODAO.getLast5Transactions(userAccount);
 	}
-
 }

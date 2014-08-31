@@ -11,11 +11,10 @@ import net.minidev.json.parser.ParseException;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
-import ch.uzh.csg.mbps.server.domain.PayOutRule;
-import ch.uzh.csg.mbps.server.service.PayOutRuleService;
-
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
+
+import ch.uzh.csg.mbps.server.clientinterface.IPayOutRule;
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 
 /**
  * Task executed by cron job for checking all {@link PayOutRule}s.
@@ -25,11 +24,11 @@ public class HourlyTask {
 	private static Logger LOGGER = Logger.getLogger(HourlyTask.class);
 
 	@Autowired
-	private PayOutRuleService payOutRuleService;
-	@Autowired
 	private IUserAccount userAccountService;
 	@Autowired
 	private MensaXLSExporter mensaXLSExporter;
+	@Autowired
+	private IPayOutRule payOutRuleService;
 
 	/**
 	 * Update is executed every 60minutes.
@@ -41,6 +40,8 @@ public class HourlyTask {
 
 		// update USD/CHF-ExchangeRate
 		updateUsdChf();
+
+		//TODO: mehmet include server payout rules hourly task
 
 		//check if enough Bitcoins are available in the system
 		sanityCheck();
@@ -71,7 +72,7 @@ public class HourlyTask {
 		} catch (BitcoinException e) {
 			Emailer.send("bitcoin@ifi.uzh.ch", "[CoinBlesk] Warning: Problem creating sanity check", "Couldn't compare useraccount balances to bitcoind balances. Exception: " + e.getMessage());
 		}
-
+		
 	}
 
 	/**

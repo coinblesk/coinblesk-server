@@ -7,7 +7,7 @@ import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 
 /**
  *
- * @author Mikhail Yevchenko <m.ṥῥẚɱ.ѓѐḿởύḙ@azazar.com>
+ * @author Mikhail Yevchenko <m?@azazar.com>
  */
 public class SimpleBitcoinPaymentListener implements BitcoinPaymentListener {
 

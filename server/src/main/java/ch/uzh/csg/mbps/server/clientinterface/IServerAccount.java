@@ -1,8 +1,12 @@
 package ch.uzh.csg.mbps.server.clientinterface;
 
+import java.math.BigDecimal;
 import java.util.List;
 
+import org.hibernate.HibernateException;
+
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
+import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidPublicKeyException;
@@ -26,8 +30,8 @@ public interface IServerAccount {
 	 * @throws InvalidEmailException
 	 * @throws InvalidPublicKeyException 
 	 */
-	public boolean createAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException;
-
+	public boolean persistAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException;
+	
 	/**
 	 * 
 	 * @param url
@@ -60,7 +64,7 @@ public interface IServerAccount {
 	 * @throws UserAccountNotFoundException
 	 * @throws BalanceNotZeroException
 	 */
-	public boolean delete(String url) throws ServerAccountNotFoundException, BalanceNotZeroException;
+	public boolean deleteAccount(String url) throws ServerAccountNotFoundException, BalanceNotZeroException;
 	
 	/**
 	 * 
@@ -73,4 +77,70 @@ public interface IServerAccount {
 	 * @return
 	 */
 	public List<ServerAccount> getAll();
+
+	/**
+	 * All server account which have a trust relation
+	 * 
+	 * @param urlPage
+	 * @return List of server account
+	 */
+	public List<ch.uzh.csg.mbps.model.ServerAccount> getServerAccounts(int urlPage);
+
+	public long getAccountsCount();
+
+	public boolean checkPredefinedDeleteArguments(String url) throws ServerAccountNotFoundException, BalanceNotZeroException, HibernateException;
+
+	/**
+	 * 
+	 * @param url
+	 * @param oldLevel
+	 * @param newLevel
+	 * @throws ServerAccountNotFoundException
+	 */
+	public void updateTrustLevel(String url, int oldLevel, int newLevel) throws ServerAccountNotFoundException;
+
+	/**
+	 * 
+	 * @param url
+	 * @param oldLimit
+	 * @param newLimit
+	 */
+	public void updateBalanceLimit(String url, BigDecimal oldLimit, BigDecimal newLimit);
+
+	/**
+	 * Stores own url, email and public key and creates a 
+	 * Server Account model which will be send.
+
+	 * 
+	 * @param userAccount
+	 * @param account
+	 * @return ServerAccount
+	 * @throws UserAccountNotFoundException
+	 * @throws InvalidPublicKeyException
+	 * @throws InvalidUrlException
+	 * @throws InvalidEmailException
+	 */
+	public ServerAccount prepareAccount(UserAccount userAccount, ServerAccount account) throws UserAccountNotFoundException, InvalidPublicKeyException, InvalidUrlException, InvalidEmailException;
+
+	/**
+	 * Checks if Url is allready existing
+	 * @param url
+	 * @return boolean
+	 * @throws UrlAlreadyExistsException
+	 */
+	public boolean checkIfExistsByUrl(String url) throws UrlAlreadyExistsException;
+
+	/**
+	 * 
+	 * @param url
+	 * @return boolean
+	 */
+	boolean isDeletedByUrl(String url);
+
+	/**
+	 * 
+	 * @param id
+	 * @return booelan
+	 */
+	boolean isDeletedById(long id);
 }

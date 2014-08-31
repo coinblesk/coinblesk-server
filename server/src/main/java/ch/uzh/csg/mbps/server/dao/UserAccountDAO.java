@@ -80,6 +80,12 @@ public class UserAccountDAO {
 		return userAccount;
 	}
 	
+	/**
+	 * 
+	 * @param cq
+	 * @param em
+	 * @return
+	 */
 	public static<K> K getSingle(CriteriaQuery<K> cq, EntityManager em) {
 		List<K> list =  em.createQuery(cq).getResultList();
 		if(list.size() == 0) {
@@ -432,6 +438,7 @@ public class UserAccountDAO {
 		return userAccount;
 	}
 	
+
 	/**
 	 * Returns a list with all {@link UserAccount} objects saved in the
 	 * database.
@@ -444,7 +451,7 @@ public class UserAccountDAO {
 		cq.from(UserAccount.class);
 		return em.createQuery(cq).getResultList();
 	}
-
+	
 	//TODO: mehmet javadoc
 	/**
 	 * 
@@ -455,7 +462,7 @@ public class UserAccountDAO {
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<UserAccount> cq = cb.createQuery(UserAccount.class);
 		Root<UserAccount> root = cq.from(UserAccount.class);
-		Predicate condition = cb.equal(root.get("roles"), role.getCode());
+		Predicate condition = cb.and(cb.equal(root.get("roles"), role.getCode()), cb.equal(root.get("deleted"), false));
 		cq.where(condition);
 		return em.createQuery(cq).getResultList();
 	}
@@ -470,4 +477,22 @@ public class UserAccountDAO {
 		return amount;
 	}
 
+	// TODO: mehmet javadoc
+	/**
+	 * 
+	 * @param role
+	 * @return
+	 */
+	public List<String> getEmailOfAllUsersByRoles(Role role) {
+		
+		@SuppressWarnings("unchecked")
+        List<String> resultWithAliasedBean = em.createQuery(
+				  "SELECT user.email "
+				+ "FROM USER_ACCOUNT user")
+				.setParameter("roles", role)
+				.setParameter("deleted", false)
+				.getResultList();
+		
+		return resultWithAliasedBean;
+	}
 }

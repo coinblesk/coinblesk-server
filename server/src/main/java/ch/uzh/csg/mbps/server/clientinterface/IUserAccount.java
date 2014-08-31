@@ -10,14 +10,15 @@ import ch.uzh.csg.mbps.server.domain.ResetPassword;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.domain.UserPublicKey;
 import ch.uzh.csg.mbps.server.util.PasswordMatcher;
-import ch.uzh.csg.mbps.server.util.UserModel;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.VerificationTokenNotFoundException;
+import ch.uzh.csg.mbps.server.util.web.model.UserModel;
 
 public interface IUserAccount {
 	
@@ -31,8 +32,9 @@ public interface IUserAccount {
 	 * @throws InvalidUsernameException
 	 * @throws InvalidEmailException 
 	 * @throws EmailAlreadyExistsException 
+	 * @throws InvalidUrlException 
 	 */
-	public boolean createAccount(UserAccount userAccount) throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException;
+	public boolean createAccount(UserAccount userAccount) throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException;
 
 	/**
 	 * Returns the UserAccount belonging to the given username.
@@ -91,15 +93,13 @@ public interface IUserAccount {
 
 	public byte saveUserPublicKey(long id, PKIAlgorithm pkiAlgorithm, String publicKey) throws UserAccountNotFoundException;
 
-	public BigDecimal getSumOfAllAccounts();
-
 	public List<UserAccount> getAdmins();
 
 	public UserModel getLoggedAdmin(String username);
 
 	public UserAccount getByEmail(String email) throws UserAccountNotFoundException;
 
-	public void changeRoleBoth(String email) throws UserAccountNotFoundException;
+	public void changeRoleBoth(UserAccount admin) throws UserAccountNotFoundException;
 
 	public void changeRoleAdmin(String email) throws UserAccountNotFoundException;
 
@@ -119,6 +119,25 @@ public interface IUserAccount {
 
 	public List<UserPublicKey> getUserPublicKeys(long id);
 
+	/**
+	 * Returns the sum of balances from all user accounts. Represents the total
+	 * amount of Bitcoins which belong to all user accounts.
+	 * @return sumOfUserAccountBalances
+	 */
 	public BigDecimal getSumOfUserAccountBalances();
 
+	/**
+	 * Checks if token is saved in table and still valid (younger than 1h)
+	 * 
+	 * @param adminToken
+	 * @return
+	 */
+	public boolean isValidAdminRoleLink(String adminToken);
+
+	/**
+	 * 
+	 * @param subject
+	 * @param text
+	 */
+	public void sendMailToAll(String subject, String text);
 }

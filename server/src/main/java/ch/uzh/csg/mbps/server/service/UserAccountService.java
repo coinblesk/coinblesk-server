@@ -22,16 +22,17 @@ import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.CustomPasswordEncoder;
 import ch.uzh.csg.mbps.server.util.Emailer;
 import ch.uzh.csg.mbps.server.util.PasswordMatcher;
-import ch.uzh.csg.mbps.server.util.UserModel;
 import ch.uzh.csg.mbps.server.util.UserRoles;
 import ch.uzh.csg.mbps.server.util.UserRoles.Role;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.VerificationTokenNotFoundException;
+import ch.uzh.csg.mbps.server.util.web.model.UserModel;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
@@ -68,14 +69,14 @@ public class UserAccountService implements IUserAccount {
 
 	@Override
 	@Transactional
-	public boolean createAccount(UserAccount userAccount) throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
+	public boolean createAccount(UserAccount userAccount) throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		if (TESTING_MODE)
 			return createAccount(userAccount, "fake-address");
 		else
 			return createAccount(userAccount, getNewPaymentAddress());
 	}
 	
-	private boolean createAccount(UserAccount userAccount, String paymentAddress) throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
+	private boolean createAccount(UserAccount userAccount, String paymentAddress) throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		UserAccount fromDB = null;
 		
 		userAccount.setUsername(userAccount.getUsername().trim());
@@ -89,8 +90,18 @@ public class UserAccountService implements IUserAccount {
 		if (email == null)
 			throw new InvalidEmailException();
 
-		if (!username.matches(Config.USERNAME_REGEX))
+		int splitIndex = username.indexOf(Config.SPLIT_USERNAME);
+		String userName = username.substring(0, splitIndex);
+		String userUrl = username.substring(splitIndex + 1);
+		
+		if(!userName.matches(Config.USERNAME_REGEX))
 			throw new InvalidUsernameException();
+		
+		if (!userUrl.matches(Config.URL_NAME_REGEX))
+			throw new InvalidUrlException();
+		
+//		if (!username.matches(Config.USERNAME_REGEX))
+//			throw new InvalidUsernameException();
 		
 		if (!email.matches(Config.EMAIL_REGEX))
 			throw new InvalidEmailException();
@@ -132,10 +143,6 @@ public class UserAccountService implements IUserAccount {
 		return true;
 	}
 	
-	private String getNewPaymentAddress() throws BitcoinException {
-		return BitcoindController.getNewAddress();
-	}
-	
 	private void sendEmailVerificationLink(String token, String email){
 		Emailer.sendEmailConfirmationLink(token, email);
 	}
@@ -152,6 +159,10 @@ public class UserAccountService implements IUserAccount {
 			userAccountDAO.createEmailVerificationToken(userAccount.getId(), token);
 			Emailer.sendEmailConfirmationLink(token, userAccount.getEmail());
 		}
+	}
+
+	private String getNewPaymentAddress() throws BitcoinException {
+		return BitcoindController.getNewAddress();
 	}
 
 	@Override
@@ -334,20 +345,6 @@ public class UserAccountService implements IUserAccount {
 		return userPublicKeyDAO.getUserPublicKeys(userId);
 	}
 	
-	/**
-	 * Returns sum of Balance of each user account in the system.
-	 * @return Sum of each Balance
-	 */
-	@Transactional(readOnly = true)
-	public BigDecimal getSumOfAllAccounts(){
-		List<UserAccount> users = userAccountDAO.getAllUserAccounts();
-		
-		BigDecimal sum = BigDecimal.ZERO;
-		for(UserAccount user: users){
-			sum = sum.add(user.getBalance());
-		}
-		return sum;
-	}
 	
 	//TODO: mehmet
 	/**
@@ -369,7 +366,7 @@ public class UserAccountService implements IUserAccount {
 	 */
 	@Transactional(readOnly = true)
 	public List<UserAccount> getUsers(){
-		List<UserAccount> users = new ArrayList<UserAccount>(); 
+		List<UserAccount> users; 
 		users = userAccountDAO.getAllUsersByRoles(Role.USER);
 		users.addAll(userAccountDAO.getAllUsersByRoles(Role.BOTH));
 		return users;
@@ -405,18 +402,15 @@ public class UserAccountService implements IUserAccount {
 		return userAccountDAO.getByEmail(email);
 	}
 
-	//TODO: mehmet test & javadoc
-	/**
-	 * 
-	 * @param email
-	 * @throws UserAccountNotFoundException 
-	 */
+	// TODO: mehmet test & javadoc
+	@Override
 	@Transactional
-	public void changeRoleBoth(String emailAddress) throws UserAccountNotFoundException {
-		UserAccount user = userAccountDAO.getByEmail(emailAddress);
-		Emailer.sendUpdateRoleBothLink(user);
+	public void changeRoleBoth(UserAccount admin) throws UserAccountNotFoundException {
+		admin.setRoles(Role.BOTH.getCode());
+		userAccountDAO.updateAccount(admin);
+		Emailer.sendUpdateRoleBothLink(admin);
 	}
-
+	
 	//TODO: mehmet Test & javadoc
 	/**
 	 * 
@@ -492,13 +486,52 @@ public class UserAccountService implements IUserAccount {
 	    return userPublicKeyDAO.getUserPublicKeys(id);
     }
 	
-	/**
-	 * Returns the sum of balances from all user accounts. Represents the total
-	 * amount of Bitcoins which belong to all user accounts.
-	 * @return sumOfUserAccountBalances
-	 */
+	@Override
 	@Transactional(readOnly = true)
     public BigDecimal getSumOfUserAccountBalances() {
 	    return userAccountDAO.getSumOfAccountBalance();
     }
+
+	@Override
+	@Transactional
+	public boolean isValidAdminRoleLink(String adminToken) {
+		try {
+			AdminRole adminRole = userAccountDAO.getCreateAdmin(adminToken);
+			if (adminRole == null) {
+				return false;
+			} else {
+				// checks if token has been created during the last 1h
+				if (adminRole.getCreationDate().getTime() >= (new Date()
+						.getTime() - Config.VALID_TOKEN_LIMIT)) {
+					return true;
+				} else {
+					return false;
+				}
+			}
+		} catch (VerificationTokenNotFoundException e) {
+			return false;
+		}
+	}
+
+	@Override
+	@Transactional
+	public void sendMailToAll(String subject, String text) {
+		List<String> emails = getEmailOfAllUsers();
+		String emailToSend = "";
+		for (String email : emails) {
+			emailToSend += email + ",";
+		}
+		Emailer.sendMessageToAllUsers(emailToSend, subject, text);
+	}
+
+	/**
+	 * 
+	 * @return
+	 */
+	private List<String> getEmailOfAllUsers() {
+		List<String> emails = new ArrayList<String>();
+		emails = userAccountDAO.getEmailOfAllUsersByRoles(Role.USER);
+		emails.addAll(userAccountDAO.getEmailOfAllUsersByRoles(Role.BOTH));
+		return emails;
+	}
 }

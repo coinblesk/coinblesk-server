@@ -14,11 +14,11 @@ import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
 import ch.uzh.csg.mbps.model.HistoryPayInTransactionUnverified;
 import ch.uzh.csg.mbps.model.HistoryPayOutTransaction;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
+import ch.uzh.csg.mbps.server.clientinterface.IPayInTransaction;
+import ch.uzh.csg.mbps.server.clientinterface.IPayInTransactionUnverified;
+import ch.uzh.csg.mbps.server.clientinterface.IPayOutTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.ITransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
-import ch.uzh.csg.mbps.server.service.PayInTransactionService;
-import ch.uzh.csg.mbps.server.service.PayInTransactionUnverifiedService;
-import ch.uzh.csg.mbps.server.service.PayOutTransactionService;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 
 /**
@@ -34,11 +34,11 @@ public class HistoryEmailHandler {
 	@Autowired
 	private ITransaction transactionService;
 	@Autowired
-	private PayInTransactionService payInTransactionService;
+	private IPayInTransactionUnverified payInTransactionUnverifiedService;
 	@Autowired
-	private PayInTransactionUnverifiedService payInTransactionUnverifiedService;
+	private IPayInTransaction payInTransactionService;
 	@Autowired
-	private PayOutTransactionService payOutTransactionService;
+	private IPayOutTransaction payOutTransactionService;
 	
 	/**
 	 * Sends the transaction history to the registered email address belonging

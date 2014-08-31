@@ -21,17 +21,18 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.keys.CustomKeyPair;
 import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
+import ch.uzh.csg.mbps.server.clientinterface.IPayInTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.PayInTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
-import ch.uzh.csg.mbps.server.service.PayInTransactionService;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
 import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
@@ -54,7 +55,7 @@ public class PayInTransactionServiceTest {
 	private IUserAccount userAccountService;
 	
 	@Autowired
-	private PayInTransactionService payInTransactionService;
+	private IPayInTransaction payInTransactionService;
 
 	@Before
 	public void setUp() throws Exception {
@@ -62,8 +63,8 @@ public class PayInTransactionServiceTest {
 		UserAccountService.enableTestingMode();
 
 		if (!initialized) {
-			test61 = new UserAccount("test61", "test61@bitcoin.csg.uzh.chs", "asdf");
-			test62 = new UserAccount("test62", "test62@bitcoin.csg.uzh.ch", "asdf");
+			test61 = new UserAccount("test61@https://mbps.csg.uzh.ch", "test61@bitcoin.csg.uzh.chs", "asdf");
+			test62 = new UserAccount("test62@https://mbps.csg.uzh.ch", "test62@bitcoin.csg.uzh.ch", "asdf");
 
 			KeyPair keypair = KeyHandler.generateKeyPair();
 
@@ -78,7 +79,7 @@ public class PayInTransactionServiceTest {
 		UserAccountService.disableTestingMode();
 	}
 
-	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
+	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		assertTrue(userAccountService.createAccount(userAccount));
 		userAccount = userAccountService.getByUsername(userAccount.getUsername());
 		userAccount.setEmailVerified(true);

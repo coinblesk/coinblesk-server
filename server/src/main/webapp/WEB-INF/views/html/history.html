@@ -15,27 +15,29 @@
 </div>
 <div class="container" id="historyController">
 	<div class="history_transaction" data-ng-repeat="transaction in servertransactions" data-ng-non-bindable="">
-		Amount: <b>{{transaction.amount}} BTC</b><span style="margin:20px;"></span> Address: <b>{{transaction.payinAddress}}</b><span style="margin:20px;"></span>Timestamp: <b>{{transaction.timestamp | date:'yyyy-MM-dd HH:mm'}}</b>
+		Amount: <b>{{transaction.amount}} BTC</b><span style="margin:20px;"></span> URL: <b>{{transaction.serverUrl}}</b>
+		<span style="margin:20px;"></span>Timestamp: <b>{{transaction.timestamp | date:'yyyy-MM-dd HH:mm'}}</b>
+		<span style="margin:20px;"></span>Received: <b>{{transaction.received}}</b> 
 	</div>
 </div>
 <div class="row">
 	<p></p>
 	<div class="col-lg-3">
 	<p></p>
-	<h2 id="Overview">Overview</h2><ul><li>Lorem ipsum</li><li>Lorem ipsum</li></ul><p><a href="overview" class="btn btn-primary">View details</a></p>
+	<h2 id="Overview">Overview</h2><ul><li>Lorem ipsum</li><li>Lorem ipsum</li></ul><p><a href="overview" class="btn btn-info">View details</a></p>
 	<p></p></div>
 	<div class="col-lg-3">
 	<p></p>
-	<h2 id="AboutMBPS">About MBPS</h2><ul><li>Lorem ipsum</li><li>Lorem ipsum</li></ul><p><a href="aboutmpbs" class="btn btn-primary">View details</a></p>
+	<h2 id="AboutMBPS">About MBPS</h2><ul><li>Lorem ipsum</li><li>Lorem ipsum</li></ul><p><a href="aboutmpbs" class="btn btn-info">View details</a></p>
 	<p></p>
 	</div>
 	<div class="col-lg-3">
 	<p></p>
-	<h2 id="Guidelines">Guidelines</h2><ul><li>Lorem ipsum</li><li>Lorem ipsum</li></ul><p><a href="guidlines" class="btn btn-primary">View details</a></p>
+	<h2 id="Guidelines">Guidelines</h2><ul><li>Lorem ipsum</li><li>Lorem ipsum</li></ul><p><a href="guidlines" class="btn btn-info">View details</a></p>
 	<p></p></div>
 	<div class="col-lg-3">
 	<p></p>
-	<h2 id="Help">Help</h2><ul><li>Lorem ipsum</li><li>Lorem ipsum</li></ul><p><a href="help" class="btn btn-primary">View details</a></p>
+	<h2 id="Help">Help</h2><ul><li>Lorem ipsum</li><li>Lorem ipsum</li></ul><p><a href="help" class="btn btn-info">View details</a></p>
 	<p></p></div>      
 	<p></p>
 </div>

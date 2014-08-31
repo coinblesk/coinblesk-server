@@ -10,7 +10,7 @@ public class SecurityConfig {
 	protected static final String FROM = "bitcoin-no-reply@ifi.uzh.ch";
 	protected static final String EMAIL_USER = "mbps-notification";
 	protected static final String EMAIL_PASSWORD = "4iu7xvEG";
-	protected static final String BASE_URL = "http://bitcoin-clone.csg.uzh.ch/server";
+	public static final String BASE_URL = "http://bitcoin-clone2.csg.uzh.ch/server";
 
 	//Bitcoin Controller Configuration
 	public static final String ACCOUNT = "bitcoinrpc";

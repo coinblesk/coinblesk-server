@@ -70,5 +70,4 @@ public interface ITransaction {
 	public List<HistoryTransaction> getAll(String username) throws UserAccountNotFoundException;
 
 	public void createTransaction(DbTransaction tx, UserAccount fromDB, UserAccount fromDB2);
-	
 }
