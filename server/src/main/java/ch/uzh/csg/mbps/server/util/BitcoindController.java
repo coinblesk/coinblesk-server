@@ -309,4 +309,14 @@ public class BitcoindController {
 	public void setListenTransactions(boolean listenTransactions) {
 	    this.listenTransactions = listenTransactions;
     }
+	
+	/**
+	 * Returns the balance of bitcoind (currently available Bitcoins).
+	 * @return accountBalance (Balance of Bitcoind)
+	 * @throws BitcoinException
+	 */
+	protected static BigDecimal getAccountBalance() throws BitcoinException  {
+		BigDecimal accountBalance = new BigDecimal(BITCOIN.getBalance());
+		return accountBalance;
+	}
 }
