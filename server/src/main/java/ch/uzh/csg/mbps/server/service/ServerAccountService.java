@@ -122,8 +122,8 @@ public class ServerAccountService implements IServerAccount {
 		
 		if (!otherEmail.matches(Config.EMAIL_REGEX))
 			throw new InvalidEmailException();
-		
-		activitiesService.activityLog(user.getUsername(), ActivitiesTitle.CREATE_SERVER_ACCOUNT,"Create a new relation with the server " + otherUrl + " and email " + otherEmail);
+		if(!TESTING_MODE)
+			activitiesService.activityLog(user.getUsername(), ActivitiesTitle.CREATE_SERVER_ACCOUNT,"Create a new relation with the server " + otherUrl + " and email " + otherEmail);
 		
 		return serverAccount;
 	}

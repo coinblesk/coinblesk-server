@@ -61,8 +61,6 @@ public class ServerAccount {
 	 *            != NULL
 	 * @param email
 	 *            != NULL
-	 * @param public key
-	 *            != NULL
 	 */
 	public ServerAccount(String url, String email, String publicKey) {
 		this.url = url;
@@ -75,6 +73,16 @@ public class ServerAccount {
 		this.trustLevel = 0;
 	}
 	
+	/**
+	 * Creates a new server account with active balance 0, actual timestamp and given
+	 * parameters.
+	 * 
+	 * @param url
+	 * @param email
+	 * @param publicKey
+	 * @param trustLevel
+	 * @param balanceLimit
+	 */
 	public ServerAccount(String url, String email, String publicKey, int trustLevel, BigDecimal balanceLimit){
 		this.url = url;
 		this.email = email;
