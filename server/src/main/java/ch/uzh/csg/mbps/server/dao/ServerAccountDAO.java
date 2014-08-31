@@ -12,7 +12,6 @@ import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
 import org.apache.log4j.Logger;
-import org.hibernate.HibernateException;
 import org.springframework.stereotype.Repository;
 
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
@@ -43,6 +42,14 @@ public class ServerAccountDAO {
 		LOGGER.info("ServerAccount created: " + serverAccount.toString());
 	}
 
+	/**
+	 * Set the server account as deleted. 
+	 * 
+	 * @pre {@link ServerAccount} has to be trust level No-Trust and the active balance has to be {@link BigDecimal} Zero.
+	 * @param url of ther {@link ServerAccount}
+	 * @throws ServerAccountNotFoundException
+	 * @throws BalanceNotZeroException
+	 */
 	public void delete(String url) throws ServerAccountNotFoundException, BalanceNotZeroException {
 		ServerAccount serverAccount = getByUrl(url);
 		
@@ -56,6 +63,8 @@ public class ServerAccountDAO {
 	}
 	
 	/**
+	 * Persist updated {@link ServerAccount}
+	 * 
 	 * @pre Only Trust level, balance limit and url should be updated
 	 * @param serverAccount
 	 */
@@ -65,9 +74,11 @@ public class ServerAccountDAO {
 	}
 	
 	/**
+	 * Returns {@link ServerAccount}-Object for given parameter url. Does not
+	 * return deleted ServerAccounts.
 	 * 
 	 * @param url
-	 * @return
+	 * @return ServerAccount
 	 * @throws ServerAccountNotFoundException
 	 */
 	public ServerAccount getByUrl(String url) throws ServerAccountNotFoundException{
@@ -88,6 +99,15 @@ public class ServerAccountDAO {
 		return serverAccount;
 	}
 	
+	/**
+	 * Returns {@link ServerAccount} (also deleted ones) ignoring cases. Only to
+	 * use for checking if serverAccount already exists when creating new
+	 * ServerAccount.
+	 * 
+	 * @param url
+	 * @return ServerAccount
+	 * @throws ServerAccountNotFoundException
+	 */
 	public ServerAccount getByUrlIgnoreCaseAndDeletedFlag(String url) throws ServerAccountNotFoundException{
 		
 		CriteriaBuilder cb = em.getCriteriaBuilder();
@@ -108,9 +128,11 @@ public class ServerAccountDAO {
 	}
 	
 	/**
+	 * Returns {@link ServerAccount}-Object for given parameter id. Does not
+	 * return deleted ServerAccounts.
 	 * 
 	 * @param id
-	 * @return
+	 * @return ServerAccount
 	 * @throws ServerAccountNotFoundException
 	 */
 	public ServerAccount getById(long id) throws ServerAccountNotFoundException{
@@ -133,9 +155,11 @@ public class ServerAccountDAO {
 	}
 	
 	/**
+	 * Returns {@link ServerAccount}-Object for given parameter email. Does not
+	 * return deleted ServerAccounts.
 	 * 
 	 * @param email
-	 * @return
+	 * @return ServerAccount
 	 * @throws ServerAccountNotFoundException
 	 */
 	public ServerAccount getByEmail(String email) throws ServerAccountNotFoundException{
@@ -157,8 +181,12 @@ public class ServerAccountDAO {
 	
 	/**
 	 * 
+	 * Returns {@link ServerAccount} (also deleted ones) ignoring cases. Only to
+	 * use for checking if serverAccount already exists when creating new
+	 * ServerAccount.
+	 * 
 	 * @param email
-	 * @return
+	 * @return ServerAccount
 	 * @throws ServerAccountNotFoundException
 	 */
 	public ServerAccount getByEmailIgnoreCaseAndDeletedFlag(String email) throws ServerAccountNotFoundException{
@@ -228,9 +256,11 @@ public class ServerAccountDAO {
 	}	
 	
 	/**
+	 * Returns {@link ServerAccount}-Objects in a list for given parameter trustlevel. Does not
+	 * return deleted ServerAccounts.
 	 * 
 	 * @param trustlevel
-	 * @return
+	 * @return List of ServerAccount
 	 */
 	public List<ServerAccount> getByTrustLevel(int trustlevel){
 		CriteriaBuilder cb = em.getCriteriaBuilder();
@@ -245,7 +275,7 @@ public class ServerAccountDAO {
 	
 	/**
 	 * 
-	 * @return
+	 * @return List of ServerAccount
 	 */
 	public List<ServerAccount> getAllServerAccounts(){
 		CriteriaBuilder cb = em.getCriteriaBuilder();
@@ -271,12 +301,14 @@ public class ServerAccountDAO {
 	
 	/**
 	 * 
-	 * @return
+	 * @return Amount of ServerAccount
 	 */
 	public long getAccountCount(){
 		long nofResults = ((Number) em.createQuery(
-				"SELECT COUNT(*) " +
-				"FROM ServerAccount as account")
+				"SELECT COUNT(*) "
+				+ "FROM ServerAccount as account"
+				+ " WHERE account.deleted = :deleted")
+				.setParameter("deleted", true)
 				.getSingleResult())
 				.longValue();
 		
@@ -285,9 +317,9 @@ public class ServerAccountDAO {
 	
 	/**
 	 * 
-	 * @param username
+	 * 
 	 * @param page
-	 * @return
+	 * @return List of ServerAcoounts
 	 */
 	public List<ch.uzh.csg.mbps.model.ServerAccount> getServerAccounts(int page){
 		if (page < 0) {
@@ -307,14 +339,14 @@ public class ServerAccountDAO {
 	}
 	
 	/**
+	 * Checks if arguments to deleted a {@link ServerAccount} are fulfilled.
 	 * 
 	 * @param url
-	 * @return
+	 * @return bollean
 	 * @throws ServerAccountNotFoundException
 	 * @throws BalanceNotZeroException
-	 * @throws HibernateException
 	 */
-	public boolean checkPredefinedDeleteArguments(String url) throws ServerAccountNotFoundException, BalanceNotZeroException, HibernateException {
+	public boolean checkPredefinedDeleteArguments(String url) throws ServerAccountNotFoundException, BalanceNotZeroException {
 		ServerAccount serverAccount = getByUrl(url);
 		
 		//TODO: mehmet check Trust Level
@@ -327,19 +359,10 @@ public class ServerAccountDAO {
 	}
 	
 	/**
-	 * 
-	 * @param serverAccount
-	 * @param newLevel
-	 */
-	public void updateTrustLevel(ServerAccount serverAccount) {
-		em.merge(serverAccount);
-		LOGGER.info("Updated ServerAccount: " + serverAccount.toString());
-	}
-	
-	/**
+	 * Checks if {@link ServerAccount} is deleted by a given parameter url. 
 	 * 
 	 * @param url
-	 * @return
+	 * @return boolean
 	 * @throws ServerAccountNotFoundException
 	 */
 	public boolean isDeletedByUrl(String url) {
@@ -361,9 +384,10 @@ public class ServerAccountDAO {
 	}
 	
 	/**
+	 * Checks if {@link ServerAccount} is deleted by a given parameter id.
 	 * 
 	 * @param id
-	 * @return
+	 * @return booelan
 	 * @throws ServerAccountNotFoundException
 	 */
 	public boolean isDeletedById(long id) {
