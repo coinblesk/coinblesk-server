@@ -72,7 +72,7 @@ public class ServerPayOutRuleDAO {
 	 * @param serverAccountId
 	 */
 	public void deleteRules(long serverAccountId) {
-		String hql = "delete from SERVER_PAYOUT_RULES where SERVER_ACCOUNT_ID= :serverAccountId";
+		String hql = "delete from ServerPayOutRule as spr where spr.serverAccountId= :serverAccountId";
 		eManager.createQuery(hql).setParameter("serverAccountId", serverAccountId).executeUpdate();
 	}
 

@@ -118,8 +118,8 @@ public class ServerTransactionDAO {
 		long nofResults = ((Number) em.createQuery(
 				  "SELECT COUNT(*) " +
 				  "FROM ServerTransaction st " +
-				  "WHERE st.user_id = :userid")
-				  .setParameter("userid", existingServerTransaction.getId())
+				  "WHERE st.serverUrl = :serverUrl")
+				  .setParameter("serverUrl", url)
 				  .getSingleResult())
 				  .longValue();
 
@@ -138,8 +138,8 @@ public class ServerTransactionDAO {
 		
 		@SuppressWarnings("unchecked")
         List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
-				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.server_url, st.received) "
-				+ "FROM server_transaction st "
+				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.serverUrl, st.received) "
+				+ "FROM serverTransaction st "
 				+ "ORDER BY st.timestamp DESC")
 				.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
 				.setMaxResults(Config.TRANSACTIONS_MAX_RESULTS)
@@ -183,8 +183,8 @@ public class ServerTransactionDAO {
 		
 		@SuppressWarnings("unchecked")
         List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
-				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.server_url, st.received) "
-				+ "FROM server_transaction st "
+				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.serverUrl, st.received) "
+				+ "FROM serverTransaction st "
 				+ "ORDER BY st.timestamp DESC")
 				.setMaxResults(5)
 				.getResultList();
@@ -212,9 +212,9 @@ public class ServerTransactionDAO {
 		
 		@SuppressWarnings("unchecked")
         List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
-				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.server_url, st.received) "
-				+ "FROM server_transaction st "
-				+ "WHERE st.server_url = :serverUrl "
+				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.serverUrl, st.received) "
+				+ "FROM serverTransaction st "
+				+ "WHERE st.serverUrl = :serverUrl "
 				+ "ORDER BY st.timestamp DESC")
 				.setParameter("serverUrl", url)
 				.setMaxResults(5)
@@ -236,8 +236,8 @@ public class ServerTransactionDAO {
 
 		@SuppressWarnings("unchecked")
         List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
-				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.server_url, st.received) "
-				+ "FROM server_transaction st "
+				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.serverUrl, st.received) "
+				+ "FROM serverTransaction st "
 				+ "WHERE (st.received = :received and st.verified = :verified) "
 				+ "ORDER BY st.timestamp DESC")
 				.setParameter("received", true)
@@ -255,8 +255,8 @@ public class ServerTransactionDAO {
 		
 		@SuppressWarnings("unchecked")
         List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
-				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.server_url, st.received) "
-				+ "FROM server_transaction st "
+				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.serverUrl, st.received) "
+				+ "FROM serverTransaction st "
 				+ "WHERE (st.received = :received and st.verified = :verified) "
 				+ "ORDER BY st.timestamp DESC")
 				.setParameter("received", false)
@@ -283,9 +283,9 @@ public class ServerTransactionDAO {
 		
 		@SuppressWarnings("unchecked")
         List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
-				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.server_url, st.received) "
-				+ "FROM server_transaction st "
-				+ "WHERE st.server_url = :serverUrl "
+				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.serverUrl, st.received) "
+				+ "FROM serverTransaction st "
+				+ "WHERE st.serverUrl = :serverUrl "
 				+ "ORDER BY st.timestamp DESC")
 				.setParameter("serverUrl", url)
 				.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)

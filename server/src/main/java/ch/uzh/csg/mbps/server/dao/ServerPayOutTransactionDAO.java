@@ -51,8 +51,8 @@ public class ServerPayOutTransactionDAO {
 
 		@SuppressWarnings("unchecked")
 		List<HistoryServerPayOutTransaction> resultWithAliasedBean = eManager.createQuery(""
-				  + "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerPayOutTransaction(pot.timestamp, pot.amount, pot.payout_address, pot.server_account_id) "
-				  + "FROM server_pay_out_transaction pot "
+				  + "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerPayOutTransaction(pot.timestamp, pot.amount, pot.payoutAddress, pot.serverAccountId) "
+				  + "FROM serverPayOutTransaction pot "
 				  + "ORDER BY pot.timestamp DESC")
 				  .setFirstResult(page * Config.PAY_OUTS_MAX_RESULTS)
 				  .setMaxResults(Config.PAY_OUTS_MAX_RESULTS)
@@ -135,8 +135,8 @@ public class ServerPayOutTransactionDAO {
 
 		@SuppressWarnings("unchecked")
 		List<HistoryServerPayOutTransaction> resultWithAliasedBean = eManager.createQuery(""
-				  + "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerPayOutTransaction((pot.timestamp, pot.amount, pot.payout_address, pot.server_account_id) "
-				  + "FROM server_pay_out_transaction pot "
+				  + "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerPayOutTransaction((pot.timestamp, pot.amount, pot.payoutAddress, pot.serverAccountId) "
+				  + "FROM serverPayOutTransaction pot "
 				  + "ORDER BY pot.timestamp DESC")
 				  .setMaxResults(5)
 				  .getResultList();
@@ -153,9 +153,9 @@ public class ServerPayOutTransactionDAO {
 	public List<HistoryServerPayOutTransaction> getLast5ServerAccountTransactions(String url) throws ServerAccountNotFoundException {
 		@SuppressWarnings("unchecked")
 		List<HistoryServerPayOutTransaction> resultWithAliasedBean = eManager.createQuery(""
-				  + "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerPayOutTransaction((pot.timestamp, pot.amount, pot.payout_address, pot.server_account_id) "
-				  + "FROM server_pay_out_transaction pot "
-				  + "WHERE pot.server_url == :serverUrl "
+				  + "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerPayOutTransaction((pot.timestamp, pot.amount, pot.payoutAddress, pot.serverAccountId) "
+				  + "FROM serverPayOutTransaction pot "
+				  + "WHERE pot.serverUrl == :serverUrl "
 				  + "ORDER BY pot.timestamp DESC")
 				  .setMaxResults(5)
 				  .setParameter("serverUrl", url)

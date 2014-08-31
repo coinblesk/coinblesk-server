@@ -276,7 +276,7 @@ public class ServerAccountDAO {
 	public long getAccountCount(){
 		long nofResults = ((Number) em.createQuery(
 				"SELECT COUNT(*) " +
-				"FROM SERVER_ACCOUNT as account")
+				"FROM ServerAccount as account")
 				.getSingleResult())
 				.longValue();
 		
@@ -296,9 +296,9 @@ public class ServerAccountDAO {
 		
 		@SuppressWarnings("unchecked")
         List<ch.uzh.csg.mbps.model.ServerAccount> resultWithAliasedBean = em.createQuery(""
-        		+"SELECT NEW ch.uzh.csg.mbps.model.ServerAccount(account.id, account.url, account.payin_address, account.payout_address,"
-        		+"account trust_level, accout.active_balance, account.balance_limit) "
-        		+ "FROM SERVER_ACCOUNT account "
+        		+"SELECT NEW ch.uzh.csg.mbps.model.ServerAccount(account.id, account.url, account.payinAddress, account.payoutAddress,"
+        		+"account trustLevel, accout.activeBalance, account.balanceLimit) "
+        		+ "FROM ServerAccount account "
         		+ "ORDER BY account.url ASC")
         		.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
         		.getResultList();
