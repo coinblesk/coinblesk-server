@@ -8,9 +8,9 @@ import net.minidev.json.parser.ParseException;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.PayOutRule;
 import ch.uzh.csg.mbps.server.service.PayOutRuleService;
-import ch.uzh.csg.mbps.server.service.UserAccountService;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
@@ -25,7 +25,7 @@ public class HourlyTask {
 	private PayOutRuleService payOutRuleService;
 	//TODO: fix autowired problem
 	@Autowired
-	private UserAccountService userAccountService;
+	private IUserAccount userAccountService;
 	
 	/**
 	 * Update is executed every 60minutes.

@@ -119,4 +119,6 @@ public interface IUserAccount {
 
 	public List<UserPublicKey> getUserPublicKeys(long id);
 
+	public BigDecimal getSumOfUserAccountBalances();
+
 }
