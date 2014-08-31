@@ -11,6 +11,7 @@ import javax.persistence.criteria.Root;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
 
 import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
 import ch.uzh.csg.mbps.server.domain.PayInTransaction;
@@ -19,6 +20,7 @@ import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 
+@Repository
 public class PayInTransactionUnverifiedDAO {
 	
 	private static Logger LOGGER = Logger.getLogger(PayInTransactionUnverifiedDAO.class);
