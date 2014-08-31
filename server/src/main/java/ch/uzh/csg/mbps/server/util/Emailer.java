@@ -194,7 +194,7 @@ public class Emailer {
 	 */
 	public static void sendMensaReport(File file) {
 		messageText = "Im Anhang finden Sie das Excel-Sheet mit den heutigen Transaktionen der Mensa.";
-		subject = "[MBPS] Tagestransaktionen - Mensa Bitcoin Testlauf";
+		subject = "[CoinBlesk] Tagestransaktionen - Mensa Bitcoin Testlauf";
 		sendEmail("bitcoin@ifi.uzh.ch,binzmuehle@zfv.ch,debitoren@zfv.ch", file);
 	}
 }
