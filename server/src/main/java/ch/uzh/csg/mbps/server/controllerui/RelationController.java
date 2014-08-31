@@ -11,7 +11,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
+import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidPublicKeyException;
@@ -28,6 +30,9 @@ public class RelationController {
 	
 	@Autowired
 	private IServerAccount serverAccountService;
+	
+	@Autowired
+	private IUserAccount userAccountService;
 
 	@RequestMapping(method = RequestMethod.GET)
 	public String relation() {
@@ -55,6 +60,13 @@ public class RelationController {
 	void createAccount(@RequestParam(value = "url", required = false) String url, 
 			@RequestParam(value = "email", required = false) String email) throws UrlAlreadyExistsException, UserAccountNotFoundException {		
 
+		UserAccount user;
+		try{			
+			user = userAccountService.getByUsername(AuthenticationInfo.getPrincipalUsername());
+		} catch(UserAccountNotFoundException e) {
+			throw new UserAccountNotFoundException(AuthenticationInfo.getPrincipalUsername());
+		}
+		
 		try {
 			serverAccountService.checkIfExistsByUrl(url);
 		} catch (UrlAlreadyExistsException exception) {
@@ -67,9 +79,7 @@ public class RelationController {
 
 		if(!isDeleted){			
 			try {
-				account = serverAccountService.prepareAccount(new ServerAccount(url, email, null));
-			} catch (UserAccountNotFoundException  e) {
-				throw new UserAccountNotFoundException(AuthenticationInfo.getPrincipalUsername());
+				account = serverAccountService.prepareAccount(user,new ServerAccount(url, email, null));
 			} catch (InvalidUrlException | InvalidEmailException | InvalidPublicKeyException e) {
 				// TODO mehmet throwable
 			} 

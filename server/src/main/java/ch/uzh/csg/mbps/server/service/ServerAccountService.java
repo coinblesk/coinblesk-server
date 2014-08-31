@@ -18,7 +18,6 @@ import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.ActivitiesTitle;
-import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.Constants;
@@ -85,13 +84,13 @@ public class ServerAccountService implements IServerAccount {
 
 	@Override
 	@Transactional
-	public ServerAccount prepareAccount(ServerAccount otherAccount) throws UserAccountNotFoundException, InvalidPublicKeyException, InvalidUrlException, InvalidEmailException {
+	public ServerAccount prepareAccount(UserAccount user, ServerAccount otherAccount) throws UserAccountNotFoundException, InvalidPublicKeyException, InvalidUrlException, InvalidEmailException {
 		if (TESTING_MODE){
-			return prepareAccount(otherAccount, "fake-keys");
+			return prepareAccount(user, otherAccount, "fake-keys");
 		} else {
 			String publicKey = Constants.SERVER_KEY_PAIR.getPublicKey();
 			//CustomPublicKey cpk = new CustomPublicKey(Constants.SERVER_KEY_PAIR.getKeyNumber(), Constants.SERVER_KEY_PAIR.getPkiAlgorithm(), Constants.SERVER_KEY_PAIR.getPublicKey());
-			return prepareAccount(otherAccount, publicKey);
+			return prepareAccount(user, otherAccount, publicKey);
 		}
 	}
 	
@@ -108,21 +107,21 @@ public class ServerAccountService implements IServerAccount {
 	 * @throws UrlAlreadyExistsException 
 	 * @throws UserAccountNotFoundException
 	 */
-	private ServerAccount prepareAccount(ServerAccount otherAccount, String publicKey) throws UserAccountNotFoundException, InvalidPublicKeyException, InvalidUrlException, InvalidEmailException {
+	private ServerAccount prepareAccount(UserAccount user, ServerAccount otherAccount, String publicKey) throws UserAccountNotFoundException, InvalidPublicKeyException, InvalidUrlException, InvalidEmailException {
 		String otherUrl = otherAccount.getUrl();
 		String otherEmail = otherAccount.getEmail();
 		
-		UserAccount user = userAccountDAO.getByUsername(AuthenticationInfo.getPrincipalUsername());
 		ServerAccount serverAccount = new ServerAccount(SecurityConfig.BASE_URL, user.getEmail(), publicKey);
 
 		if (serverAccount.getPublicKey() == null)
 			throw new InvalidPublicKeyException();
 
-		if (!otherUrl.matches(Config.URL_REGEX))
+		if (!otherUrl.matches(Config.URL_NAME_REGEX))
 			throw new InvalidUrlException();
 		
 		if (!otherEmail.matches(Config.EMAIL_REGEX))
 			throw new InvalidEmailException();
+		
 		if(!TESTING_MODE)
 			activitiesService.activityLog(user.getUsername(), ActivitiesTitle.CREATE_SERVER_ACCOUNT,"Create a new relation with the server " + otherUrl + " and email " + otherEmail);
 		
@@ -248,8 +247,7 @@ public class ServerAccountService implements IServerAccount {
 	@Override
 	@Transactional
 	public boolean deleteAccount(String url) throws ServerAccountNotFoundException, BalanceNotZeroException {
-		serverAccountDAO.delete(url);
-		return true;
+		return serverAccountDAO.delete(url);
 	}
 
 	@Override

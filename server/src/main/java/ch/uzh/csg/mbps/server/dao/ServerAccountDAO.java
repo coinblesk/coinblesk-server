@@ -48,16 +48,17 @@ public class ServerAccountDAO {
 	 * @throws ServerAccountNotFoundException
 	 * @throws BalanceNotZeroException
 	 */
-	public void delete(String url) throws ServerAccountNotFoundException, BalanceNotZeroException {
+	public boolean delete(String url) throws ServerAccountNotFoundException, BalanceNotZeroException {
 		ServerAccount serverAccount = getByUrl(url);
 		
 		//TODO: mehmet: check: TrustLevel -> 
 		// Hyprid: escrow account
-
 		if(serverAccount.getActiveBalance().compareTo(BigDecimal.ZERO)==0 && serverAccount.getTrustLevel() == 0){
 			serverAccount.setDeleted(true);
 			em.merge(serverAccount);
+			return true;
 		}
+		return false;
 	}
 	
 	/**
@@ -265,8 +266,10 @@ public class ServerAccountDAO {
 		CriteriaQuery<ServerAccount> cq = cb.createQuery(ServerAccount.class);
 		Root<ServerAccount> root = cq.from(ServerAccount.class);
 		
-		Predicate condition = cb.equal(root.get("trustLevel"), trustlevel);
-		cq.where(condition);
+		Predicate condition1 = cb.equal(root.get("trustLevel"), trustlevel);
+		Predicate condition2 = cb.equal(root.get("deleted"), false);
+		Predicate condition3 = cb.and(condition1, condition2);
+		cq.where(condition3);
 		
 		return em.createQuery(cq).getResultList();
 	}
@@ -278,9 +281,12 @@ public class ServerAccountDAO {
 	public List<ServerAccount> getAllServerAccounts(){
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<ServerAccount> cq = cb.createQuery(ServerAccount.class);
-		cq.from(ServerAccount.class);
-		return em.createQuery(cq).getResultList();
+		Root<ServerAccount> root = cq.from(ServerAccount.class);
 		
+		Predicate condition = cb.equal(root.get("deleted"), false);
+		cq.where(condition);
+		
+		return em.createQuery(cq).getResultList();
 	}
 
 	/**
@@ -306,7 +312,7 @@ public class ServerAccountDAO {
 				"SELECT COUNT(*) "
 				+ "FROM ServerAccount as account"
 				+ " WHERE account.deleted = :deleted")
-				.setParameter("deleted", true)
+				.setParameter("deleted", false)
 				.getSingleResult())
 				.longValue();
 		
@@ -329,7 +335,9 @@ public class ServerAccountDAO {
         		+"SELECT NEW ch.uzh.csg.mbps.model.ServerAccount(account.id, account.url, account.payinAddress, account.payoutAddress,"
         		+"account trustLevel, accout.activeBalance, account.balanceLimit) "
         		+ "FROM ServerAccount account "
+        		+ "WHERE account.deleted=:deleted"
         		+ "ORDER BY account.url ASC")
+        		.setParameter(":deleted", false)
         		.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
         		.getResultList();
 		

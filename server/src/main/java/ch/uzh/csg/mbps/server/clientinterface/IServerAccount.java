@@ -6,6 +6,7 @@ import java.util.List;
 import org.hibernate.HibernateException;
 
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
+import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidPublicKeyException;
@@ -107,17 +108,19 @@ public interface IServerAccount {
 	public void updateBalanceLimit(String url, BigDecimal oldLimit, BigDecimal newLimit);
 
 	/**
-	 * Collects the the own url, email and public key and creates a 
-	 * Server Account which will be send.
+	 * Stores own url, email and public key and creates a 
+	 * Server Account model which will be send.
+
 	 * 
+	 * @param userAccount
 	 * @param account
-	 * @return Server Account
-	 * @throws InvalidEmailException 
-	 * @throws InvalidUrlException 
-	 * @throws InvalidPublicKeyException 
-	 * @throws UserAccountNotFoundException 
+	 * @return ServerAccount
+	 * @throws UserAccountNotFoundException
+	 * @throws InvalidPublicKeyException
+	 * @throws InvalidUrlException
+	 * @throws InvalidEmailException
 	 */
-	public ServerAccount prepareAccount(ServerAccount account) throws UserAccountNotFoundException, InvalidPublicKeyException, InvalidUrlException, InvalidEmailException;
+	public ServerAccount prepareAccount(UserAccount userAccount, ServerAccount account) throws UserAccountNotFoundException, InvalidPublicKeyException, InvalidUrlException, InvalidEmailException;
 
 	/**
 	 * Checks if Url is allready existing

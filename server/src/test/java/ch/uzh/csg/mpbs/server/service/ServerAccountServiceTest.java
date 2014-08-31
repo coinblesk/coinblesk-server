@@ -7,8 +7,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 
-import org.hsqldb.Server;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -20,8 +20,12 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
 
 import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
+import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
+import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.service.ServerAccountService;
+import ch.uzh.csg.mbps.server.util.SecurityConfig;
+import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidPublicKeyException;
@@ -55,6 +59,9 @@ public class ServerAccountServiceTest {
 	@Autowired
 	private IServerAccount serverAccountService;
 	
+	@Autowired
+	private IUserAccount userAccountService;
+	
 	@Before
 	public void setUp() throws Exception {
 		ServerAccountService.enableTestingMode();
@@ -69,10 +76,26 @@ public class ServerAccountServiceTest {
 	}
 
 	@Test
-	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/userAccountServerAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
 	public void testPrepareGetAccount() throws UserAccountNotFoundException, InvalidPublicKeyException, InvalidUrlException, InvalidEmailException{
-		ServerAccount server = new ServerAccount("http://www.neu.ch", "neu@neu.ch", "fake-key");
-		ServerAccount sendAccount = serverAccountService.prepareAccount(server);
+		UserAccount  account = userAccountService.getByUsername("hans");
+		assertNotNull(account);
+		
+		ServerAccount server = new ServerAccount("http://www.neu.ch", "neu@neu.ch", "fake-keys");
+		ServerAccount sendAccount = serverAccountService.prepareAccount(account, server);
+		assertNotNull(sendAccount);
+		assertEquals(SecurityConfig.BASE_URL, sendAccount.getUrl());
+		assertEquals("fake-keys", sendAccount.getPublicKey());
+	}
+
+	@Test(expected=InvalidUrlException.class)
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/userAccountServerAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	public void testPrepareGetAccount_FailInvalidUrlexception() throws UserAccountNotFoundException, InvalidPublicKeyException, InvalidUrlException, InvalidEmailException{
+		UserAccount  account = userAccountService.getByUsername("hans");
+		assertNotNull(account);
+		
+		ServerAccount server = new ServerAccount("www.neu.ch", "neu@neu.ch", "fake-keys");
+		serverAccountService.prepareAccount(account, server);
 	}
 	
 	@Test
@@ -211,9 +234,52 @@ public class ServerAccountServiceTest {
 	
 	@Test
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
-//	@ExpectedDatabase(value="classpath:DbUnitFiles/serverAccountExpectedUpdatedData.xml", table="server_account")
-	public void deleteAccount(){
-		//TODO: mehmet write test
+	public void testDeleteAccount() throws ServerAccountNotFoundException, BalanceNotZeroException{
+		ServerAccount account = serverAccountService.getByUrl("https://www.my_url.ch");
+		
+		assertEquals(account.getTrustLevel(), 0);
+		assertEquals(account.getActiveBalance(), new BigDecimal("0.00000000"));
+		
+		boolean success = serverAccountService.deleteAccount("https://www.my_url.ch");
+		assertEquals(success, true);
 	}
 	
+	@Test
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	public void testDeleteAccount_FailedConditions() throws ServerAccountNotFoundException, BalanceNotZeroException{
+		ServerAccount accountActiveBalance = serverAccountService.getByUrl("http://www.fake_address.org");
+		assertFalse(accountActiveBalance.getActiveBalance()==new BigDecimal("0.00000000"));
+		boolean success = serverAccountService.deleteAccount("http://www.fake_address.org");
+		assertEquals(success, false);
+
+		ServerAccount accountTrustLevel = serverAccountService.getByUrl("http://test.com");
+		assertFalse(accountTrustLevel.getTrustLevel()==0);
+		boolean success2 = serverAccountService.deleteAccount("http://test.com");
+		assertEquals(success2, false);
+		
+	}
+	
+	@Test
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountTrustLevelData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	public void testGetByTrustLevel(){
+		List<ServerAccount> noTrust = serverAccountService.getByTrustLevel(0);
+		List<ServerAccount> hyprid = serverAccountService.getByTrustLevel(1);
+		List<ServerAccount> high = serverAccountService.getByTrustLevel(2);
+		
+		//deleted is not count
+		assertFalse(noTrust.size()==5);
+		assertEquals(noTrust.size(), 4);
+		
+		//deleted is not count
+		assertFalse(hyprid.size() == 2);
+		assertEquals(hyprid.size(), 1);
+	
+		//deleted is not count
+		assertFalse(high.size() == 5);
+		assertEquals(high.size(), 3);
+	}
+	
+	public void testGetAll() {
+		
+	}
 }

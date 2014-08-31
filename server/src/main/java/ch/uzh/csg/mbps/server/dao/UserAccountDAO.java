@@ -81,6 +81,12 @@ public class UserAccountDAO {
 		return userAccount;
 	}
 	
+	/**
+	 * 
+	 * @param cq
+	 * @param em
+	 * @return
+	 */
 	public static<K> K getSingle(CriteriaQuery<K> cq, EntityManager em) {
 		List<K> list =  em.createQuery(cq).getResultList();
 		if(list.size() == 0) {
