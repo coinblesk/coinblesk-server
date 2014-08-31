@@ -459,5 +459,14 @@ public class UserAccountDAO {
 		cq.where(condition);
 		return em.createQuery(cq).getResultList();
 	}
+	
+	/**
+	 * Returns the sum of all account balances.
+	 * 
+	 * @return sumOfBalances
+	 */
+	public BigDecimal getSumOfAccountBalance() {
+		return (BigDecimal) em.createQuery("SELECT SUM(u.balance) FROM UserAccount u");
+	}
 
 }

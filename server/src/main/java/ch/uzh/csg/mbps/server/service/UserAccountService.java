@@ -491,4 +491,14 @@ public class UserAccountService implements IUserAccount {
     public List<UserPublicKey> getUserPublicKeys(long id) {
 	    return userPublicKeyDAO.getUserPublicKeys(id);
     }
+	
+	/**
+	 * Returns the sum of balances from all user accounts. Represents the total
+	 * amount of Bitcoins which belong to all user accounts.
+	 * @return sumOfUserAccountBalances
+	 */
+	@Transactional(readOnly = true)
+    public BigDecimal getSumOfUserAccountBalances() {
+	    return userAccountDAO.getSumOfAccountBalance();
+    }
 }
