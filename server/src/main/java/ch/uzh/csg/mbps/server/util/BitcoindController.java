@@ -316,7 +316,7 @@ public class BitcoindController {
 	 * @throws BitcoinException
 	 */
 	protected static BigDecimal getAccountBalance() throws BitcoinException  {
-		BigDecimal accountBalance = new BigDecimal(Double.toString(BITCOIN.getBalance()));
+		BigDecimal accountBalance = new BigDecimal(Double.toString(BITCOIN.getBalance(SecurityConfig.ACCOUNT, Config.MIN_CONFIRMATIONS_SMALL_TRANSACTIONS)));
 		return accountBalance;
 	}
 }
