@@ -23,7 +23,6 @@ public class HourlyTask {
 	
 	@Autowired
 	private PayOutRuleService payOutRuleService;
-	//TODO: fix autowired problem
 	@Autowired
 	private IUserAccount userAccountService;
 	
