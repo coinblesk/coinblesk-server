@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
 import ch.uzh.csg.mbps.responseobject.TransferObject;
 import ch.uzh.csg.mbps.server.dao.PayInTransactionDAO;
+import ch.uzh.csg.mbps.server.dao.PayInTransactionUnverifiedDAO;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.PayInTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
@@ -26,6 +27,8 @@ public class PayInTransactionService {
 	@Autowired
 	private PayInTransactionDAO payInTransactionDAO;
 	@Autowired
+	private PayInTransactionUnverifiedDAO payInTransactionUnverifiedDAO;
+	@Autowired
 	private UserAccountDAO userAccountDAO;
 
 	/**
@@ -42,6 +45,7 @@ public class PayInTransactionService {
 		PayInTransaction pit = new PayInTransaction(userID, transaction);
 		if (payInTransactionDAO.isNew(pit)) {
 			payInTransactionDAO.createPayInTransaction(pit);
+			payInTransactionUnverifiedDAO.remove(pit);
 		}
 	}
 

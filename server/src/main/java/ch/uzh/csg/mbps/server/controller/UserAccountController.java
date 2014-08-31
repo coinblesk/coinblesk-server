@@ -31,6 +31,7 @@ import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.domain.UserPublicKey;
 import ch.uzh.csg.mbps.server.service.PayInTransactionService;
+import ch.uzh.csg.mbps.server.service.PayInTransactionUnverifiedService;
 import ch.uzh.csg.mbps.server.service.PayOutTransactionService;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.Constants;
@@ -71,6 +72,9 @@ public class UserAccountController {
 	
 	@Autowired
 	private PayInTransactionService payInTransactionService;
+	
+	@Autowired
+	private PayInTransactionUnverifiedService payInTransactionUnverifiedService;
 	
 	@Autowired
 	private PayOutTransactionService payOutTransactionService;
@@ -389,6 +393,7 @@ public class UserAccountController {
 			GetHistoryTransferObject ghto = new GetHistoryTransferObject();
 			ghto.setTransactionHistory(transactionService.getLast5Transactions(username));
 			ghto.setPayInTransactionHistory(payInTransactionService.getLast5Transactions(username));
+			ghto.setPayInTransactionUnverifiedHistory(payInTransactionUnverifiedService.getLast5Transactions(username));
 			ghto.setPayOutTransactionHistory(payOutTransactionService.getLast5Transactions(username));
 			response.setGetHistoryTransferObject(ghto);
 			UserAccountObject uao = transform1(userAccount);

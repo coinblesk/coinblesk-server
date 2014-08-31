@@ -34,6 +34,7 @@ import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.PayInTransactionService;
+import ch.uzh.csg.mbps.server.service.PayInTransactionUnverifiedService;
 import ch.uzh.csg.mbps.server.service.PayOutTransactionService;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.Constants;
@@ -56,6 +57,9 @@ public class TransactionController {
 
 	@Autowired
 	private PayInTransactionService payInTransactionService;
+	
+	@Autowired
+	private PayInTransactionUnverifiedService payInTransactionUnverifiedService;
 	
 	@Autowired
 	private PayOutTransactionService payOutTransactionService;
@@ -154,6 +158,7 @@ public class TransactionController {
 			
 			int txPage = request.getTxPage().intValue();
 			int txPayInPage = request.getTxPayInPage().intValue();
+			int txPayInUnverifiedPage = request.getTxPayInUnverifiedPage().intValue();
 			int txPayOutPage = request.getTxPayOutPage().intValue();
 			List<HistoryTransaction> history = transactionService.getHistory(username, txPage);
 			long nofTx = (txPage < 0) ? 0 : transactionService.getHistoryCount(username);
@@ -161,17 +166,23 @@ public class TransactionController {
 			List<HistoryPayInTransaction> payInHistory = payInTransactionService.getHistory(username, txPayInPage);
 			long nofPayInTx = (txPayInPage < 0) ? 0 : payInTransactionService.getHistoryCount(username);
 			
+			List<HistoryPayInTransaction> payInUnverifiedHistory = payInTransactionUnverifiedService.getHistory(username, txPayInUnverifiedPage);
+			long nofPayInUnverifiedTx = (txPayInUnverifiedPage < 0) ? 0 : payInTransactionUnverifiedService.getHistoryCount(username);
+			
 			List<HistoryPayOutTransaction> payOutHistory = payOutTransactionService.getHistory(username, txPayOutPage);
 			long nofPayOutTx = (txPayOutPage < 0) ? 0 : payOutTransactionService.getHistoryCount(username);
 			
 			response.setSuccessful(true);
 			response.setTransactionHistory(history);
 			response.setPayInTransactionHistory(payInHistory);
+			response.setPayInTransactionUnverifiedHistory(payInUnverifiedHistory);
 			response.setPayOutTransactionHistory(payOutHistory);
 			
-			response.setNofPayInTransactions(nofPayInTx);
-			response.setNofPayOutTransactions(nofPayOutTx);
 			response.setNofTransactions(nofTx);
+			response.setNofPayInTransactions(nofPayInTx);
+			response.setNofPayInTransactionsUnverified(nofPayInUnverifiedTx);
+			response.setNofPayOutTransactions(nofPayOutTx);
+			
 			
 			return response;
 		} catch (Exception e) {
@@ -229,6 +240,8 @@ public class TransactionController {
 				msg = "Transaction history has successfully been send to your email address.";
 			} else if (type == 1) {
 				msg = "Pay In history has successfully been send to your email address.";
+			} else if (type == 2) {
+				msg = "Pay In unverified history has successfully been send to your email address.";
 			} else {
 				msg = "Pay Out history has successfully been send to your email address.";
 			}

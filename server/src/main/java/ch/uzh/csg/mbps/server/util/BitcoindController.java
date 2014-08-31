@@ -11,10 +11,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 
 import ch.uzh.csg.mbps.server.service.PayInTransactionService;
+import ch.uzh.csg.mbps.server.service.PayInTransactionUnverifiedService;
 import ch.uzh.csg.mbps.server.service.PayOutTransactionService;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 
 import com.azazar.bitcoin.jsonrpcclient.Bitcoin;
+import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 import com.azazar.bitcoin.jsonrpcclient.BitcoinAcceptor;
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 import com.azazar.bitcoin.jsonrpcclient.BitcoinJSONRPCClient;
@@ -36,15 +38,19 @@ public class BitcoindController {
 	@Autowired
 	private PayInTransactionService payInTransactionService;
 	@Autowired
+	private PayInTransactionUnverifiedService payInTransactionServiceUnverified;
+	@Autowired
 	private PayOutTransactionService payOutTransactionService;
 	
 	private boolean listenTransactions;
 	
 	private BitcoinAcceptor incomingSmall;
+	private BitcoinAcceptor incomingUnverified;
 	private BitcoinAcceptor incomingBig;
 	private BitcoinAcceptor outgoing;
 	//
 	private Thread incomingSmallThread;
+	private Thread incomingUnverifiedThread;
 	private Thread incomingBigThread;
 	private Thread outgoingThread;
 	
@@ -70,6 +76,12 @@ public class BitcoindController {
 				 incomingSmall.stopAccepting();
 				 if(incomingSmallThread != null) {
 					 incomingSmallThread.interrupt();
+				 }
+			 }
+			 if(incomingUnverified != null) {
+				 incomingUnverified.stopAccepting();
+				 if(incomingUnverifiedThread != null) {
+					 incomingUnverifiedThread.interrupt();
 				 }
 			 }
 			 if(incomingBig != null) {
@@ -156,6 +168,7 @@ public class BitcoindController {
 	 */
 	public void listenIncomingTransactions() throws BitcoinException {
 		listenIncomingBigTransactions();
+		listenIncomingUnverifiedTransactions();
 		
 		ConfirmedPaymentListener smallTx = new ConfirmedPaymentListener(Config.MIN_CONFIRMATIONS_SMALL_TRANSACTIONS) {
 
@@ -177,6 +190,33 @@ public class BitcoindController {
         incomingSmallThread = new Thread(incomingSmall);
         incomingSmallThread.start();
     }
+	
+	public void listenIncomingUnverifiedTransactions() throws BitcoinException {
+		ConfirmedPaymentListener unverifiedTxListener = new ConfirmedPaymentListener(0) {
+			@Override
+            public void confirmed(Transaction transaction) {
+				try {
+					if(transaction.category().equals("receive")) {
+						boolean unverified = false;
+						if(transaction.amount() <= Config.SMALL_TRANSACTION_LIMIT && transaction.confirmations() < Config.MIN_CONFIRMATIONS_SMALL_TRANSACTIONS) {
+							unverified = true;
+						} else if(transaction.amount() > Config.SMALL_TRANSACTION_LIMIT && transaction.confirmations() < Config.MIN_CONFIRMATIONS_BIG_TRANSACTIONS) {
+							unverified = true;
+						}
+						if (unverified) {
+							LOGGER.info("Incoming unverified transaction: amount: " + transaction.amount() + ", account: " + transaction.account() + ", address: " +  transaction.address());
+							payInTransactionServiceUnverified.create(transaction);
+						}
+					}
+				} catch (UserAccountNotFoundException e) {
+					LOGGER.error("Couldn't allocate incoming transaction. Useraccount not found. Transaction: " + transaction.toString());
+				}
+            }
+		};
+		incomingUnverified = new BitcoinAcceptor(BITCOIN, unverifiedTxListener, false);
+        incomingUnverifiedThread = new Thread(incomingUnverified);
+        incomingUnverifiedThread.start();
+	}
 	
 	/**
 	 * Starts task which continually listens for new incoming

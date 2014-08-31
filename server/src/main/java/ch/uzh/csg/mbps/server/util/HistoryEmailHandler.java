@@ -16,6 +16,7 @@ import ch.uzh.csg.mbps.model.HistoryTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.ITransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.service.PayInTransactionService;
+import ch.uzh.csg.mbps.server.service.PayInTransactionUnverifiedService;
 import ch.uzh.csg.mbps.server.service.PayOutTransactionService;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 
@@ -33,6 +34,8 @@ public class HistoryEmailHandler {
 	private ITransaction transactionService;
 	@Autowired
 	private PayInTransactionService payInTransactionService;
+	@Autowired
+	private PayInTransactionUnverifiedService payInTransactionUnverifiedService;
 	@Autowired
 	private PayOutTransactionService payOutTransactionService;
 	
@@ -67,6 +70,10 @@ public class HistoryEmailHandler {
 			writePayInTransactions(bufferedWriter, username);
 			break;
 		case 2:
+			writeHeader(bufferedWriter, getPayInTransactionsUnverifiedHeader());
+			writePayInTransactionsUnverified(bufferedWriter, username);
+			break;
+		case 3:
 			writeHeader(bufferedWriter, getPayOutTransactionsHeader());
 			writePayOutTransactions(bufferedWriter, username);
 			break;
@@ -126,6 +133,18 @@ public class HistoryEmailHandler {
 			hasMore = (history.size() > 0) ? true : false;
 		}
 	}
+	
+	private void writePayInTransactionsUnverified(BufferedWriter bufferedWriter, String username) throws UserAccountNotFoundException, IOException {
+		boolean hasMore = true;
+		
+		for (int page=0; hasMore; page++) {
+			List<HistoryPayInTransaction> history = payInTransactionUnverifiedService.getHistory(username, page);
+			for (HistoryPayInTransaction htx : history) {
+				bufferedWriter.write(htx.getTimestamp().toString() + ", " + htx.getAmount().toString() + "\n");
+			}
+			hasMore = (history.size() > 0) ? true : false;
+		}
+	}
 
 	private void writePayOutTransactions(BufferedWriter bufferedWriter, String username) throws UserAccountNotFoundException, IOException {
 		boolean hasMore = true;
@@ -150,6 +169,14 @@ public class HistoryEmailHandler {
 	}
 	
 	private static String getPayInTransactionsHeader() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("timestamp, ");
+		builder.append("amount");
+		
+		return builder.toString();
+	}
+	
+	private static String getPayInTransactionsUnverifiedHeader() {
 		StringBuilder builder = new StringBuilder();
 		builder.append("timestamp, ");
 		builder.append("amount");
