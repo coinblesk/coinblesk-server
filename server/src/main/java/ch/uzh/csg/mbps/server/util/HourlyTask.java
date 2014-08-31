@@ -2,6 +2,9 @@ package ch.uzh.csg.mbps.server.util;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 
 import net.minidev.json.parser.ParseException;
 
@@ -20,12 +23,12 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
  */
 public class HourlyTask {
 	private static Logger LOGGER = Logger.getLogger(HourlyTask.class);
-	
+
 	@Autowired
 	private PayOutRuleService payOutRuleService;
 	@Autowired
 	private IUserAccount userAccountService;
-	
+
 	/**
 	 * Update is executed every 60minutes.
 	 */
@@ -33,12 +36,24 @@ public class HourlyTask {
 		//check payout rules
 		payOutRuleService.checkAllRules();
 		LOGGER.info("Cronjob is executing PayOutRules-Task.");
-		
+
 		// update USD/CHF-ExchangeRate
 		updateUsdChf();
-		
+
 		//check if enough Bitcoins are available in the system
 		sanityCheck();
+
+		//Check for MensaXLS Export
+		Date date = new Date();
+		Calendar calendar = GregorianCalendar.getInstance();
+		calendar.setTime(date);
+		int hour = calendar.get(Calendar.HOUR_OF_DAY); // hour formatted in 24h
+
+		//TODO: for mensa testrun only, delete afterwards
+		//do mensa export
+		if(hour == 23){
+			MensaXLSExporter.doQuery();
+		}
 	}
 
 	/**
@@ -54,7 +69,7 @@ public class HourlyTask {
 		} catch (BitcoinException e) {
 			Emailer.send("bitcoin@ifi.uzh.ch", "[CoinBlesk] Warning: Problem creating sanity check", "Couldn't compare useraccount balances to bitcoind balances. Exception: " + e.getMessage());
 		}
-		
+
 	}
 
 	/**

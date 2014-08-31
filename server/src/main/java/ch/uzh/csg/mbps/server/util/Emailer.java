@@ -28,7 +28,7 @@ public class Emailer {
 	private static Logger LOGGER = Logger.getLogger(Emailer.class);
 	private static String messageText;
 	private static String subject;
-	
+
 	/**
 	 * Sends initial Email Configuration Link to User via defined MailService
 	 * 
@@ -42,7 +42,7 @@ public class Emailer {
 		subject = "MBPS Account Verification";
 		sendEmail(toEmail, null);
 	}
-	
+
 	/**
 	 * Sends email with link to reset Password to emailAddress from UserAccount
 	 * 
@@ -55,7 +55,7 @@ public class Emailer {
 		subject = "MBPS Account Password Reset";
 		sendEmail(user.getEmail(), null);
 	}
-	
+
 	/**
 	 * Sends file with history of all transactions to Users email address.
 	 * @param userName
@@ -67,7 +67,7 @@ public class Emailer {
 		subject = "MBPS history list";
 		sendEmail(email, file);
 	}
-	
+
 	/**
 	 * Non-blocking call to send the email, otherwise the client runs into a
 	 * timeout exception.
@@ -84,7 +84,7 @@ public class Emailer {
 	private static class EmailSenderTask implements Runnable {
 		private String toEmail;
 		private File attachment;
-		
+
 		protected EmailSenderTask(String toEmail, File attachment) {
 			this.toEmail = toEmail;
 			this.attachment = attachment;
@@ -98,37 +98,37 @@ public class Emailer {
 			props.put("mail.smtp.host", "mail.nope.ch");
 			props.put("mail.smtp.port", "587");
 			props.put("mail.smtp.ssl.trust", "mail.nope.ch" );
-	 
+
 			Session session = Session.getInstance(props, new javax.mail.Authenticator() {
 				protected PasswordAuthentication getPasswordAuthentication() {
 					return new PasswordAuthentication(SecurityConfig.EMAIL_USER, SecurityConfig.EMAIL_PASSWORD);
 				}
 			});
-	 
+
 			try {
 				Message message = new MimeMessage(session);
 				message.setFrom(new InternetAddress(SecurityConfig.FROM));
 				message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(toEmail));
 				message.setSubject(subject);
-	 
+
 				Multipart mp = new MimeMultipart();
-				
+
 				MimeBodyPart htmlPart = new MimeBodyPart();
 				htmlPart.setContent(messageText, "text/html; charset=ISO-8859-1");
 				mp.addBodyPart(htmlPart);
-				
-				if (attachment != null) {
-			        MimeBodyPart mbp = new MimeBodyPart();
-			        mbp.attachFile(attachment);
-			        mbp.setHeader("Content-Type", "text/comma-separated-values; name=\""+attachment.getName()+"\"");
 
-			        mp.addBodyPart(mbp);
+				if (attachment != null) {
+					MimeBodyPart mbp = new MimeBodyPart();
+					mbp.attachFile(attachment);
+					mbp.setHeader("Content-Type", "text/comma-separated-values; name=\""+attachment.getName()+"\"");
+
+					mp.addBodyPart(mbp);
 				}
-				
+
 				message.setContent(mp);
-				
+
 				Transport.send(message);
-				
+
 				//delete the file on the servers hd
 				if(attachment != null){
 					attachment.delete();					
@@ -152,13 +152,13 @@ public class Emailer {
 		subject = subj;
 		sendEmail(toEmail, null);
 	}
-	
+
 	public static void sendPayInAddressAsEmail(String username,String email, String payInAddress){
 		messageText ="Dear " + username +",<br><br>Your pay in address is " + payInAddress +".";
 		subject = "MBPS Pay In Address";
 		sendEmail(email,null);
 	}
-	
+
 	/**
 	 * Sends email to notify user that is account was updated from Role_User user to Role_Both.
 	 * 
@@ -183,5 +183,18 @@ public class Emailer {
 		messageText = "Dear " + user.getUsername() + ",<br><br>You are invited to adminsitred the following website: <a href = \"" + server + "\">" + server + "</a>. To create an account, please enter your credentials on the follwowing link: <a href = \"" + link + "\">" + link + "</a>";
 		subject = "MBPS Admin Account";
 		sendEmail(user.getEmail(), null);
+	}
+
+	//TODO: for mensa testrun only, delete afterwards
+	/**
+	 * Sends an xls Report with the daily transactions for Account "MensaBinz"
+	 * to the defined email recipients.
+	 *
+	 * @param file
+	 */
+	public static void sendMensaReport(File file) {
+		messageText = "Im Anhang finden Sie das Excel-Sheet mit den heutigen Transaktionen der Mensa.";
+		subject = "[MBPS] Tagestransaktionen - Mensa Bitcoin Testlauf";
+		sendEmail("bitcoin@ifi.uzh.ch,binzmuehle@zfv.ch,debitoren@zfv.ch", file);
 	}
 }
