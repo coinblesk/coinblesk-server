@@ -19,7 +19,6 @@ import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 @Table(name = "SERVER_PAY_OUT_TRANSACTION", indexes = {
 		@Index(name = "SERVER_ACCOUNT_ID_INDEX_PAY_OUT_TX",  columnList="SERVER_ACCOUNT_ID"),
 		@Index(name = "SERVER_TRANSACTION_ID_INDEX_PAY_OUT_TX",  columnList="SERVER_TRANSACTION_ID")})
-
 public class ServerPayOutTransaction implements Serializable{
 	private static final long serialVersionUID = -8174904243568625313L;
 	

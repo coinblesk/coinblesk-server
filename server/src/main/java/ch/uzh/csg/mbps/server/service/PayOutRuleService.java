@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.mbps.responseobject.PayOutRulesTransferObject;
+import ch.uzh.csg.mbps.server.clientinterface.IPayOutRule;
+import ch.uzh.csg.mbps.server.clientinterface.IPayOutTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.dao.PayOutRuleDAO;
 import ch.uzh.csg.mbps.server.domain.PayOutRule;
@@ -28,27 +30,17 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
  *
  */
 @Service
-public class PayOutRuleService {
+public class PayOutRuleService implements IPayOutRule{
 	@Autowired
 	private PayOutRuleDAO payOutRuleDAO;
 	@Autowired
-	private PayOutTransactionService payOutTransactionService;
+	private IPayOutTransaction payOutTransactionService;
 	@Autowired
 	private IUserAccount userAccountService;
 	
 	public static Boolean testingMode = false;
 
-	/**
-	 * Creates a new set of {@link PayOutRule}s for assigned UserAccount. Not more than
-	 * 28 rules can be created for one UserAccount.
-	 * 
-	 * @param porto	PayOutRulesTransferObject containing list of PayOutRules
-	 * @param username
-	 * @throws UserAccountNotFoundException
-	 * @throws BitcoinException
-	 * @throws PayOutRulesAlreadyDefinedException
-	 *             if already PayOutRules for this UserAccount are defined
-	 */
+	@Override
 	@Transactional
 	public void createRule(PayOutRulesTransferObject porto, String username) throws UserAccountNotFoundException, BitcoinException, PayOutRulesAlreadyDefinedException {
 		UserAccount user = userAccountService.getByUsername(username);
@@ -74,43 +66,21 @@ public class PayOutRuleService {
 		payOutRuleDAO.createPayOutRules(porto.getPayOutRulesList());
 	}
 
-	/**
-	 * Returns ArrayList with all {@link PayOutRule}s for UserAccount with username.
-	 * 
-	 * @param username
-	 * @return ArrayList<PayOutRules>
-	 * @throws PayOutRuleNotFoundException
-	 * @throws UserAccountNotFoundException
-	 */
+	@Override
 	@Transactional(readOnly = true)
 	public List<PayOutRule> getRules(String username) throws PayOutRuleNotFoundException, UserAccountNotFoundException {
 		UserAccount user = userAccountService.getByUsername(username);
 		return payOutRuleDAO.getByUserId(user.getId());
 	}
 
-	/**
-	 * Deletes all {@link PayOutRule}s for UserAccount with username.
-	 * 
-	 * @param username
-	 * @throws UserAccountNotFoundException
-	 */
+	@Override
 	@Transactional
 	public void deleteRules(String username) throws UserAccountNotFoundException {
 		UserAccount user = userAccountService.getByUsername(username);
 		payOutRuleDAO.deleteRules(user.getId());
 	}
 
-	/**
-	 * Checks if {@link PayOutRule} is assigned for sellerAccount. If rules exist for
-	 * sellerAccount they are checked if the balance of sellerAccount exceeds
-	 * the one defined in the rule. If yes a new PayOut is initiated according
-	 * to the PayOutRule.
-	 * 
-	 * @param sellerAccount
-	 * @throws PayOutRuleNotFoundException
-	 * @throws UserAccountNotFoundException
-	 * @throws BitcoinException
-	 */
+	@Override
 	@Transactional
 	public void checkBalanceLimitRules(UserAccount sellerAccount) throws PayOutRuleNotFoundException, UserAccountNotFoundException, BitcoinException {
 		sellerAccount = userAccountService.getById(sellerAccount.getId());
@@ -128,22 +98,13 @@ public class PayOutRuleService {
 		}		
 	}
 
-	/**
-	 * Returns all {@link PayOutRule}s assigned to {@link UserAccount} with userId
-	 * 
-	 * @param userId
-	 * @return List<PayOutRule>
-	 * @throws PayOutRuleNotFoundException
-	 */
+	@Override
 	@Transactional(readOnly = true)
 	public List<PayOutRule> getRules(long userId) throws PayOutRuleNotFoundException{
 		return payOutRuleDAO.getByUserId(userId);
 	}
 
-	/**
-	 * Checks if Rules exist for the current hour and day. If yes these
-	 * {@link PayOutRule}s are executed.
-	 */
+	@Override
 	@Transactional
 	public void checkAllRules() {
 		Date date = new Date();

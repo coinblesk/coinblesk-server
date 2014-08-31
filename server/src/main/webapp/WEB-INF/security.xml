@@ -12,17 +12,19 @@
     <http pattern="/" security='none' />
     
 	<http auto-config="false" use-expressions="true" entry-point-ref="restAuthenticationEntryPoint">
-		<intercept-url pattern="/user/create" access="permitAll" />
-		<intercept-url pattern="/user/resetPassword/**" access="permitAll" />
-		<intercept-url pattern="/user/resetPasswordRequest" access="permitAll" />
-		<intercept-url pattern="/user/verify/**" access="permitAll" />
-		<intercept-url pattern="/transaction/exchange-rate" access="permitAll" />
-		<intercept-url pattern="/home/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" />
-		<intercept-url pattern="/relation/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" />
-		<intercept-url pattern="/users/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" />
-		<intercept-url pattern="/history/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" />
-		<intercept-url pattern="/activities/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" />
-		<intercept-url pattern="/**" access="isFullyAuthenticated()" />
+		<intercept-url pattern="/user/create" access="permitAll" requires-channel="http" />
+		<intercept-url pattern="/user/resetPassword/**" access="permitAll" requires-channel="http" />
+		<intercept-url pattern="/user/resetPasswordRequest" access="permitAll" requires-channel="http" />
+		<intercept-url pattern="/user/verify/**" access="permitAll" requires-channel="http" />
+		<intercept-url pattern="/transaction/exchange-rate" access="permitAll" requires-channel="http" />
+		<intercept-url pattern="/home/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
+		<intercept-url pattern="/relation/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
+		<intercept-url pattern="/users/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
+		<intercept-url pattern="/history/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
+		<intercept-url pattern="/activities/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
+		<intercept-url pattern="/serveraccount/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
+		<intercept-url pattern="/**" access="isFullyAuthenticated()" requires-channel="http" />
+
 		<logout invalidate-session="true" 
 				logout-success-url="/"
 				delete-cookies="JSESSIONID"

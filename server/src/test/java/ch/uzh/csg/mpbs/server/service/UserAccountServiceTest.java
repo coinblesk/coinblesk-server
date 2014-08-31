@@ -29,6 +29,7 @@ import ch.uzh.csg.mbps.server.util.UserRoles.Role;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
@@ -62,23 +63,23 @@ public class UserAccountServiceTest {
 		
 		if (! initialized) {
 			accountOnePassword = "my-password";
-			accountOne = new UserAccount("hans", "hans@bitcoin.csg.uzh.ch", accountOnePassword);
+			accountOne = new UserAccount("hans@https://mbps.csg.uzh.ch", "hans@bitcoin.csg.uzh.ch", accountOnePassword);
 			accountOne.setBalance(new BigDecimal(2.5));
-			accountTwo = new UserAccount("hans1", "hans1@bitcoin.csg.uzh.ch", "my-password-wurst");
+			accountTwo = new UserAccount("hans1@https://mbps.csg.uzh.ch", "hans1@bitcoin.csg.uzh.ch", "my-password-wurst");
 			accountTwo.setBalance(new BigDecimal(2.5));
-			accountToDelete = new UserAccount("hans2", "hans2@bitcoin.csg.uzh.ch", "my-password-wurst");
+			accountToDelete = new UserAccount("hans2@https://mbps.csg.uzh.ch", "hans2@bitcoin.csg.uzh.ch", "my-password-wurst");
 			accountToDelete.setBalance(new BigDecimal(1.0));
-			accountToUpdate = new UserAccount("hans3", "hans3@bitcoin.csg.uzh.ch", "my-password-wurst");
+			accountToUpdate = new UserAccount("hans3@https://mbps.csg.uzh.ch", "hans3@bitcoin.csg.uzh.ch", "my-password-wurst");
 			accountToUpdate.setBalance(new BigDecimal(1.5));
-			accountToUpdate2 = new UserAccount("hans3-2", "hans3-2@bitcoin.csg.uzh.ch", "my-password-wurst");
+			accountToUpdate2 = new UserAccount("hans3-2@https://mbps.csg.uzh.ch", "hans3-2@bitcoin.csg.uzh.ch", "my-password-wurst");
 			accountToUpdate2.setBalance(new BigDecimal(0.8));
-			accountFour = new UserAccount("hans4", "hans4@bitcoin.csg.uzh.ch", "my-password-wurst");
+			accountFour = new UserAccount("hans4@https://mbps.csg.uzh.ch", "hans4@bitcoin.csg.uzh.ch", "my-password-wurst");
 			accountFour.setBalance(new BigDecimal(2.0));
-			accountFive = new UserAccount("hans5", "hans5@bitcoin.csg.uzh.ch", "my-password-wurst");
+			accountFive = new UserAccount("hans5@https://mbps.csg.uzh.ch", "hans5@bitcoin.csg.uzh.ch", "my-password-wurst");
 			accountFive.setBalance(new BigDecimal(1.3));
-			accountSix = new UserAccount("hans6", "hans6@bitcoin.csg.uzh.ch", "my-password-wurst");
+			accountSix = new UserAccount("hans6@https://mbps.csg.uzh.ch", "hans6@bitcoin.csg.uzh.ch", "my-password-wurst");
 			accountSix.setBalance(new BigDecimal(0.4));
-			accountSeven = new UserAccount("hans7", "hans7@bitcoin.csg.uzh.ch", "my-password-wurst");
+			accountSeven = new UserAccount("hans7@https://mbps.csg.uzh.ch", "hans7@bitcoin.csg.uzh.ch", "my-password-wurst");
 			accountSeven.setBalance(new BigDecimal(0.4));
 			try {
 				userAccountService.createAccount(accountOne);
@@ -90,7 +91,7 @@ public class UserAccountServiceTest {
 				userAccountService.createAccount(accountSeven);
 			} catch (UsernameAlreadyExistsException | BitcoinException e) {
 				//do nothing
-			} catch (InvalidUsernameException e) {
+			} catch (InvalidUsernameException | InvalidUrlException e) {
 				//do nothing
 			}
 			
@@ -104,9 +105,9 @@ public class UserAccountServiceTest {
 	}
 	
 	@Test
-	public void testCreateAccount() throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
+	public void testCreateAccount() throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		int nofUsers = userAccountService.getAllUserAccounts().size();
-		UserAccount newUser = new UserAccount("hans80", "hans80@bitcoin.csg.uzh.ch", "my-password");
+		UserAccount newUser = new UserAccount("hans80@https://mbps.csg.uzh.ch", "hans80@bitcoin.csg.uzh.ch", "my-password");
 		assertTrue(userAccountService.createAccount(newUser));
 		
 		newUser = userAccountService.getByUsername(newUser.getUsername());
@@ -146,14 +147,14 @@ public class UserAccountServiceTest {
 	}
 	
 	@Test(expected=UsernameAlreadyExistsException.class)
-	public void testCreateAccount_FailUsernameAlreadyExists() throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
+	public void testCreateAccount_FailUsernameAlreadyExists() throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		userAccountService.createAccount(accountOne);
 	}
 	
 	@Test
-	public void testCreateAccount_EnterFieldsManually() throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException {
+	public void testCreateAccount_EnterFieldsManually() throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		String pw = "my-password";
-		UserAccount newAccount = new UserAccount("hans81", "hans81@bitcoin.csg.uzh.ch", pw);
+		UserAccount newAccount = new UserAccount("hans81@https://mbps.csg.uzh.ch", "hans81@bitcoin.csg.uzh.ch", pw);
 		newAccount.setBalance(new BigDecimal(1000));
 		Date date = new Date();
 		newAccount.setCreationDate(date);
@@ -164,7 +165,7 @@ public class UserAccountServiceTest {
 		
 		assertTrue(userAccountService.createAccount(newAccount));
 		
-		UserAccount fromDB = userAccountService.getByUsername("hans81");
+		UserAccount fromDB = userAccountService.getByUsername("hans81@https://mbps.csg.uzh.ch");
 		
 		assertEquals(newAccount.getUsername(), fromDB.getUsername());
 		assertEquals(newAccount.getEmail(), fromDB.getEmail());

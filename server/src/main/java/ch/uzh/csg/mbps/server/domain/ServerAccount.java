@@ -35,6 +35,8 @@ public class ServerAccount {
 	private String email;
 	@Column(name = "PAYIN_ADDRESS")
 	private String payinAddress;
+	@Column(name = "PAYOUT_ADDRESS")
+	private String payoutAddress;
 	@Column(name = "TRUST_LEVEL", nullable = false)
 	private int trustLevel;
 	@Column(name = "PUBLIC_KEY", length = 1024, nullable = false)
@@ -57,8 +59,6 @@ public class ServerAccount {
 	 *            != NULL
 	 * @param email
 	 *            != NULL
-	 * @param public key
-	 *            != NULL
 	 */
 	public ServerAccount(String url, String email, String publicKey) {
 		this.url = url;
@@ -69,6 +69,27 @@ public class ServerAccount {
 		this.creationDate = new Date();
 		this.publicKey = publicKey;
 		this.trustLevel = 0;
+	}
+	
+	/**
+	 * Creates a new server account with active balance 0, actual timestamp and given
+	 * parameters.
+	 * 
+	 * @param url
+	 * @param email
+	 * @param publicKey
+	 * @param trustLevel
+	 * @param balanceLimit
+	 */
+	public ServerAccount(String url, String email, String publicKey, int trustLevel, BigDecimal balanceLimit){
+		this.url = url;
+		this.email = email;
+		this.deleted = false;
+		this.balanceLimit = balanceLimit;
+		this.activeBalance = new BigDecimal(0.0);
+		this.creationDate = new Date();
+		this.publicKey = publicKey;
+		this.trustLevel = trustLevel;
 	}
 
 	public long getId() {
@@ -105,6 +126,14 @@ public class ServerAccount {
 
 	public String getPayinAddress() {
 		return payinAddress;
+	}
+
+	public void setPayoutAddress(String btcAddress) {
+		this.payoutAddress = btcAddress;
+	}
+	
+	public String getPayoutAddress() {
+		return payoutAddress;
 	}
 
 	public void setPayinAddress(String btcAddress) {

@@ -1,6 +1,6 @@
 package ch.uzh.csg.mbps.server.service;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -35,32 +35,37 @@ public class ServerTransactionService implements IServerTransaction{
 
 	@Override
 	@Transactional(readOnly = true)
-	public ArrayList<HistoryServerAccountTransaction> getLast3Transactions() {
-		return serverTransactionDAO.getLast3Transactions();
+	public List<HistoryServerAccountTransaction> getLast5Transactions() {
+		return serverTransactionDAO.getLast5Transactions();
 	}
 
 	@Override
 	@Transactional(readOnly = true)
-	public ArrayList<HistoryServerAccountTransaction> getLast3ServerAccountTransaction(String url) throws ServerAccountNotFoundException {
-		return serverTransactionDAO.getLast3ServerAccountTransaction(url);
+	public List<HistoryServerAccountTransaction> getLast5ServerAccountTransaction(String url) throws ServerAccountNotFoundException {
+		return serverTransactionDAO.getLast5ServerAccountTransaction(url);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
-	public ArrayList<HistoryServerAccountTransaction> getHistory(int page) {
+	public List<HistoryServerAccountTransaction> getHistory(int page) {
 		return serverTransactionDAO.getHistory(page);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
-	public ArrayList<HistoryServerAccountTransaction> getPayeeHistory(int page) {
+	public List<HistoryServerAccountTransaction> getPayeeHistory(int page) {
 		return serverTransactionDAO.getPayeeHistory(page);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
-	public ArrayList<HistoryServerAccountTransaction> getPayerHistory(int page) {
+	public List<HistoryServerAccountTransaction> getPayerHistory(int page) {
 		return serverTransactionDAO.getPayerHistory(page);
 	}
 
+	@Override
+	@Transactional(readOnly=true)
+	public List<HistoryServerAccountTransaction> getServerAccountTransactions(String url, int page) throws ServerAccountNotFoundException {
+		return serverTransactionDAO.getServerAccountTransactions(url, page);
+	}
 }
