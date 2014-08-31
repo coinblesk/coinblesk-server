@@ -89,8 +89,21 @@ public interface IServerAccount {
 
 	public boolean checkPredefinedDeleteArguments(String url) throws ServerAccountNotFoundException, BalanceNotZeroException, HibernateException;
 
+	/**
+	 * 
+	 * @param url
+	 * @param oldLevel
+	 * @param newLevel
+	 * @throws ServerAccountNotFoundException
+	 */
 	public void updateTrustLevel(String url, int oldLevel, int newLevel) throws ServerAccountNotFoundException;
 
+	/**
+	 * 
+	 * @param url
+	 * @param oldLimit
+	 * @param newLimit
+	 */
 	public void updateBalanceLimit(String url, BigDecimal oldLimit, BigDecimal newLimit);
 
 	/**

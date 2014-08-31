@@ -27,9 +27,7 @@ import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 @Repository
 public class ServerAccountDAO {
 	private static Logger LOGGER = Logger.getLogger(ServerAccountDAO.class);
-	
-	//TODO: mehmet: javadoc
-	
+
 	@PersistenceContext
 	private EntityManager em;
 	

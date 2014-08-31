@@ -96,16 +96,17 @@ public class ServerAccountService implements IServerAccount {
 	}
 	
 	/**
+	 * Prepares {@link ServerAccount} with the data which will be send to the other server. 
 	 * 
 	 * @param serverAccount
 	 * @param newPayinAddress
 	 * @param date
-	 * @return
-	 * @throws InvalidUrlException 
+	 * @return ServerAccount
+	 * @throws InvalidUrlException
 	 * @throws InvalidEmailException 
-	 * @throws InvalidPublicKeyException 
+	 * @throws InvalidPublicKeyException
 	 * @throws UrlAlreadyExistsException 
-	 * @throws UserAccountNotFoundException 
+	 * @throws UserAccountNotFoundException
 	 */
 	private ServerAccount prepareAccount(ServerAccount otherAccount, String publicKey) throws UserAccountNotFoundException, InvalidPublicKeyException, InvalidUrlException, InvalidEmailException {
 		String otherUrl = otherAccount.getUrl();
@@ -147,10 +148,11 @@ public class ServerAccountService implements IServerAccount {
 	}
 
 	/**
+	 * Creates {@link ServerAccount} with a payinAddress.
 	 * 
 	 * @param serverAccount
 	 * @param payinAddress
-	 * @return
+	 * @return boolean
 	 * @throws UrlAlreadyExistsException
 	 * @throws BitcoinException
 	 * @throws InvalidUrlException
@@ -280,26 +282,12 @@ public class ServerAccountService implements IServerAccount {
 		return serverAccountDAO.checkPredefinedDeleteArguments(url);
 	}
 
-	//TODO: tests
-	/**
-	 * 
-	 * @param url
-	 * @param oldLevel
-	 * @param newLevel
-	 * @throws ServerAccountNotFoundException
-	 */
 	@Override
 	@Transactional
 	public void updateTrustLevel(String url, int oldLevel, int newLevel) throws ServerAccountNotFoundException {
 		//TODO: check if upgrade or downgrade
 	}
 	
-	/**
-	 * 
-	 * @param url
-	 * @param oldLimit
-	 * @param newLimit
-	 */
 	@Override
 	@Transactional
 	public void updateBalanceLimit(String url, BigDecimal oldLimit, BigDecimal newLimit) {
