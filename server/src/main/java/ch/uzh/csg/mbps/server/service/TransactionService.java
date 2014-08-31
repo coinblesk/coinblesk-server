@@ -301,4 +301,11 @@ public class TransactionService implements ITransaction {
 
 	}
 
+	@Override
+	@Transactional(readOnly = true)
+    public List<HistoryTransaction> getAll(String username) throws UserAccountNotFoundException {
+		UserAccount user = userAccountService.getByUsername(username);
+		return transactionDAO.getAll(user);
+    }
+
 }

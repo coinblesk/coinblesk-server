@@ -66,6 +66,8 @@ public interface ITransaction {
 	public long getHistoryCount(String username) throws UserAccountNotFoundException;
 
 	public List<HistoryTransaction> getAll();
+	
+	public List<HistoryTransaction> getAll(String username) throws UserAccountNotFoundException;
 
 	public void createTransaction(DbTransaction tx, UserAccount fromDB, UserAccount fromDB2);
 	

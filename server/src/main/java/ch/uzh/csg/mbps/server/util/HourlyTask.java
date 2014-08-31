@@ -28,6 +28,8 @@ public class HourlyTask {
 	private PayOutRuleService payOutRuleService;
 	@Autowired
 	private IUserAccount userAccountService;
+	@Autowired
+	private MensaXLSExporter mensaXLSExporter;
 
 	/**
 	 * Update is executed every 60minutes.
@@ -52,7 +54,7 @@ public class HourlyTask {
 		//TODO: for mensa testrun only, delete afterwards
 		//do mensa export
 		if(hour == 23){
-			MensaXLSExporter.doQuery();
+			mensaXLSExporter.doQuery();
 		}
 	}
 

@@ -2,65 +2,64 @@ package ch.uzh.csg.mbps.server.util;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.List;
 import java.util.Properties;
+
 import org.apache.log4j.Logger;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.criterion.Restrictions;
-import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
-import ch.uzh.csg.mbps.server.domain.DbTransaction;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+
+import ch.uzh.csg.mbps.model.HistoryTransaction;
+import ch.uzh.csg.mbps.server.clientinterface.ITransaction;
 /**
  * Helper Class, only for Mensa Testrun! Will be deleted afterwards.
  *
  */
+@Controller
 public class MensaXLSExporter {
 	private static Logger LOGGER = Logger.getLogger(MensaXLSExporter.class);
+
+	@Autowired
+	private ITransaction transactionService;
 	
-	private static Session openSession() {
-		SessionFactory sessionFactory = HibernateUtil.getSessionFactory();
-		return sessionFactory.openSession();
-	}
-	
-	@SuppressWarnings({ "deprecation", "unchecked" })
-	protected static void doQuery(){
+	public void doQuery(){
 		try{
 			File f = createFile("mensaExport");
 			HSSFWorkbook hwb = new HSSFWorkbook();
 			HSSFSheet sheet = hwb.createSheet("Report");
 			HSSFRow rowhead = sheet.createRow((short) 0);
-			rowhead.createCell((short) 0).setCellValue("seller_id");
+			rowhead.createCell((short) 0).setCellValue("buyer / seller");
 			rowhead.createCell((short) 1).setCellValue("timestamp");
 			rowhead.createCell((short) 2).setCellValue("input_currency");
 			rowhead.createCell((short) 3).setCellValue("input_currency_amount");
 			rowhead.createCell((short) 4).setCellValue("BTC_amount");
-			Session session = openSession();
-			session.beginTransaction();
-			ch.uzh.csg.mbps.server.domain.UserAccount mensa = UserAccountDAO.getByUsername("MensaBinz");
-			long mensaUserId = mensa.getId();
-			ArrayList<DbTransaction> transactions = (ArrayList<DbTransaction>) session.createCriteria(DbTransaction.class).add(Restrictions.eq("sellerID", mensaUserId)).list();
+			
+			List<HistoryTransaction> transactions = transactionService.getAll("MensaBinz");
+			
 			Date date = new Date();
 			Calendar calendar = GregorianCalendar.getInstance();
 			calendar.setTime(date);
 			int day = calendar.get(Calendar.DAY_OF_MONTH);
 			int month = calendar.get(Calendar.MONTH);
-			session.close();
+	
+			
+			
 			Calendar transactionCalendar = GregorianCalendar.getInstance();
 			int rowIndex = 1;
-			for (DbTransaction tx : transactions) {
+			for (HistoryTransaction tx : transactions) {
 				Date transactionDate = tx.getTimestamp();
 				transactionCalendar.setTime(transactionDate);
 				int txDay = transactionCalendar.get(Calendar.DAY_OF_MONTH);
 				int txMonth= transactionCalendar.get(Calendar.MONTH);;
 				if (day == txDay && month == txMonth) {	
 					HSSFRow row = sheet.createRow((short) rowIndex);
-					row.createCell((short) 0).setCellValue(tx.getSellerId());
+					row.createCell((short) 0).setCellValue(tx.getBuyer() + "/" + tx.getSeller());
 					row.createCell((short) 1).setCellValue(tx.getTimestamp().toString());
 					row.createCell((short) 2).setCellValue(tx.getInputCurrency());
 					BigDecimal inputCurrencyAmount = tx.getInputCurrencyAmount();

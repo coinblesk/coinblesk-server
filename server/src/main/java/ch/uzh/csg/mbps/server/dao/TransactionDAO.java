@@ -175,4 +175,18 @@ public class TransactionDAO {
 		
 		return resultWithAliasedBean;
     }
+
+	public List<HistoryTransaction> getAll(UserAccount userAccount) {
+		
+		@SuppressWarnings("unchecked")
+        List<HistoryTransaction> resultWithAliasedBean = em.createQuery(
+				  "SELECT NEW ch.uzh.csg.mbps.model.HistoryTransaction(dbt.timestamp,  dbt.usernamePayer, dbt.usernamePayee, dbt.amount, dbt.inputCurrency, dbt.inputCurrencyAmount) "
+				+ "FROM DbTransaction dbt "
+				+ "WHERE (dbt.usernamePayer = :username OR dbt.usernamePayee = :username) "
+				+ "ORDER BY dbt.timestamp DESC")
+				.setParameter("username", userAccount.getUsername())
+				.getResultList();
+		
+		return resultWithAliasedBean;
+    }
 }
