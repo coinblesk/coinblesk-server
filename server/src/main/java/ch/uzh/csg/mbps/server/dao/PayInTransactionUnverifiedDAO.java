@@ -13,7 +13,7 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
+import ch.uzh.csg.mbps.model.HistoryPayInTransactionUnverified;
 import ch.uzh.csg.mbps.server.domain.PayInTransaction;
 import ch.uzh.csg.mbps.server.domain.PayInTransactionUnverified;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
@@ -61,7 +61,7 @@ public class PayInTransactionUnverifiedDAO {
 		em.persist(tx);
     }
 
-	public List<HistoryPayInTransaction> getHistory(String username, int page) throws UserAccountNotFoundException {
+	public List<HistoryPayInTransactionUnverified> getHistory(String username, int page) throws UserAccountNotFoundException {
 		if (page < 0) {
 			return null;
 		}
@@ -69,8 +69,8 @@ public class PayInTransactionUnverifiedDAO {
 		UserAccount userAccount = userAccountDAO.getByUsername(username);
 		
 		@SuppressWarnings("unchecked")
-        List<HistoryPayInTransaction> resultWithAliasedBean = em.createQuery(""
-				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayInTransaction(pit.timestamp,  pit.amount) "
+        List<HistoryPayInTransactionUnverified> resultWithAliasedBean = em.createQuery(""
+				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayInTransactionUnverified(pit.timestamp,  pit.amount) "
 				+ "FROM PayInTransactionUnverified pit "
 				+ "WHERE pit.userID = :userid "
 				+ "ORDER BY pit.timestamp DESC")
@@ -93,10 +93,10 @@ public class PayInTransactionUnverifiedDAO {
 		return em.createQuery(cq).getSingleResult();
     }
 
-	public List<HistoryPayInTransaction> getLast5Transactions(UserAccount userAccount) {
+	public List<HistoryPayInTransactionUnverified> getLast5Transactions(UserAccount userAccount) {
 		@SuppressWarnings("unchecked")
-        List<HistoryPayInTransaction> resultWithAliasedBean = em.createQuery(""
-				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayInTransaction(pit.timestamp,  pit.amount) "
+        List<HistoryPayInTransactionUnverified> resultWithAliasedBean = em.createQuery(""
+				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayInTransactionUnverified(pit.timestamp,  pit.amount) "
 				+ "FROM PayInTransactionUnverified pit "
 				+ "WHERE pit.userID = :userid "
 				+ "ORDER BY pit.timestamp DESC")

@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
+import ch.uzh.csg.mbps.model.HistoryPayInTransactionUnverified;
 import ch.uzh.csg.mbps.server.dao.PayInTransactionUnverifiedDAO;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.PayInTransactionUnverified;
@@ -33,7 +33,7 @@ public class PayInTransactionUnverifiedService {
     }
 	
 	@Transactional(readOnly = true)
-	public List<HistoryPayInTransaction> getHistory(String username,
+	public List<HistoryPayInTransactionUnverified> getHistory(String username,
 			int page) throws UserAccountNotFoundException {
 		return payInTransactionUnverifiedDAODAO.getHistory(username, page);
 	}
@@ -46,7 +46,7 @@ public class PayInTransactionUnverifiedService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<HistoryPayInTransaction> getLast5Transactions(String username) throws UserAccountNotFoundException {
+	public List<HistoryPayInTransactionUnverified> getLast5Transactions(String username) throws UserAccountNotFoundException {
 		UserAccount userAccount = userAccountDAO.getByUsername(username);
 		return payInTransactionUnverifiedDAODAO.getLast5Transactions(userAccount);
 	}

@@ -22,6 +22,7 @@ import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
 import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
+import ch.uzh.csg.mbps.model.HistoryPayInTransactionUnverified;
 import ch.uzh.csg.mbps.model.HistoryPayOutTransaction;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
 import ch.uzh.csg.mbps.responseobject.GetHistoryTransferObject;
@@ -166,7 +167,7 @@ public class TransactionController {
 			List<HistoryPayInTransaction> payInHistory = payInTransactionService.getHistory(username, txPayInPage);
 			long nofPayInTx = (txPayInPage < 0) ? 0 : payInTransactionService.getHistoryCount(username);
 			
-			List<HistoryPayInTransaction> payInUnverifiedHistory = payInTransactionUnverifiedService.getHistory(username, txPayInUnverifiedPage);
+			List<HistoryPayInTransactionUnverified> payInUnverifiedHistory = payInTransactionUnverifiedService.getHistory(username, txPayInUnverifiedPage);
 			long nofPayInUnverifiedTx = (txPayInUnverifiedPage < 0) ? 0 : payInTransactionUnverifiedService.getHistoryCount(username);
 			
 			List<HistoryPayOutTransaction> payOutHistory = payOutTransactionService.getHistory(username, txPayOutPage);

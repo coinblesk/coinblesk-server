@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 
 import ch.uzh.csg.mbps.model.HistoryPayInTransaction;
+import ch.uzh.csg.mbps.model.HistoryPayInTransactionUnverified;
 import ch.uzh.csg.mbps.model.HistoryPayOutTransaction;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.ITransaction;
@@ -138,8 +139,8 @@ public class HistoryEmailHandler {
 		boolean hasMore = true;
 		
 		for (int page=0; hasMore; page++) {
-			List<HistoryPayInTransaction> history = payInTransactionUnverifiedService.getHistory(username, page);
-			for (HistoryPayInTransaction htx : history) {
+			List<HistoryPayInTransactionUnverified> history = payInTransactionUnverifiedService.getHistory(username, page);
+			for (HistoryPayInTransactionUnverified htx : history) {
 				bufferedWriter.write(htx.getTimestamp().toString() + ", " + htx.getAmount().toString() + "\n");
 			}
 			hasMore = (history.size() > 0) ? true : false;
