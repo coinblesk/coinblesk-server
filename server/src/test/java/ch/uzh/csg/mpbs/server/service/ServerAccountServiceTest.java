@@ -43,6 +43,7 @@ import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DbUnitConfiguration;
 import com.github.springtestdbunit.annotation.ExpectedDatabase;
 import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
+import com.mchange.util.AssertException;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
@@ -279,7 +280,17 @@ public class ServerAccountServiceTest {
 		assertEquals(high.size(), 3);
 	}
 	
-	public void testGetAll() {
+	@Test
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountTrustLevelData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	public void testGetServerAccountsAll() {
+		List<ch.uzh.csg.mbps.model.ServerAccount> notDeletedAccounts = serverAccountService.getServerAccounts(0);
+		assertNotNull(notDeletedAccounts);
 		
+		int nofAllAccounts = notDeletedAccounts.size();
+		
+		//deleted accounts are not count
+		assertFalse(nofAllAccounts==12);
+
+		assertEquals(nofAllAccounts,8);
 	}
 }

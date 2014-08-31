@@ -279,18 +279,6 @@ public class ServerAccountService implements IServerAccount {
 	public boolean checkPredefinedDeleteArguments(String url) throws ServerAccountNotFoundException, BalanceNotZeroException, HibernateException{
 		return serverAccountDAO.checkPredefinedDeleteArguments(url);
 	}
-
-	@Override
-	@Transactional
-	public void updateTrustLevel(String url, int oldLevel, int newLevel) throws ServerAccountNotFoundException {
-		//TODO: check if upgrade or downgrade
-	}
-	
-	@Override
-	@Transactional
-	public void updateBalanceLimit(String url, BigDecimal oldLimit, BigDecimal newLimit) {
-		//TODO: communicate balance limit asymmetric balance limits
-	}
 	
 	@Override
 	@Transactional(readOnly=true)
@@ -302,5 +290,19 @@ public class ServerAccountService implements IServerAccount {
 	@Transactional(readOnly=true)
 	public boolean isDeletedById(long id) {
 		return serverAccountDAO.isDeletedById(id);
+	}
+
+	//TODO: mehmet
+	
+	@Override
+	@Transactional
+	public void updateTrustLevel(String url, int oldLevel, int newLevel) throws ServerAccountNotFoundException {
+		//TODO: check if upgrade or downgrade
+	}
+	
+	@Override
+	@Transactional
+	public void updateBalanceLimit(String url, BigDecimal oldLimit, BigDecimal newLimit) {
+		//TODO: communicate balance limit asymmetric balance limits
 	}
 }

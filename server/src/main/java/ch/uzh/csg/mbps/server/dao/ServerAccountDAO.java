@@ -332,12 +332,11 @@ public class ServerAccountDAO {
 		
 		@SuppressWarnings("unchecked")
         List<ch.uzh.csg.mbps.model.ServerAccount> resultWithAliasedBean = em.createQuery(""
-        		+"SELECT NEW ch.uzh.csg.mbps.model.ServerAccount(account.id, account.url, account.payinAddress, account.payoutAddress,"
-        		+"account trustLevel, accout.activeBalance, account.balanceLimit) "
+        		+ "SELECT NEW ch.uzh.csg.mbps.model.ServerAccount(account.id, account.url, account.payinAddress, account.payoutAddress, account.trustLevel, account.activeBalance, account.balanceLimit) "
         		+ "FROM ServerAccount account "
-        		+ "WHERE account.deleted=:deleted"
+        		+ "WHERE account.deleted=:deleted "
         		+ "ORDER BY account.url ASC")
-        		.setParameter(":deleted", false)
+        		.setParameter("deleted", false)
         		.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
         		.getResultList();
 		
