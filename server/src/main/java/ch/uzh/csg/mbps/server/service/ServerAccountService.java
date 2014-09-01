@@ -18,6 +18,7 @@ import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.ActivitiesTitle;
+import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.Constants;
@@ -197,8 +198,9 @@ public class ServerAccountService implements IServerAccount {
 		} catch (HibernateException e) {
 			return false;
 		}
-		
-		activitiesService.activityLog("n.V.", ActivitiesTitle.CREATE_SERVER_ACCOUNT,"Create a new relation with the server " + url + " and email " + email);
+		if(!TESTING_MODE)
+			activitiesService.activityLog("n.V.", ActivitiesTitle.CREATE_SERVER_ACCOUNT,"Create a new relation with the server " + url + " and email " + email);
+	
 		return true;
 	}
 
@@ -241,13 +243,58 @@ public class ServerAccountService implements IServerAccount {
 			serverAccount.setBalanceLimit(updatedAccount.getBalanceLimit());
 		
 		serverAccountDAO.updatedAccount(serverAccount);
+
+		if(!TESTING_MODE){
+			String title = "";
+			String message = "";
+			String username;
+			try {
+				UserAccount user = userAccountDAO.getByUsername(AuthenticationInfo.getPrincipalUsername());
+				username = user.getUsername();
+			} catch (UserAccountNotFoundException e) {
+				username = "n.V.";
+			}
+		
+			if (updatedAccount.getEmail() != null && !updatedAccount.getEmail().isEmpty()){
+				title = ActivitiesTitle.UPDATE_EMAIL;
+				message = "Email is updated to " + updatedAccount.getEmail();
+			}
+				
+			if (updatedAccount.getUrl() != null && !updatedAccount.getUrl().isEmpty()){
+				title = ActivitiesTitle.UPDATE_URL;
+				message = "URL is updated to " + updatedAccount.getUrl();
+			}
+				
+			if (updatedAccount.getTrustLevel() != serverAccount.getTrustLevel()){
+				title = ActivitiesTitle.UPGRADE_TRUST_LEVEL;
+				message = "Trust level is updated to " + updatedAccount.getTrustLevel();
+			}
+					
+			if (updatedAccount.getBalanceLimit() != serverAccount.getBalanceLimit()){
+				title = ActivitiesTitle.UPDATE_BALANCE_LIMIT;
+				message = "Balance limit is updated to " + updatedAccount.getBalanceLimit();
+			}
+			
+			activitiesService.activityLog(username, title, message);
+		}
 		return true;
 	}
 
 	@Override
 	@Transactional
 	public boolean deleteAccount(String url) throws ServerAccountNotFoundException, BalanceNotZeroException {
-		return serverAccountDAO.delete(url);
+		boolean success = serverAccountDAO.delete(url);
+		if(success && !TESTING_MODE){
+			String username;
+			try {
+				UserAccount user = userAccountDAO.getByUsername(AuthenticationInfo.getPrincipalUsername());
+				username = user.getUsername();
+			} catch (UserAccountNotFoundException e) {
+				username = "n.V.";
+			}
+			activitiesService.activityLog(username, ActivitiesTitle.DELETE_ACCOUNT, "The server account "+ url +" is deleted.");
+		}
+		return success;
 	}
 
 	@Override
