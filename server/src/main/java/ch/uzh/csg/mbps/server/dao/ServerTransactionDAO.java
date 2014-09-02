@@ -38,8 +38,9 @@ public class ServerTransactionDAO {
 	@PersistenceContext
 	private EntityManager em;
 
-	//TODO: mehmet: javadoc
+
 	/**
+	 * Creates a {@link ServerTransaction}
 	 * 
 	 * @param serverTransaction
 	 * @throws ServerAccountNotFoundException
@@ -57,6 +58,7 @@ public class ServerTransactionDAO {
 	}
 	
 	/**
+	 * Verifies the transaction.
 	 * 
 	 * @param serverTransaction
 	 * @throws TransactionException
@@ -78,19 +80,19 @@ public class ServerTransactionDAO {
 			existingServerTransaction.setVerified(true);
 			em.merge(existingServerTransaction);
 			LOGGER.info("Successfully verified ServerTransaction with ID: " + existingServerTransaction.getId());
-			
 		}
 				
 	}
 	
 	/**
+	 * Gets the number of {@link ServerTransaction}s with the server.
 	 * 
-	 * @return
+	 * @return long number of transactions
 	 */
 	public long getHistoryCount(){
 		long nofResults = ((Number) em.createQuery(
 				"SELECT COUNT(*) " +
-				"FROM ServerTransaction st")
+				"FROM ch.uzh.csg.mbps.server.domain.ServerTransaction st")
 				.getSingleResult())
 				.longValue();
 		
@@ -98,38 +100,28 @@ public class ServerTransactionDAO {
 	}
 	
 	/**
+	 * Returns the number {@link ServerTransaction} given by the parameter url
 	 * 
 	 * @param url
-	 * @return
+	 * @return long number of transactions
 	 */
 	public long getServerAccountHistoryCount(String url){
-		
 		CriteriaBuilder cb = em.getCriteriaBuilder();
-		CriteriaQuery<ServerTransaction> cq = cb.createQuery(ServerTransaction.class);
+		CriteriaQuery<Long> cq = cb.createQuery(Long.class);
 		Root<ServerTransaction> root = cq.from(ServerTransaction.class);
-		Predicate condition = cb.equal(root.get("url"), url);
+		cq.select(cb.count(root));
+		Predicate condition = cb.equal(root.get("serverUrl"), url);
 		cq.where(condition);
-		ServerTransaction existingServerTransaction = em.createQuery(cq).getSingleResult();
-		
-		if(existingServerTransaction == null) {
-			return 0;
-		}
-		
-		long nofResults = ((Number) em.createQuery(
-				  "SELECT COUNT(*) " +
-				  "FROM ServerTransaction st " +
-				  "WHERE st.serverUrl = :serverUrl")
-				  .setParameter("serverUrl", url)
-				  .getSingleResult())
-				  .longValue();
+		long nofResults = em.createQuery(cq).getSingleResult();
 
 		return nofResults;
 	}
 
 	/**
+	 * Returns all {@link ServerTransaction}s
 	 * 
-	 * @param page
-	 * @return
+	 * @param page number
+	 * @return List of Server Transactions
 	 */
 	public List<HistoryServerAccountTransaction> getHistory(int page){
 		if (page < 0) {
@@ -137,9 +129,9 @@ public class ServerTransactionDAO {
 		}
 		
 		@SuppressWarnings("unchecked")
-        List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
-				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.serverUrl, st.received) "
-				+ "FROM serverTransaction st "
+		List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
+				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.serverUrl, st.received, st.verified, st.transactionID) "
+				+ "FROM ch.uzh.csg.mbps.server.domain.ServerTransaction st "
 				+ "ORDER BY st.timestamp DESC")
 				.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
 				.setMaxResults(Config.TRANSACTIONS_MAX_RESULTS)
@@ -165,7 +157,7 @@ public class ServerTransactionDAO {
 				
 		Predicate condition1 = cb.equal(root.get("serverUrl"), url);
 		Predicate condition2 = cb.equal(root.get("amount"), Converter.getBigDecimalFromLong(amount));
-		Predicate condition3= cb.equal(root.get("timestamp"), timestamp);
+		Predicate condition3 = cb.equal(root.get("timestamp"), timestamp);
 		
 		Predicate condition4 = cb.and(condition1, condition2, condition3);
 		
@@ -176,58 +168,55 @@ public class ServerTransactionDAO {
 	}
 	
 	/**
+	 * Returns the last 5 made transactions. All are verified.
 	 * 
-	 * @return
+	 * @return Returns last 5 verified Transaction
 	 */
 	public List<HistoryServerAccountTransaction> getLast5Transactions(){
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<HistoryServerAccountTransaction> cq = cb.createQuery(HistoryServerAccountTransaction.class);
+		Root<ServerTransaction> root = cq.from(ServerTransaction.class);
+		cq.select(cb.construct(HistoryServerAccountTransaction.class, root.get("timestamp"),
+				root.get("amount"), root.get("serverUrl"), root.get("received"), root.get("verified"), root.get("transactionID")));
 		
-		@SuppressWarnings("unchecked")
-        List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
-				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.serverUrl, st.received) "
-				+ "FROM serverTransaction st "
-				+ "ORDER BY st.timestamp DESC")
-				.setMaxResults(5)
-				.getResultList();
-		
+		Predicate condition = cb.equal(root.get("verified"), true);
+		cq.where(condition);
+		cq.orderBy(cb.desc(root.get("timestamp")));
+		List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(cq).setMaxResults(5).getResultList();
+
 		return resultWithAliasedBean;
 	}
 	
 	/**
+	 * Returns the last 5 made transactions of a Server Account.
 	 * 
 	 * @param url
-	 * @return
+	 * @return Returns last 5 Server Account Transaction
 	 * @throws ServerAccountNotFoundException
 	 */
 	public List<HistoryServerAccountTransaction> getLast5ServerAccountTransaction(String url) throws ServerAccountNotFoundException{
-		
 		CriteriaBuilder cb = em.getCriteriaBuilder();
-		CriteriaQuery<ServerTransaction> cq = cb.createQuery(ServerTransaction.class);
+		CriteriaQuery<HistoryServerAccountTransaction> cq = cb.createQuery(HistoryServerAccountTransaction.class);
 		Root<ServerTransaction> root = cq.from(ServerTransaction.class);
-		Predicate condition = cb.equal(root.get("url"), url);
-		cq.where(condition);
-		ServerTransaction existingServerTransaction = em.createQuery(cq).getSingleResult();
-
-		if(existingServerTransaction == null)
-			throw new ServerAccountNotFoundException(url);
+		cq.select(cb.construct(HistoryServerAccountTransaction.class, root.get("timestamp"),
+				root.get("amount"), root.get("serverUrl"), root.get("received"), root.get("verified"), root.get("transactionID")));
 		
-		@SuppressWarnings("unchecked")
-        List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
-				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.serverUrl, st.received) "
-				+ "FROM serverTransaction st "
-				+ "WHERE st.serverUrl = :serverUrl "
-				+ "ORDER BY st.timestamp DESC")
-				.setParameter("serverUrl", url)
-				.setMaxResults(5)
-				.getResultList();
+		Predicate condition = cb.equal(root.get("serverUrl"), url);
+		cq.where(condition);
+		cq.orderBy(cb.desc(root.get("timestamp")));
+		List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(cq).setMaxResults(5).getResultList();
+
+		if(resultWithAliasedBean == null)
+			throw new ServerAccountNotFoundException(url);
 		
 		return resultWithAliasedBean;
 	}
 	
-	
 	/**
+	 * Returns the {@link ServerTransaction}s as payee.
 	 * 
-	 * @param page
-	 * @return
+	 * @param page Number of the page
+	 * @return List of Transactions
 	 */
 	public List<HistoryServerAccountTransaction> getPayeeHistory(int page){
 		if (page < 0) {
@@ -236,61 +225,70 @@ public class ServerTransactionDAO {
 
 		@SuppressWarnings("unchecked")
         List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
-				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.serverUrl, st.received) "
-				+ "FROM serverTransaction st "
-				+ "WHERE (st.received = :received and st.verified = :verified) "
+				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.serverUrl, st.received, st.verified, st.transactionID) "
+				+ "FROM ch.uzh.csg.mbps.server.domain.ServerTransaction st "
+				+ "WHERE (st.received=:received AND st.verified=:verified) "
 				+ "ORDER BY st.timestamp DESC")
 				.setParameter("received", true)
 				.setParameter("verified", true)
-				.setMaxResults(5)
+				.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
+				.setMaxResults(Config.TRANSACTIONS_MAX_RESULTS)
 				.getResultList();
 		
 		return resultWithAliasedBean;
 	}
 	
+	/**
+	 * Returns the {@link ServerTransaction}s as payer.
+	 * 
+	 * @param page Number of the page
+	 * @return List of Transactions
+	 */
 	public List<HistoryServerAccountTransaction> getPayerHistory(int page){
 		if (page < 0) {
 			return null;
 		}
-		
+
 		@SuppressWarnings("unchecked")
         List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
-				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.serverUrl, st.received) "
-				+ "FROM serverTransaction st "
-				+ "WHERE (st.received = :received and st.verified = :verified) "
-				+ "ORDER BY st.timestamp DESC")
+				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(server.timestamp, server.amount, server.serverUrl, server.received, server.verified, server.transactionID) "
+				+ "FROM ch.uzh.csg.mbps.server.domain.ServerTransaction server "
+				+ "WHERE (server.received=:received AND server.verified=:verified) "
+				+ "ORDER BY server.timestamp DESC")
 				.setParameter("received", false)
 				.setParameter("verified", true)
-				.setMaxResults(5)
+				.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
+				.setMaxResults(Config.TRANSACTIONS_MAX_RESULTS)
 				.getResultList();
 		
 		return resultWithAliasedBean;
 	}
 	
+	/**
+	 * Returns all {@link ServerTransaction} of a given parameter url.
+	 * 
+	 * @param url
+	 * @param page Number of the page
+	 * @return List of {@link ServerTransaction}
+	 * @throws ServerAccountNotFoundException
+	 */
 	public List<HistoryServerAccountTransaction> getServerAccountTransactions(String url, int page) throws ServerAccountNotFoundException {
 		if (page < 0)
 			return null;
-		
-		CriteriaBuilder cb = em.getCriteriaBuilder();
-		CriteriaQuery<ServerTransaction> cq = cb.createQuery(ServerTransaction.class);
-		Root<ServerTransaction> root = cq.from(ServerTransaction.class);
-		Predicate condition = cb.equal(root.get("url"), url);
-		cq.where(condition);
-		ServerTransaction existingServerTransaction = em.createQuery(cq).getSingleResult();
 
-		if(existingServerTransaction == null)
-			throw new ServerAccountNotFoundException(url);
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<HistoryServerAccountTransaction> cq = cb.createQuery(HistoryServerAccountTransaction.class);
+		Root<ServerTransaction> root = cq.from(ServerTransaction.class);
+		cq.select(cb.construct(HistoryServerAccountTransaction.class, root.get("timestamp"),
+				root.get("amount"), root.get("serverUrl"), root.get("received"), root.get("verified"), root.get("transactionID")));
 		
-		@SuppressWarnings("unchecked")
-        List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(
-				  "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction(st.timestamp, st.amount, st.serverUrl, st.received) "
-				+ "FROM serverTransaction st "
-				+ "WHERE st.serverUrl = :serverUrl "
-				+ "ORDER BY st.timestamp DESC")
-				.setParameter("serverUrl", url)
-				.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
-				.setMaxResults(Config.TRANSACTIONS_MAX_RESULTS)
-				.getResultList();
+		Predicate condition = cb.equal(root.get("serverUrl"), url);
+		cq.where(condition);
+		cq.orderBy(cb.desc(root.get("timestamp")));
+		List<HistoryServerAccountTransaction> resultWithAliasedBean = em.createQuery(cq).setFirstResult(page*Config.TRANSACTIONS_MAX_RESULTS).setMaxResults(Config.TRANSACTIONS_MAX_RESULTS).getResultList();
+
+		if(resultWithAliasedBean == null)
+			throw new ServerAccountNotFoundException(url);
 		
 		return resultWithAliasedBean;
 	}
