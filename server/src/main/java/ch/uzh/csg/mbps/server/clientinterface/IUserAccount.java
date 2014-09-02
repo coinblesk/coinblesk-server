@@ -83,42 +83,106 @@ public interface IUserAccount {
 	 */
 	public boolean verifyEmailAddress(String verificationToken);
 
-	public List<UserAccount> getUsers();
-
+	/**
+	 * Generates new {@link ResetPassword} Entry and sends Email to user with token
+	 * @param emailAddress
+	 * @throws UserAccountNotFoundException
+	 */
 	public void resetPasswordRequest(String emailAddress) throws UserAccountNotFoundException;
 
+	/**
+	 * Deletes all old tokens first, afterwards resets the userpassword and deletes the used token.
+	 * @param matcher
+	 * @return true if password has successfully been reseted
+	 */
 	public boolean resetPassword(PasswordMatcher matcher);
 
+	/**
+	 * Checks if token is saved in table and still valid (younger than 1h)
+	 * @param resetPasswordToken
+	 * @return
+	 */
 	public boolean isValidResetPasswordLink(String resetPasswordToken);
-
+	
+	/**
+	 * Stores a public key on the database and maps this public key to a user
+	 * account.
+	 * 
+	 * @param userId
+	 *            the id of the user account
+	 * @param algorithm
+	 *            the {@link PKIAlgorithm} used to generate the key
+	 * @param publicKey
+	 *            the base64 encoded public key
+	 * @return the key number, indicating the (incremented) position this public
+	 *         key has in a list of public keys mapped to this user account
+	 * @throws UserAccountNotFoundException
+	 */
 	public byte saveUserPublicKey(long id, PKIAlgorithm pkiAlgorithm, String publicKey) throws UserAccountNotFoundException;
 
-	public List<UserAccount> getAdmins();
-
-	public UserModel getLoggedAdmin(String username);
-
+	/**
+	 * 
+	 * @param email
+	 * @return User Account
+	 * @throws UserAccountNotFoundException 
+	 */
 	public UserAccount getByEmail(String email) throws UserAccountNotFoundException;
-
-	public void changeRoleBoth(UserAccount admin) throws UserAccountNotFoundException;
-
-	public void changeRoleAdmin(String email) throws UserAccountNotFoundException;
 
 	public void resendVerificationEmail(UserAccount userAccount);
 	
 	public List<UserPublicKey> getUserPublicKey(long userId) throws UserAccountNotFoundException;
-
+	
 	public void updateAccount(UserAccount userAccount) throws UserAccountNotFoundException;
-
+	
 	public List<ResetPassword> getAllResetPassword();
-
+	
 	public String getTokenForUser(long id) throws VerificationTokenNotFoundException;
-
-	public List<UserAccount> getAllUserAccounts();
-
+	
 	public String getVerificationTokenByUserId(long id)  throws VerificationTokenNotFoundException;
-
+	
 	public List<UserPublicKey> getUserPublicKeys(long id);
+	
+	/**
+	 * Returns all {@link UserAccount}s with role admin.
+	 * @return list of all admins
+	 */
+	public List<UserAccount> getAdmins();
+	
+	/**
+	 * Returns all {@link ch.uzh.csg.mbps.model.UserAccount}s with the roles as user and both.
+	 * @return list of all user accounts
+	 */
+	public List<UserAccount> getUsers();
+	
+	/**
+	 * Returns a {@link UserModel} of a given parameter username.
+	 * 
+	 * @param username
+	 * @return User Model
+	 */
+	public UserModel getLoggedAdmin(String username);
 
+	/**
+	 * Updates a user with the role user to both
+	 * 
+	 * @param admin
+	 * @throws UserAccountNotFoundException
+	 */
+	public void changeRoleBoth(UserAccount admin) throws UserAccountNotFoundException;
+
+	/**
+	 * sets the role as admin
+	 * 
+	 * @param email
+	 * @throws UserAccountNotFoundException
+	 */
+	public void changeRoleAdmin(String email) throws UserAccountNotFoundException;
+
+	/**
+	 * 
+	 * @return
+	 */
+	public List<UserAccount> getAllUserAccounts();
 	/**
 	 * Returns the sum of balances from all user accounts. Represents the total
 	 * amount of Bitcoins which belong to all user accounts.
@@ -135,6 +199,7 @@ public interface IUserAccount {
 	public boolean isValidAdminRoleLink(String adminToken);
 
 	/**
+	 * Sends a message as email to all not deleted users
 	 * 
 	 * @param subject
 	 * @param text

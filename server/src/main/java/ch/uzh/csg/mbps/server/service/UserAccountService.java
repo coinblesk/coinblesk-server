@@ -186,6 +186,12 @@ public class UserAccountService implements IUserAccount {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
+	public UserAccount getByEmail(String email) throws UserAccountNotFoundException {
+		return userAccountDAO.getByEmail(email);
+	}
+
+	@Override
 	@Transactional
 	public boolean updateAccount(String username, UserAccount updatedAccount) throws UserAccountNotFoundException{
 		UserAccount userAccount = getByUsername(username);
@@ -208,7 +214,6 @@ public class UserAccountService implements IUserAccount {
 	@Override
 	@Transactional
 	public boolean delete(String username) throws UserAccountNotFoundException, BalanceNotZeroException {
-		
 		userAccountDAO.delete(username);
 		return true;
 	}
@@ -224,11 +229,7 @@ public class UserAccountService implements IUserAccount {
 		} 
 	}
 
-	/**
-	 * Generates new {@link ResetPassword} Entry and sends Email to user with token
-	 * @param emailAddress
-	 * @throws UserAccountNotFoundException
-	 */
+	@Override
 	@Transactional
 	public void resetPasswordRequest(String emailAddress) throws UserAccountNotFoundException {
 		UserAccount user = userAccountDAO.getByEmail(emailAddress);
@@ -237,12 +238,9 @@ public class UserAccountService implements IUserAccount {
 		
 		Emailer.sendResetPasswordLink(user, token);
 	}
-	
-	/**
-	 * Checks if token is saved in table and still valid (younger than 1h)
-	 * @param resetPasswordToken
-	 * @return
-	 */
+
+
+	@Override
 	@Transactional(readOnly = true)
 	public boolean isValidResetPasswordLink(String resetPasswordToken) {
 		try {
@@ -291,11 +289,7 @@ public class UserAccountService implements IUserAccount {
 		return userAccountDAO.getByResetPasswordToken(token);
 	}
 	
-	/**
-	 * Deletes all old tokens first, afterwards resets the userpassword and deletes the used token.
-	 * @param matcher
-	 * @return true if password has successfully been reseted
-	 */
+	@Override
 	@Transactional
 	public boolean resetPassword(PasswordMatcher matcher){
 		if (!isValidResetPasswordLink(matcher.getToken())) {
@@ -321,36 +315,50 @@ public class UserAccountService implements IUserAccount {
 		}
 	}
 	
-	/**
-	 * Stores a public key on the database and maps this public key to a user
-	 * account.
-	 * 
-	 * @param userId
-	 *            the id of the user account
-	 * @param algorithm
-	 *            the {@link PKIAlgorithm} used to generate the key
-	 * @param publicKey
-	 *            the base64 encoded public key
-	 * @return the key number, indicating the (incremented) position this public
-	 *         key has in a list of public keys mapped to this user account
-	 * @throws UserAccountNotFoundException
-	 */
+	@Override
 	@Transactional
 	public byte saveUserPublicKey(long userId, PKIAlgorithm algorithm, String publicKey) throws UserAccountNotFoundException {
 		return userPublicKeyDAO.saveUserPublicKey(userId, algorithm, publicKey);
 	}
 	
+	@Override
 	@Transactional(readOnly = true)
 	public List<UserPublicKey> getUserPublicKey(long userId) throws UserAccountNotFoundException {
 		return userPublicKeyDAO.getUserPublicKeys(userId);
 	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<UserPublicKey> getUserPublicKeys(long id) {
+		return userPublicKeyDAO.getUserPublicKeys(id);
+	}
 	
+	@Override
+	@Transactional(readOnly = true)
+	public String getVerificationTokenByUserId(long id) throws VerificationTokenNotFoundException {
+		return userAccountDAO.getVerificationTokenByUserId(id);
+	}
 	
-	//TODO: mehmet
-	/**
-	 * Gets all users which have the role as admin
-	 * @return
-	 */
+	@Override
+	@Transactional(readOnly = true)
+	public List<ResetPassword> getAllResetPassword() {
+		return userAccountDAO.getAllResetPassword();
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	public String getTokenForUser(long userID) throws VerificationTokenNotFoundException {
+		return userAccountDAO.getVerificationTokenByUserId(userID);
+	}
+
+	@Override
+	@Transactional
+	public void updateAccount(UserAccount userAccount) throws UserAccountNotFoundException {
+		userAccountDAO.updateAccount(userAccount);
+	}
+
+	//TODO: mehmet test
+	@Override
 	@Transactional(readOnly = true)
 	public List<UserAccount> getAdmins(){
 		List<UserAccount> users = new ArrayList<UserAccount>(); 
@@ -359,11 +367,8 @@ public class UserAccountService implements IUserAccount {
 		return users;
 	}
 	
-	//TODO: mehmet
-	/**
-	 * Gets all users which have the role as user
-	 * @return
-	 */
+	//TODO: mehmet test
+	@Override
 	@Transactional(readOnly = true)
 	public List<UserAccount> getUsers(){
 		List<UserAccount> users; 
@@ -372,12 +377,8 @@ public class UserAccountService implements IUserAccount {
 		return users;
 	}
 	
-	//TODO: mehmet
-	/**
-	 * 
-	 * @param username
-	 * @return
-	 */
+	//TODO: mehmet test
+	@Override
 	@Transactional(readOnly = true)
 	public UserModel getLoggedAdmin(String username) {
 		UserAccount account = null;
@@ -390,18 +391,6 @@ public class UserAccountService implements IUserAccount {
 				account.getEmail(), account.getPassword(), account.getPaymentAddress(), account.getRoles());
 	}
 
-	//TODO: mehmet test & javadoc
-	/**
-	 * 
-	 * @param email
-	 * @return
-	 * @throws UserAccountNotFoundException 
-	 */
-	@Transactional(readOnly = true)
-	public UserAccount getByEmail(String email) throws UserAccountNotFoundException {
-		return userAccountDAO.getByEmail(email);
-	}
-
 	// TODO: mehmet test & javadoc
 	@Override
 	@Transactional
@@ -412,11 +401,7 @@ public class UserAccountService implements IUserAccount {
 	}
 	
 	//TODO: mehmet Test & javadoc
-	/**
-	 * 
-	 * @param email
-	 * @throws UserAccountNotFoundException 
-	 */
+	@Override
 	@Transactional
 	public void changeRoleAdmin(String emailAddress) throws UserAccountNotFoundException {
 		UserAccount user = userAccountDAO.getByEmail(emailAddress);
@@ -430,9 +415,10 @@ public class UserAccountService implements IUserAccount {
 	 * Checks if token is saved in table and still valid (younger than 1h)
 	 * @param adminToken
 	 * @return
-	 */
-	@Transactional(readOnly = true)
-	public boolean isValidAdminLink(String adminToken) {
+	 */	
+	@Override
+	@Transactional
+	public boolean isValidAdminRoleLink(String adminToken) {
 		try {
 			AdminRole adminRole = userAccountDAO.getCreateAdmin(adminToken);
 			if (adminRole == null) {
@@ -447,72 +433,24 @@ public class UserAccountService implements IUserAccount {
 			}
 		} catch (VerificationTokenNotFoundException e) {
 			return false;
-		} 
+		}
 	}
 
-	@Override
-	@Transactional
-    public void updateAccount(UserAccount userAccount) throws UserAccountNotFoundException {
-	    userAccountDAO.updateAccount(userAccount);
-    }
-
-	@Override
-	@Transactional(readOnly = true)
-    public List<ResetPassword> getAllResetPassword() {
-	    return userAccountDAO.getAllResetPassword();
-    }
-
-	@Override
-	@Transactional(readOnly = true)
-    public String getTokenForUser(long userID) throws VerificationTokenNotFoundException {
-		return userAccountDAO.getVerificationTokenByUserId(userID);
-    }
-
+	//TODO: mehmet tests
 	@Override
 	@Transactional(readOnly = true)
     public List<UserAccount> getAllUserAccounts() {
 	    return userAccountDAO.getAllUserAccounts();
     }
-
-	@Override
-	@Transactional(readOnly = true)
-    public String getVerificationTokenByUserId(long id) throws VerificationTokenNotFoundException {
-	    return userAccountDAO.getVerificationTokenByUserId(id);
-    }
-
-	@Override
-	@Transactional(readOnly = true)
-    public List<UserPublicKey> getUserPublicKeys(long id) {
-	    return userPublicKeyDAO.getUserPublicKeys(id);
-    }
 	
+	//TODO: mehmet tests
 	@Override
 	@Transactional(readOnly = true)
     public BigDecimal getSumOfUserAccountBalances() {
 	    return userAccountDAO.getSumOfAccountBalance();
     }
 
-	@Override
-	@Transactional
-	public boolean isValidAdminRoleLink(String adminToken) {
-		try {
-			AdminRole adminRole = userAccountDAO.getCreateAdmin(adminToken);
-			if (adminRole == null) {
-				return false;
-			} else {
-				// checks if token has been created during the last 1h
-				if (adminRole.getCreationDate().getTime() >= (new Date()
-						.getTime() - Config.VALID_TOKEN_LIMIT)) {
-					return true;
-				} else {
-					return false;
-				}
-			}
-		} catch (VerificationTokenNotFoundException e) {
-			return false;
-		}
-	}
-
+	//TODO:TEST
 	@Override
 	@Transactional
 	public void sendMailToAll(String subject, String text) {
@@ -526,8 +464,9 @@ public class UserAccountService implements IUserAccount {
 
 	/**
 	 * 
-	 * @return
+	 * @return All email addresses of all user with the role admin and both
 	 */
+	@Transactional
 	private List<String> getEmailOfAllUsers() {
 		List<String> emails = new ArrayList<String>();
 		emails = userAccountDAO.getEmailOfAllUsersByRoles(Role.USER);
