@@ -32,6 +32,7 @@ public class ServerAccountDAO {
 	private EntityManager em;
 	
 	/**
+	 * Persist the {@link ServerAccount} into the DB
 	 * 
 	 * @param serverAccount
 	 */
@@ -275,6 +276,7 @@ public class ServerAccountDAO {
 	}
 	
 	/**
+	 * Returns all {@link ServerAccount}s that are not deleted.
 	 * 
 	 * @return List of ServerAccount
 	 */
@@ -304,6 +306,7 @@ public class ServerAccountDAO {
 	}
 	
 	/**
+	 * Returns the number of all registered {@link ServerAccount}s without deleted.
 	 * 
 	 * @return Amount of ServerAccount
 	 */
@@ -320,7 +323,7 @@ public class ServerAccountDAO {
 	}
 	
 	/**
-	 * 
+	 * Returns a number of {@link ch.uzh.csg.mbps.model.ServerAccount}s 
 	 * 
 	 * @param page
 	 * @return List of ServerAcoounts

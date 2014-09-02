@@ -71,4 +71,12 @@ public interface IServerTransaction {
 	 * @return the number of server transactions as long
 	 */
 	public long getHistoryCount();
+
+	/**
+	 * Returns the number of {@link ServerTransaction}s of a given parameter url.
+	 * 
+	 * @param url
+	 * @return long 
+	 */
+	public long getServerAccountHistoryCount(String url);
 }
