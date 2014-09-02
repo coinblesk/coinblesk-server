@@ -291,5 +291,10 @@ public class ServerAccountServiceTest {
 		assertFalse(nofAllAccounts==12);
 
 		assertEquals(nofAllAccounts,8);
+		
+		for(ch.uzh.csg.mbps.model.ServerAccount account: notDeletedAccounts){
+			assertFalse(account.getBalanceLimit() == null);
+			assertFalse(account.getActiveBalance() == null);			
+		}
 	}
 }
