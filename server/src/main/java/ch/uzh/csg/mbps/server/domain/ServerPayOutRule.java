@@ -16,13 +16,13 @@ public class ServerPayOutRule {
 	@Id
 	@SequenceGenerator(name = "pk_sequence", sequenceName = "server_payout_rules_id_seq", allocationSize = 1)
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "pk_sequence")
-	@Column(name = "ID")
+	@Column(name = "ID", nullable = false)
 	private long id;
 	@Column(name = "HOUR")
 	private int hour;
 	@Column(name = "DAY")
 	private int day;
-	@Column(name = "SERVER_ACCOUNT_ID")
+	@Column(name = "SERVER_ACCOUNT_ID", nullable = false)
 	private long serverAccountId;
 	@Column(name = "BALANCE_LIMIT", precision = 25, scale = 8)
 	private BigDecimal balanceLimit;

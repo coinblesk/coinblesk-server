@@ -20,26 +20,26 @@ import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 
 @Entity(name = "SERVER_TRANSACTION")
 @Table(indexes = {
-		@Index(name = "BTC_ADDRESS_INDEX", columnList = "BTC_ADDRESS"),
-		@Index(name = "TX_ID_INDEX_SERVER_TX", columnList = "TX_ID"),
-		@Index(name = "SERVER_URL_INDEX", columnList = "SERVER_URL") })
+		@Index(name = "BTC_ADDRESS_TX_INDEX", columnList = "BTC_ADDRESS"),
+		@Index(name = "TX_ID_INDEX_TX_SERVER", columnList = "TX_ID"),
+		@Index(name = "SERVER_URL_TX_INDEX", columnList = "SERVER_URL") })
 public class ServerTransaction {
 
 	@Id
 	@SequenceGenerator(name = "pk_sequence", sequenceName = "server_transaction_id_seq", allocationSize = 1)
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "pk_sequence")
-	@Column(name = "ID")
+	@Column(name = "ID", nullable = false)
 	private long id;
 	@Column(name = "TIMESTAMP")
 	@Temporal(TemporalType.TIMESTAMP)
 	private Date timestamp;
 	@Column(name = "AMOUNT", precision = 25, scale = 8)
 	private BigDecimal amount;
-	@Column(name = "SERVER_URL")
+	@Column(name = "SERVER_URL", nullable = false)
 	private String serverUrl;
 	@Column(name = "BTC_ADDRESS")
 	private String btcAddress;
-	@Column(name = "TX_ID")
+	@Column(name = "TX_ID", nullable = false)
 	private String transactionID;
 	@Column(name = "VERIFIED")
 	private boolean verified;

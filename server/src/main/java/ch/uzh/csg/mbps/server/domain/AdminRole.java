@@ -16,7 +16,7 @@ import javax.persistence.Table;
 public class AdminRole {
 
 	@Id
-	@Column(name = "ID")
+	@Column(name = "ID", nullable = false)
 	@SequenceGenerator(name = "pk_sequence", sequenceName = "adminRole_id_seq", allocationSize = 1)
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "pk_sequence")
 	private long id;

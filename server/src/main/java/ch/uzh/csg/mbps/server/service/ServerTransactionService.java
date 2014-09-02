@@ -68,4 +68,10 @@ public class ServerTransactionService implements IServerTransaction{
 	public List<HistoryServerAccountTransaction> getServerAccountTransactions(String url, int page) throws ServerAccountNotFoundException {
 		return serverTransactionDAO.getServerAccountTransactions(url, page);
 	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	public long getHistoryCount() {
+		return serverTransactionDAO.getHistoryCount();
+	}
 }

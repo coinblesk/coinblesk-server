@@ -16,7 +16,7 @@ import javax.persistence.Table;
 public class Activities {
 
 	@Id
-	@Column(name = "ID")
+	@Column(name = "ID", nullable = false)
 	@SequenceGenerator(name = "pk_sequence", sequenceName = "activities_id_seq", allocationSize = 1)
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "pk_sequence")
 	private long id;

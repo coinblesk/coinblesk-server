@@ -25,9 +25,9 @@ public class ServerPayOutTransaction implements Serializable{
 	@Id
 	@SequenceGenerator(name="pk_sequence",sequenceName="server_pay_out_transaction_id_seq", allocationSize=1)
 	@GeneratedValue(strategy=GenerationType.SEQUENCE,generator="pk_sequence")
-	@Column(name="ID")
+	@Column(name="ID", nullable = false)
 	private long id;
-	@Column(name="SERVER_ACCOUNT_ID")
+	@Column(name="SERVER_ACCOUNT_ID", nullable = false)
 	private long serverAccountID;
 	@Column(name="TIMESTAMP")
 	private Date timestamp;
@@ -37,7 +37,7 @@ public class ServerPayOutTransaction implements Serializable{
 	private String payoutAddress;
 	@Column(name="VERIFIED")
 	private boolean verified;
-	@Column(name="SERVER_TRANSACTION_ID")
+	@Column(name="SERVER_TRANSACTION_ID", nullable = false)
 	private String serverTransactionID;
 	
 	public ServerPayOutTransaction() {
