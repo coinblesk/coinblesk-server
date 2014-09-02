@@ -12,15 +12,20 @@ public class HistoryServerAccountTransaction extends AbstractServerHistory {
 
 	private String serverUrl;
 	private boolean received;
+	private boolean verified;
+	private String transactionID;
 	
 	public HistoryServerAccountTransaction(){
 	}
 	
-	public HistoryServerAccountTransaction(Date timestamp, BigDecimal amount, String serverUrl, boolean received){
+	public HistoryServerAccountTransaction(Date timestamp, BigDecimal amount, String serverUrl, 
+			boolean received, boolean verified, String txId){
 		this.timestamp = timestamp;
 		this.amount = amount;
 		this.serverUrl = serverUrl;
 		this.received = received;
+		this.verified = verified;
+		this.transactionID = txId;
 	}
 	
 	public void setServerUrl(String url){
@@ -39,6 +44,22 @@ public class HistoryServerAccountTransaction extends AbstractServerHistory {
 		return this.received;
 	}
 	
+	public void setVerified(boolean verified){
+		this.verified = verified;
+	}
+	
+	public boolean getVerified(){
+		return this.verified;
+	}
+
+	public void setTransactionId(String txId){
+		this.transactionID = txId;
+	}
+	
+	public String getTransactionId(){
+		return this.transactionID;
+	}
+	
 	@Override
 	public String toString() {
 		DecimalFormat DisplayFormatBTC = new DecimalFormat("#.########");
@@ -55,6 +76,10 @@ public class HistoryServerAccountTransaction extends AbstractServerHistory {
 		sb.append(getServerUrl());
 		sb.append(", Received: ");
 		sb.append(getReceived());
+		sb.append(", Verified: ");
+		sb.append(getVerified());
+		sb.append(", TxID: ");
+		sb.append(getTransactionId());
 		return sb.toString();
 	}
 
