@@ -74,4 +74,10 @@ public class ServerTransactionService implements IServerTransaction{
 	public long getHistoryCount() {
 		return serverTransactionDAO.getHistoryCount();
 	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	public long getServerAccountHistoryCount(String url){
+		return serverTransactionDAO.getServerAccountHistoryCount(url);
+	}
 }
