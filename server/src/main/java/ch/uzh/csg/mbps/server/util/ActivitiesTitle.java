@@ -16,4 +16,5 @@ public class ActivitiesTitle {
 	public static final String DECLINE_UPGRADE_TRUST_LEVEL = "Upgrade declined";
 	public static final String DOWNGRADE_TRUST_LEVEL = "Trust level downgraded";
 	public static final String CREATE_PAYOUT_RULES = "Created payout rule for bitcoins";
+	public static final String UPDATE_URL = "URL is updated";
 }
