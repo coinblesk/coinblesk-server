@@ -19,7 +19,6 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
 public interface IServerAccount {
 	
-	//TODO: mehmet: javadoc
 	/**
 	 * 
 	 * Stores the server account into the DB
@@ -62,7 +61,8 @@ public interface IServerAccount {
 	public boolean updateAccount(String url, ServerAccount updatedAccount) throws ServerAccountNotFoundException;
 
 	/**
-	 * Sets the deleted flag
+	 * Deletes {@link ServerAccount} with url. ServerAccount is not deleted from DB,
+	 * but account's flag "isDeleted" is set to true.
 	 * 
 	 * @param url
 	 * @return boolean
@@ -72,7 +72,9 @@ public interface IServerAccount {
 	public boolean deleteAccount(String url) throws ServerAccountNotFoundException, BalanceNotZeroException;
 	
 	/**
+	 * Returns a list of all accounts with the specific trust level.
 	 * 
+	 * @param trustlevel of the accounts
 	 * @return list of {@link ServerAccount}s
 	 */
 	public List<ServerAccount> getByTrustLevel(int trustlevel);
@@ -84,7 +86,7 @@ public interface IServerAccount {
 	public List<ServerAccount> getAll();
 
 	/**
-	 * All server account which have a trust relation
+	 * Returns a list of all {@link ch.uzh.csg.mbps.model.ServerAccount} that have a relation.
 	 * 
 	 * @param urlPage
 	 * @return List of server account
@@ -129,7 +131,6 @@ public interface IServerAccount {
 	/**
 	 * Stores own url, email and public key and creates a 
 	 * Server Account model which will be send.
-
 	 * 
 	 * @param userAccount
 	 * @param account
