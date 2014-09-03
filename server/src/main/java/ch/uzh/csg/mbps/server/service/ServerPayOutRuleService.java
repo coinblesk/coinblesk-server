@@ -22,6 +22,7 @@ import ch.uzh.csg.mbps.server.util.exceptions.PayOutRuleNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerPayOutRuleNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerPayOutRulesAlreadyDefinedException;
+import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.web.ServerPayOutRulesTransferObject;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
@@ -32,7 +33,6 @@ import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
  */
 @Service
 public class ServerPayOutRuleService implements IServerPayOutRule {
-	//TODO: mehmet Tests
 	
 	@Autowired
 	private ServerPayOutRuleDAO serverPayOutRuleDAO;
@@ -40,9 +40,9 @@ public class ServerPayOutRuleService implements IServerPayOutRule {
 	private IServerPayOutTransaction serverPayOutTransactionService;
 	@Autowired
 	private IServerAccount serverAccountService;
-	
-	public static Boolean testingMode = false;
 
+	public static Boolean testingMode = false;
+	
 	@Override
 	@Transactional
 	public void createRule(ServerPayOutRulesTransferObject sporto, String url) throws ServerAccountNotFoundException, BitcoinException, ServerPayOutRulesAlreadyDefinedException {
@@ -92,24 +92,26 @@ public class ServerPayOutRuleService implements IServerPayOutRule {
 
 	@Override
 	@Transactional
-	public void checkBalanceLimitRules(ServerAccount serverAccount) throws ServerAccountNotFoundException, BitcoinException, ServerPayOutRuleNotFoundException {
+	public void checkBalanceLimitRules(ServerAccount serverAccount) throws ServerAccountNotFoundException, BitcoinException, ServerPayOutRuleNotFoundException, UserAccountNotFoundException {
 		serverAccount = serverAccountService.getById(serverAccount.getId());
 		List<ServerPayOutRule> rules = serverPayOutRuleDAO.getByServerAccountId(serverAccount.getId());
 		
 		ServerPayOutRule tempRule;
 		for (int i = 0; i < rules.size(); i++) {
 			tempRule = rules.get(i);
-			if (tempRule.getBalanceLimit() != null && serverAccount.getActiveBalance().compareTo(tempRule.getBalanceLimit()) == 1) {
-				BigDecimal amount = serverAccount.getActiveBalance().subtract(Config.TRANSACTION_FEE);
-				String address = tempRule.getPayoutAddress();
-				serverPayOutTransactionService.createPayOutTransaction(serverAccount.getUrl(), amount, address);
+			if(tempRule.getBalanceLimit() !=null && (serverAccount.getActiveBalance().compareTo(BigDecimal.ZERO) == -1)){				
+				if (serverAccount.getActiveBalance().abs().compareTo(tempRule.getBalanceLimit()) == 1) {
+					BigDecimal amount = serverAccount.getActiveBalance().abs().subtract(Config.TRANSACTION_FEE);
+					String address = tempRule.getPayoutAddress();
+					serverPayOutTransactionService.createPayOutTransaction(serverAccount.getUrl(), amount, address);
+				}
 			}
 		}
 	}
 
 	@Override
 	@Transactional
-	public void checkAllRules() {
+	public void checkAllRules() throws UserAccountNotFoundException {
 		Date date = new Date();
 		Calendar calendar = GregorianCalendar.getInstance();
 		calendar.setTime(date);
@@ -123,10 +125,12 @@ public class ServerPayOutRuleService implements IServerPayOutRule {
 				tempRule = rules.get(i);
 				try {
 					ServerAccount serverAccount = serverAccountService.getById(tempRule.getServerAccountId());
-					if (serverAccount.getActiveBalance().compareTo(Config.TRANSACTION_FEE) == 1) {
-						BigDecimal amount = serverAccount.getActiveBalance().subtract(Config.TRANSACTION_FEE);
-						String address = tempRule.getPayoutAddress();
-						serverPayOutTransactionService.createPayOutTransaction(serverAccount.getUrl(), amount, address);
+					if(serverAccount.getActiveBalance().compareTo(BigDecimal.ZERO) == -1){
+						if (serverAccount.getActiveBalance().abs().compareTo(Config.TRANSACTION_FEE) == 1) {
+							BigDecimal amount = serverAccount.getActiveBalance().abs().subtract(Config.TRANSACTION_FEE);
+							String address = tempRule.getPayoutAddress();
+							serverPayOutTransactionService.createPayOutTransaction(serverAccount.getUrl(), amount, address);
+						}
 					}
 				} catch (ServerAccountNotFoundException | BitcoinException e) {
 				}
