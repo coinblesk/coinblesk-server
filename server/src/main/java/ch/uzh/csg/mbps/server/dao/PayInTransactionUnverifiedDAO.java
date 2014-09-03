@@ -68,16 +68,29 @@ public class PayInTransactionUnverifiedDAO {
 		
 		UserAccount userAccount = userAccountDAO.getByUsername(username);
 		
-		@SuppressWarnings("unchecked")
-        List<HistoryPayInTransactionUnverified> resultWithAliasedBean = em.createQuery(""
-				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayInTransactionUnverified(pit.timestamp,  pit.amount) "
-				+ "FROM PayInTransactionUnverified pit "
-				+ "WHERE pit.userID = :userid "
-				+ "ORDER BY pit.timestamp DESC")
-				.setFirstResult(page * Config.PAY_INS_MAX_RESULTS)
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<HistoryPayInTransactionUnverified> cq = cb.createQuery(HistoryPayInTransactionUnverified.class);
+		Root<PayInTransactionUnverified> root = cq.from(PayInTransactionUnverified.class);
+		cq.select(cb.construct(HistoryPayInTransactionUnverified.class, root.get("timestamp"),root.get("amount")));
+		
+		Predicate condition = cb.equal(root.get("userID"), userAccount.getId());
+		cq.where(condition);
+		cq.orderBy(cb.desc(root.get("timestamp")));
+		List<HistoryPayInTransactionUnverified> resultWithAliasedBean = em.createQuery(cq)
+				.setFirstResult(page* Config.PAY_INS_MAX_RESULTS)
 				.setMaxResults(Config.PAY_INS_MAX_RESULTS)
-				.setParameter("userid", userAccount.getId())
 				.getResultList();
+
+//		@SuppressWarnings("unchecked")
+//        List<HistoryPayInTransactionUnverified> resultWithAliasedBean = em.createQuery(""
+//				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayInTransactionUnverified(pit.timestamp,  pit.amount) "
+//				+ "FROM PayInTransactionUnverified pit "
+//				+ "WHERE pit.userID = :userid "
+//				+ "ORDER BY pit.timestamp DESC")
+//				.setFirstResult(page * Config.PAY_INS_MAX_RESULTS)
+//				.setMaxResults(Config.PAY_INS_MAX_RESULTS)
+//				.setParameter("userid", userAccount.getId())
+//				.getResultList();
 		
 		return resultWithAliasedBean;
     }
@@ -94,15 +107,27 @@ public class PayInTransactionUnverifiedDAO {
     }
 
 	public List<HistoryPayInTransactionUnverified> getLast5Transactions(UserAccount userAccount) {
-		@SuppressWarnings("unchecked")
-        List<HistoryPayInTransactionUnverified> resultWithAliasedBean = em.createQuery(""
-				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayInTransactionUnverified(pit.timestamp,  pit.amount) "
-				+ "FROM PayInTransactionUnverified pit "
-				+ "WHERE pit.userID = :userid "
-				+ "ORDER BY pit.timestamp DESC")
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<HistoryPayInTransactionUnverified> cq = cb.createQuery(HistoryPayInTransactionUnverified.class);
+		Root<PayInTransactionUnverified> root = cq.from(PayInTransactionUnverified.class);
+		cq.select(cb.construct(HistoryPayInTransactionUnverified.class, root.get("timestamp"),root.get("amount")));
+		
+		Predicate condition = cb.equal(root.get("userID"), userAccount.getId());
+		cq.where(condition);
+		cq.orderBy(cb.desc(root.get("timestamp")));
+		List<HistoryPayInTransactionUnverified> resultWithAliasedBean = em.createQuery(cq)
 				.setMaxResults(5)
-				.setParameter("userid", userAccount.getId())
 				.getResultList();
+		
+//		@SuppressWarnings("unchecked")
+//        List<HistoryPayInTransactionUnverified> resultWithAliasedBean = em.createQuery(""
+//				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayInTransactionUnverified(pit.timestamp,  pit.amount) "
+//				+ "FROM PayInTransactionUnverified pit "
+//				+ "WHERE pit.userID = :userid "
+//				+ "ORDER BY pit.timestamp DESC")
+//				.setMaxResults(5)
+//				.setParameter("userid", userAccount.getId())
+//				.getResultList();
 		
 		return resultWithAliasedBean;
     }

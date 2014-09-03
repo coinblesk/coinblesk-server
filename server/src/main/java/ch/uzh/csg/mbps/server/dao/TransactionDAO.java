@@ -50,13 +50,19 @@ public class TransactionDAO {
 			return null;
 		}
 		
-		@SuppressWarnings("unchecked")
-        List<HistoryTransaction> resultWithAliasedBean = em.createQuery(
-				  "SELECT NEW ch.uzh.csg.mbps.model.HistoryTransaction(dbt.timestamp, dbt.usernamePayer, dbt.usernamePayee, dbt.amount, dbt.inputCurrency, dbt.inputCurrencyAmount) "
-				+ "FROM DbTransaction dbt "
-				+ "WHERE (dbt.usernamePayer = :username OR dbt.usernamePayee = :username) "
-				+ "ORDER BY dbt.timestamp DESC")
-				.setParameter("username", userAccount.getUsername())
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<HistoryTransaction> cq = cb.createQuery(HistoryTransaction.class);
+		Root<DbTransaction> root = cq.from(DbTransaction.class);
+		cq.select(cb.construct(HistoryTransaction.class,root.get("timestamp"), root.get("usernamePayer"),root.get("usernamePayee"), 
+				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount")));
+		
+		Predicate condition1 = cb.equal(root.get("usernamePayer"), userAccount.getUsername());
+		Predicate condition2 = cb.equal(root.get("usernamePayee"), userAccount.getUsername());
+		Predicate condition3 = cb.or(condition1, condition2);
+		cq.where(condition3);
+		
+		cq.orderBy(cb.desc(root.get("timestamp")));
+		List<HistoryTransaction> resultWithAliasedBean = em.createQuery(cq)
 				.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
 				.setMaxResults(Config.TRANSACTIONS_MAX_RESULTS)
 				.getResultList();
@@ -128,7 +134,6 @@ public class TransactionDAO {
 		Root<DbTransaction> root = cq.from(DbTransaction.class);
 		cq.select(cb.count(root));
 		
-		
 		Predicate condition1 = cb.equal(root.get("usernamePayer"), usernamePayer);
 		Predicate condition2 = cb.equal(root.get("usernamePayee"), usernamePayee);
 		Predicate condition3= cb.equal(root.get("currency"), currency.getCurrencyCode());
@@ -152,39 +157,52 @@ public class TransactionDAO {
 	 * @throws UserAccountNotFoundException
 	 */
 	public List<HistoryTransaction> getLast5Transactions(UserAccount userAccount) throws UserAccountNotFoundException {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<HistoryTransaction> cq = cb.createQuery(HistoryTransaction.class);
+		Root<DbTransaction> root = cq.from(DbTransaction.class);
+		cq.select(cb.construct(HistoryTransaction.class,root.get("timestamp"), root.get("usernamePayer"),root.get("usernamePayee"), 
+				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount")));
 		
-		@SuppressWarnings("unchecked")
-        List<HistoryTransaction> resultWithAliasedBean = em.createQuery(
-				  "SELECT NEW ch.uzh.csg.mbps.model.HistoryTransaction(dbt.timestamp, dbt.usernamePayer, dbt.usernamePayee, dbt.amount, dbt.inputCurrency, dbt.inputCurrencyAmount) "
-				+ "FROM DbTransaction dbt "
-				+ "WHERE (dbt.usernamePayer = :username OR dbt.usernamePayee = :username) "
-				+ "ORDER BY dbt.timestamp DESC")
-				.setParameter("username", userAccount.getUsername())
+		Predicate condition1 = cb.equal(root.get("usernamePayer"), userAccount.getUsername());
+		Predicate condition2 = cb.equal(root.get("usernamePayee"), userAccount.getUsername());
+		Predicate condition3= cb.and(condition1, condition2);
+		cq.where(condition3);
+		
+		cq.orderBy(cb.desc(root.get("timestamp")));
+		List<HistoryTransaction> resultWithAliasedBean = em.createQuery(cq)
 				.setMaxResults(5)
 				.getResultList();
 		
 		return resultWithAliasedBean;
 	}
 
-	public List<HistoryTransaction> getAll() {		
-		@SuppressWarnings("unchecked")
-        List<HistoryTransaction> resultWithAliasedBean = em.createQuery(
-				  "SELECT NEW ch.uzh.csg.mbps.model.HistoryTransaction(dbt.timestamp,  dbt.usernamePayer, dbt.usernamePayee, dbt.amount, dbt.inputCurrency, dbt.inputCurrencyAmount) "
-				+ "FROM DbTransaction dbt")
+	public List<HistoryTransaction> getAll() {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<HistoryTransaction> cq = cb.createQuery(HistoryTransaction.class);
+		Root<DbTransaction> root = cq.from(DbTransaction.class);
+		cq.select(cb.construct(HistoryTransaction.class,root.get("timestamp"), root.get("usernamePayer"),root.get("usernamePayee"), 
+				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount")));
+		
+		List<HistoryTransaction> resultWithAliasedBean = em.createQuery(cq)
 				.getResultList();
 		
 		return resultWithAliasedBean;
     }
 
 	public List<HistoryTransaction> getAll(UserAccount userAccount) {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<HistoryTransaction> cq = cb.createQuery(HistoryTransaction.class);
+		Root<DbTransaction> root = cq.from(DbTransaction.class);
+		cq.select(cb.construct(HistoryTransaction.class,root.get("timestamp"), root.get("usernamePayer"),root.get("usernamePayee"), 
+				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount")));
 		
-		@SuppressWarnings("unchecked")
-        List<HistoryTransaction> resultWithAliasedBean = em.createQuery(
-				  "SELECT NEW ch.uzh.csg.mbps.model.HistoryTransaction(dbt.timestamp,  dbt.usernamePayer, dbt.usernamePayee, dbt.amount, dbt.inputCurrency, dbt.inputCurrencyAmount) "
-				+ "FROM DbTransaction dbt "
-				+ "WHERE (dbt.usernamePayer = :username OR dbt.usernamePayee = :username) "
-				+ "ORDER BY dbt.timestamp DESC")
-				.setParameter("username", userAccount.getUsername())
+		Predicate condition1 = cb.equal(root.get("usernamePayer"), userAccount.getUsername());
+		Predicate condition2 = cb.equal(root.get("usernamePayee"), userAccount.getUsername());
+		Predicate condition3= cb.and(condition1, condition2);
+		cq.where(condition3);
+		
+		cq.orderBy(cb.desc(root.get("timestamp")));
+		List<HistoryTransaction> resultWithAliasedBean = em.createQuery(cq)
 				.getResultList();
 		
 		return resultWithAliasedBean;

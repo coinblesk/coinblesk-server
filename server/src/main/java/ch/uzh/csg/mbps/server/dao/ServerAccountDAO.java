@@ -311,14 +311,15 @@ public class ServerAccountDAO {
 	 * @return Amount of ServerAccount
 	 */
 	public long getAccountCount(){
-		long nofResults = ((Number) em.createQuery(
-				"SELECT COUNT(*) "
-				+ "FROM ServerAccount as account"
-				+ " WHERE account.deleted = :deleted")
-				.setParameter("deleted", false)
-				.getSingleResult())
-				.longValue();
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<Long> cq = cb.createQuery(Long.class);
+		Root<ServerAccount> root = cq.from(ServerAccount.class);
+		cq.select(cb.count(root));
 		
+		Predicate condition = cb.equal(root.get("deleted"), false);
+		cq.where(condition);
+		
+		long nofResults = em.createQuery(cq).getSingleResult().longValue();
 		return nofResults;
 	}
 	
@@ -333,16 +334,20 @@ public class ServerAccountDAO {
 			return null;
 		}
 		
-		@SuppressWarnings("unchecked")
-        List<ch.uzh.csg.mbps.model.ServerAccount> resultWithAliasedBean = em.createQuery(""
-        		+ "SELECT NEW ch.uzh.csg.mbps.model.ServerAccount(account.id, account.url, account.payinAddress, account.payoutAddress, account.trustLevel, account.activeBalance, account.balanceLimit) "
-        		+ "FROM ServerAccount account "
-        		+ "WHERE account.deleted=:deleted "
-        		+ "ORDER BY account.url ASC")
-        		.setParameter("deleted", false)
-        		.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
-        		.getResultList();
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ch.uzh.csg.mbps.model.ServerAccount> cq = cb.createQuery(ch.uzh.csg.mbps.model.ServerAccount.class);
+		Root<ServerAccount> root = cq.from(ServerAccount.class);
+		cq.select(cb.construct(ch.uzh.csg.mbps.model.ServerAccount.class, root.get("id"),root.get("payinAddress"),
+				root.get("payoutAddress"), root.get("trustLevel"), root.get("activeBalance"), root.get("balanceLimit")));
 		
+		Predicate condition = cb.equal(root.get("deleted"), false);
+		cq.where(condition);
+		cq.orderBy(cb.asc(root.get("url")));
+		List<ch.uzh.csg.mbps.model.ServerAccount> resultWithAliasedBean = em.createQuery(cq)
+        		.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
+				.setMaxResults(Config.TRANSACTIONS_MAX_RESULTS)
+				.getResultList();
+
 		return resultWithAliasedBean;
 	}
 	

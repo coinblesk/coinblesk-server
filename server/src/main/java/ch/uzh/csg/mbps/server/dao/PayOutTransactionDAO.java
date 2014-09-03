@@ -50,15 +50,17 @@ public class PayOutTransactionDAO {
 			return null;
 		}
 		
-		@SuppressWarnings("unchecked")
-        List<HistoryPayOutTransaction> resultWithAliasedBean = em.createQuery(""
-				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayOutTransaction(pot.timestamp,  pot.amount, pot.btcAddress) "
-				+ "FROM PayOutTransaction pot "
-				+ "WHERE pot.userID = :userid "
-				+ "ORDER BY pot.timestamp DESC")
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<HistoryPayOutTransaction> cq = cb.createQuery(HistoryPayOutTransaction.class);
+		Root<PayOutTransaction> root = cq.from(PayOutTransaction.class);
+		cq.select(cb.construct(HistoryPayOutTransaction.class, root.get("timestamp"),root.get("amount"), root.get("btcAddress")));
+		
+		Predicate condition = cb.equal(root.get("userID"), userAccount.getId());
+		cq.where(condition);
+		cq.orderBy(cb.desc(root.get("timestamp")));
+		List<HistoryPayOutTransaction> resultWithAliasedBean = em.createQuery(cq)
 				.setFirstResult(page * Config.PAY_INS_MAX_RESULTS)
 				.setMaxResults(Config.PAY_INS_MAX_RESULTS)
-				.setParameter("userid", userAccount.getId())
 				.getResultList();
 		
 		return resultWithAliasedBean;
@@ -140,14 +142,16 @@ public class PayOutTransactionDAO {
 	 */
 	public List<HistoryPayOutTransaction> getLast5Transactions(UserAccount userAccount) throws UserAccountNotFoundException {
 		
-		@SuppressWarnings("unchecked")
-        List<HistoryPayOutTransaction> resultWithAliasedBean = em.createQuery(""
-				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayOutTransaction(pot.timestamp,  pot.amount, pot.btcAddress) "
-				+ "FROM PayOutTransaction pot "
-				+ "WHERE pot.userID = :userid "
-				+ "ORDER BY pot.timestamp DESC")
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<HistoryPayOutTransaction> cq = cb.createQuery(HistoryPayOutTransaction.class);
+		Root<PayOutTransaction> root = cq.from(PayOutTransaction.class);
+		cq.select(cb.construct(HistoryPayOutTransaction.class, root.get("timestamp"),root.get("amount"), root.get("btcAddress")));
+		
+		Predicate condition = cb.equal(root.get("userID"), userAccount.getId());
+		cq.where(condition);
+		cq.orderBy(cb.desc(root.get("timestamp")));
+		List<HistoryPayOutTransaction> resultWithAliasedBean = em.createQuery(cq)
 				.setMaxResults(5)
-				.setParameter("userid", userAccount.getId())
 				.getResultList();
 		
 		return resultWithAliasedBean;

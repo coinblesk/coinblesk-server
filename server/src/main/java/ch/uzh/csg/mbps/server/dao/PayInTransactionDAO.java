@@ -59,8 +59,7 @@ public class PayInTransactionDAO {
 	public boolean isNew(PayInTransaction pit) {
 		
 		CriteriaBuilder cb = em.getCriteriaBuilder();
-		CriteriaQuery<Long> cq = cb.createQuery(Long.class);
-		
+		CriteriaQuery<Long> cq = cb.createQuery(Long.class);		
 		Root<PayInTransaction> root = cq.from(PayInTransaction.class);
 		cq.select(cb.count(root));
 		
@@ -88,18 +87,19 @@ public class PayInTransactionDAO {
 		if (page < 0) {
 			return null;
 		}
-		
 		UserAccount userAccount = userAccountDAO.getByUsername(username);
 		
-		@SuppressWarnings("unchecked")
-        List<HistoryPayInTransaction> resultWithAliasedBean = em.createQuery(""
-				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayInTransaction(pit.timestamp,  pit.amount) "
-				+ "FROM PayInTransaction pit "
-				+ "WHERE pit.userID = :userid "
-				+ "ORDER BY pit.timestamp DESC")
-				.setFirstResult(page * Config.PAY_INS_MAX_RESULTS)
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<HistoryPayInTransaction> cq = cb.createQuery(HistoryPayInTransaction.class);
+		Root<PayInTransaction> root = cq.from(PayInTransaction.class);
+		cq.select(cb.construct(HistoryPayInTransaction.class, root.get("timestamp"),root.get("amount")));
+		
+		Predicate condition = cb.equal(root.get("userID"), userAccount.getId());
+		cq.where(condition);
+		cq.orderBy(cb.desc(root.get("timestamp")));
+		List<HistoryPayInTransaction> resultWithAliasedBean = em.createQuery(cq)
+				.setFirstResult(page* Config.PAY_INS_MAX_RESULTS)
 				.setMaxResults(Config.PAY_INS_MAX_RESULTS)
-				.setParameter("userid", userAccount.getId())
 				.getResultList();
 		
 		return resultWithAliasedBean;
@@ -133,18 +133,18 @@ public class PayInTransactionDAO {
 	 * @throws UserAccountNotFoundException
 	 */
 	public List<HistoryPayInTransaction> getLast5Transactions(UserAccount userAccount) throws UserAccountNotFoundException {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<HistoryPayInTransaction> cq = cb.createQuery(HistoryPayInTransaction.class);
+		Root<PayInTransaction> root = cq.from(PayInTransaction.class);
+		cq.select(cb.construct(HistoryPayInTransaction.class, root.get("timestamp"),root.get("amount")));
 		
-		
-		@SuppressWarnings("unchecked")
-        List<HistoryPayInTransaction> resultWithAliasedBean = em.createQuery(""
-				+ "SELECT NEW ch.uzh.csg.mbps.model.HistoryPayInTransaction(pit.timestamp,  pit.amount) "
-				+ "FROM PayInTransaction pit "
-				+ "WHERE pit.userID = :userid "
-				+ "ORDER BY pit.timestamp DESC")
-				.setMaxResults(5)
-				.setParameter("userid", userAccount.getId())
-				.getResultList();
-		
+		Predicate condition = cb.equal(root.get("userId"), userAccount.getId());
+		cq.where(condition);
+		cq.orderBy(cb.desc(root.get("timestamp")));
+		List<HistoryPayInTransaction> resultWithAliasedBean = em.createQuery(cq)
+				.setMaxResults(Config.PAY_INS_MAX_RESULTS)
+				.getResultList();		
+				
 		return resultWithAliasedBean;
 	}
 }
