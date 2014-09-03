@@ -68,8 +68,11 @@ public class ServerTransactionServiceTest {
 	}
 	
 	@Test
-	public void testCreateTransaction() {
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverTransactionDataHistory.xml",type=DatabaseOperation.CLEAN_INSERT)
+	public void testCreateRule() {
 		//TODO: mehmet needed when communicating with android
+		
+		
 	}
 	
 	@Test
