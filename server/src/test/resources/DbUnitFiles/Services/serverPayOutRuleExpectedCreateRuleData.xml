@@ -6,6 +6,9 @@
     <server_account id="13" url="http://test.com" creation_date="2014-06-19 14:35:54.0" email="test3@mail.com" payin_address="fake-address" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" trust_level="2" public_key="test test test" deleted="FALSE" active_balance="-0.05000000" balance_limit="1.00000000"/>
     <server_account id="14" url="http://www.fake_address.org" creation_date="2014-06-19 14:35:54.0" email="test4@mail.ch" payin_address="fake-address" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" trust_level="0" public_key="pk_pk_pk" deleted="FALSE" active_balance="-0.08000000" balance_limit="1.00000000"/>
     <server_account id="15" url="http://www.serveraccount.org" creation_date="2014-06-19 14:35:54.0" email="test5@mail.ch" payin_address="fake-address" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" trust_level="0" public_key="password" deleted="FALSE" active_balance="0.00000000" balance_limit="0.00000000"/>
+    <server_payout_rules id="1" hour="15" day="2" server_account_id="15" balance_limit="[null]" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" />
+    <server_payout_rules id="2" hour="15" day="4" server_account_id="15" balance_limit="[null]" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" />
+    <server_payout_rules id="3" hour="15" day="6" server_account_id="15" balance_limit="[null]" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" />
     <server_payout_rules id="21" hour="15" day="2" server_account_id="10" balance_limit="[null]" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" />
     <server_payout_rules id="22" hour="18" day="3" server_account_id="10" balance_limit="[null]" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" />
     <server_payout_rules id="23" hour="10" day="4" server_account_id="10" balance_limit="[null]" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" />

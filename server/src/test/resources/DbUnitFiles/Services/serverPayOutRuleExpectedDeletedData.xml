@@ -13,6 +13,4 @@
     <server_payout_rules id="25" hour="0" day="0" server_account_id="12" balance_limit="0.35000000" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" />
     <server_payout_rules id="26" hour="10" day="4" server_account_id="13" balance_limit="[null]" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" />
     <server_payout_rules id="27" hour="10" day="5" server_account_id="13" balance_limit="[null]" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" />
-    <server_payout_rules id="28" hour="10" day="5" server_account_id="14" balance_limit="[null]" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" />
-    <server_payout_rules id="29" hour="12" day="6" server_account_id="14" balance_limit="[null]" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" />
 </dataset>
