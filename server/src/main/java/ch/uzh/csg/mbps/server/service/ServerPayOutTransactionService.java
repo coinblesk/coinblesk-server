@@ -53,7 +53,7 @@ public class ServerPayOutTransactionService implements IServerPayOutTransaction 
 		spot.setPayoutAddress(address);
 		spot.setServerAccountID(serverAccount.getId());
 		
-		BigDecimal accountBalance = serverAccount.getActiveBalance().abs().subtract(Config.TRANSACTION_FEE);
+		BigDecimal accountBalance = serverAccount.getActiveBalance().abs();
 		UserAccount user = null;
 		if(!testingMode){			
 			try {
@@ -82,7 +82,6 @@ public class ServerPayOutTransactionService implements IServerPayOutTransaction 
 				
 				amount = spot.getAmount();
 				spot.setAmount(spot.getAmount().add(Config.TRANSACTION_FEE));
-
 				//write payOut to DB
 				serverPayOutTransactionDAO.createPayOutTransaction(spot);
 				if(!testingMode)
