@@ -385,8 +385,8 @@ public class UserAccountDAO {
 		LOGGER.info("Created AdminRoleToken for UserAccount with ID: " + user.getId());
 	}
 
-	//TODO: mehmet Test & javadoc
 	/**
+	 * 
 	 * 
 	 * @param adminToken
 	 * @return
@@ -452,11 +452,11 @@ public class UserAccountDAO {
 		return em.createQuery(cq).getResultList();
 	}
 	
-	//TODO: mehmet javadoc
 	/**
+	 * Returns all users by a given parameter role
 	 * 
 	 * @param role
-	 * @return
+	 * @return List of UserAccounts
 	 */
 	public List<UserAccount> getAllUsersByRoles(Role role){
 		CriteriaBuilder cb = em.getCriteriaBuilder();
@@ -477,22 +477,24 @@ public class UserAccountDAO {
 		return amount;
 	}
 
-	// TODO: mehmet javadoc
 	/**
+	 * Returns all email address of all users by the given parameter role.
 	 * 
 	 * @param role
-	 * @return
+	 * @return List of String
 	 */
 	public List<String> getEmailOfAllUsersByRoles(Role role) {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<String> cq = cb.createQuery(String.class);
+		Root<UserAccount> root = cq.from(UserAccount.class);
+		cq.select(cb.construct(String.class, root.get("email")));
 		
-		@SuppressWarnings("unchecked")
-        List<String> resultWithAliasedBean = em.createQuery(
-				  "SELECT user.email "
-				+ "FROM USER_ACCOUNT user")
-				.setParameter("roles", role)
-				.setParameter("deleted", false)
-				.getResultList();
-		
+		Predicate condition1 = cb.equal(root.get("roles"), role.getCode());
+		Predicate condition2 = cb.equal(root.get("deleted"), false);
+		Predicate condition3 = cb.and(condition1, condition2);
+		cq.where(condition3);
+		List<String> resultWithAliasedBean = em.createQuery(cq).getResultList();
+
 		return resultWithAliasedBean;
 	}
 }

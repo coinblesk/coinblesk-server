@@ -205,4 +205,10 @@ public interface IUserAccount {
 	 * @param text
 	 */
 	public void sendMailToAll(String subject, String text);
+
+	/**
+	 * 
+	 * @return All email addresses of all user with the role admin and both
+	 */
+	public List<String> getEmailOfAllUsers();
 }
