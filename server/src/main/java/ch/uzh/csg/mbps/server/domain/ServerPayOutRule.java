@@ -34,6 +34,19 @@ public class ServerPayOutRule {
 	public ServerPayOutRule() {
 	}
 
+	public ServerPayOutRule(long accountId, BigDecimal balance, String address){
+		this.serverAccountId = accountId;
+		this.balanceLimit = balance;
+		this.payoutAddress = address;
+	}
+	
+	public ServerPayOutRule(long accountId, int hour, int day, String address){
+		this.serverAccountId = accountId;
+		this.payoutAddress = address;
+		this.day = day;
+		this.hour = hour;
+	}
+	
 	public long getId() {
 		return id;
 	}
