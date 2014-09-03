@@ -357,7 +357,6 @@ public class UserAccountService implements IUserAccount {
 		userAccountDAO.updateAccount(userAccount);
 	}
 
-	//TODO: mehmet test
 	@Override
 	@Transactional(readOnly = true)
 	public List<UserAccount> getAdmins(){
@@ -367,7 +366,6 @@ public class UserAccountService implements IUserAccount {
 		return users;
 	}
 	
-	//TODO: mehmet test
 	@Override
 	@Transactional(readOnly = true)
 	public List<UserAccount> getUsers(){
@@ -377,7 +375,6 @@ public class UserAccountService implements IUserAccount {
 		return users;
 	}
 	
-	//TODO: mehmet test
 	@Override
 	@Transactional(readOnly = true)
 	public UserModel getLoggedAdmin(String username) {
@@ -391,7 +388,6 @@ public class UserAccountService implements IUserAccount {
 				account.getEmail(), account.getPassword(), account.getPaymentAddress(), account.getRoles());
 	}
 
-	// TODO: mehmet test & javadoc
 	@Override
 	@Transactional
 	public void changeRoleBoth(UserAccount admin) throws UserAccountNotFoundException {
@@ -400,7 +396,6 @@ public class UserAccountService implements IUserAccount {
 		Emailer.sendUpdateRoleBothLink(admin);
 	}
 	
-	//TODO: mehmet Test & javadoc
 	@Override
 	@Transactional
 	public void changeRoleAdmin(String emailAddress) throws UserAccountNotFoundException {
@@ -410,12 +405,7 @@ public class UserAccountService implements IUserAccount {
 		
 		Emailer.sendCreateRoleAdminLink(user, token);
 	}
-	
-	/**
-	 * Checks if token is saved in table and still valid (younger than 1h)
-	 * @param adminToken
-	 * @return
-	 */	
+
 	@Override
 	@Transactional
 	public boolean isValidAdminRoleLink(String adminToken) {
@@ -436,21 +426,18 @@ public class UserAccountService implements IUserAccount {
 		}
 	}
 
-	//TODO: mehmet tests
 	@Override
 	@Transactional(readOnly = true)
     public List<UserAccount> getAllUserAccounts() {
 	    return userAccountDAO.getAllUserAccounts();
     }
 	
-	//TODO: mehmet tests
 	@Override
 	@Transactional(readOnly = true)
     public BigDecimal getSumOfUserAccountBalances() {
 	    return userAccountDAO.getSumOfAccountBalance();
     }
 
-	//TODO:TEST
 	@Override
 	@Transactional
 	public void sendMailToAll(String subject, String text) {
@@ -462,12 +449,9 @@ public class UserAccountService implements IUserAccount {
 		Emailer.sendMessageToAllUsers(emailToSend, subject, text);
 	}
 
-	/**
-	 * 
-	 * @return All email addresses of all user with the role admin and both
-	 */
+	@Override
 	@Transactional
-	private List<String> getEmailOfAllUsers() {
+	public List<String> getEmailOfAllUsers() {
 		List<String> emails = new ArrayList<String>();
 		emails = userAccountDAO.getEmailOfAllUsersByRoles(Role.USER);
 		emails.addAll(userAccountDAO.getEmailOfAllUsersByRoles(Role.BOTH));
