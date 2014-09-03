@@ -283,7 +283,7 @@ public class UserAccountServiceTest {
 	}
 	
 	@Test
-	public void testGetAllUserAccounts(){
+	public void testGetUserAccounts(){
 		BigDecimal balance = userAccountService.getSumOfUserAccountBalances();
 		
 		assertNotNull(balance);
@@ -296,5 +296,38 @@ public class UserAccountServiceTest {
 		
 		assertEquals(balance, sum);
 	}
+	
+	@Test
+	public void testGetAllEmailAccounts(){
+		List<String> allEmails = userAccountService.getEmailOfAllUsers();
+		List<UserAccount> users = userAccountService.getUsers();
+		
+		//has to be same
+		assertEquals(allEmails.size(), users.size());
+	}
 
+	@Test
+	public void testGetAllUserAccounts(){		
+		List<UserAccount> allUsers = userAccountService.getAllUserAccounts();
+		List<UserAccount> users = userAccountService.getUsers();
+		
+		//only users with role users exists
+		assertTrue(allUsers.size() == users.size());
+		
+		UserAccount account = new UserAccount("marcus@https://mbps.csg.uzh.ch", "marcus@bitcoin.csg.uzh.ch", accountOnePassword);
+		account.setRoles(Role.ADMIN.getCode());
+		try {
+			userAccountService.createAccount(account);
+		} catch (UsernameAlreadyExistsException | BitcoinException
+				| InvalidUsernameException | InvalidEmailException
+				| EmailAlreadyExistsException | InvalidUrlException e) {
+			// do nothing
+		}
+		
+		List<UserAccount> allUsers2 = userAccountService.getAllUserAccounts();
+		List<UserAccount> users2 = userAccountService.getUsers();
+		
+		//only users with role users exists
+		assertFalse(allUsers2.size() == users2.size());
+	}
 }
