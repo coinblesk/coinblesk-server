@@ -1,5 +1,6 @@
 package ch.uzh.csg.mbps.server.dao;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import javax.persistence.EntityManager;
@@ -121,7 +122,8 @@ public class ServerPayOutTransactionDAO {
 		eManager.persist(spot);
 		//update UserAccountBalance
 		ServerAccount serverAccount = serverAccountDAO.getById(spot.getServerAccountID());
-		serverAccount.setActiveBalance(serverAccount.getActiveBalance().subtract(spot.getAmount()));
+		BigDecimal newAmount = serverAccount.getActiveBalance().abs().subtract(spot.getAmount());
+		serverAccount.setActiveBalance(newAmount);
 		eManager.merge(serverAccount);
 		LOGGER.info("ServerPayOutTransaction created for serverAccount with ID: " + serverAccount.getId() + " Transaction: " + spot.toString());
 	}
