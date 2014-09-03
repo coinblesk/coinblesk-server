@@ -17,4 +17,7 @@ public class ActivitiesTitle {
 	public static final String DOWNGRADE_TRUST_LEVEL = "Trust level downgraded";
 	public static final String CREATE_PAYOUT_RULES = "Created payout rule for bitcoins";
 	public static final String UPDATE_URL = "URL is updated";
+	public static final String PAYOUT_ERROR_BALANCE = "Failed to pay out";
+	public static final String PAYOUT_SUCCEED = "Payout succeded";
+	public static final String PAYOUT_ERROR_ADDRESS = "Invalid address";
 }
