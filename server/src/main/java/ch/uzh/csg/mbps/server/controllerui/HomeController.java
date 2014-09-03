@@ -11,10 +11,17 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
+
 import ch.uzh.csg.mbps.server.clientinterface.IServerTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
+import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction;
 import ch.uzh.csg.mbps.server.util.web.model.UserModel;
 
@@ -82,7 +89,7 @@ public class HomeController {
 	}
 	
 	@RequestMapping(value={"/inviteAdmin"}, method=RequestMethod.GET, produces="application/json")
-	public @ResponseBody void inviteAdmin(@RequestParam(value="email", required=false)String email) throws UserAccountNotFoundException{
+	public @ResponseBody void inviteAdmin(@RequestParam(value="email", required=false)String email) throws UserAccountNotFoundException, UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException{
 		UserAccount admin = null;
 		try {
 			admin = userAccountService.getByEmail(email);
@@ -93,6 +100,9 @@ public class HomeController {
 		if(admin != null){
 			userAccountService.changeRoleBoth(admin);
 		}else{
+			String tmpPwd = java.util.UUID.randomUUID().toString();
+			UserAccount user = new UserAccount(email, email,tmpPwd);
+			userAccountService.createAccount(user);
 			userAccountService.changeRoleAdmin(email);
 		}
 	}
