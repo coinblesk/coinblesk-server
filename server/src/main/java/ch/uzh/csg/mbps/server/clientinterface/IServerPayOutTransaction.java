@@ -3,10 +3,10 @@ package ch.uzh.csg.mbps.server.clientinterface;
 import java.math.BigDecimal;
 import java.util.List;
 
-import ch.uzh.csg.mbps.responseobject.TransferObject;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.ServerPayOutTransaction;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
+import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.web.model.HistoryServerPayOutTransaction;
 
 import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
@@ -19,11 +19,11 @@ public interface IServerPayOutTransaction {
 	 * 
 	 * @param url
 	 * @param spot ServerPayOutTransaction
-	 * @return CustomResponseObject with information about success/non success of creation and notification message.
 	 * @throws BitcoinException
 	 * @throws ServerAccountNotFoundException
+	 * @throws UserAccountNotFoundException 
 	 */
-	public TransferObject createPayOutTransaction(String url, BigDecimal amount, String address) throws BitcoinException, ServerAccountNotFoundException;
+	public void createPayOutTransaction(String url, BigDecimal amount, String address) throws BitcoinException, ServerAccountNotFoundException, UserAccountNotFoundException;
 
 	/**
 	 * Returns history of {@link ServerPayOutTransaction}s. Only the

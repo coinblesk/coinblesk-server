@@ -66,11 +66,12 @@ public interface IServerPayOutRule {
 	 * @throws BitcoinException
 	 * @throws ServerPayOutRuleNotFoundException 
 	 */
-	public void checkBalanceLimitRules(ServerAccount serverAccount) throws ServerAccountNotFoundException, BitcoinException, ServerPayOutRuleNotFoundException;
+	public void checkBalanceLimitRules(ServerAccount serverAccount) throws ServerAccountNotFoundException, BitcoinException, ServerPayOutRuleNotFoundException, UserAccountNotFoundException;
 
 	/**
 	 * Checks if Rules exist for the current hour and day. If yes these
 	 * {@link ServerPayOutRule}s are executed.
+	 * @throws UserAccountNotFoundException 
 	 */
-	public void checkAllRules();	
+	public void checkAllRules() throws UserAccountNotFoundException;	
 }
