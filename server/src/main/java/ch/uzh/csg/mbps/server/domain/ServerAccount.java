@@ -47,6 +47,8 @@ public class ServerAccount {
 	private BigDecimal activeBalance;
 	@Column(name = "BALANCE_LIMIT", nullable = false, precision = 25, scale = 8)
 	private BigDecimal balanceLimit;
+	@Column(name="USER_BALANCE_LIMIT", precision = 25, scale = 8)
+	private BigDecimal userBalanceLimit;
 	
 	public ServerAccount(){
 	}
@@ -180,6 +182,14 @@ public class ServerAccount {
 		this.balanceLimit = balanceLimit;
 	}
 
+	public BigDecimal getUserBalanceLimit() {
+		return userBalanceLimit;
+	}
+
+	public void setUserBalanceLimit(BigDecimal balance) {
+		this.userBalanceLimit = balance;
+	}
+	
 	@Override
 	public String toString(){
 		StringBuilder sb = new StringBuilder();

@@ -1,6 +1,5 @@
 package ch.uzh.csg.mbps.server.clientinterface;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 import org.hibernate.HibernateException;
@@ -119,14 +118,6 @@ public interface IServerAccount {
 	 * @throws ServerAccountNotFoundException
 	 */
 	public void updateTrustLevel(String url, int oldLevel, int newLevel) throws ServerAccountNotFoundException;
-
-	/**
-	 * 
-	 * @param url
-	 * @param oldLimit
-	 * @param newLimit
-	 */
-	public void updateBalanceLimit(String url, BigDecimal oldLimit, BigDecimal newLimit);
 
 	/**
 	 * Stores own url, email and public key and creates a 

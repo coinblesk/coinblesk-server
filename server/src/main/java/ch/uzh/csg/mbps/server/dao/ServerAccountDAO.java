@@ -338,7 +338,7 @@ public class ServerAccountDAO {
 		CriteriaQuery<ch.uzh.csg.mbps.model.ServerAccount> cq = cb.createQuery(ch.uzh.csg.mbps.model.ServerAccount.class);
 		Root<ServerAccount> root = cq.from(ServerAccount.class);
 		cq.select(cb.construct(ch.uzh.csg.mbps.model.ServerAccount.class, root.get("id"),root.get("payinAddress"),
-				root.get("payoutAddress"), root.get("trustLevel"), root.get("activeBalance"), root.get("balanceLimit")));
+				root.get("payoutAddress"), root.get("trustLevel"), root.get("activeBalance"), root.get("balanceLimit"), root.get("userBalanceLimit")));
 		
 		Predicate condition = cb.equal(root.get("deleted"), false);
 		cq.where(condition);

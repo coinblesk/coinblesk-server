@@ -1,6 +1,5 @@
 package ch.uzh.csg.mbps.server.service;
 
-import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -242,6 +241,9 @@ public class ServerAccountService implements IServerAccount {
 		if (updatedAccount.getBalanceLimit() != serverAccount.getBalanceLimit())
 			serverAccount.setBalanceLimit(updatedAccount.getBalanceLimit());
 		
+		if (updatedAccount.getUserBalanceLimit() != serverAccount.getUserBalanceLimit())
+			serverAccount.setUserBalanceLimit(updatedAccount.getUserBalanceLimit());
+		
 		serverAccountDAO.updatedAccount(serverAccount);
 
 		if(!TESTING_MODE){
@@ -273,6 +275,12 @@ public class ServerAccountService implements IServerAccount {
 			if (updatedAccount.getBalanceLimit() != serverAccount.getBalanceLimit()){
 				title = ActivitiesTitle.UPDATE_BALANCE_LIMIT;
 				message = "Balance limit is updated to " + updatedAccount.getBalanceLimit();
+			}
+			
+			
+			if (updatedAccount.getUserBalanceLimit() != serverAccount.getUserBalanceLimit()){
+				title = ActivitiesTitle.UPDATE_USER_BALANCE_LIMIT;
+				message = "USer balance limit is updated to " + updatedAccount.getUserBalanceLimit();
 			}
 			
 			activitiesService.activityLog(username, title, message);
@@ -345,11 +353,5 @@ public class ServerAccountService implements IServerAccount {
 	@Transactional
 	public void updateTrustLevel(String url, int oldLevel, int newLevel) throws ServerAccountNotFoundException {
 		//TODO: check if upgrade or downgrade
-	}
-	
-	@Override
-	@Transactional
-	public void updateBalanceLimit(String url, BigDecimal oldLimit, BigDecimal newLimit) {
-		//TODO: communicate balance limit asymmetric balance limits
 	}
 }

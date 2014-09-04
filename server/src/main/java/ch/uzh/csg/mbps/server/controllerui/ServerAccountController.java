@@ -72,11 +72,21 @@ public class ServerAccountController {
 	}
 
 	@RequestMapping(value = { "/updateBalanceLimit}" }, method = RequestMethod.GET)
-	public @ResponseBody
-	void updateBalanceLimit(
+	public @ResponseBody boolean updateBalanceLimit(
 			@RequestParam(value = "url", required = false) String url,
-			@RequestParam(value = "oldLimit", required = false) BigDecimal oldLimit,
 			@RequestParam(value = "newLimit", required = false) BigDecimal newLimit) throws ServerAccountNotFoundException {
-		serverAccountService.updateBalanceLimit(url, oldLimit, newLimit);
+		ServerAccount updatedAccount = new ServerAccount();
+		updatedAccount.setBalanceLimit(newLimit);
+		return serverAccountService.updateAccount(url, updatedAccount);
+	}
+	
+	@RequestMapping(value = { "/updateUserBalanceLimit}" }, method = RequestMethod.GET)
+	public @ResponseBody boolean updateUserBalanceLimit(
+			@RequestParam(value = "url", required = false) String url,
+			@RequestParam(value = "newLimit", required = false) BigDecimal newLimit) throws ServerAccountNotFoundException {
+		
+		ServerAccount updatedAccount = new ServerAccount();
+		updatedAccount.setUserBalanceLimit(newLimit);
+		return serverAccountService.updateAccount(url, updatedAccount);
 	}
 }

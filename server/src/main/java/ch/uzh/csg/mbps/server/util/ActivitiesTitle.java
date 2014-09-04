@@ -9,12 +9,13 @@ public class ActivitiesTitle {
 	public static final String CREATE_SERVER_ACCOUNT = "Create Server account";
 	public static final String PERSIST_SERVER_ACCOUNT = "Succesfully created new server account";
 	public static final String DECLINE_SERVER_ACCOUNT = "Server account creation declined";
-	public static final String UPDATE_BALANCE_LIMIT = "Balance limit is updated";
-	public static final String REMOVE_SERVER_ACCOUNT = "Server account relation is cancelled";
 	public static final String UPGRADE_TRUST_LEVEL = "Updgrade trust level";
+	public static final String DOWNGRADE_TRUST_LEVEL = "Trust level downgraded";
+	public static final String UPDATE_BALANCE_LIMIT = "Balance limit is updated";
+	public static final String UPDATE_USER_BALANCE_LIMIT = "User balance limit is updated";
+	public static final String REMOVE_SERVER_ACCOUNT = "Server account relation is cancelled";
 	public static final String ACCEPT_UPGRADE_TRUST_LEVEL = "Upgrade accepted";
 	public static final String DECLINE_UPGRADE_TRUST_LEVEL = "Upgrade declined";
-	public static final String DOWNGRADE_TRUST_LEVEL = "Trust level downgraded";
 	public static final String CREATE_PAYOUT_RULES = "Created payout rule for bitcoins";
 	public static final String UPDATE_URL = "URL is updated";
 	public static final String PAYOUT_ERROR_BALANCE = "Failed to pay out";
