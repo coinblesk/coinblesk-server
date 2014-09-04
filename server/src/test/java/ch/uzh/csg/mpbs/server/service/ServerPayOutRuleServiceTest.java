@@ -70,8 +70,6 @@ public class ServerPayOutRuleServiceTest {
 	@Autowired
 	private IServerAccount serverAccountService;
 	
-	public static Boolean testingMode = false;
-
 	private static boolean initialized = false;
 	@Rule
 	public ExpectedException exception = ExpectedException.none();

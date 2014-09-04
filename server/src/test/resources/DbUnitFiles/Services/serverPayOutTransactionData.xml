@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dataset>
+    <server_account id="10" url="https://www.my_url.ch" creation_date="2014-06-19 14:35:54.0" email="test@mail.ch" payin_address="fake-address" payout_address="fake-address" trust_level="0" public_key="my public key" deleted="FALSE" active_balance="0.00000000" balance_limit="0.00000000"/>
+    <server_account id="11" url="https://www.haus.ch" creation_date="2014-06-19 14:35:54.0" email="test2@mail.ch" payin_address="fake-address" payout_address="fake-address" trust_level="0" public_key="fake_public_key" deleted="FALSE" active_balance="0.00000000" balance_limit="0.00000000"/>
+    <server_account id="12" url="https://www.mbps.com" creation_date="2014-06-19 14:35:54.0" email="mbps@mail.ch" payin_address="fake-address" trust_level="0" public_key="fake_fake_fake" deleted="FALSE" active_balance="0.00000000" balance_limit="0.00000000"/>
+    <server_account id="13" url="http://test.com" creation_date="2014-06-19 14:35:54.0" email="test3@mail.com" payin_address="fake-address" trust_level="2" public_key="test test test" deleted="FALSE" active_balance="0.00000000" balance_limit="0.00000000"/>
+    <server_account id="14" url="http://www.fake_address.org" creation_date="2014-06-19 14:35:54.0" email="test4@mail.ch" payin_address="fake-address" trust_level="0" public_key="pk_pk_pk" deleted="FALSE" active_balance="-0.50000000" balance_limit="0.00000000"/>
+    <server_account id="15" url="http://www.serveraccount.org" creation_date="2014-06-19 14:35:54.0" email="test5@mail.ch" payin_address="fake-address" trust_level="0" public_key="password" deleted="FALSE" active_balance="0.00000000" balance_limit="0.00000000"/>
+   	<server_pay_out_transaction id="20" server_account_id="10" timestamp="2014-06-19 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="10" />
+   	<server_pay_out_transaction id="21" server_account_id="10" timestamp="2014-06-20 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="11" />
+   	<server_pay_out_transaction id="22" server_account_id="10" timestamp="2014-06-23 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="12" />
+   	<server_pay_out_transaction id="23" server_account_id="10" timestamp="2014-06-13 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="13" />
+   	<server_pay_out_transaction id="24" server_account_id="11" timestamp="2014-07-19 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="14" />
+   	<server_pay_out_transaction id="25" server_account_id="11" timestamp="2014-08-19 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="FALSE" server_transaction_id="15" />
+   	<server_pay_out_transaction id="26" server_account_id="11" timestamp="2014-09-19 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="16" />
+   	<server_pay_out_transaction id="27" server_account_id="12" timestamp="2014-09-22 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="17" />
+   	<server_pay_out_transaction id="28" server_account_id="12" timestamp="2014-06-21 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="FALSE" server_transaction_id="18" />
+   	<server_pay_out_transaction id="29" server_account_id="12" timestamp="2014-06-24 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="19" />
+   	<server_pay_out_transaction id="30" server_account_id="12" timestamp="2014-07-19 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="20" />
+   	<server_pay_out_transaction id="31" server_account_id="13" timestamp="2014-07-23 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="FALSE" server_transaction_id="21" />
+   	<server_pay_out_transaction id="32" server_account_id="13" timestamp="2014-08-12 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="22" />
+   	<server_pay_out_transaction id="33" server_account_id="14" timestamp="2014-09-15 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="23" />
+   	<server_pay_out_transaction id="34" server_account_id="14" timestamp="2014-09-20 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="FALSE" server_transaction_id="24" />
+   	<server_pay_out_transaction id="35" server_account_id="14" timestamp="2014-05-11 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="25" />
+   	<server_pay_out_transaction id="36" server_account_id="15" timestamp="2014-05-14 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="26" />
+   	<server_pay_out_transaction id="37" server_account_id="15" timestamp="2014-07-05 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="FALSE" server_transaction_id="27" />
+   	<server_pay_out_transaction id="38" server_account_id="15" timestamp="2014-08-08 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="28" />
+   	<server_pay_out_transaction id="39" server_account_id="10" timestamp="2014-06-19 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="29" />
+   	<server_pay_out_transaction id="40" server_account_id="10" timestamp="2014-06-12 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="30" />
+   	<server_pay_out_transaction id="41" server_account_id="10" timestamp="2014-06-25 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="31" />
+   	<server_pay_out_transaction id="42" server_account_id="10" timestamp="2014-07-12 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="32" />
+   	<server_pay_out_transaction id="43" server_account_id="10" timestamp="2014-08s-25 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="33" />
+</dataset>

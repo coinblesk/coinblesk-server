@@ -17,6 +17,7 @@ public class HistoryServerPayOutTransaction extends AbstractServerHistory {
 
 	private String btcAddress;
 	private long serverId;
+	private boolean verified;
 
 	public HistoryServerPayOutTransaction() {
 	}
@@ -26,11 +27,12 @@ public class HistoryServerPayOutTransaction extends AbstractServerHistory {
 		this.amount = amount;
 	}
 	
-	public HistoryServerPayOutTransaction(Date timestamp, BigDecimal amount, String btcAddress, long serverId) {
+	public HistoryServerPayOutTransaction(Date timestamp, BigDecimal amount, String btcAddress, long serverId, boolean verified) {
 		this.timestamp = timestamp;
 		this.amount = amount;
 		this.btcAddress = btcAddress;
 		this.serverId = serverId;
+		this.verified = verified;
 	}
 	
 	public String getBtcAddress() {
@@ -47,6 +49,14 @@ public class HistoryServerPayOutTransaction extends AbstractServerHistory {
 	
 	public void setServerId(String btcAddress) {
 		this.btcAddress = btcAddress;
+	}
+	
+	public boolean isVerified() {
+		return verified;
+	}
+	
+	public void setVerified(boolean verified) {
+		this.verified = verified;
 	}
 	
 	@Override

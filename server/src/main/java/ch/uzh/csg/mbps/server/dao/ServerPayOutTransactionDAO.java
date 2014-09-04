@@ -49,16 +49,19 @@ public class ServerPayOutTransactionDAO {
 		if (page < 0) {
 			return null;
 		}
-
-		@SuppressWarnings("unchecked")
-		List<HistoryServerPayOutTransaction> resultWithAliasedBean = eManager.createQuery(""
-				  + "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerPayOutTransaction(pot.timestamp, pot.amount, pot.payoutAddress, pot.serverAccountId) "
-				  + "FROM serverPayOutTransaction pot "
-				  + "ORDER BY pot.timestamp DESC")
-				  .setFirstResult(page * Config.PAY_OUTS_MAX_RESULTS)
-				  .setMaxResults(Config.PAY_OUTS_MAX_RESULTS)
-				  .getResultList();
 		
+		CriteriaBuilder cb = eManager.getCriteriaBuilder();
+		CriteriaQuery<HistoryServerPayOutTransaction> cq = cb.createQuery(HistoryServerPayOutTransaction.class);
+		Root<ServerPayOutTransaction> root = cq.from(ServerPayOutTransaction.class);
+		cq.select(cb.construct(HistoryServerPayOutTransaction.class, root.get("timestamp"),root.get("amount"), root.get("payoutAddress")
+				, root.get("serverAccountID"), root.get("verified")));
+		
+		cq.orderBy(cb.desc(root.get("timestamp")));
+		List<HistoryServerPayOutTransaction> resultWithAliasedBean = eManager.createQuery(cq)
+				.setFirstResult(page * Config.PAY_OUTS_MAX_RESULTS)
+				.setMaxResults(Config.PAY_OUTS_MAX_RESULTS)
+				.getResultList();
+
 		return resultWithAliasedBean;
 	}
 	
@@ -134,14 +137,26 @@ public class ServerPayOutTransactionDAO {
 	 * @return List<HistoryServerPayOutTransaction> (an array list with the last 5 PayOutTransactions)
 	 */
 	public List<HistoryServerPayOutTransaction> getLast5Transactions() {
-
-		@SuppressWarnings("unchecked")
-		List<HistoryServerPayOutTransaction> resultWithAliasedBean = eManager.createQuery(""
-				  + "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerPayOutTransaction((pot.timestamp, pot.amount, pot.payoutAddress, pot.serverAccountId) "
-				  + "FROM serverPayOutTransaction pot "
-				  + "ORDER BY pot.timestamp DESC")
-				  .setMaxResults(5)
-				  .getResultList();
+		CriteriaBuilder cb = eManager.getCriteriaBuilder();
+		CriteriaQuery<HistoryServerPayOutTransaction> cq = cb.createQuery(HistoryServerPayOutTransaction.class);
+		Root<ServerPayOutTransaction> root = cq.from(ServerPayOutTransaction.class);
+		cq.select(cb.construct(HistoryServerPayOutTransaction.class, root.get("timestamp"),root.get("amount"), root.get("payoutAddress")
+				, root.get("serverAccountID"), root.get("verified")));
+		
+		Predicate condition = cb.equal(root.get("verified"), true);		
+		cq.where(condition);
+		cq.orderBy(cb.desc(root.get("timestamp")));
+		List<HistoryServerPayOutTransaction> resultWithAliasedBean = eManager.createQuery(cq)
+				.setMaxResults(5)
+				.getResultList();
+//		
+//		@SuppressWarnings("unchecked")
+//		List<HistoryServerPayOutTransaction> resultWithAliasedBean = eManager.createQuery(""
+//				  + "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerPayOutTransaction((pot.timestamp, pot.amount, pot.payoutAddress, pot.serverAccountId) "
+//				  + "FROM serverPayOutTransaction pot "
+//				  + "ORDER BY pot.timestamp DESC")
+//				  .setMaxResults(5)
+//				  .getResultList();
 
 		return resultWithAliasedBean;
 	}
@@ -153,15 +168,30 @@ public class ServerPayOutTransactionDAO {
 	 * @throws ServerAccountNotFoundException 
 	 */
 	public List<HistoryServerPayOutTransaction> getLast5ServerAccountTransactions(String url) throws ServerAccountNotFoundException {
-		@SuppressWarnings("unchecked")
-		List<HistoryServerPayOutTransaction> resultWithAliasedBean = eManager.createQuery(""
-				  + "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerPayOutTransaction((pot.timestamp, pot.amount, pot.payoutAddress, pot.serverAccountId) "
-				  + "FROM serverPayOutTransaction pot "
-				  + "WHERE pot.serverUrl == :serverUrl "
-				  + "ORDER BY pot.timestamp DESC")
-				  .setMaxResults(5)
-				  .setParameter("serverUrl", url)
-				  .getResultList();
+		CriteriaBuilder cb = eManager.getCriteriaBuilder();
+		CriteriaQuery<HistoryServerPayOutTransaction> cq = cb.createQuery(HistoryServerPayOutTransaction.class);
+		Root<ServerPayOutTransaction> root = cq.from(ServerPayOutTransaction.class);
+		cq.select(cb.construct(HistoryServerPayOutTransaction.class, root.get("timestamp"),root.get("amount"), root.get("payoutAddress")
+				, root.get("serverAccountID"), root.get("verified")));
+		
+		Predicate condition1 = cb.equal(root.get("serverUrl"), url);
+		Predicate condition2 = cb.equal(root.get("verified"), true);		
+		Predicate condition3 = cb.and(condition1, condition2);		
+		cq.where(condition3);
+		cq.orderBy(cb.desc(root.get("timestamp")));
+		List<HistoryServerPayOutTransaction> resultWithAliasedBean = eManager.createQuery(cq)
+				.setMaxResults(5)
+				.getResultList();
+		
+//		@SuppressWarnings("unchecked")
+//		List<HistoryServerPayOutTransaction> resultWithAliasedBean = eManager.createQuery(""
+//				  + "SELECT NEW ch.uzh.csg.mbps.server.util.web.model.HistoryServerPayOutTransaction((pot.timestamp, pot.amount, pot.payoutAddress, pot.serverAccountId) "
+//				  + "FROM serverPayOutTransaction pot "
+//				  + "WHERE pot.serverUrl == :serverUrl "
+//				  + "ORDER BY pot.timestamp DESC")
+//				  .setMaxResults(5)
+//				  .setParameter("serverUrl", url)
+//				  .getResultList();
 
 		return resultWithAliasedBean;
 	}
