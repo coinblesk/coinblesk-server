@@ -228,7 +228,8 @@ public class ServerAccount {
 				.append(isDeleted(), other.isDeleted())
 				.append(getCreationDate(), other.getCreationDate())
 				.append(getActiveBalance(), other.getActiveBalance())
-				.append(getTrustLevel(), other.getTrustLevel()).isEquals();
+				.append(getTrustLevel(), other.getTrustLevel())
+				.append(getUserBalanceLimit(), other.getUserBalanceLimit()).isEquals();
 	}
 	
 	@Override
@@ -237,6 +238,7 @@ public class ServerAccount {
 				.append(getUrl()).append(getEmail())
 				.append(getCreationDate()).append(isDeleted())
 				.append(getActiveBalance())
-				.append(getTrustLevel()).toHashCode();
+				.append(getTrustLevel())
+				.append(getUserBalanceLimit()).toHashCode();
 	}
 }
