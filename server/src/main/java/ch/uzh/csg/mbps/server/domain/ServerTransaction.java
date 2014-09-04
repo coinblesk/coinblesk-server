@@ -18,8 +18,8 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 
-@Entity(name = "SERVER_TRANSACTION")
-@Table(indexes = {
+@Entity
+@Table(name = "SERVER_TRANSACTION", indexes = {
 		@Index(name = "BTC_ADDRESS_TX_INDEX", columnList = "BTC_ADDRESS"),
 		@Index(name = "TX_ID_INDEX_TX_SERVER", columnList = "TX_ID"),
 		@Index(name = "SERVER_URL_TX_INDEX", columnList = "SERVER_URL") })
