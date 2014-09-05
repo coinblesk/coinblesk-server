@@ -1,5 +1,6 @@
 package ch.uzh.csg.mbps.server.dao;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import javax.persistence.EntityManager;
@@ -32,6 +33,12 @@ public class TransactionDAO {
 	@PersistenceContext
 	private EntityManager em;
 
+	
+	private String getUsername(String fullname){
+		int splitIndex = fullname.indexOf(Config.SPLIT_USERNAME);
+		return fullname.substring(0, splitIndex);
+	}
+	
 	/**
 	 * Returns defined amount of {@link DbTransaction}s assigned to the given
 	 * username as an ArrayList. Number of Transactions and selection is defined
@@ -54,10 +61,12 @@ public class TransactionDAO {
 		CriteriaQuery<HistoryTransaction> cq = cb.createQuery(HistoryTransaction.class);
 		Root<DbTransaction> root = cq.from(DbTransaction.class);
 		cq.select(cb.construct(HistoryTransaction.class,root.get("timestamp"), root.get("usernamePayer"),root.get("usernamePayee"), 
-				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount")));
+				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount"), root.get("buyerServer"), root.get("sellerServer")));
 		
-		Predicate condition1 = cb.equal(root.get("usernamePayer"), userAccount.getUsername());
-		Predicate condition2 = cb.equal(root.get("usernamePayee"), userAccount.getUsername());
+		String username = getUsername(userAccount.getUsername());
+		
+		Predicate condition1 = cb.equal(root.get("usernamePayer"), username);
+		Predicate condition2 = cb.equal(root.get("usernamePayee"), username);
 		Predicate condition3 = cb.or(condition1, condition2);
 		cq.where(condition3);
 		
@@ -86,8 +95,10 @@ public class TransactionDAO {
 		Root<DbTransaction> root = cq.from(DbTransaction.class);
 		cq.select(cb.count(root));
 		
-		Predicate condition1 = cb.equal(root.get("usernamePayer"), userAccount.getUsername());
-		Predicate condition2 = cb.equal(root.get("usernamePayee"), userAccount.getUsername());
+		String username = getUsername(userAccount.getUsername());
+		
+		Predicate condition1 = cb.equal(root.get("usernamePayer"), username);
+		Predicate condition2 = cb.equal(root.get("usernamePayee"), username);
 		Predicate condition3 = cb.or(condition1, condition2);
 		cq.where(condition3);
 		return em.createQuery(cq).getSingleResult();
@@ -134,8 +145,11 @@ public class TransactionDAO {
 		Root<DbTransaction> root = cq.from(DbTransaction.class);
 		cq.select(cb.count(root));
 		
-		Predicate condition1 = cb.equal(root.get("usernamePayer"), usernamePayer);
-		Predicate condition2 = cb.equal(root.get("usernamePayee"), usernamePayee);
+		String payer = getUsername(usernamePayer);
+		String payee = getUsername(usernamePayee);
+		
+		Predicate condition1 = cb.equal(root.get("usernamePayer"), payer);
+		Predicate condition2 = cb.equal(root.get("usernamePayee"), payee);
 		Predicate condition3= cb.equal(root.get("currency"), currency.getCurrencyCode());
 		Predicate condition4 = cb.equal(root.get("amount"), Converter.getBigDecimalFromLong(amount));
 		Predicate condition5= cb.equal(root.get("timestampPayer"), timestampPayer);
@@ -161,10 +175,12 @@ public class TransactionDAO {
 		CriteriaQuery<HistoryTransaction> cq = cb.createQuery(HistoryTransaction.class);
 		Root<DbTransaction> root = cq.from(DbTransaction.class);
 		cq.select(cb.construct(HistoryTransaction.class,root.get("timestamp"), root.get("usernamePayer"),root.get("usernamePayee"), 
-				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount")));
+				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount"), root.get("buyerServer"), root.get("sellerServer")));
 		
-		Predicate condition1 = cb.equal(root.get("usernamePayer"), userAccount.getUsername());
-		Predicate condition2 = cb.equal(root.get("usernamePayee"), userAccount.getUsername());
+		String username = getUsername(userAccount.getUsername());
+		
+		Predicate condition1 = cb.equal(root.get("usernamePayer"), username);
+		Predicate condition2 = cb.equal(root.get("usernamePayee"), username);
 		Predicate condition3= cb.and(condition1, condition2);
 		cq.where(condition3);
 		
@@ -181,7 +197,7 @@ public class TransactionDAO {
 		CriteriaQuery<HistoryTransaction> cq = cb.createQuery(HistoryTransaction.class);
 		Root<DbTransaction> root = cq.from(DbTransaction.class);
 		cq.select(cb.construct(HistoryTransaction.class,root.get("timestamp"), root.get("usernamePayer"),root.get("usernamePayee"), 
-				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount")));
+				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount"), root.get("buyerServer"), root.get("sellerServer")));
 		
 		List<HistoryTransaction> resultWithAliasedBean = em.createQuery(cq)
 				.getResultList();
@@ -194,10 +210,12 @@ public class TransactionDAO {
 		CriteriaQuery<HistoryTransaction> cq = cb.createQuery(HistoryTransaction.class);
 		Root<DbTransaction> root = cq.from(DbTransaction.class);
 		cq.select(cb.construct(HistoryTransaction.class,root.get("timestamp"), root.get("usernamePayer"),root.get("usernamePayee"), 
-				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount")));
+				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount"), root.get("buyerServer"), root.get("sellerServer")));
 		
-		Predicate condition1 = cb.equal(root.get("usernamePayer"), userAccount.getUsername());
-		Predicate condition2 = cb.equal(root.get("usernamePayee"), userAccount.getUsername());
+		String username = getUsername(userAccount.getUsername());
+		
+		Predicate condition1 = cb.equal(root.get("usernamePayer"), username);
+		Predicate condition2 = cb.equal(root.get("usernamePayee"), username);
 		Predicate condition3= cb.and(condition1, condition2);
 		cq.where(condition3);
 		
@@ -207,4 +225,24 @@ public class TransactionDAO {
 		
 		return resultWithAliasedBean;
     }
+
+	public BigDecimal transactionSumByServer(String url, String username) {
+		
+		BigDecimal payee = new BigDecimal(em.createQuery("SELECT SUM(t.amount) "
+				+ "FROM DbTransaction t "
+				+ "WHERE t.serverPayer=:serverUrl AND t.usernamePayee=:payeeUsername")
+				.setParameter("serverUrl", url)
+				.setParameter("payeeUsername", username)
+				.getSingleResult().toString());
+		
+		BigDecimal payer = new BigDecimal(em.createQuery("SELECT SUM(t.amount) "
+				+ "FROM DbTransaction t "
+				+ "WHERE t.serverPayee=:serverUrl AND t.usernamePayer=:payerUsername")
+				.setParameter("serverUrl", url)
+				.setParameter("payerUsername", username)
+				.getSingleResult().toString());
+		
+		BigDecimal sum = payee.subtract(payer);
+		return sum;
+	}
 }
