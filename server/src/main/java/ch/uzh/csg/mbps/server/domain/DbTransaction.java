@@ -20,6 +20,7 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
+import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.util.Converter;
 
@@ -27,7 +28,9 @@ import ch.uzh.csg.mbps.util.Converter;
 @Entity
 @Table(name = "DB_TRANSACTION", indexes = {
 		@Index(name = "USERNAME_PAYER_INDEX",  columnList="USERNAME_PAYER"), 
-		@Index(name = "USERNAME_PAYEE_INDEX",  columnList="USERNAME_PAYEE"), 
+		@Index(name = "USERNAME_PAYEE_INDEX",  columnList="USERNAME_PAYEE"),
+		@Index(name = "SERVER_PAYER_INDEX",  columnList="SERVER_PAYER"), 
+		@Index(name = "SERVER_PAYEE_INDEX",  columnList="SERVER_PAYEE"),
 		@Index(name = "TIMESTAMP_PAYER_INDEX",  columnList="TIMESTAMP_PAYER")})
 public class DbTransaction implements Serializable {
 	private static final long serialVersionUID = 6937127333699090182L;
@@ -42,8 +45,12 @@ public class DbTransaction implements Serializable {
 	private Date timestamp;
 	@Column(name="USERNAME_PAYER")
 	private String usernamePayer;
+	@Column(name="SERVER_PAYER")
+	private String serverPayer;
 	@Column(name="USERNAME_PAYEE")
 	private String usernamePayee;
+	@Column(name="SERVER_PAYEE")
+	private String serverPayee;
 	@Column(name="CURRENCY")
 	private String currency;
 	@Column(name="AMOUNT", precision = 25, scale=8)
@@ -61,8 +68,8 @@ public class DbTransaction implements Serializable {
 	}
 	
 	public DbTransaction(PaymentRequest paymentRequest) throws UserAccountNotFoundException {
-		this.usernamePayer = paymentRequest.getUsernamePayer();
-		this.usernamePayee = paymentRequest.getUsernamePayee();
+		setPayerData(paymentRequest);
+		setPayeeData(paymentRequest);
 		this.currency = paymentRequest.getCurrency().getCurrencyCode();
 		this.amount = Converter.getBigDecimalFromLong(paymentRequest.getAmount());
 		this.timestampPayer = paymentRequest.getTimestamp();
@@ -74,6 +81,19 @@ public class DbTransaction implements Serializable {
 		}
 	}
 	
+
+	public void setPayerData(PaymentRequest paymentRequest){
+		int splitIndex = paymentRequest.getUsernamePayer().indexOf(Config.SPLIT_USERNAME);
+		this.usernamePayer = paymentRequest.getUsernamePayer().substring(0, splitIndex);
+		this.serverPayer = paymentRequest.getUsernamePayer().substring(splitIndex + 1);
+	}
+	
+	public void setPayeeData(PaymentRequest paymentRequest) {
+		int splitIndex = paymentRequest.getUsernamePayee().indexOf(Config.SPLIT_USERNAME);
+		this.usernamePayer = paymentRequest.getUsernamePayee().substring(0, splitIndex);
+		this.serverPayer = paymentRequest.getUsernamePayee().substring(splitIndex + 1);
+	}
+
 	public long getId() {
 		return id;
 	}
@@ -102,8 +122,24 @@ public class DbTransaction implements Serializable {
 		return usernamePayee;
 	}
 
+	public void setServerPayer(String serverPayer) {
+		this.serverPayer = serverPayer;
+	}
+	
+	public String getServerPayer() {
+		return serverPayer;
+	}
+
 	public void setUsernamePayee(String usernamePayee) {
 		this.usernamePayee = usernamePayee;
+	}
+	
+	public void setServerPayee(String serverPayee) {
+		this.serverPayee = serverPayee;
+	}
+	
+	public String getServerPayee() {
+		return serverPayee;
 	}
 	
 	public String getCurrency() {
@@ -163,8 +199,12 @@ public class DbTransaction implements Serializable {
 		sb.append(getTimestamp());
 		sb.append(", payer: ");
 		sb.append(getUsernamePayer());
+		sb.append(", server payer: ");
+		sb.append(getServerPayer());
 		sb.append(", payee: ");
 		sb.append(getUsernamePayee());
+		sb.append(", server payee: ");
+		sb.append(getServerPayee());
 		sb.append(", currency: ");
 		sb.append(getCurrency());
 		sb.append(", amount: ");
@@ -195,7 +235,9 @@ public class DbTransaction implements Serializable {
 		return new EqualsBuilder().append(getId(), other.getId())
 				.append(getTimestamp(), other.getTimestamp())
 				.append(getUsernamePayer(), other.getUsernamePayer())
+				.append(getServerPayer(), other.getServerPayer())
 				.append(getUsernamePayee(), other.getUsernamePayee())
+				.append(getServerPayee(), other.getServerPayee())
 				.append(getAmount(), other.getAmount())
 				.append(getCurrency(), other.getCurrency())
 				.append(getTimestampPayer(), other.getTimestampPayer())
@@ -207,7 +249,9 @@ public class DbTransaction implements Serializable {
 		return new HashCodeBuilder(47, 83).append(getId())
 				.append(getTimestamp())
 				.append(getUsernamePayer())
+				.append(getServerPayer())
 				.append(getUsernamePayee())
+				.append(getServerPayee())
 				.append(getAmount())
 				.append(getCurrency())
 				.append(getTimestampPayer())
