@@ -40,6 +40,14 @@ public class Activities {
 		this.creationDate = new Date();
 	}
 
+	public long getId(){
+		return this.id;
+	}
+	
+	public void setId(long id){
+		this.id = id;
+	}
+	
 	public String getUsername() {
 		return username;
 	}
@@ -66,5 +74,21 @@ public class Activities {
 
 	public Date getCreationDate() {
 		return creationDate;
+	}
+	
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("id: ");
+		sb.append(getId());
+		sb.append(" username: ");
+		sb.append(getUsername());
+		sb.append(" title: ");
+		sb.append(getTitle());
+		sb.append(" Message: ");
+		sb.append(getMessage());
+		sb.append(" creation date: ");
+		sb.append(getCreationDate());
+		return sb.toString();
 	}
 }
