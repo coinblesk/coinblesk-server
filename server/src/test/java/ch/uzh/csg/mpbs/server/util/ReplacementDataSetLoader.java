@@ -1,4 +1,4 @@
-package ch.uzh.csg.mbps.server.util.test;
+package ch.uzh.csg.mpbs.server.util;
 
 import org.dbunit.dataset.IDataSet;
 import org.dbunit.dataset.ReplacementDataSet;

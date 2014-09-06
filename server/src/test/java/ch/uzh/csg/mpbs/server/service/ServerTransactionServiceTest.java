@@ -28,8 +28,8 @@ import ch.uzh.csg.mbps.server.service.ServerAccountService;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
-import ch.uzh.csg.mbps.server.util.test.ReplacementDataSetLoader;
 import ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction;
+import ch.uzh.csg.mpbs.server.util.ReplacementDataSetLoader;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseOperation;

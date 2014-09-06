@@ -43,8 +43,8 @@ import ch.uzh.csg.mbps.server.util.exceptions.ServerPayOutRuleNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerPayOutRulesAlreadyDefinedException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
-import ch.uzh.csg.mbps.server.util.test.ReplacementDataSetLoader;
 import ch.uzh.csg.mbps.server.util.web.ServerPayOutRulesTransferObject;
+import ch.uzh.csg.mpbs.server.util.ReplacementDataSetLoader;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
