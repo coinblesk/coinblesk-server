@@ -308,5 +308,17 @@ public class TransactionService implements ITransaction {
 		UserAccount user = userAccountService.getByUsername(username);
 		return transactionDAO.getAll(user);
     }
+	
+	@Override
+	@Transactional(readOnly=true)
+	public BigDecimal transactionSumByServerAsPayer(String url, String username){
+		return transactionDAO.transactionSumByServerAsPayer(url, username);
+	}
+
+	@Override
+	@Transactional(readOnly=true)
+	public	BigDecimal transactionSumByServerAsPayee(String url, String username){
+		return transactionDAO.transactionSumByServerAsPayee(url, username);
+	}
 
 }

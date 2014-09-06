@@ -1,5 +1,6 @@
 package ch.uzh.csg.mbps.server.clientinterface;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import ch.uzh.csg.mbps.customserialization.PaymentRequest;
@@ -70,4 +71,22 @@ public interface ITransaction {
 	public List<HistoryTransaction> getAll(String username) throws UserAccountNotFoundException;
 
 	public void createTransaction(DbTransaction tx, UserAccount fromDB, UserAccount fromDB2);
+
+	/**
+	 * Returns the amount of transactions with a server as payer.
+	 * 
+	 * @param url
+	 * @param username
+	 * @return BigDecimal
+	 */
+	public BigDecimal transactionSumByServerAsPayer(String url, String username);
+
+	/**
+	 * Returns the amount of transactions with a server as payee.
+	 * 
+	 * @param url
+	 * @param username
+	 * @return BigDecimal
+	 */
+	public BigDecimal transactionSumByServerAsPayee(String url, String username);
 }

@@ -226,23 +226,27 @@ public class TransactionDAO {
 		return resultWithAliasedBean;
     }
 
-	public BigDecimal transactionSumByServer(String url, String username) {
+	public BigDecimal transactionSumByServerAsPayer(String url, String username) {
 		
-		BigDecimal payee = new BigDecimal(em.createQuery("SELECT SUM(t.amount) "
-				+ "FROM DbTransaction t "
-				+ "WHERE t.serverPayer=:serverUrl AND t.usernamePayee=:payeeUsername")
-				.setParameter("serverUrl", url)
-				.setParameter("payeeUsername", username)
-				.getSingleResult().toString());
-		
-		BigDecimal payer = new BigDecimal(em.createQuery("SELECT SUM(t.amount) "
+		BigDecimal sum = new BigDecimal(em.createQuery("SELECT SUM(t.amount) "
 				+ "FROM DbTransaction t "
 				+ "WHERE t.serverPayee=:serverUrl AND t.usernamePayer=:payerUsername")
 				.setParameter("serverUrl", url)
 				.setParameter("payerUsername", username)
 				.getSingleResult().toString());
 		
-		BigDecimal sum = payee.subtract(payer);
+		return sum;
+	}
+
+	public BigDecimal transactionSumByServerAsPayee(String url, String username) {
+		
+		BigDecimal sum = new BigDecimal(em.createQuery("SELECT SUM(t.amount) "
+				+ "FROM DbTransaction t "
+				+ "WHERE t.serverPayer=:serverUrl AND t.usernamePayee=:payeeUsername")
+				.setParameter("serverUrl", url)
+				.setParameter("payeeUsername", username)
+				.getSingleResult().toString());
+
 		return sum;
 	}
 }
