@@ -68,8 +68,10 @@ public class DbTransaction implements Serializable {
 	}
 	
 	public DbTransaction(PaymentRequest paymentRequest) throws UserAccountNotFoundException {
-		setPayerData(paymentRequest);
-		setPayeeData(paymentRequest);
+		this.usernamePayer = paymentRequest.getUsernamePayer();
+		this.usernamePayee = paymentRequest.getUsernamePayee();
+		setPayerData(paymentRequest.getUsernamePayer());
+		setPayeeData(paymentRequest.getUsernamePayee());
 		this.currency = paymentRequest.getCurrency().getCurrencyCode();
 		this.amount = Converter.getBigDecimalFromLong(paymentRequest.getAmount());
 		this.timestampPayer = paymentRequest.getTimestamp();
@@ -82,16 +84,14 @@ public class DbTransaction implements Serializable {
 	}
 	
 
-	public void setPayerData(PaymentRequest paymentRequest){
-		int splitIndex = paymentRequest.getUsernamePayer().indexOf(Config.SPLIT_USERNAME);
-		this.usernamePayer = paymentRequest.getUsernamePayer().substring(0, splitIndex);
-		this.serverPayer = paymentRequest.getUsernamePayer().substring(splitIndex + 1);
+	public void setPayerData(String usernamePayer){
+		int splitIndex = usernamePayer.indexOf(Config.SPLIT_USERNAME);
+		this.serverPayer = usernamePayer.substring(splitIndex + 1);
 	}
 	
-	public void setPayeeData(PaymentRequest paymentRequest) {
-		int splitIndex = paymentRequest.getUsernamePayee().indexOf(Config.SPLIT_USERNAME);
-		this.usernamePayer = paymentRequest.getUsernamePayee().substring(0, splitIndex);
-		this.serverPayer = paymentRequest.getUsernamePayee().substring(splitIndex + 1);
+	public void setPayeeData(String usernamePayee) {
+		int splitIndex = usernamePayee.indexOf(Config.SPLIT_USERNAME);
+		this.serverPayee = usernamePayee.substring(splitIndex + 1);
 	}
 
 	public long getId() {
@@ -115,6 +115,8 @@ public class DbTransaction implements Serializable {
 	}
 
 	public void setUsernamePayer(String usernamePayer) {
+		if(usernamePayer.contains(Config.SPLIT_USERNAME))
+			setPayerData(usernamePayer);
 		this.usernamePayer = usernamePayer;
 	}
 
@@ -131,6 +133,8 @@ public class DbTransaction implements Serializable {
 	}
 
 	public void setUsernamePayee(String usernamePayee) {
+		if(usernamePayee.contains(Config.SPLIT_USERNAME))
+			setPayeeData(usernamePayee);
 		this.usernamePayee = usernamePayee;
 	}
 	
@@ -192,17 +196,22 @@ public class DbTransaction implements Serializable {
 
 	@Override
 	public String toString() {
+		int indexPayer = getUsernamePayer().indexOf(Config.SPLIT_USERNAME);
+		String usernamePayer = getUsernamePayer().substring(0, indexPayer);
+		int indexPayee = getUsernamePayee().indexOf(Config.SPLIT_USERNAME);
+		String usernamePayee = getUsernamePayee().substring(0, indexPayee);
+		
 		StringBuilder sb = new StringBuilder();
 		sb.append("id: ");
 		sb.append(getId());
 		sb.append(", date:");
 		sb.append(getTimestamp());
 		sb.append(", payer: ");
-		sb.append(getUsernamePayer());
+		sb.append(usernamePayer);
 		sb.append(", server payer: ");
 		sb.append(getServerPayer());
 		sb.append(", payee: ");
-		sb.append(getUsernamePayee());
+		sb.append(usernamePayee);
 		sb.append(", server payee: ");
 		sb.append(getServerPayee());
 		sb.append(", currency: ");

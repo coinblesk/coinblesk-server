@@ -467,7 +467,7 @@ public class TransactionServiceTest {
 			tx.setUsernamePayee(fromDB2.getUsername());
 			
 			transactionService.createTransaction(tx, fromDB, fromDB2);
-		
+			System.out.println("********** " + nofTransactions);
 			fromDB = userAccountService.getByUsername(fromDB.getUsername());
 			fromDB2 = userAccountService.getByUsername(fromDB2.getUsername());
 			nofTransactions++;
@@ -509,6 +509,45 @@ public class TransactionServiceTest {
 		long historyCount = transactionService.getHistoryCount(fromDB.getUsername());
 		assertEquals(Config.TRANSACTIONS_MAX_RESULTS+additionalTx, historyCount);
 	}
+	
+	@Test
+	public void testTransactionSumByServerAsPayer() throws Exception{
+		UserAccount fromDB = createAccountAndVerifyAndReload("TDAOT_16@https://mbps.csg.uzh.ch", "TDAOT_16@bitcoin.csg.uzh.ch", "my-password", new BigDecimal("0.0"));
+		UserAccount fromDB2 = createAccountAndVerifyAndReload("TDAOT_17@https://mbps.csg.uzh.ch", "TDAOT_17@bitcoin.csg.uzh.ch", "my-password", new BigDecimal("0.0"));
+		
+		DbTransaction tx = new DbTransaction();
+		Date d = new Date();
+		tx.setTimestamp(d);
+		tx.setAmount(new BigDecimal("0.00020"));
+		tx.setUsernamePayer(fromDB.getUsername());
+		tx.setUsernamePayee(fromDB2.getUsername());
+		transactionService.createTransaction(tx, fromDB, fromDB2);
+		
+		DbTransaction tx2 = new DbTransaction();
+		Date d2 = new Date();
+		tx2.setTimestamp(d2);
+		tx2.setAmount(new BigDecimal("0.00025"));
+		tx2.setUsernamePayer(fromDB.getUsername());
+		tx2.setUsernamePayee(fromDB2.getUsername());
+		transactionService.createTransaction(tx2, fromDB, fromDB2);
+		
+		DbTransaction tx3 = new DbTransaction();
+		Date d3 = new Date();
+		tx3.setTimestamp(d3);
+		tx3.setAmount(new BigDecimal("0.00030"));
+		tx3.setUsernamePayer(fromDB2.getUsername());
+		tx3.setUsernamePayee(fromDB.getUsername());
+		transactionService.createTransaction(tx3, fromDB2, fromDB);
+		
+		BigDecimal	trans1 = transactionService.transactionSumByServerAsPayee("https://mbps.csg.uzh.ch", fromDB.getUsername());
+		BigDecimal	trans2 = transactionService.transactionSumByServerAsPayer("https://mbps.csg.uzh.ch", fromDB.getUsername());
+		BigDecimal	trans3 = transactionService.transactionSumByServerAsPayee("https://mbps.csg.uzh.ch", fromDB2.getUsername());
+		BigDecimal	trans4 = transactionService.transactionSumByServerAsPayer("https://mbps.csg.uzh.ch", fromDB2.getUsername());
+		
+		assertEquals(trans1,  trans4);
+		assertEquals(trans2,  trans3);
+	}
+	
 	
 	private UserAccount createAccountAndVerifyAndReload(String username, String email, String password, BigDecimal bigDecimal) throws Exception {
 		UserAccount buyerAccount = new UserAccount(username, email, password);
