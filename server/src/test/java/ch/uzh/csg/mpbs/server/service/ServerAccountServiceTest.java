@@ -297,4 +297,18 @@ public class ServerAccountServiceTest {
 			assertFalse(account.getActiveBalance() == null);			
 		}
 	}
+	
+	@Test
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/userAccountServerAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	public void testGetByUrlIgnoreCase() throws UrlAlreadyExistsException{
+		String url = "https://www.my_url.ch";
+		boolean success = serverAccountService.checkIfExistsByUrl(url);
+		
+		assertTrue(success);
+		
+		String urlNotExisting = "http://notExisting.ch";
+		boolean failed = serverAccountService.checkIfExistsByUrl(urlNotExisting);
+		
+		assertFalse(failed);
+	}
 }
