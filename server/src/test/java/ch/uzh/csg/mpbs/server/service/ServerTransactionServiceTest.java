@@ -175,9 +175,7 @@ public class ServerTransactionServiceTest {
 	
 	@Test
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverTransactionDataHistory.xml",type=DatabaseOperation.CLEAN_INSERT)
-	public void testetServerAccountTransactions() throws ServerAccountNotFoundException{
-		//TODO: mehmet verified??
-		
+	public void testServerAccountTransactions() throws ServerAccountNotFoundException{
 		//first page
 		List<HistoryServerAccountTransaction> history = serverTransactionService.getServerAccountTransactions("https://www.my_url.ch", 0);
 		assertNotNull(history);
@@ -198,4 +196,5 @@ public class ServerTransactionServiceTest {
 			assertTrue(history.get(i).getTimestamp().compareTo(history.get(i+1).getTimestamp()) >= 0);
 		}
 	}
+
 }
