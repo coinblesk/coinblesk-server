@@ -211,7 +211,27 @@
 			<artifactId>hibernate-c3p0</artifactId>
 			<version>4.2.4.Final</version>
 		</dependency>
-
+		<!-- Apache Http Client (Async) -->
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>4.3.5</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpcore</artifactId>
+			<version>4.3.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpasyncclient</artifactId>
+			<version>4.0.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpasyncclient-cache</artifactId>
+			<version>4.0.2</version>
+		</dependency>		
 		<!-- Resolver to find html views -->
 		<dependency>
 			<groupId>org.thymeleaf</groupId>
