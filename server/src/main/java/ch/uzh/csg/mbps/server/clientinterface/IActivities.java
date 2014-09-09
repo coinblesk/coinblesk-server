@@ -5,10 +5,8 @@ import java.util.List;
 import ch.uzh.csg.mbps.server.domain.Activities;
 
 public interface IActivities {
-
-	//TODO: mehmet test & javadoc
-	
 	/**
+	 * Creates a log entry.
 	 * 
 	 * @param username
 	 * @param title
@@ -17,6 +15,7 @@ public interface IActivities {
 	public void activityLog(String username, String title, String message);
 
 	/**
+	 * Returns log activities order by timestamp (desc)
 	 * 
 	 * @param page
 	 * @return

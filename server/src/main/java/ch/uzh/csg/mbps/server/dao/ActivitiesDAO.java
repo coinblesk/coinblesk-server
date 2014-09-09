@@ -14,6 +14,11 @@ import org.springframework.stereotype.Repository;
 import ch.uzh.csg.mbps.server.domain.Activities;
 import ch.uzh.csg.mbps.server.util.Config;
 
+/**
+ * DatabaseAccessObject for {@link Activities}s. Handles all DB operations
+ * regarding {@link Activities}.
+ * 
+ */
 @Repository
 public class ActivitiesDAO {
 
