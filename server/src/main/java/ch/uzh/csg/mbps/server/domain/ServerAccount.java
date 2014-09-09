@@ -39,8 +39,8 @@ public class ServerAccount {
 	private String payoutAddress;
 	@Column(name = "TRUST_LEVEL", nullable = false)
 	private int trustLevel;
-	@Column(name = "PUBLIC_KEY", length = 1024, nullable = false)
-	private String publicKey;
+	@Column(name = "NOF_KEYS")
+	private int nOfKeys;
 	@Column(name = "DELETED", nullable = false)
 	private boolean deleted;
 	@Column(name = "ACTIVE_BALANCE", nullable = false, precision = 25, scale = 8)
@@ -62,14 +62,14 @@ public class ServerAccount {
 	 * @param email
 	 *            != NULL
 	 */
-	public ServerAccount(String url, String email, String publicKey) {
+	public ServerAccount(String url, String email) {
 		this.url = url;
 		this.email = email;
 		this.deleted = false;
 		this.balanceLimit = new BigDecimal(0.0);
 		this.activeBalance = new BigDecimal(0.0);
 		this.creationDate = new Date();
-		this.publicKey = publicKey;
+		this.nOfKeys = 0;
 		this.trustLevel = 0;
 	}
 	
@@ -83,14 +83,14 @@ public class ServerAccount {
 	 * @param trustLevel
 	 * @param balanceLimit
 	 */
-	public ServerAccount(String url, String email, String publicKey, int trustLevel, BigDecimal balanceLimit){
+	public ServerAccount(String url, String email, int nOfKeys, int trustLevel, BigDecimal balanceLimit){
 		this.url = url;
 		this.email = email;
 		this.deleted = false;
 		this.balanceLimit = balanceLimit;
 		this.activeBalance = new BigDecimal(0.0);
 		this.creationDate = new Date();
-		this.publicKey = publicKey;
+		this.nOfKeys = nOfKeys;
 		this.trustLevel = trustLevel;
 	}
 
@@ -150,12 +150,12 @@ public class ServerAccount {
 		this.trustLevel = trustLevel;
 	}
 
-	public String getPublicKey() {
-		return publicKey;
+	public int getnOfKeys() {
+		return nOfKeys;
 	}
 
-	public void setPublicKey(String publicKey) {
-		this.publicKey = publicKey;
+	public void setnOfKeys(int nOfKeys) {
+		this.nOfKeys = nOfKeys;
 	}
 
 	public boolean isDeleted() {

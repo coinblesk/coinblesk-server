@@ -14,6 +14,7 @@ import javax.persistence.criteria.Root;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Repository;
 
+import ch.uzh.csg.mbps.model.UserAccount;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
@@ -109,13 +110,14 @@ public class ServerAccountDAO {
 	 * @throws ServerAccountNotFoundException
 	 */
 	public ServerAccount getByUrlIgnoreCaseAndDeletedFlag(String url) throws ServerAccountNotFoundException{
-		
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<ServerAccount> cq = cb.createQuery(ServerAccount.class);
 		Root<ServerAccount> root = cq.from(ServerAccount.class);
 		
-		Expression<String> e = root.get("url");
-		Predicate condition = cb.equal(cb.upper(e), url.toUpperCase());
+//		Expression<String> e = root.get("url");
+//		Expression<String> upper = cb.upper(e);
+		Predicate condition = cb.equal(root.get("url"), url);
+//		Predicate condition = cb.equal(cb.upper(e), url.toUpperCase());
 		cq.where(condition);
 		
 		ServerAccount serverAccount = UserAccountDAO.getSingle(cq, em);
@@ -125,6 +127,15 @@ public class ServerAccountDAO {
 		}
 		
 		return serverAccount;
+	}
+	
+	/**
+	 * 
+	 * @param url
+	 * @return
+	 */
+	public boolean checkByUrlIgnoreCaseAndDeletedFlag(String url){
+		return em.find(ch.uzh.csg.mbps.server.domain.UserAccount.class, url) != null;
 	}
 	
 	/**
@@ -337,7 +348,7 @@ public class ServerAccountDAO {
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<ch.uzh.csg.mbps.model.ServerAccount> cq = cb.createQuery(ch.uzh.csg.mbps.model.ServerAccount.class);
 		Root<ServerAccount> root = cq.from(ServerAccount.class);
-		cq.select(cb.construct(ch.uzh.csg.mbps.model.ServerAccount.class, root.get("id"),root.get("payinAddress"),
+		cq.select(cb.construct(ch.uzh.csg.mbps.model.ServerAccount.class, root.get("id"),root.get("url"), root.get("payinAddress"),
 				root.get("payoutAddress"), root.get("trustLevel"), root.get("activeBalance"), root.get("balanceLimit"), root.get("userBalanceLimit")));
 		
 		Predicate condition = cb.equal(root.get("deleted"), false);

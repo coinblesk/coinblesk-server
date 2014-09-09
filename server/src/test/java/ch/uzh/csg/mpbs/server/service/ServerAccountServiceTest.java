@@ -28,7 +28,6 @@ import ch.uzh.csg.mbps.server.util.SecurityConfig;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
-import ch.uzh.csg.mbps.server.util.exceptions.InvalidPublicKeyException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
@@ -77,33 +76,33 @@ public class ServerAccountServiceTest {
 
 	@Test
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/userAccountServerAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	public void testPrepareGetAccount() throws UserAccountNotFoundException, InvalidPublicKeyException, InvalidUrlException, InvalidEmailException{
+	public void testPrepareGetAccount() throws UserAccountNotFoundException, InvalidUrlException, InvalidEmailException{
 		UserAccount  account = userAccountService.getByUsername("hans");
 		assertNotNull(account);
 		
-		ServerAccount server = new ServerAccount("http://www.neu.ch", "neu@neu.ch", "fake-keys");
+		ServerAccount server = new ServerAccount("http://www.neu.ch", "neu@neu.ch");
 		ServerAccount sendAccount = serverAccountService.prepareAccount(account, server);
 		assertNotNull(sendAccount);
 		assertEquals(SecurityConfig.BASE_URL, sendAccount.getUrl());
-		assertEquals("fake-keys", sendAccount.getPublicKey());
+		assertEquals(0, sendAccount.getnOfKeys());
 	}
 
 	@Test(expected=InvalidUrlException.class)
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/userAccountServerAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	public void testPrepareGetAccount_FailInvalidUrlexception() throws UserAccountNotFoundException, InvalidPublicKeyException, InvalidUrlException, InvalidEmailException{
+	public void testPrepareGetAccount_FailInvalidUrlexception() throws UserAccountNotFoundException, InvalidUrlException, InvalidEmailException{
 		UserAccount  account = userAccountService.getByUsername("hans");
 		assertNotNull(account);
 		
-		ServerAccount server = new ServerAccount("www.neu.ch", "neu@neu.ch", "fake-keys");
+		ServerAccount server = new ServerAccount("www.neu.ch", "neu@neu.ch");
 		serverAccountService.prepareAccount(account, server);
 	}
 	
 	@Test
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
 	@ExpectedDatabase(value="classpath:DbUnitFiles/Services/serverAccountExpectedCreateData.xml", table="server_account")
-	public void testPersistAccount() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException, ServerAccountNotFoundException {
+	public void testPersistAccount() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, ServerAccountNotFoundException {
 		int numberOfServerAccount = serverAccountService.getAll().size();
-		ServerAccount newServer = new ServerAccount("https://www.test-test.ch", "test6@mail.com", "publicKey");
+		ServerAccount newServer = new ServerAccount("https://www.test-test.ch", "test6@mail.com");
 		assertTrue(serverAccountService.persistAccount(newServer));
 		
 		newServer = serverAccountService.getByUrl(newServer.getUrl());
@@ -113,20 +112,20 @@ public class ServerAccountServiceTest {
 	
 	@Test(expected=UrlAlreadyExistsException.class)
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	public void testPersistsAccount_FailUrlAlreadyExists() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException{
-		ServerAccount newServer = new ServerAccount("https://www.my_url.ch", "test@mail.ch", "my public key");
+	public void testPersistsAccount_FailUrlAlreadyExists() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException{
+		ServerAccount newServer = new ServerAccount("https://www.my_url.ch", "test@mail.ch");
 		serverAccountService.persistAccount(newServer);
 	}
 	
 	@Test(expected=InvalidUrlException.class)
-	public void testPersistsAccount_FailInvalidUrl() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException {
-		ServerAccount serverAccount = new ServerAccount("abcd", "test@mail.ch", "blabla");
+	public void testPersistsAccount_FailInvalidUrl() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException {
+		ServerAccount serverAccount = new ServerAccount("abcd", "test@mail.ch");
 		serverAccountService.persistAccount(serverAccount);
 	}
 	
 	@Test(expected=InvalidEmailException.class)
-	public void testPersistsAccount_FailInvalidEmail() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException {
-		ServerAccount serverAccount = new ServerAccount("http://www.url.ch", "mail.ch", "blabla");
+	public void testPersistsAccount_FailInvalidEmail() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException {
+		ServerAccount serverAccount = new ServerAccount("http://www.url.ch", "mail.ch");
 		serverAccountService.persistAccount(serverAccount);
 	}
 	
@@ -139,8 +138,8 @@ public class ServerAccountServiceTest {
 	@Test
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
 	@ExpectedDatabase(value="classpath:DbUnitFiles/Services/serverAccountExpectedManuallyData.xml", table="server_account", assertionMode = DatabaseAssertionMode.NON_STRICT)
-	public void testCreateAccount_EnterFieldsManually() throws BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, UrlAlreadyExistsException, InvalidUrlException, InvalidPublicKeyException, ServerAccountNotFoundException {
-		ServerAccount newAccount = new ServerAccount("https://www.insert.com", "insert@mail.ch", "fake-insert");
+	public void testCreateAccount_EnterFieldsManually() throws BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, UrlAlreadyExistsException, InvalidUrlException, ServerAccountNotFoundException {
+		ServerAccount newAccount = new ServerAccount("https://www.insert.com", "insert@mail.ch");
 		newAccount.setBalanceLimit(BigDecimal.ZERO);
 		Date date = new Date();
 		
@@ -199,6 +198,8 @@ public class ServerAccountServiceTest {
 		int trustlevel = beforeUpdateAccount.getTrustLevel();
 		String url = beforeUpdateAccount.getUrl();
 		BigDecimal limitBalance = beforeUpdateAccount.getBalanceLimit();
+		BigDecimal userBalanceLimit = beforeUpdateAccount.getUserBalanceLimit();
+		int nofKeys = beforeUpdateAccount.getnOfKeys();
 		
 		beforeUpdateAccount.setActiveBalance(new BigDecimal(-100.0));
 		beforeUpdateAccount.setEmail("newemail@mail.com");
@@ -206,6 +207,8 @@ public class ServerAccountServiceTest {
 		beforeUpdateAccount.setTrustLevel(1);
 		beforeUpdateAccount.setUrl("https://www.update.com");
 		beforeUpdateAccount.setBalanceLimit(new BigDecimal(100.0));
+		beforeUpdateAccount.setUserBalanceLimit(new BigDecimal(20.0));
+		beforeUpdateAccount.setnOfKeys(2);
 		
 		serverAccountService.updateAccount(url, beforeUpdateAccount);
 		ServerAccount afterUpdateAccount = serverAccountService.getByUrl(beforeUpdateAccount.getUrl());
@@ -230,6 +233,10 @@ public class ServerAccountServiceTest {
 		assertFalse(url.equals(afterUpdateAccount.getUrl()));
 		//limit balance should change
 		assertFalse(limitBalance.equals(afterUpdateAccount.getBalanceLimit()));
+		//user balance limit should change
+		assertFalse(userBalanceLimit.equals(afterUpdateAccount.getUserBalanceLimit()));
+		//nof keys should not change
+		assertEquals(nofKeys, afterUpdateAccount.getnOfKeys());
 	}
 	
 	@Test

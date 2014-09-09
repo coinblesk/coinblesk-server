@@ -20,7 +20,6 @@ import ch.uzh.csg.mbps.server.util.ActivitiesTitle;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Config;
-import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.SecurityConfig;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
@@ -49,8 +48,6 @@ public class ServerAccountService implements IServerAccount {
 	
 	@Autowired
 	private IActivities activitiesService;
-
-	//TODO: mehmet: javadoc
 	
 	/**
 	 * Enables testing mode for JUnit Tests.
@@ -72,49 +69,23 @@ public class ServerAccountService implements IServerAccount {
 	
 	@Override
 	@Transactional(readOnly = true)
-	public boolean checkIfExistsByUrl(String url) throws UrlAlreadyExistsException{
+	public boolean checkIfExistsByUrl(String url) {
 		try {
 			//see for matches in db ignoring cases and deletion status
 			getByUrlIgnoreCaseAndDeletedFlag(url);
-			throw new UrlAlreadyExistsException(url);
-		} catch (ServerAccountNotFoundException e) {
 			return true;
+		} catch (ServerAccountNotFoundException e) {
+			return false;
 		}
 	}
 
 	@Override
 	@Transactional
-	public ServerAccount prepareAccount(UserAccount user, ServerAccount otherAccount) throws UserAccountNotFoundException, InvalidPublicKeyException, InvalidUrlException, InvalidEmailException {
-		if (TESTING_MODE){
-			return prepareAccount(user, otherAccount, "fake-keys");
-		} else {
-			String publicKey = Constants.SERVER_KEY_PAIR.getPublicKey();
-			//CustomPublicKey cpk = new CustomPublicKey(Constants.SERVER_KEY_PAIR.getKeyNumber(), Constants.SERVER_KEY_PAIR.getPkiAlgorithm(), Constants.SERVER_KEY_PAIR.getPublicKey());
-			return prepareAccount(user, otherAccount, publicKey);
-		}
-	}
-	
-	/**
-	 * Prepares {@link ServerAccount} with the data which will be send to the other server. 
-	 * 
-	 * @param serverAccount
-	 * @param newPayinAddress
-	 * @param date
-	 * @return ServerAccount
-	 * @throws InvalidUrlException
-	 * @throws InvalidEmailException 
-	 * @throws InvalidPublicKeyException
-	 * @throws UrlAlreadyExistsException 
-	 * @throws UserAccountNotFoundException
-	 */
-	private ServerAccount prepareAccount(UserAccount user, ServerAccount otherAccount, String publicKey) throws UserAccountNotFoundException, InvalidPublicKeyException, InvalidUrlException, InvalidEmailException {
+	public ServerAccount prepareAccount(UserAccount user, ServerAccount otherAccount) throws UserAccountNotFoundException, InvalidUrlException, InvalidEmailException {
 		String otherUrl = otherAccount.getUrl();
 		String otherEmail = otherAccount.getEmail();
 		
-		ServerAccount serverAccount = new ServerAccount(SecurityConfig.BASE_URL, user.getEmail(), publicKey);
-
-		if (serverAccount.getPublicKey() == null)
-			throw new InvalidPublicKeyException();
+		ServerAccount serverAccount = new ServerAccount(SecurityConfig.BASE_URL, user.getEmail());
 
 		if (!otherUrl.matches(Config.URL_NAME_REGEX))
 			throw new InvalidUrlException();
@@ -128,9 +99,10 @@ public class ServerAccountService implements IServerAccount {
 		return serverAccount;
 	}
 
+
 	@Override
 	@Transactional
-	public boolean persistAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException {
+	public boolean persistAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException {
 		Date date = new Date();
 		if (TESTING_MODE){
 			String strDate = "2014-06-19 14:35:54.0";
@@ -158,20 +130,16 @@ public class ServerAccountService implements IServerAccount {
 	 * @throws InvalidEmailException
 	 * @throws InvalidPublicKeyException 
 	 */
-	private boolean createAccount(ServerAccount serverAccount, String payinAddress, Date date) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException {
+	private boolean createAccount(ServerAccount serverAccount, String payinAddress, Date date) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException {
 		serverAccount.setUrl(serverAccount.getUrl().trim());
 		String url = serverAccount.getUrl();
 		String email = serverAccount.getEmail();
-		String publicKey = serverAccount.getPublicKey();
 		
 		if (url == null)
 			throw new InvalidUrlException();
 
 		if (email == null)
 			throw new InvalidEmailException();
-
-		if (publicKey == null)
-			throw new InvalidPublicKeyException();
 		
 		if (!url.matches(Config.URL_REGEX))
 			throw new InvalidUrlException();
@@ -187,7 +155,7 @@ public class ServerAccountService implements IServerAccount {
 			//do nothing, since this happens when a new account is created with a unique url
 		}
 		
-		serverAccount = new ServerAccount(serverAccount.getUrl(), serverAccount.getEmail(), serverAccount.getPublicKey());
+		serverAccount = new ServerAccount(serverAccount.getUrl(), serverAccount.getEmail());
 		
 		serverAccount.setPayoutAddress(payinAddress);
 		serverAccount.setCreationDate(date);
@@ -280,7 +248,7 @@ public class ServerAccountService implements IServerAccount {
 			
 			if (updatedAccount.getUserBalanceLimit() != serverAccount.getUserBalanceLimit()){
 				title = ActivitiesTitle.UPDATE_USER_BALANCE_LIMIT;
-				message = "USer balance limit is updated to " + updatedAccount.getUserBalanceLimit();
+				message = "User balance limit is updated to " + updatedAccount.getUserBalanceLimit();
 			}
 			
 			activitiesService.activityLog(username, title, message);
