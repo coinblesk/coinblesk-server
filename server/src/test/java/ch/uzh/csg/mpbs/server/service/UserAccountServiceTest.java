@@ -24,6 +24,7 @@ import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.domain.UserPublicKey;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.service.UserAccountService;
+import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.CustomPasswordEncoder;
 import ch.uzh.csg.mbps.server.util.UserRoles.Role;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
@@ -329,5 +330,24 @@ public class UserAccountServiceTest {
 		
 		//only users with role users exists
 		assertFalse(allUsers2.size() == users2.size());
+	}
+	
+	@Test
+	public void testGetAdminEmail(){
+		UserAccount account = new UserAccount("felix@https://mbps.csg.uzh.ch", "felix@bitcoin.csg.uzh.ch", accountOnePassword);
+		account.setRoles(Role.ADMIN.getCode());
+		try {
+			userAccountService.createAccount(account);
+		} catch (UsernameAlreadyExistsException | BitcoinException
+				| InvalidUsernameException | InvalidEmailException
+				| EmailAlreadyExistsException | InvalidUrlException e) {
+			// do nothing
+		}
+		
+		String admin = userAccountService.getAdminEmail();
+		assertNotNull(admin);
+		System.out.println(admin);
+		assertTrue(admin.matches(Config.EMAIL_REGEX));
+		
 	}
 }

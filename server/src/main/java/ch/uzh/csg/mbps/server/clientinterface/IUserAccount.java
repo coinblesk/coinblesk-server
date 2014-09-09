@@ -211,4 +211,10 @@ public interface IUserAccount {
 	 * @return All email addresses of all user with the role admin and both
 	 */
 	public List<String> getEmailOfAllUsers();
+
+	/**
+	 * Returns the email of the first admin
+	 * @return Email
+	 */
+	public String getAdminEmail();
 }

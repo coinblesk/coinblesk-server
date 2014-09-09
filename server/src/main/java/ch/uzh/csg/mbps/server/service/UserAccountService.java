@@ -457,4 +457,10 @@ public class UserAccountService implements IUserAccount {
 		emails.addAll(userAccountDAO.getEmailOfAllUsersByRoles(Role.BOTH));
 		return emails;
 	}
+
+	@Override
+	@Transactional(readOnly=true)
+	public String getAdminEmail() {
+		return userAccountDAO.getAdminEmail();
+	}
 }
