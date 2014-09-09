@@ -112,10 +112,8 @@ public class ServerAccountDAO {
 		CriteriaQuery<ServerAccount> cq = cb.createQuery(ServerAccount.class);
 		Root<ServerAccount> root = cq.from(ServerAccount.class);
 		
-//		Expression<String> e = root.get("url");
-//		Expression<String> upper = cb.upper(e);
-		Predicate condition = cb.equal(root.get("url"), url);
-//		Predicate condition = cb.equal(cb.upper(e), url.toUpperCase());
+		Expression<String> e = root.get("url");
+		Predicate condition = cb.equal(cb.upper(e), url.toUpperCase());
 		cq.where(condition);
 		
 		ServerAccount serverAccount = UserAccountDAO.getSingle(cq, em);
