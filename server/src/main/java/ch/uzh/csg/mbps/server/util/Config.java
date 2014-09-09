@@ -49,5 +49,20 @@ public class Config {
 	// Multiplier for Bitstamp Trading. Define lower/upper limits for exchange of BTC/USD
 	public static final BigDecimal BITSTAMP_SELL_EXCHANGE_RATE_LIMIT = new BigDecimal("0.95");
 	public static final BigDecimal BITSTAMP_BUY_EXCHANGE_RATE_LIMIT = new BigDecimal("1.05");
+	
+	//Limits for the HttpRequestHandler
+	public static final int HTTP_CONNECTION_TIMEOUT = 3 * 1000;
+	public static final int HTTP_SOCKET_TIMEOUT = 5 * 1000;
+	public static final int DEFAULT_MAX_TOTAL_CONNECTIONS = 100;
+	public static final int DEFAULT_MAX_CONNECTIONS_PER_ROUTE = 10;
+	
+	public static final String CANCELLED = "cancelled";
+	public static final String FAILED = "failed";
+
+	//Server Account creation
+	public static final String ACCOUNT_DELETED = "Account was deleted";
+	public static final String ACCOUNT_EXISTS = "Account already exists";
+	public static final String ACCOUNT_SUCCESS = "Creation succeeded";
+	
 
 }
