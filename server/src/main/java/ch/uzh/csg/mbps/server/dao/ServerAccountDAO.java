@@ -14,7 +14,6 @@ import javax.persistence.criteria.Root;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Repository;
 
-import ch.uzh.csg.mbps.model.UserAccount;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
