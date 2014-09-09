@@ -8,7 +8,6 @@ import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
-import ch.uzh.csg.mbps.server.util.exceptions.InvalidPublicKeyException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UrlAlreadyExistsException;
@@ -28,9 +27,8 @@ public interface IServerAccount {
 	 * @throws BitcoinException
 	 * @throws InvalidUrlException
 	 * @throws InvalidEmailException
-	 * @throws InvalidPublicKeyException 
 	 */
-	public boolean persistAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, InvalidPublicKeyException;
+	public boolean persistAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException;
 	
 	/**
 	 * 
@@ -127,11 +125,10 @@ public interface IServerAccount {
 	 * @param account
 	 * @return ServerAccount
 	 * @throws UserAccountNotFoundException
-	 * @throws InvalidPublicKeyException
 	 * @throws InvalidUrlException
 	 * @throws InvalidEmailException
 	 */
-	public ServerAccount prepareAccount(UserAccount userAccount, ServerAccount account) throws UserAccountNotFoundException, InvalidPublicKeyException, InvalidUrlException, InvalidEmailException;
+	public ServerAccount prepareAccount(UserAccount userAccount, ServerAccount account) throws UserAccountNotFoundException, InvalidUrlException, InvalidEmailException;
 
 	/**
 	 * Checks if Url is allready existing
@@ -140,7 +137,7 @@ public interface IServerAccount {
 	 * @return boolean
 	 * @throws UrlAlreadyExistsException
 	 */
-	public boolean checkIfExistsByUrl(String url) throws UrlAlreadyExistsException;
+	public boolean checkIfExistsByUrl(String url);
 
 	/**
 	 * 
