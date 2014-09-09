@@ -150,11 +150,11 @@ public class ServerAccount {
 		this.trustLevel = trustLevel;
 	}
 
-	public int getnOfKeys() {
+	public int getNOfKeys() {
 		return nOfKeys;
 	}
 
-	public void setnOfKeys(int nOfKeys) {
+	public void setNOfKeys(int nOfKeys) {
 		this.nOfKeys = nOfKeys;
 	}
 

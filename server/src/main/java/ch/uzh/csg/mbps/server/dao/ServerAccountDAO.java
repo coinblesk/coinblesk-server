@@ -82,7 +82,6 @@ public class ServerAccountDAO {
 	 * @throws ServerAccountNotFoundException
 	 */
 	public ServerAccount getByUrl(String url) throws ServerAccountNotFoundException{
-		
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<ServerAccount> cq = cb.createQuery(ServerAccount.class);
 		Root<ServerAccount> root = cq.from(ServerAccount.class);
@@ -129,15 +128,6 @@ public class ServerAccountDAO {
 	}
 	
 	/**
-	 * 
-	 * @param url
-	 * @return
-	 */
-	public boolean checkByUrlIgnoreCaseAndDeletedFlag(String url){
-		return em.find(ch.uzh.csg.mbps.server.domain.UserAccount.class, url) != null;
-	}
-	
-	/**
 	 * Returns {@link ServerAccount}-Object for given parameter id. Does not
 	 * return deleted ServerAccounts.
 	 * 
@@ -146,8 +136,6 @@ public class ServerAccountDAO {
 	 * @throws ServerAccountNotFoundException
 	 */
 	public ServerAccount getById(long id) throws ServerAccountNotFoundException{
-		
-		
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<ServerAccount> cq = cb.createQuery(ServerAccount.class);
 		Root<ServerAccount> root = cq.from(ServerAccount.class);
@@ -158,6 +146,54 @@ public class ServerAccountDAO {
 		ServerAccount serverAccount = UserAccountDAO.getSingle(cq, em);
 		
 		if(serverAccount == null || serverAccount.isDeleted()) {
+			throw new ServerAccountNotFoundException("id:" + id);
+		}
+		
+		return serverAccount;
+	}
+
+	/**
+	 * Returns {@link ServerAccount}-Object for given parameter id.
+	 * 
+	 * @param url
+	 * @return ServerAccount
+	 * @throws ServerAccountNotFoundException
+	 */
+	public ServerAccount getByUrlIgnoreDelete(String url) throws ServerAccountNotFoundException {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ServerAccount> cq = cb.createQuery(ServerAccount.class);
+		Root<ServerAccount> root = cq.from(ServerAccount.class);
+		
+		Predicate condition = cb.equal(root.get("url"), url);
+		cq.where(condition);
+		
+		ServerAccount serverAccount = UserAccountDAO.getSingle(cq, em);
+		
+		if(serverAccount == null) {
+			throw new ServerAccountNotFoundException(url);
+		}
+		
+		return serverAccount;
+	}
+	
+	/**
+	 * Returns {@link ServerAccount}-Object for given parameter url.
+	 * 
+	 * @param id
+	 * @return ServerAccount
+	 * @throws ServerAccountNotFoundException
+	 */
+	public ServerAccount getByIdIgnoreDelete(Long id) throws ServerAccountNotFoundException {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ServerAccount> cq = cb.createQuery(ServerAccount.class);
+		Root<ServerAccount> root = cq.from(ServerAccount.class);
+		
+		Predicate condition = cb.equal(root.get("id"), id);
+		cq.where(condition);
+		
+		ServerAccount serverAccount = UserAccountDAO.getSingle(cq, em);
+		
+		if(serverAccount == null) {
 			throw new ServerAccountNotFoundException("id:" + id);
 		}
 		
@@ -410,7 +446,7 @@ public class ServerAccountDAO {
 	 * Checks if {@link ServerAccount} is deleted by a given parameter id.
 	 * 
 	 * @param id
-	 * @return booelan
+	 * @return boolean
 	 * @throws ServerAccountNotFoundException
 	 */
 	public boolean isDeletedById(long id) {
@@ -431,5 +467,16 @@ public class ServerAccountDAO {
 		
 		return true;
 	}
+
+	/**
+	 * Undoes the deletion of the {@link ServerAccount} by a given object ServerAccount.
+	 * 
+	 * @param account
+	 */
+	public void undeleteServerAccount(ServerAccount account) {
+		account.setDeleted(false);
+		em.merge(account);
+	}
+
 	
 }

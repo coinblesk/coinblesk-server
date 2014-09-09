@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.hibernate.HibernateException;
 
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
@@ -144,12 +145,41 @@ public interface IServerAccount {
 	 * @param url
 	 * @return boolean
 	 */
-	boolean isDeletedByUrl(String url);
+	public boolean isDeletedByUrl(String url);
 
 	/**
 	 * 
 	 * @param id
 	 * @return boolean
 	 */
-	boolean isDeletedById(long id);
+	public boolean isDeletedById(long id);
+
+	/**
+	 * Stores a public key on the database and maps this public key to a {@link ServerAccount}.
+	 * 
+	 * @param serverId 
+	 * @param algorithm the {@link PKIAlgorithm} used to generate the key
+	 * @param publicKey the base64 encoded public key
+	 * @return byte Returns the key number, indicating the (incremented) position this public
+	 *         key has in a list of public keys mapped to this server account
+	 * @throws UserAccountNotFoundException
+	 * @throws ServerAccountNotFoundException 
+	 */
+	public byte saveServerPublicKey(long serverId, PKIAlgorithm algorithm,String publicKey) throws UserAccountNotFoundException, ServerAccountNotFoundException;
+
+	/**
+	 * Undoes the deletion of the {@link ServerAccount} by a given parameter url.
+	 * 
+	 * @param url
+	 * @throws ServerAccountNotFoundException
+	 */
+	public void undeleteServerAccountByUrl(String url) throws ServerAccountNotFoundException;
+	
+	/**
+	 * Undoes the deletion of the {@link ServerAccount} by a given parameter id.
+	 * 
+	 * @param id
+	 * @throws ServerAccountNotFoundException
+	 */
+	public void undeleteServerAccountById(Long id) throws ServerAccountNotFoundException;
 }
