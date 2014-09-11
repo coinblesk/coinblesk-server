@@ -33,7 +33,7 @@ import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UrlAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
-import ch.uzh.csg.mbps.server.util.ReplacementDataSetLoader;
+import ch.uzh.csg.mpbs.server.utilTest.ReplacementDataSetLoader;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
