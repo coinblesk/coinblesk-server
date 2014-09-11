@@ -33,7 +33,7 @@ import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UrlAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
-import ch.uzh.csg.mpbs.server.util.ReplacementDataSetLoader;
+import ch.uzh.csg.mbps.server.util.ReplacementDataSetLoader;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
@@ -84,7 +84,7 @@ public class ServerAccountServiceTest {
 		ServerAccount sendAccount = serverAccountService.prepareAccount(account, server);
 		assertNotNull(sendAccount);
 		assertEquals(SecurityConfig.BASE_URL, sendAccount.getUrl());
-		assertEquals(0, sendAccount.getnOfKeys());
+		assertEquals(0, sendAccount.getNOfKeys());
 	}
 
 	@Test(expected=InvalidUrlException.class)
@@ -199,7 +199,7 @@ public class ServerAccountServiceTest {
 		String url = beforeUpdateAccount.getUrl();
 		BigDecimal limitBalance = beforeUpdateAccount.getBalanceLimit();
 		BigDecimal userBalanceLimit = beforeUpdateAccount.getUserBalanceLimit();
-		int nofKeys = beforeUpdateAccount.getnOfKeys();
+		int nofKeys = beforeUpdateAccount.getNOfKeys();
 		
 		beforeUpdateAccount.setActiveBalance(new BigDecimal(-100.0));
 		beforeUpdateAccount.setEmail("newemail@mail.com");
@@ -208,7 +208,7 @@ public class ServerAccountServiceTest {
 		beforeUpdateAccount.setUrl("https://www.update.com");
 		beforeUpdateAccount.setBalanceLimit(new BigDecimal(100.0));
 		beforeUpdateAccount.setUserBalanceLimit(new BigDecimal(20.0));
-		beforeUpdateAccount.setnOfKeys(2);
+		beforeUpdateAccount.setNOfKeys(2);
 		
 		serverAccountService.updateAccount(url, beforeUpdateAccount);
 		ServerAccount afterUpdateAccount = serverAccountService.getByUrl(beforeUpdateAccount.getUrl());
@@ -236,7 +236,7 @@ public class ServerAccountServiceTest {
 		//user balance limit should change
 		assertFalse(userBalanceLimit.equals(afterUpdateAccount.getUserBalanceLimit()));
 		//nof keys should not change
-		assertEquals(nofKeys, afterUpdateAccount.getnOfKeys());
+		assertEquals(nofKeys, afterUpdateAccount.getNOfKeys());
 	}
 	
 	@Test
@@ -317,5 +317,15 @@ public class ServerAccountServiceTest {
 		boolean failed = serverAccountService.checkIfExistsByUrl(urlNotExisting);
 		
 		assertFalse(failed);
+	}
+	
+	@Test
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/userAccountServerAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	public void testGetUrlIgnoreCase(){
+		ServerAccount test = new ServerAccount("http://what_is.ch", "mail@mail.ch");
+		
+		boolean success = serverAccountService.checkIfExistsByUrl(test.getUrl());
+		
+		assertFalse(success==true);
 	}
 }
