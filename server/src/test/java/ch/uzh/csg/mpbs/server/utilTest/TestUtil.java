@@ -1,4 +1,4 @@
-package ch.uzh.csg.mpbs.server.controller;
+package ch.uzh.csg.mpbs.server.utilTest;
 
 import org.springframework.http.MediaType;
 
