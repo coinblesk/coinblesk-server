@@ -109,6 +109,7 @@ App.config(['$routeProvider', '$httpProvider', '$provide', function($routeProvid
   //sets a resource in the header of each request
   $httpProvider.defaults.useXDomain = true;
   $httpProvider.defaults.withCredentials = true;
+  delete $httpProvider.defaults.headers.common['X-Requested-With'];
   httpHeaders = $httpProvider.defaults.headers;
 }]);
 
