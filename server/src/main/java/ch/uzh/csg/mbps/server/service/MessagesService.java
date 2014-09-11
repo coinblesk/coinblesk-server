@@ -7,9 +7,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import ch.uzh.csg.mbps.server.clientinterface.IActivities;
 import ch.uzh.csg.mbps.server.clientinterface.IMessages;
 import ch.uzh.csg.mbps.server.dao.MessagesDAO;
 import ch.uzh.csg.mbps.server.domain.Messages;
+import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
+import ch.uzh.csg.mbps.server.util.Subjects;
 import ch.uzh.csg.mbps.server.util.exceptions.MessageNotFoundException;
 
 /**
@@ -22,10 +25,20 @@ public class MessagesService implements IMessages{
 	@Autowired
 	MessagesDAO messagesDAO;
 	
+	@Autowired
+	IActivities activitiesService;
+	
 	@Override
 	@Transactional
 	public boolean createMessage(Messages message) throws MessageNotFoundException{
-		return messagesDAO.createMessage(message);
+		boolean success =  messagesDAO.createMessage(message);
+		if(success){
+			activitiesService.activityLog(AuthenticationInfo.getPrincipalUsername(), Subjects.SUCCEDED_CREATE_MESSAGE, "Message with subject " + message.getSubject() +" is created");
+		} else {
+			activitiesService.activityLog(AuthenticationInfo.getPrincipalUsername(), Subjects.FAILED_CREATE_MESSAGE, "Message with subject " + message.getSubject() +" is failed");			
+		}
+		
+		return success;
 	}
 
 	@Override
@@ -76,9 +89,12 @@ public class MessagesService implements IMessages{
 	public boolean updatedMessagesAnswered(long id) throws MessageNotFoundException{
 		try {
 			Messages message = messagesDAO.updatedMessagesAnswered(id);
-			if (message == null)
+			if (message == null){				
+				activitiesService.activityLog(AuthenticationInfo.getPrincipalUsername(), Subjects.FAILED_ANSWERED_MESSAGE, "Message with id " + id + " could not be answered");
 				return false;
+			}
 			
+			activitiesService.activityLog(AuthenticationInfo.getPrincipalUsername(), Subjects.SUCCEDED_ANSWERED_MESSAGE, "Message with subject and date (" + message.getSubject() + ", " + message.getCreationDate() +") is answered");			
 			return true;
 		} catch (MessageNotFoundException e) {
 			throw new MessageNotFoundException(id);
