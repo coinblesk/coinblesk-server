@@ -10,6 +10,10 @@ import ch.uzh.csg.mbps.server.clientinterface.IActivities;
 import ch.uzh.csg.mbps.server.dao.ActivitiesDAO;
 import ch.uzh.csg.mbps.server.domain.Activities;
 
+/**
+ * Service class for {@link Activities}.
+ * 
+ */
 @Service
 public class ActivitiesService implements IActivities{
 	
