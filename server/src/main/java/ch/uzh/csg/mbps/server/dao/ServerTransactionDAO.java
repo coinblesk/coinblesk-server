@@ -85,7 +85,7 @@ public class ServerTransactionDAO {
 	}
 	
 	/**
-	 * Gets the number of {@link ServerTransaction}s with the server.
+	 * Gets the number of {@link ServerTransaction}s.
 	 * 
 	 * @return long number of transactions
 	 */
