@@ -119,5 +119,26 @@ public class ServerAccountTasksDAO {
 		}
 		return account;
 	}
+
+	/**
+	 * Gets all {@link ServerAccountTasks} by given parameter by type
+	 * @param type 
+	 * 
+	 * @return
+	 */
+	public List<ServerAccountTasks> getAllAccountTasksBySubject(int type) {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ServerAccountTasks> cq = cb.createQuery(ServerAccountTasks.class);
+		Root<ServerAccountTasks> root = cq.from(ServerAccountTasks.class);
+
+		Predicate condition = cb.equal(root.get("type"), type);
+		cq.where(condition);
+		
+		cq.orderBy(cb.desc(root.get("creationDate")));
+		List<ServerAccountTasks> resultWithAliasedBean = em.createQuery(cq)
+				.getResultList();
+
+		return resultWithAliasedBean;
+	}
 	
 }

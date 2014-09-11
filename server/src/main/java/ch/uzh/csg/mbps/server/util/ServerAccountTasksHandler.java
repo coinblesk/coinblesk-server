@@ -66,12 +66,12 @@ public class ServerAccountTasksHandler {
 				if(respString != null && respString.trim().length() > 0) {
 					csao.decode(respString);
 				} else {
-					//if response not correct store account into db for houtly tasks
+					//if response not correct store account into db for hourly tasks
 					if(serverAccountTasksService != null)
 						serverAccountTasksService.persistsCreateNewAccount(new ServerAccount(SecurityConfig.BASE_URL, user.getEmail()), url, email);
 				}
 			} catch (Exception e) {
-				//if response not correct store account into db for houtly tasks
+				//if response not correct store account into db for hourly tasks
 				if(serverAccountTasksService != null)
 					serverAccountTasksService.persistsCreateNewAccount(new ServerAccount(SecurityConfig.BASE_URL, user.getEmail()), url, email);
 				throw new Exception(e.getMessage());
@@ -79,7 +79,7 @@ public class ServerAccountTasksHandler {
 				resBody.close();
 			}
 		} catch (IOException e) {
-			//if response not correct store account into db for houtly tasks
+			//if response not correct store account into db for hourly tasks
 			if(serverAccountTasksService != null)
 				serverAccountTasksService.persistsCreateNewAccount(new ServerAccount(SecurityConfig.BASE_URL, user.getEmail()), url, email);
 			throw new IOException(e.getMessage());
@@ -90,8 +90,7 @@ public class ServerAccountTasksHandler {
 			if (url != csao.getUrl()) {
 				if (serverAccountTasksService != null)
 					serverAccountTasksService.persistsCreateNewAccount(
-							new ServerAccount(SecurityConfig.BASE_URL, user
-									.getEmail()), url, email);
+							new ServerAccount(SecurityConfig.BASE_URL, user.getEmail()), url, email);
 				throw new InvalidUrlException();
 			}
 			ServerAccount serverAccount = new ServerAccount(csao.getUrl(),email);
@@ -110,7 +109,7 @@ public class ServerAccountTasksHandler {
 			updatedPayoutAddress(csao.getUrl(), email, user,csao.getCustomPublicKey());
 			serverAccountTasksService.deleteCreateNewAccount(csao.getUrl());
 		}
-		activitiesService.activityLog(user.getUsername(), ActivitiesTitle.FAILED_CREATE_SERVER_ACCOUNT,"Failed to create a new relation with the server " + url + " and email " + email);
+		activitiesService.activityLog(user.getUsername(), Subjects.FAILED_CREATE_SERVER_ACCOUNT,"Failed to create a new relation with the server " + url + " and email " + email);
 	}
 	
 	
@@ -157,6 +156,6 @@ public class ServerAccountTasksHandler {
 			serverAccountService.updatePayOutAddress(responseAccount.getUrl(), responseAccount);
 		}					
 
-		activitiesService.activityLog(user.getUsername(), ActivitiesTitle.CREATE_SERVER_ACCOUNT,"Create a new relation with the server " + url + " and email " + email);
+		activitiesService.activityLog(user.getUsername(), Subjects.CREATE_SERVER_ACCOUNT,"Create a new relation with the server " + url + " and email " + email);
 	}
 }

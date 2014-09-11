@@ -9,8 +9,8 @@ public class Subjects {
 	public static final String CREATE_SERVER_ACCOUNT = "Create server account";
 	public static final String PERSIST_SERVER_ACCOUNT = "Create server account succeeded";
 	public static final String DECLINE_SERVER_ACCOUNT = "Create server account declined";
-	public static final String UPGRADE_TRUST_LEVEL = "Trust level updgraded";
-	public static final String DOWNGRADE_TRUST_LEVEL = "Trust level downgraded";
+	public static final String UPGRADE_TRUST_LEVEL = "Trust level updgrade";
+	public static final String DOWNGRADE_TRUST_LEVEL = "Trust level downgrade";
 	public static final String UPDATE_BALANCE_LIMIT = "Balance limit updated";
 	public static final String UPDATE_USER_BALANCE_LIMIT = "User balance limit updated";
 	public static final String REMOVE_SERVER_ACCOUNT = "Server account relation deleted";
@@ -26,4 +26,5 @@ public class Subjects {
 	public static final String SUCCEDED_CREATE_MESSAGE = "Message creation succeeded";
 	public static final String FAILED_ANSWERED_MESSAGE = "Message answer failed";
 	public static final String SUCCEDED_ANSWERED_MESSAGE = "Message answer succeeded";
+	public static final String FAILED_HOURLY_TASK = "Hourly task failed";
 }

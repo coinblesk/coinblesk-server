@@ -42,4 +42,8 @@ public interface IServerAccountTasks {
 	 */
 	public boolean checkIfExists(String url);
 
+	/**
+	 * This method is called by the HourlyTask to request failed request to create new Account
+	 */
+	public void processNewAccountTask();
 }
