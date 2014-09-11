@@ -1,5 +1,8 @@
 package ch.uzh.csg.mbps.server.service;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,14 +19,43 @@ import ch.uzh.csg.mbps.server.domain.Activities;
  */
 @Service
 public class ActivitiesService implements IActivities{
+	private static boolean TESTING_MODE = false;
 	
 	@Autowired
 	private ActivitiesDAO activitiesDAO;
 	
+	/**
+	 * Enables testing mode for JUnit Tests.
+	 */
+	public static void enableTestingMode() {
+		TESTING_MODE = true;
+	}
+	
+	public static boolean isTestingMode(){
+		return TESTING_MODE;
+	}
+
+	/**
+	 * Disables testing mode for JUnit Tests.
+	 */
+	public static void disableTestingMode() {
+		TESTING_MODE = false;
+	}
+	
 	@Override
 	@Transactional
-	public void activityLog (String username, String title, String message){
-		Activities activity = new Activities(username, title, message);
+	public void activityLog (String username, String subject, String message){
+		Activities activity = new Activities(username, subject, message);
+		if(isTestingMode()){			
+			String strDate = "2014-08-31 15:15:15.0";
+			Date date;
+			try {
+				date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(strDate);
+				activity.setCreationDate(date);
+			} catch (ParseException e) {
+				activity.setCreationDate(new Date());				
+			}
+		}
 		activitiesDAO.createActivityLog(activity);
 	}
 	

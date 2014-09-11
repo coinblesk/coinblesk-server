@@ -27,7 +27,7 @@ public class Activities {
 	private String subject;
 	@Column(name = "MESSAGE")
 	private String message;
-	@Column(name = "CREATIONDATE", nullable = false)
+	@Column(name = "CREATION_DATE", nullable = false)
 	private Date creationDate;
 
 	public Activities() {
@@ -71,6 +71,10 @@ public class Activities {
 
 	public void setMessage(String message) {
 		this.message = message;
+	}
+
+	public void setCreationDate(Date date) {
+		this.creationDate = date;
 	}
 
 	public Date getCreationDate() {
