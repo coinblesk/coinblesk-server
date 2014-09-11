@@ -497,4 +497,26 @@ public class UserAccountDAO {
 
 		return resultWithAliasedBean;
 	}
+
+	public String getAdminEmail() {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<String> cq = cb.createQuery(String.class);
+		Root<UserAccount> root = cq.from(UserAccount.class);
+		cq.select(cb.construct(String.class, root.get("email")));
+		
+		Predicate condition1 = cb.equal(root.get("roles"), Role.ADMIN.getCode());
+		Predicate condition2 = cb.equal(root.get("roles"), Role.BOTH.getCode());
+		Predicate condition3 = cb.equal(root.get("deleted"), false);
+		
+		Predicate condition4 = cb.or(condition1, condition2);
+		Predicate condition5 = cb.and(condition3, condition4);
+		cq.where(condition5);
+		
+		cq.orderBy(cb.asc(root.get("id")));
+		
+		System.out.println("***************** " + cq.toString());
+		String resultWithAliasedBean = em.createQuery(cq).getSingleResult();
+		
+		return resultWithAliasedBean;
+	}
 }
