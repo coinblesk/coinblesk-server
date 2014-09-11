@@ -18,7 +18,7 @@ import ch.uzh.csg.mbps.server.dao.ServerPublicKeyDAO;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
-import ch.uzh.csg.mbps.server.util.ActivitiesTitle;
+import ch.uzh.csg.mbps.server.util.Subjects;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Config;
@@ -98,7 +98,7 @@ public class ServerAccountService implements IServerAccount {
 			throw new InvalidEmailException();
 		
 		if(!TESTING_MODE)
-			activitiesService.activityLog(user.getUsername(), ActivitiesTitle.CREATE_SERVER_ACCOUNT,"Create a new relation with the server " + otherUrl + " and email " + otherEmail);
+			activitiesService.activityLog(user.getUsername(), Subjects.CREATE_SERVER_ACCOUNT,"Create a new relation with the server " + otherUrl + " and email " + otherEmail);
 		
 		return serverAccount;
 	}
@@ -173,7 +173,7 @@ public class ServerAccountService implements IServerAccount {
 			return false;
 		}
 		if(!TESTING_MODE)
-			activitiesService.activityLog("n.V.", ActivitiesTitle.CREATE_SERVER_ACCOUNT,"Create a new relation with the server " + url + " and email " + email);
+			activitiesService.activityLog("n.V.", Subjects.CREATE_SERVER_ACCOUNT,"Create a new relation with the server " + url + " and email " + email);
 	
 		return true;
 	}
@@ -214,31 +214,31 @@ public class ServerAccountService implements IServerAccount {
 		}
 		
 		if (updatedAccount.getEmail() != null && !updatedAccount.getEmail().isEmpty()){			
-			title = ActivitiesTitle.UPDATE_EMAIL;
+			title = Subjects.UPDATE_EMAIL;
 			message = "Email is updated to " + updatedAccount.getEmail();
 			serverAccount.setEmail(updatedAccount.getEmail());
 		}
 		
 		if (updatedAccount.getUrl() != null && !updatedAccount.getUrl().isEmpty()){
-			title = ActivitiesTitle.UPDATE_URL;
+			title = Subjects.UPDATE_URL;
 			message = "URL is updated to " + updatedAccount.getUrl();			
 			serverAccount.setUrl(updatedAccount.getUrl());
 		}
 		
 		if (updatedAccount.getTrustLevel() != serverAccount.getTrustLevel()){
-			title = ActivitiesTitle.UPGRADE_TRUST_LEVEL;
+			title = Subjects.UPGRADE_TRUST_LEVEL;
 			message = "Trust level is updated to " + updatedAccount.getTrustLevel();			
 			serverAccount.setTrustLevel(updatedAccount.getTrustLevel());
 		}
 
 		if (updatedAccount.getBalanceLimit() != serverAccount.getBalanceLimit()){			
-			title = ActivitiesTitle.UPDATE_BALANCE_LIMIT;
+			title = Subjects.UPDATE_BALANCE_LIMIT;
 			message = "Balance limit is updated to " + updatedAccount.getBalanceLimit();
 			serverAccount.setBalanceLimit(updatedAccount.getBalanceLimit());
 		}
 		
 		if (updatedAccount.getUserBalanceLimit() != serverAccount.getUserBalanceLimit()){
-			title = ActivitiesTitle.UPDATE_USER_BALANCE_LIMIT;
+			title = Subjects.UPDATE_USER_BALANCE_LIMIT;
 			message = "User balance limit is updated to " + updatedAccount.getUserBalanceLimit();			
 			serverAccount.setUserBalanceLimit(updatedAccount.getUserBalanceLimit());
 		}
@@ -263,7 +263,7 @@ public class ServerAccountService implements IServerAccount {
 			} catch (UserAccountNotFoundException e) {
 				username = "n.V.";
 			}
-			activitiesService.activityLog(username, ActivitiesTitle.DELETE_ACCOUNT, "The server account "+ url +" is deleted.");
+			activitiesService.activityLog(username, Subjects.DELETE_ACCOUNT, "The server account "+ url +" is deleted.");
 		}
 		return success;
 	}
@@ -353,7 +353,7 @@ public class ServerAccountService implements IServerAccount {
 		
 		if (updatedAccount.getPayoutAddress() != null && !updatedAccount.getPayoutAddress().isEmpty() && 
 				!updatedAccount.getPayoutAddress().equals(payaoutAddress)){
-			title = ActivitiesTitle.UPDATE_BALANCE_LIMIT;
+			title = Subjects.UPDATE_BALANCE_LIMIT;
 			message = "PayoutAddress is updated from  limit is updated to " + updatedAccount.getBalanceLimit();
 			serverAccount.setPayoutAddress(updatedAccount.getPayoutAddress());
 		}

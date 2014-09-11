@@ -16,7 +16,7 @@ import ch.uzh.csg.mbps.server.dao.ServerPayOutTransactionDAO;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.ServerPayOutTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
-import ch.uzh.csg.mbps.server.util.ActivitiesTitle;
+import ch.uzh.csg.mbps.server.util.Subjects;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Config;
@@ -69,7 +69,7 @@ public class ServerPayOutTransactionService implements IServerPayOutTransaction 
 				spot.setAmount(payOutAmount);
 			} else {
 				if(!testingMode)
-					activitiesService.activityLog(user.getUsername(), ActivitiesTitle.PAYOUT_ERROR_BALANCE, "Balance too low to pay out to " + serverAccount.getUrl()+" amount " + payOutAmount);
+					activitiesService.activityLog(user.getUsername(), Subjects.PAYOUT_ERROR_BALANCE, "Balance too low to pay out to " + serverAccount.getUrl()+" amount " + payOutAmount);
 			}
 		}
 		
@@ -85,15 +85,15 @@ public class ServerPayOutTransactionService implements IServerPayOutTransaction 
 				//write payOut to DB
 				serverPayOutTransactionDAO.createPayOutTransaction(spot);
 				if(!testingMode)
-					activitiesService.activityLog(user.getUsername(), ActivitiesTitle.PAYOUT_SUCCEED, "Pay out succeded to " + serverAccount.getUrl()+" amount: "+spot.getAmount() +" , address " + spot.getPayoutAddress());
+					activitiesService.activityLog(user.getUsername(), Subjects.PAYOUT_SUCCEED, "Pay out succeded to " + serverAccount.getUrl()+" amount: "+spot.getAmount() +" , address " + spot.getPayoutAddress());
 			} else {
 				if(!testingMode)
-					activitiesService.activityLog(user.getUsername(), ActivitiesTitle.PAYOUT_ERROR_ADDRESS, "Invalid address to pay out to " + serverAccount.getUrl()+" amount: "+spot.getAmount() +" , address " + spot.getPayoutAddress());
+					activitiesService.activityLog(user.getUsername(), Subjects.PAYOUT_ERROR_ADDRESS, "Invalid address to pay out to " + serverAccount.getUrl()+" amount: "+spot.getAmount() +" , address " + spot.getPayoutAddress());
 				
 			}
 		} else{
 			if(!testingMode)
-				activitiesService.activityLog(user.getUsername(), ActivitiesTitle.PAYOUT_ERROR_BALANCE, "Balance lower than specified amount too low to pay out to " + serverAccount.getUrl()+spot.getAmount() +" , address " + spot.getPayoutAddress());
+				activitiesService.activityLog(user.getUsername(), Subjects.PAYOUT_ERROR_BALANCE, "Balance lower than specified amount too low to pay out to " + serverAccount.getUrl()+spot.getAmount() +" , address " + spot.getPayoutAddress());
 		}
 	}
 	
