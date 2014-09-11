@@ -22,7 +22,7 @@ import ch.uzh.csg.mbps.server.util.Config;
 @Repository
 public class ActivitiesDAO {
 
-private static Logger LOGGER = Logger.getLogger(ActivitiesDAO.class);
+	private static Logger LOGGER = Logger.getLogger(ActivitiesDAO.class);
 
 	@PersistenceContext
 	private EntityManager em;
@@ -33,7 +33,7 @@ private static Logger LOGGER = Logger.getLogger(ActivitiesDAO.class);
 	 */
 	public void createActivityLog(Activities activity) {
 		em.merge(activity);
-		LOGGER.info("Activity created by user " + activity.getUsername()+ " title: " + activity.getTitle());
+		LOGGER.info("Activity created by user " + activity.getUsername()+ " title: " + activity.getSubject());
 	}
 	
 	/**

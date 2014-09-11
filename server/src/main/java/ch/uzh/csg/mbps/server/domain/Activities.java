@@ -12,7 +12,8 @@ import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
 @Entity
-@Table(name = "ACTIVITIES", indexes = {@Index(name = "USERNAME_INDEX",  columnList="USERNAME")})
+@Table(name = "ACTIVITIES", indexes = {
+		@Index(name = "USERNAME_INDEX",  columnList="USERNAME")})
 public class Activities {
 
 	@Id
@@ -22,8 +23,8 @@ public class Activities {
 	private long id;
 	@Column(name = "USERNAME")
 	private String username;
-	@Column(name = "TITLE")
-	private String title;
+	@Column(name = "SUBJECT")
+	private String subject;
 	@Column(name = "MESSAGE")
 	private String message;
 	@Column(name = "CREATIONDATE", nullable = false)
@@ -33,9 +34,9 @@ public class Activities {
 		this.creationDate = new Date();
 	}
 
-	public Activities(String Username, String title, String message) {
+	public Activities(String Username, String subject, String message) {
 		this.username = Username;
-		this.title = title;
+		this.subject = subject;
 		this.message = message;
 		this.creationDate = new Date();
 	}
@@ -56,12 +57,12 @@ public class Activities {
 		this.username = username;
 	}
 
-	public String getTitle() {
-		return title;
+	public String getSubject() {
+		return subject;
 	}
 
-	public void setTitle(String title) {
-		this.title = title;
+	public void setTitle(String subject) {
+		this.subject = subject;
 	}
 	
 	public String getMessage() {
@@ -83,8 +84,8 @@ public class Activities {
 		sb.append(getId());
 		sb.append(" username: ");
 		sb.append(getUsername());
-		sb.append(" title: ");
-		sb.append(getTitle());
+		sb.append(" subject: ");
+		sb.append(getSubject());
 		sb.append(" Message: ");
 		sb.append(getMessage());
 		sb.append(" creation date: ");
