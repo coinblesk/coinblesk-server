@@ -20,6 +20,7 @@ public class Config {
 	public static final int PAY_OUTS_MAX_RESULTS = 50;
 	public static final int SEREVER_TRANSACTION_MAX_RESULTS = 50;
 	public static final int ACTIVITIES_MAX_RESULTS = 50;
+	public static final int MESSAGES_MAX_RESULTS = 50;
 	
 	//Reset Password Settings
 	public static final int DELETE_TOKEN_LIMIT = 86400000; //limit when to delete old tokens in seconds (1 day)
