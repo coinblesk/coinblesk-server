@@ -12,7 +12,7 @@ public interface IActivities {
 	 * @param title
 	 * @param message
 	 */
-	public void activityLog(String username, String title, String message);
+	public void activityLog(String username, String subject, String message);
 
 	/**
 	 * Returns log activities order by timestamp (desc)
