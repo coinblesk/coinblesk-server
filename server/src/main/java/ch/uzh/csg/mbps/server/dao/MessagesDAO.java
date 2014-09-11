@@ -193,10 +193,10 @@ public class MessagesDAO {
 	 * @return boolean
 	 * @throws MessageNotFoundException 
 	 */
-	public Messages updatedMessagesAnswered(long id) throws MessageNotFoundException{
+	public Messages updatedMessagesAnswered(long id, boolean answered, Date date) throws MessageNotFoundException{
 		Messages message = getMessageById(id);
-		message.setAnswered(true);
-		message.setAnsweredDate(new Date());
+		message.setAnswered(answered);
+		message.setAnsweredDate(date);
 		em.merge(message);
 		return message;
 	}
@@ -237,7 +237,7 @@ public class MessagesDAO {
 		CriteriaQuery<Messages> cq = cb.createQuery(Messages.class);
 		Root<Messages> root = cq.from(Messages.class);
 		
-		Predicate condition1 = cb.equal(root.get("date"), date);
+		Predicate condition1 = cb.equal(root.get("creationDate"), date);
 		Predicate condition2 = cb.equal(root.get("subject"), subject);
 		Predicate condition3 = cb.and(condition1, condition2);
 		cq.where(condition3);

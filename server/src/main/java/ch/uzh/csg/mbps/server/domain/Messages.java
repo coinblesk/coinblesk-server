@@ -41,11 +41,10 @@ public class Messages {
 	}
 	
 	public Messages(String subject, String message, String url){
+		super();
 		this.subject = subject;
 		this.message = message;
 		this.serverUrl = url;
-		this.creationDate = new Date();
-		this.answered = false;
 	}
 
 	public long getId() {

@@ -1,5 +1,7 @@
 package ch.uzh.csg.mbps.server.service;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
@@ -21,24 +23,86 @@ import ch.uzh.csg.mbps.server.util.exceptions.MessageNotFoundException;
  */
 @Service
 public class MessagesService implements IMessages{
-
+	private static boolean TESTING_MODE = false;
+	
 	@Autowired
 	MessagesDAO messagesDAO;
 	
 	@Autowired
 	IActivities activitiesService;
 	
+	/**
+	 * Enables testing mode for JUnit Tests.
+	 */
+	public static void enableTestingMode() {
+		TESTING_MODE = true;
+	}
+	
+	public static boolean isTestingMode(){
+		return TESTING_MODE;
+	}
+
+	/**
+	 * Disables testing mode for JUnit Tests.
+	 */
+	public static void disableTestingMode() {
+		TESTING_MODE = false;
+	}
+	
 	@Override
 	@Transactional
 	public boolean createMessage(Messages message) throws MessageNotFoundException{
+		if(isTestingMode()){			
+			String strDate = "2014-08-31 15:15:15";
+			Date date = new Date();
+			try {
+				date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(strDate);
+			} catch (ParseException e) {
+				//ignored
+			}
+			
+			message.setCreationDate(date);
+		}
+				
 		boolean success =  messagesDAO.createMessage(message);
-		if(success){
-			activitiesService.activityLog(AuthenticationInfo.getPrincipalUsername(), Subjects.SUCCEDED_CREATE_MESSAGE, "Message with subject " + message.getSubject() +" is created");
-		} else {
-			activitiesService.activityLog(AuthenticationInfo.getPrincipalUsername(), Subjects.FAILED_CREATE_MESSAGE, "Message with subject " + message.getSubject() +" is failed");			
+		
+		if(!isTestingMode()){			
+			if(success){
+				activitiesService.activityLog(AuthenticationInfo.getPrincipalUsername(), Subjects.SUCCEDED_CREATE_MESSAGE, "Message with subject " + message.getSubject() +" is created");
+			} else {
+				activitiesService.activityLog(AuthenticationInfo.getPrincipalUsername(), Subjects.FAILED_CREATE_MESSAGE, "Message with subject " + message.getSubject() +" is failed");			
+			}
 		}
 		
 		return success;
+	}
+
+	@Override
+	@Transactional
+	public boolean updatedMessagesAnswered(long id) throws MessageNotFoundException{
+		Date date = new Date();
+		try {
+			if(isTestingMode()){			
+				String strDate = "2014-08-31 15:15:15";
+				try {
+					date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(strDate);
+				} catch (ParseException e) {
+					//ignored
+				}	
+			}				
+			Messages message = messagesDAO.updatedMessagesAnswered(id, true, date);
+			
+			if (message == null){
+				if(!isTestingMode())
+					activitiesService.activityLog(AuthenticationInfo.getPrincipalUsername(), Subjects.FAILED_ANSWERED_MESSAGE, "Message with id " + id + " could not be answered");
+				return false;
+			}
+			if(!isTestingMode())
+				activitiesService.activityLog(AuthenticationInfo.getPrincipalUsername(), Subjects.SUCCEDED_ANSWERED_MESSAGE, "Message with subject and date (" + message.getSubject() + ", " + message.getCreationDate() +") is answered");			
+			return true;
+		} catch (MessageNotFoundException e) {
+			throw new MessageNotFoundException(id);
+		}
 	}
 
 	@Override
@@ -84,22 +148,6 @@ public class MessagesService implements IMessages{
 		return messagesDAO.getAnsweredMessagesCount();		
 	}
 	
-	@Override
-	@Transactional
-	public boolean updatedMessagesAnswered(long id) throws MessageNotFoundException{
-		try {
-			Messages message = messagesDAO.updatedMessagesAnswered(id);
-			if (message == null){				
-				activitiesService.activityLog(AuthenticationInfo.getPrincipalUsername(), Subjects.FAILED_ANSWERED_MESSAGE, "Message with id " + id + " could not be answered");
-				return false;
-			}
-			
-			activitiesService.activityLog(AuthenticationInfo.getPrincipalUsername(), Subjects.SUCCEDED_ANSWERED_MESSAGE, "Message with subject and date (" + message.getSubject() + ", " + message.getCreationDate() +") is answered");			
-			return true;
-		} catch (MessageNotFoundException e) {
-			throw new MessageNotFoundException(id);
-		}
-	}
 	
 	@Override
 	@Transactional(readOnly=true)
