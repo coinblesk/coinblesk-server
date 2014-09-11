@@ -20,7 +20,7 @@ public class ServerPublicKey implements Serializable{
 	private static final long serialVersionUID = 6501617333724668051L;
 
 	@Id
-	@SequenceGenerator(name="pk_sequence", sequenceName="user_public_key_id_seq", allocationSize=1)
+	@SequenceGenerator(name="pk_sequence", sequenceName="server_public_key_id_seq", allocationSize=1)
 	@GeneratedValue(strategy=GenerationType.SEQUENCE, generator="pk_sequence")
 	@Column(name = "ID", nullable = false)
 	private long id;
