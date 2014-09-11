@@ -109,14 +109,6 @@ public interface IServerAccount {
 	 */
 	public boolean checkPredefinedDeleteArguments(String url) throws ServerAccountNotFoundException, BalanceNotZeroException, HibernateException;
 
-	/**
-	 * 
-	 * @param url
-	 * @param oldLevel
-	 * @param newLevel
-	 * @throws ServerAccountNotFoundException
-	 */
-	public void updateTrustLevel(String url, int oldLevel, int newLevel) throws ServerAccountNotFoundException;
 
 	/**
 	 * Stores own url, email and public key and creates a 
@@ -182,4 +174,21 @@ public interface IServerAccount {
 	 * @throws ServerAccountNotFoundException
 	 */
 	public void undeleteServerAccountById(Long id) throws ServerAccountNotFoundException;
+
+	/**
+	 * Updates the payoutaddress
+	 * 
+	 * @param url
+	 * @param updatedAccount
+	 * @throws ServerAccountNotFoundException
+	 */
+	public void updatePayOutAddress(String url, ServerAccount updatedAccount) throws ServerAccountNotFoundException;
+
+	/**
+	 * 
+	 * @param url
+	 * @param newLevel
+	 * @throws ServerAccountNotFoundException
+	 */
+	public void updateTrustLevel(String url, int newLevel) throws ServerAccountNotFoundException;
 }
