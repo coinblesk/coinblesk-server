@@ -405,10 +405,6 @@ public class ServerAccountDAO {
 	 */
 	public boolean checkPredefinedDeleteArguments(String url) throws ServerAccountNotFoundException, BalanceNotZeroException {
 		ServerAccount serverAccount = getByUrl(url);
-		
-		//TODO: mehmet check Trust Level
-		// Hyprid: escrow account
-		
 		if(serverAccount.getActiveBalance().compareTo(BigDecimal.ZERO)==0 && serverAccount.getTrustLevel() == 0){
 			return true;
 		}

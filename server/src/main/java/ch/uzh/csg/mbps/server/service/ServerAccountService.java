@@ -10,9 +10,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.server.clientinterface.IActivities;
 import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
 import ch.uzh.csg.mbps.server.dao.ServerAccountDAO;
+import ch.uzh.csg.mbps.server.dao.ServerPublicKeyDAO;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
@@ -42,12 +44,14 @@ public class ServerAccountService implements IServerAccount {
 	
 	@Autowired
 	private ServerAccountDAO serverAccountDAO;
-	
 	@Autowired
 	private UserAccountDAO userAccountDAO;
-	
+	@Autowired
+	private ServerPublicKeyDAO serverPublicKeyDAO;
 	@Autowired
 	private IActivities activitiesService;
+	
+	
 	
 	/**
 	 * Enables testing mode for JUnit Tests.
@@ -130,7 +134,10 @@ public class ServerAccountService implements IServerAccount {
 	 * @throws InvalidEmailException
 	 * @throws InvalidPublicKeyException 
 	 */
-	private boolean createAccount(ServerAccount serverAccount, String payinAddress, Date date) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException {
+	private boolean createAccount(ServerAccount serverAccount, String payinAddress, Date date) throws UrlAlreadyExistsException, InvalidUrlException, InvalidEmailException {
+		if(serverAccount.getUrl() == null)
+			throw new InvalidUrlException();
+
 		serverAccount.setUrl(serverAccount.getUrl().trim());
 		String url = serverAccount.getUrl();
 		String email = serverAccount.getEmail();
@@ -141,7 +148,7 @@ public class ServerAccountService implements IServerAccount {
 		if (email == null)
 			throw new InvalidEmailException();
 		
-		if (!url.matches(Config.URL_REGEX))
+		if (!url.matches(Config.URL_NAME_REGEX))
 			throw new InvalidUrlException();
 		
 		if (!email.matches(Config.EMAIL_REGEX))
@@ -157,7 +164,7 @@ public class ServerAccountService implements IServerAccount {
 		
 		serverAccount = new ServerAccount(serverAccount.getUrl(), serverAccount.getEmail());
 		
-		serverAccount.setPayoutAddress(payinAddress);
+		serverAccount.setPayinAddress(payinAddress);
 		serverAccount.setCreationDate(date);
 
 		try {
@@ -196,63 +203,51 @@ public class ServerAccountService implements IServerAccount {
 	@Transactional
 	public boolean updateAccount(String url, ServerAccount updatedAccount) throws ServerAccountNotFoundException {
 		ServerAccount serverAccount = getByUrl(url);
+		String title = "";
+		String message = "";
+		String username;
+		try {
+			UserAccount user = userAccountDAO.getByUsername(AuthenticationInfo.getPrincipalUsername());
+			username = user.getUsername();
+		} catch (UserAccountNotFoundException e) {
+			username = "n.V.";
+		}
 		
-		if (updatedAccount.getEmail() != null && !updatedAccount.getEmail().isEmpty())
+		if (updatedAccount.getEmail() != null && !updatedAccount.getEmail().isEmpty()){			
+			title = ActivitiesTitle.UPDATE_EMAIL;
+			message = "Email is updated to " + updatedAccount.getEmail();
 			serverAccount.setEmail(updatedAccount.getEmail());
+		}
 		
-		if (updatedAccount.getUrl() != null && !updatedAccount.getUrl().isEmpty())
+		if (updatedAccount.getUrl() != null && !updatedAccount.getUrl().isEmpty()){
+			title = ActivitiesTitle.UPDATE_URL;
+			message = "URL is updated to " + updatedAccount.getUrl();			
 			serverAccount.setUrl(updatedAccount.getUrl());
+		}
 		
-		if (updatedAccount.getTrustLevel() != serverAccount.getTrustLevel())
+		if (updatedAccount.getTrustLevel() != serverAccount.getTrustLevel()){
+			title = ActivitiesTitle.UPGRADE_TRUST_LEVEL;
+			message = "Trust level is updated to " + updatedAccount.getTrustLevel();			
 			serverAccount.setTrustLevel(updatedAccount.getTrustLevel());
+		}
 
-		if (updatedAccount.getBalanceLimit() != serverAccount.getBalanceLimit())
+		if (updatedAccount.getBalanceLimit() != serverAccount.getBalanceLimit()){			
+			title = ActivitiesTitle.UPDATE_BALANCE_LIMIT;
+			message = "Balance limit is updated to " + updatedAccount.getBalanceLimit();
 			serverAccount.setBalanceLimit(updatedAccount.getBalanceLimit());
+		}
 		
-		if (updatedAccount.getUserBalanceLimit() != serverAccount.getUserBalanceLimit())
+		if (updatedAccount.getUserBalanceLimit() != serverAccount.getUserBalanceLimit()){
+			title = ActivitiesTitle.UPDATE_USER_BALANCE_LIMIT;
+			message = "User balance limit is updated to " + updatedAccount.getUserBalanceLimit();			
 			serverAccount.setUserBalanceLimit(updatedAccount.getUserBalanceLimit());
+		}
 		
 		serverAccountDAO.updatedAccount(serverAccount);
 
-		if(!TESTING_MODE){
-			String title = "";
-			String message = "";
-			String username;
-			try {
-				UserAccount user = userAccountDAO.getByUsername(AuthenticationInfo.getPrincipalUsername());
-				username = user.getUsername();
-			} catch (UserAccountNotFoundException e) {
-				username = "n.V.";
-			}
-		
-			if (updatedAccount.getEmail() != null && !updatedAccount.getEmail().isEmpty()){
-				title = ActivitiesTitle.UPDATE_EMAIL;
-				message = "Email is updated to " + updatedAccount.getEmail();
-			}
-				
-			if (updatedAccount.getUrl() != null && !updatedAccount.getUrl().isEmpty()){
-				title = ActivitiesTitle.UPDATE_URL;
-				message = "URL is updated to " + updatedAccount.getUrl();
-			}
-				
-			if (updatedAccount.getTrustLevel() != serverAccount.getTrustLevel()){
-				title = ActivitiesTitle.UPGRADE_TRUST_LEVEL;
-				message = "Trust level is updated to " + updatedAccount.getTrustLevel();
-			}
-					
-			if (updatedAccount.getBalanceLimit() != serverAccount.getBalanceLimit()){
-				title = ActivitiesTitle.UPDATE_BALANCE_LIMIT;
-				message = "Balance limit is updated to " + updatedAccount.getBalanceLimit();
-			}
-			
-			
-			if (updatedAccount.getUserBalanceLimit() != serverAccount.getUserBalanceLimit()){
-				title = ActivitiesTitle.UPDATE_USER_BALANCE_LIMIT;
-				message = "User balance limit is updated to " + updatedAccount.getUserBalanceLimit();
-			}
-			
+		if(!TESTING_MODE)
 			activitiesService.activityLog(username, title, message);
-		}
+
 		return true;
 	}
 
@@ -315,11 +310,58 @@ public class ServerAccountService implements IServerAccount {
 		return serverAccountDAO.isDeletedById(id);
 	}
 
-	//TODO: mehmet
-	
 	@Override
 	@Transactional
-	public void updateTrustLevel(String url, int oldLevel, int newLevel) throws ServerAccountNotFoundException {
-		//TODO: check if upgrade or downgrade
+	public byte saveServerPublicKey(long serverId, PKIAlgorithm algorithm, String publicKey) throws UserAccountNotFoundException, ServerAccountNotFoundException {
+		return serverPublicKeyDAO.saveUserPublicKey(serverId, algorithm, publicKey);
 	}
+
+	@Override
+	public void undeleteServerAccountByUrl(String url) throws ServerAccountNotFoundException {
+		ServerAccount account = serverAccountDAO.getByUrlIgnoreDelete(url);
+		serverAccountDAO.undeleteServerAccount(account);
+	}
+	
+	@Override
+	public void undeleteServerAccountById(Long id) throws ServerAccountNotFoundException {
+		ServerAccount account = serverAccountDAO.getByIdIgnoreDelete(id);
+		serverAccountDAO.undeleteServerAccount(account);
+	}
+
+	@Override
+	@Transactional
+	public void updateTrustLevel(String url, int newLevel) throws ServerAccountNotFoundException {
+		ServerAccount updatedAccount = new ServerAccount();
+		updatedAccount.setTrustLevel(newLevel);
+		updateAccount(url, updatedAccount);
+	}
+
+	@Override
+	@Transactional
+	public void updatePayOutAddress(String url, ServerAccount updatedAccount) throws ServerAccountNotFoundException {
+		ServerAccount serverAccount = getByUrl(url);
+		String payaoutAddress = serverAccount.getPayoutAddress() != null ? serverAccount.getPayoutAddress() : "";
+		String title = "";
+		String message = "";
+		String username;
+		try {
+			UserAccount user = userAccountDAO.getByUsername(AuthenticationInfo.getPrincipalUsername());
+			username = user.getUsername();
+		} catch (UserAccountNotFoundException e) {
+			username = "n.V.";
+		}
+		
+		if (updatedAccount.getPayoutAddress() != null && !updatedAccount.getPayoutAddress().isEmpty() && 
+				!updatedAccount.getPayoutAddress().equals(payaoutAddress)){
+			title = ActivitiesTitle.UPDATE_BALANCE_LIMIT;
+			message = "PayoutAddress is updated from  limit is updated to " + updatedAccount.getBalanceLimit();
+			serverAccount.setPayoutAddress(updatedAccount.getPayoutAddress());
+		}
+		
+		if(!TESTING_MODE){
+			activitiesService.activityLog(username, title, message);
+		}
+	}
+
+	
 }
