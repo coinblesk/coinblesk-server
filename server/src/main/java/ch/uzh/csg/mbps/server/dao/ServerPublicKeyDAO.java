@@ -44,10 +44,8 @@ public class ServerPublicKeyDAO {
 	 */
 	public byte saveUserPublicKey(long serverId, PKIAlgorithm algorithm, String publicKey) throws ServerAccountNotFoundException {
 		ServerAccount accountFromDB = serverAccountDAO.getById(serverId);
-		//TODO: 
-//		byte newKeyNumber = (byte) (accountFromDB.getNofKeys()+1);
-//		accountFromDB.setNofKeys(newKeyNumber);
-		byte newKeyNumber  = 1;
+		byte newKeyNumber = (byte) (accountFromDB.getNOfKeys()+1);
+		accountFromDB.setNOfKeys(newKeyNumber);
 		ServerPublicKey toSave = new ServerPublicKey(serverId, newKeyNumber, algorithm.getCode(), publicKey);
 		em.merge(accountFromDB);
 		em.persist(toSave);
