@@ -12,7 +12,9 @@ import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
 @Entity
-@Table(name = "MESSAGES", indexes = {@Index(name = "SERVER_URL_MSG_INDEX",  columnList="SERVER_URL"), @Index(name = "ANSWERED_INDEX",  columnList="ANSWERED")})
+@Table(name = "MESSAGES", indexes = {
+		@Index(name = "SERVER_URL_MSG_INDEX",  columnList="SERVER_URL"), 
+		@Index(name = "ANSWERED_INDEX",  columnList="ANSWERED")})
 public class Messages {
 
 	@Id
@@ -26,13 +28,15 @@ public class Messages {
 	private String message;
 	@Column(name = "SERVER_URL")
 	private String serverUrl;
-	@Column(name = "TIMESTAMP", nullable = false)
-	private Date timestamp;
+	@Column(name = "CREATION_DATE", nullable = false)
+	private Date creationDate;
+	@Column(name = "ANSWERED_DATE")
+	private Date answeredDate;
 	@Column(name = "ANSWERED", nullable = false)
 	boolean answered;
 
 	public Messages(){
-		this.timestamp = new Date();
+		this.creationDate = new Date();
 		this.answered = false;
 	}
 	
@@ -40,7 +44,7 @@ public class Messages {
 		this.subject = subject;
 		this.message = message;
 		this.serverUrl = url;
-		this.timestamp = new Date();
+		this.creationDate = new Date();
 		this.answered = false;
 	}
 
@@ -76,12 +80,20 @@ public class Messages {
 		this.serverUrl = url;
 	}
 	
-	public Date getTimestamp() {
-		return timestamp;
+	public Date getCreationDate() {
+		return creationDate;
 	}
 	
-	public void setTimestamp(Date timestamp) {
-		this.timestamp = timestamp;
+	public void setCreationDate(Date creationDate) {
+		this.creationDate = creationDate;
+	}
+
+	public Date getAnsweredDate() {
+		return answeredDate;
+	}
+	
+	public void setAnsweredDate(Date answeredDate) {
+		this.answeredDate = answeredDate;
 	}
 	
 	public boolean getAnswered() {
@@ -103,8 +115,10 @@ public class Messages {
 		sb.append(getMessage());
 		sb.append(" Server URL: ");
 		sb.append(getServerUrl());
-		sb.append(" timestamp: ");
-		sb.append(getTimestamp());
+		sb.append(" creation date: ");
+		sb.append(getCreationDate());
+		sb.append(" answered date: ");
+		sb.append(getAnsweredDate());
 		sb.append(" answered: ");
 		sb.append(getAnswered());
 		return sb.toString();
