@@ -12,6 +12,10 @@ import ch.uzh.csg.mbps.server.domain.ServerTransaction;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction;
 
+/**
+ * Service class for {@link ServerTransaction}s.
+ * 
+ */
 @Service
 public class ServerTransactionService implements IServerTransaction{
 	
@@ -23,8 +27,6 @@ public class ServerTransactionService implements IServerTransaction{
 
 	@Autowired
 	private ServerTransactionDAO serverTransactionDAO;
-	
-	//TODO: mehmet: javadoc
 	
 	@Override
 	@Transactional
