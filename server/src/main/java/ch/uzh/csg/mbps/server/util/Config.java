@@ -46,7 +46,7 @@ public class Config {
 //	public static final String IP_REGEX ="/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/";
 	// Exchange Rate Provicer Settings
 	// 1 for MtGox, 2 for Bitstamp
-	public static final int EXCHANGE_RATE_PROVIDER = 2;
+	public static final int EXCHANGE_RATE_PROVIDER = 1;
 	public static final int EXCHANGE_RATE_CACHE_TIME = 10000; //time for which exchange rate is cached in ms
 	public static final int EXCHANGE_RATE_UPDATE_TIME = 5; //update time in s
 	
@@ -74,10 +74,12 @@ public class Config {
 	public static final String DOWNGRADE_TRUST = "/communication/downgradeTrustLevel";
 	public static final String UPGRADE_TRUST = "/communication/upgradeTrustLevel";
 	public static final String DELETE_ACCOUNT ="/communication/deletedAccount";
-
-
+	public static final String CREATE_NEW_SERVER = "/communication/createNewAccount";
+	public static final String CREATE_NEW_SERVER_PUBLIC_KEY = "/communication/createNewAccountData";
 	
 	public static final String NOT_AVAILABLE = "n.A.";
+
+
 
 
 }
