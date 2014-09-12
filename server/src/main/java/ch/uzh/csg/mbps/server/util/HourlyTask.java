@@ -42,6 +42,8 @@ public class HourlyTask {
 		updateUsdChf();
 
 		//TODO: mehmet include server payout rules hourly task
+		//TODO: mehmet include createnewaccount
+		//TODO: mehmet include upgrade of account
 
 		//check if enough Bitcoins are available in the system
 		sanityCheck();
