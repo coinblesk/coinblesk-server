@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dataset>
-	<activities id="10" username="peter" subject="Admin invitation"  message="Test" creation_date="2014-06-19 14:35:54.0"  />
-	<activities id="11" username="hans" subject="Admin invitation"  message="Test" creation_date="2014-06-22 14:35:54.0"  />
-	<activities id="12" username="peter" subject="New password set"  message="Test" creation_date="2014-06-23 14:35:54.0"  />
-	<activities id="13" username="ueli" subject="User balance limit updated"  message="Test" creation_date="2014-06-25 14:35:54.0"  />
-	<activities id="14" username="peter" subject="User balance limit updated"  message="Test" creation_date="2014-06-28 14:35:54.0"  />
-	<activities id="15" username="peter" subject="Create server account"  message="Test" creation_date="2014-07-02 14:35:54.0"  />
-	<activities id="16" username="hans" subject="Trust level downgraded"  message="Test" creation_date="2014-07-05 14:35:54.0"  />
-	<activities id="17" username="ueli" subject="User balance limit updated"  message="Test" creation_date="2014-08-10 14:35:54.0"  />
-	<activities id="18" username="peter" subject="Pay out failed"  message="Test" creation_date="2014-08-15 14:35:54.0"  />
-	<activities id="19" username="hans" subject="Invalid payout address address"  message="Test" creation_date="2014-08-19 14:35:54.0"  />
+	<activities id="10" username="peter@http://server.own.org" subject="Admin invitation"  message="Test" creation_date="2014-06-19 14:35:54.0"  />
+	<activities id="11" username="hans@http://server.own.org" subject="Admin invitation"  message="Test" creation_date="2014-06-22 14:35:54.0"  />
+	<activities id="12" username="peter@http://server.own.org" subject="New password set"  message="Test" creation_date="2014-06-23 14:35:54.0"  />
+	<activities id="13" username="ueli@http://server.own.org" subject="User balance limit updated"  message="Test" creation_date="2014-06-25 14:35:54.0"  />
+	<activities id="14" username="peter@http://server.own.org" subject="User balance limit updated"  message="Test" creation_date="2014-06-28 14:35:54.0"  />
+	<activities id="15" username="peter@http://server.own.org" subject="Create server account"  message="Test" creation_date="2014-07-02 14:35:54.0"  />
+	<activities id="16" username="hans@http://server.own.org" subject="Trust level downgraded"  message="Test" creation_date="2014-07-05 14:35:54.0"  />
+	<activities id="17" username="ueli@http://server.own.org" subject="User balance limit updated"  message="Test" creation_date="2014-08-10 14:35:54.0"  />
+	<activities id="18" username="peter@http://server.own.org" subject="Pay out failed"  message="Test" creation_date="2014-08-15 14:35:54.0"  />
+	<activities id="19" username="hans@http://server.own.org" subject="Invalid payout address address"  message="Test" creation_date="2014-08-19 14:35:54.0"  />
 </dataset>
