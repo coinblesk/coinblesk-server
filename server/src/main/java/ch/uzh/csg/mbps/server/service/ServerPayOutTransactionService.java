@@ -42,8 +42,6 @@ public class ServerPayOutTransactionService implements IServerPayOutTransaction 
 	
 	public static Boolean testingMode = false;
 	
-	//TODO:mehmet Tests
-	
 	@Override
 	@Transactional
 	public void createPayOutTransaction(String url, BigDecimal amount, String address) throws BitcoinException, ServerAccountNotFoundException, UserAccountNotFoundException {
