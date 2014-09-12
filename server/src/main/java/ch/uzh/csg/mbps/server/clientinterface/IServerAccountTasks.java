@@ -42,9 +42,10 @@ public interface IServerAccountTasks {
 
 	/**
 	 * 
-	 * @param url
+	 * @param type
+	 * @param token
 	 */
-	public void deleteCreateNewAccount(String url);
+	public void deleteTask(int type, String token);
 
 	/**
 	 * 
