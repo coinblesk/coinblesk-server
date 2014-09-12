@@ -90,7 +90,7 @@ public class ServerAccountServiceTest {
 	@Test(expected=InvalidUrlException.class)
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/userAccountServerAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
 	public void testPrepareGetAccount_FailInvalidUrlexception() throws UserAccountNotFoundException, InvalidUrlException, InvalidEmailException{
-		UserAccount  account = userAccountService.getByUsername("hans");
+		UserAccount  account = userAccountService.getByUsername("hans@http://server.own.org");
 		assertNotNull(account);
 		
 		ServerAccount server = new ServerAccount("www.neu.ch", "neu@neu.ch");
