@@ -1,5 +1,8 @@
 package ch.uzh.csg.mbps.server.service;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,14 +13,8 @@ import ch.uzh.csg.mbps.server.clientinterface.IActivities;
 import ch.uzh.csg.mbps.server.clientinterface.IServerAccountTasks;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.dao.ServerAccountTasksDAO;
-import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.ServerAccountTasks;
-import ch.uzh.csg.mbps.server.domain.UserAccount;
-import ch.uzh.csg.mbps.server.util.Config;
-import ch.uzh.csg.mbps.server.util.ServerAccountTasksHandler;
-import ch.uzh.csg.mbps.server.util.Subjects;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountTasksAlreadyExists;
-import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 
 /**
  * Service class for {@link ServerAccountTasks}.
@@ -25,6 +22,7 @@ import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
  */
 @Service
 public class ServerAccountTasksService implements IServerAccountTasks{
+	private static boolean TESTING_MODE = false;
 
 	@Autowired
 	private ServerAccountTasksDAO serverAccountTasksDAO;
@@ -32,11 +30,28 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 	private IUserAccount userAccountService;
 	@Autowired
 	private IActivities activitiesService;
+
+	/**
+	 * Enables testing mode for JUnit Tests.
+	 */
+	public static void enableTestingMode() {
+		TESTING_MODE = true;
+	}
+	
+	public static boolean isTestingMode(){
+		return TESTING_MODE;
+	}
+
+	/**
+	 * Disables testing mode for JUnit Tests.
+	 */
+	public static void disableTestingMode() {
+		TESTING_MODE = false;
+	}
 	
 	public enum ServerAccountTaskTypes {
 		CREATE_ACCOUNT((int) 1),
-		UPDATE_ACCOUNT((int) 2),
-		DELETE_ACCOUNT((int) 3);
+		UPDATE_ACCOUNT((int) 2);
 		
 		private int code;
 		
@@ -54,28 +69,65 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 			return true;
 		else if (code == ServerAccountTaskTypes.UPDATE_ACCOUNT.getCode())
 			return true;
-		else if (code == ServerAccountTaskTypes.DELETE_ACCOUNT.getCode())
-			return true;
 		else
 			return false;
 	}
 	
 	@Override
 	@Transactional
-	public void persistsCreateNewAccount(ServerAccount account, String username, String email){
+	public void persistsCreateNewAccount(String url, String username, String email){
 		ServerAccountTasks task = new ServerAccountTasks();
 		task.setType(ServerAccountTaskTypes.CREATE_ACCOUNT.getCode());
-		task.setUrl(account.getUrl());
+		task.setUrl(url);
 		task.setUsername(username);
 		task.setEmail(email);
 		task.setToken(java.util.UUID.randomUUID().toString());
+		
+		if(isTestingMode()){			
+			String strDate = "2014-08-31 15:15:15.0";
+			Date date = new Date();
+			try {
+				date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(strDate);
+			} catch (ParseException e) {
+				//ignore
+			}
+			task.setTimestamp(date);
+			task.setToken("123456");
+		}
+		
+		serverAccountTasksDAO.persistCreateNewAccount(task);
+	}
+
+	@Override
+	@Transactional
+	public void persistsCreateNewAccountPayOutAddress(String url, String username, String email, String payoutAddress){
+		ServerAccountTasks task = new ServerAccountTasks();
+		task.setType(ServerAccountTaskTypes.CREATE_ACCOUNT.getCode());
+		task.setUrl(url);
+		task.setUsername(username);
+		task.setEmail(email);
+		task.setPayoutAddress(payoutAddress);
+		task.setToken(java.util.UUID.randomUUID().toString());
+		
+		if(isTestingMode()){			
+			String strDate = "2014-08-31 15:15:15.0";
+			Date date = new Date();
+			try {
+				date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(strDate);
+			} catch (ParseException e) {
+				//ignore
+			}
+			task.setTimestamp(date);
+			task.setToken("123457");
+		}
+		
 		serverAccountTasksDAO.persistCreateNewAccount(task);
 	}
 	
 	@Override
 	@Transactional(readOnly = true)
-	public ServerAccountTasks getAccountTasksByUrl(String url){
-		return serverAccountTasksDAO.getAccountTasksByUrl(url);
+	public ServerAccountTasks getAccountTasksCreateByUrl(String url){
+		return serverAccountTasksDAO.getAccountTasksCreateByUrl(url);
 	}
 	
 	@Override
@@ -103,21 +155,20 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 	
 	@Override
 	@Transactional
-	public void processNewAccountTask(){
-		List<ServerAccountTasks> createNewAccount = serverAccountTasksDAO.getAllAccountTasksBySubject(ServerAccountTaskTypes.CREATE_ACCOUNT.getCode());
-		
-		for(ServerAccountTasks task: createNewAccount){
-			UserAccount user;
-			try {
-				user = userAccountService.getByUsername(task.getUsername());
-			} catch (UserAccountNotFoundException e) {
-				user = new UserAccount(Config.NOT_AVAILABLE, Config.NOT_AVAILABLE, null);
-			}
-			try {
-				ServerAccountTasksHandler.getInstance().createNewAccount(task.getUrl(),task.getEmail(), user);
-			} catch (Exception e) {
-				activitiesService.activityLog(task.getUsername(), Subjects.FAILED_HOURLY_TASK, "Process hourly task to create new Account failed.");
-			}
-		}
+	public List<ServerAccountTasks> processNewAccountTask(int type){
+		return serverAccountTasksDAO.getAllAccountTasksBySubject(type);
+	}
+	
+	@Override
+	@Transactional
+	public List<ServerAccountTasks> getProceedAccounts(){
+		return serverAccountTasksDAO.getProceedAccounts();
+	}
+	
+	@Override
+	@Transactional
+	public void updateProceed(String token){
+		ServerAccountTasks task = serverAccountTasksDAO.getAccountTasksByToken(token);
+		serverAccountTasksDAO.updatedProceed(task);
 	}
 }

@@ -16,7 +16,8 @@ import javax.persistence.Table;
 @Table(name = "SERVER_ACCOUNT_TASKS", indexes = {
 		@Index(name = "TOKEN_TASKS_INDEX",  columnList="TOKEN"),
 		@Index(name = "URL_TASKS_INDEX",  columnList="URL"),		
-		@Index(name = "TYPE_TASKS_INDEX", columnList="TYPE")})
+		@Index(name = "TYPE_TASKS_INDEX", columnList="TYPE"),
+		@Index(name = "PROCEED_TASKS_INDEX" , columnList="PROCEED")})
 public class ServerAccountTasks implements Serializable{
 	private static final long serialVersionUID = 5881836235554219228L;
 
@@ -25,25 +26,28 @@ public class ServerAccountTasks implements Serializable{
 	@SequenceGenerator(name = "pk_sequence", sequenceName = "server_account_tasks_id_seq", allocationSize = 1)
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "pk_sequence")
 	long id;
-	@Column(name="TOKEN")
+	@Column(name="TOKEN", nullable = false)
 	String token;
-	@Column(name="TIMESTAMP")
+	@Column(name="TIMESTAMP", nullable = false)
 	Date timestamp;
-	@Column(name="TYPE")
+	@Column(name="TYPE", nullable = false)
 	int type;
-	@Column(name="URL")
+	@Column(name="URL", nullable = false)
 	String url;
-	@Column(name="USERNAME")
-	String username;
 	@Column(name="EMAIL")
 	String email;
+	@Column(name="USERNAME")
+	String username;
 	@Column(name="PAYOUT_ADDRESS")
 	String payoutAddress;
 	@Column(name="TRUST_LEVEL")
 	int trustLevel;
+	@Column(name="PROCEED", nullable = false)
+	boolean proceed;
 	
 	public ServerAccountTasks(){
 		this.timestamp = new Date();
+		this.proceed = false;
 	}
 	
 	public long getId() {
@@ -118,6 +122,14 @@ public class ServerAccountTasks implements Serializable{
 		this.trustLevel = trustLevel;
 	}
 	
+	public boolean getProceed() {
+		return proceed;
+	}
+	
+	public void setProceed(boolean proceed) {
+		this.proceed = proceed;
+	}
+	
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
@@ -137,6 +149,8 @@ public class ServerAccountTasks implements Serializable{
 		sb.append(getPayoutAddress());
 		sb.append(", trust level: ");
 		sb.append(getTrustLevel());
+		sb.append(", proceed: ");
+		sb.append(getProceed());
 		
 		return sb.toString();
 	}

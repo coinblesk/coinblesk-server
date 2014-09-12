@@ -1,26 +1,37 @@
 package ch.uzh.csg.mbps.server.clientinterface;
 
-import ch.uzh.csg.mbps.server.domain.ServerAccount;
+import java.util.List;
+
 import ch.uzh.csg.mbps.server.domain.ServerAccountTasks;
 
 public interface IServerAccountTasks {
 
 
 	/**
-	 * Persists the server account data of not existing account into the db. 
+	 * Persists the server account data of not existing account for hourly task. 
 	 * 
-	 * @param account
+	 * @param url
 	 * @param username
 	 * @param email
 	 */
-	public void persistsCreateNewAccount(ServerAccount account, String username, String email);
+	public void persistsCreateNewAccount(String url, String username, String email);
+
+	/**
+	 * Persists the server account data of not existing account with payout address for hourly task.
+	 * 
+	 * @param url
+	 * @param username
+	 * @param email
+	 * @param payoutAddress
+	 */
+	public void persistsCreateNewAccountPayOutAddress(String url, String username, String email, String payoutAddress);
 
 	/**
 	 * 
 	 * @param url
 	 * @return ServerAccountTasks
 	 */
-	public ServerAccountTasks getAccountTasksByUrl(String url);
+	public ServerAccountTasks getAccountTasksCreateByUrl(String url);
 
 	/**
 	 * 
@@ -44,6 +55,24 @@ public interface IServerAccountTasks {
 
 	/**
 	 * This method is called by the HourlyTask to request failed request to create new Account
+	 * 
+	 * @param type
+	 * @return List of ServerAccountTasks
 	 */
-	public void processNewAccountTask();
+	public List<ServerAccountTasks> processNewAccountTask(int type);
+
+	/**
+	 * Gets all tasks which are proceed.
+	 * 
+	 * @return List of ServerAccountTasks
+	 */
+	public List<ServerAccountTasks> getProceedAccounts();
+
+	/**
+	 * Change value from not proceed to proceed.
+	 * 
+	 * @param token
+	 */
+	public void updateProceed(String token);
+
 }
