@@ -113,7 +113,8 @@ public class ServerAccountTasksServiceTest {
 		List<ServerAccountTasks> before = serverAccountTasksService.processNewAccountTask(ServerAccountTaskTypes.CREATE_ACCOUNT.getCode());
 		assertEquals(5, before.size());
 		
-		serverAccountTasksService.deleteCreateNewAccount(task.getUrl());
+		if(ServerAccountTasksService.isValidServerAccountTaskType(task.getType()))
+			serverAccountTasksService.deleteTask(task.getType(), task.getToken());
 		
 		ServerAccountTasks task2 = serverAccountTasksService.getAccountTasksByToken("45656577");
 		assertTrue(task2 == null);

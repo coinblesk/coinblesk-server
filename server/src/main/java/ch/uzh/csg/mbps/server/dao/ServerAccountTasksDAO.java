@@ -85,11 +85,11 @@ public class ServerAccountTasksDAO {
 	 * @param code
 	 * @param url
 	 */
-	public void delete(int type, String url) {
+	public void deleteTask(int type, String token) {
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<ServerAccountTasks> cq = cb.createQuery(ServerAccountTasks.class);
 		Root<ServerAccountTasks> root = cq.from(ServerAccountTasks.class);
-		Predicate condition = cb.equal(root.get("url"), url);
+		Predicate condition = cb.equal(root.get("token"), token);
 		Predicate condition2 = cb.equal(root.get("type"), type);
 		Predicate condition3 = cb.and(condition, condition2);
 		cq.where(condition3);

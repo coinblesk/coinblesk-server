@@ -64,6 +64,7 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 		}
 	}
 	
+
 	public static boolean isValidServerAccountTaskType(int code) {
 		if (code == ServerAccountTaskTypes.CREATE_ACCOUNT.getCode())
 			return true;
@@ -138,8 +139,8 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 
 	@Override
 	@Transactional
-	public void deleteCreateNewAccount(String url) {
-		serverAccountTasksDAO.delete(ServerAccountTaskTypes.CREATE_ACCOUNT.getCode(),url);
+	public void deleteTask(int type, String token) {
+		serverAccountTasksDAO.deleteTask(type,token);
 	}
 	
 	@Override
