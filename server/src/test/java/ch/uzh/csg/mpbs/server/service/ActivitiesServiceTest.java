@@ -70,7 +70,7 @@ public class ActivitiesServiceTest {
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/activitiesData.xml",type=DatabaseOperation.CLEAN_INSERT)
 	@ExpectedDatabase(value="classpath:DbUnitFiles/Services/activitiesExpectedData.xml",table="activities")
 	public void testCreatedLog(){
-		String username = "martin";
+		String username = "martin@http://server.own.org";
 		String message = "new entry";
 		String subject = Subjects.ACCEPT_UPGRADE_TRUST_LEVEL;
 		
