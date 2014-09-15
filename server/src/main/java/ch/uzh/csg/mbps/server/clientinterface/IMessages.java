@@ -15,7 +15,7 @@ public interface IMessages {
 	 * @return boolean
 	 * @throws MessageNotFoundException
 	 */
-	public boolean createMessage(Messages message) throws MessageNotFoundException;
+	public boolean createMessage(Messages message);
 
 	/**
 	 * 

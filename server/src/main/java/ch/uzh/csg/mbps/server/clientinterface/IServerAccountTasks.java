@@ -1,5 +1,6 @@
 package ch.uzh.csg.mbps.server.clientinterface;
 
+import java.util.Date;
 import java.util.List;
 
 import ch.uzh.csg.mbps.server.domain.ServerAccountTasks;
@@ -75,5 +76,31 @@ public interface IServerAccountTasks {
 	 * @param token
 	 */
 	public void updateProceed(String token);
+
+	/**
+	 * Persists the server account data for a upgrade of trust level for hourly task.
+	 * 
+	 * @param url
+	 * @param username
+	 * @param email
+	 */
+	public void persistsUpgradeAccount(String url, String username, String email, int trustLevel);
+
+	/**
+	 * 
+	 * @param url
+	 * @param date
+	 * @return Server account tasks
+	 */
+	public ServerAccountTasks getAccountTaskByUrlAndDate(String url, Date date);
+
+	/**
+	 * Persists the server account data for a downgrade of trust level for hourly task.
+	 * 
+	 * @param url
+	 * @param date
+	 * @return Server account task
+	 */
+	public void persistsDowngradeAccount(String url, String username,String email, Integer trustLevel);
 
 }

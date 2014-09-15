@@ -18,7 +18,7 @@ import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.VerificationTokenNotFoundException;
-import ch.uzh.csg.mbps.server.util.web.model.UserModel;
+import ch.uzh.csg.mbps.server.web.model.UserModelObject;
 
 public interface IUserAccount {
 	
@@ -155,12 +155,12 @@ public interface IUserAccount {
 	public List<UserAccount> getUsers();
 	
 	/**
-	 * Returns a {@link UserModel} of a given parameter username.
+	 * Returns a {@link UserModelObject} of a given parameter username.
 	 * 
 	 * @param username
 	 * @return User Model
 	 */
-	public UserModel getLoggedAdmin(String username);
+	public UserModelObject getLoggedAdmin(String username);
 
 	/**
 	 * Updates a user with the role user to both

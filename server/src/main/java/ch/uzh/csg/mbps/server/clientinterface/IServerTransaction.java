@@ -4,7 +4,7 @@ import java.util.List;
 
 import ch.uzh.csg.mbps.server.domain.ServerTransaction;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
-import ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction;
+import ch.uzh.csg.mbps.server.web.model.HistoryServerAccountTransaction;
 
 public interface IServerTransaction {
 
