@@ -43,7 +43,7 @@ import ch.uzh.csg.mbps.server.util.exceptions.ServerPayOutRuleNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerPayOutRulesAlreadyDefinedException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
-import ch.uzh.csg.mbps.server.util.web.ServerPayOutRulesTransferObject;
+import ch.uzh.csg.mbps.server.web.response.ServerPayOutRulesTransferObject;
 import ch.uzh.csg.mpbs.server.utilTest.ReplacementDataSetLoader;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
@@ -110,7 +110,7 @@ public class ServerPayOutRuleServiceTest {
 		rules.add(third);
 		
 		ServerPayOutRulesTransferObject spot = new ServerPayOutRulesTransferObject();
-		spot.setPayOutRulesList(rules);
+		spot.setServerPayOutRulesList(rules);
 		
 		serverPayOutRuleService.createRule(spot, account.getUrl());
 		
@@ -142,7 +142,7 @@ public class ServerPayOutRuleServiceTest {
 		serverPayOutRuleService.checkAllRules();
 		
 		fromDB = serverAccountService.getByUrl("https://www.my_url.ch");
-		assertTrue(fromDB.getActiveBalance().abs().compareTo(BigDecimal.ZERO)==0);
+		assertTrue(fromDB.getActiveBalance().abs().compareTo(BigDecimal.ONE)==0);
 		serverPayOutRuleService.checkAllRules();
 	}
 	
