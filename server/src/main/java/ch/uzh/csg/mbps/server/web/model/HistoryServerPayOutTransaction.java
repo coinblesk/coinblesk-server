@@ -1,4 +1,4 @@
-package ch.uzh.csg.mbps.server.util.web.model;
+package ch.uzh.csg.mbps.server.web.model;
 
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
@@ -6,6 +6,9 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
+
+import net.minidev.json.JSONObject;
+import ch.uzh.csg.mbps.responseobject.TransferObject;
 
 /**
  * DatabaseAccessObject for {@link ServerPayOutTransaction}s. Handles all DB operations
@@ -16,8 +19,8 @@ public class HistoryServerPayOutTransaction extends AbstractServerHistory {
 	private static final long serialVersionUID = -6105683540166317472L;
 
 	private String btcAddress;
-	private long serverId;
-	private boolean verified;
+	private Long serverId;
+	private Boolean verified;
 
 	public HistoryServerPayOutTransaction() {
 	}
@@ -27,7 +30,7 @@ public class HistoryServerPayOutTransaction extends AbstractServerHistory {
 		this.amount = amount;
 	}
 	
-	public HistoryServerPayOutTransaction(Date timestamp, BigDecimal amount, String btcAddress, long serverId, boolean verified) {
+	public HistoryServerPayOutTransaction(Date timestamp, BigDecimal amount, String btcAddress, Long serverId, Boolean verified) {
 		this.timestamp = timestamp;
 		this.amount = amount;
 		this.btcAddress = btcAddress;
@@ -39,23 +42,23 @@ public class HistoryServerPayOutTransaction extends AbstractServerHistory {
 		return btcAddress;
 	}
 	
-	public void setBtcAddress(long serverId) {
+	public void setBtcAddress(String btcAddress) {
+		this.btcAddress = btcAddress;
+	}
+
+	public void setServerId(Long serverId) {
 		this.serverId = serverId;
 	}
 
-	public long getServerId() {
+	public Long getServerId() {
 		return serverId;
 	}
 	
-	public void setServerId(String btcAddress) {
-		this.btcAddress = btcAddress;
-	}
-	
-	public boolean isVerified() {
+	public Boolean isVerified() {
 		return verified;
 	}
 	
-	public void setVerified(boolean verified) {
+	public void setVerified(Boolean verified) {
 		this.verified = verified;
 	}
 	
@@ -76,4 +79,24 @@ public class HistoryServerPayOutTransaction extends AbstractServerHistory {
 		sb.append(getServerId());
 		return sb.toString();
 	}
+	
+	public void encode(JSONObject o) {
+		super.encode(o);
+		if(btcAddress!=null) {
+			o.put("btcAddress", btcAddress);
+		}
+		if(serverId!=null){
+			o.put("serverId", serverId);
+		}
+		if(verified!=null){
+			o.put("verified", verified);
+		}
+    }
+
+	public void decode(JSONObject o) {
+		super.decode(o);
+		setBtcAddress(TransferObject.toStringOrNull(o.get("btcAddress")));
+		setServerId(TransferObject.toLongOrNull(o.get("serverId")));
+		setVerified(TransferObject.toBooleanOrNull(o.get("verified")));
+    }
 }

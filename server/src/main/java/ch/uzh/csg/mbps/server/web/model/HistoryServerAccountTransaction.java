@@ -1,4 +1,4 @@
-package ch.uzh.csg.mbps.server.util.web.model;
+package ch.uzh.csg.mbps.server.web.model;
 
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
@@ -7,19 +7,22 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
+import net.minidev.json.JSONObject;
+import ch.uzh.csg.mbps.responseobject.TransferObject;
+
 public class HistoryServerAccountTransaction extends AbstractServerHistory {
 	private static final long serialVersionUID = -6411119193220293391L;
 
 	private String serverUrl;
-	private boolean received;
-	private boolean verified;
+	private Boolean received;
+	private Boolean verified;
 	private String transactionID;
 	
 	public HistoryServerAccountTransaction(){
 	}
 	
 	public HistoryServerAccountTransaction(Date timestamp, BigDecimal amount, String serverUrl, 
-			boolean received, boolean verified, String txId){
+			Boolean received, Boolean verified, String txId){
 		this.timestamp = timestamp;
 		this.amount = amount;
 		this.serverUrl = serverUrl;
@@ -36,19 +39,19 @@ public class HistoryServerAccountTransaction extends AbstractServerHistory {
 		return this.serverUrl;
 	}
 	
-	public void setReceived(boolean received){
+	public void setReceived(Boolean received){
 		this.received = received;
 	}
 	
-	public boolean getReceived(){
+	public Boolean getReceived(){
 		return this.received;
 	}
 	
-	public void setVerified(boolean verified){
+	public void setVerified(Boolean verified){
 		this.verified = verified;
 	}
 	
-	public boolean getVerified(){
+	public Boolean getVerified(){
 		return this.verified;
 	}
 
@@ -83,4 +86,27 @@ public class HistoryServerAccountTransaction extends AbstractServerHistory {
 		return sb.toString();
 	}
 
+	public void encode(JSONObject o) {
+		super.encode(o);
+		if(serverUrl!=null) {
+			o.put("serverUrl", serverUrl);
+		}
+		if(received!=null){
+			o.put("received", received);
+		}
+		if(verified!=null){
+			o.put("verified", verified);
+		}
+		if(transactionID!=null){
+			o.put("transactionID", transactionID);
+		}
+    }
+
+	public void decode(JSONObject o) {
+		super.decode(o);
+		setServerUrl(TransferObject.toStringOrNull(o.get("serverUrl")));
+		setReceived(TransferObject.toBooleanOrNull(o.get("received")));
+		setVerified(TransferObject.toBooleanOrNull(o.get("verified")));
+		setTransactionId(TransferObject.toStringOrNull(o.get("transactionID")));
+    }
 }
