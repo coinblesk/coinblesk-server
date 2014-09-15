@@ -10,11 +10,11 @@
 .menu {
     text-align: center;
     list-style: none;
-    padding: 0 0 0.5em;
+    padding: .5em .5em .5em .5em;
   	background-color: #eee;
-  	border-radius: 5px;
+  	border-radius: 3px;
   	border: 1px solid #ccc;
-    font-size: 50px;
+    font-size: 40px;
     font-weight: bolder;
 }
 

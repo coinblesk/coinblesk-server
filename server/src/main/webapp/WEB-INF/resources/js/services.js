@@ -6,76 +6,69 @@ var AppServices = angular.module('SpringAngularApp.services', []);
 
 AppServices.value('version', '0.1');
 
-AppServices.service('accessTokenCookieService', function($cookies, $cookieStore){
-	return ({
-		initToken: initToken,
-		removeToken: removeToken,
-		initCookies: initCookies,
-		removeCookies: removeCookies
-	});
-	
-	function initToken(token){
-		httpHeaders.common['Authorization'] = token || $cookies.token;
-	};
-	
-	function initCookies() {
+//AppServices.service('accessTokenCookieService', function($cookies, $cookieStore){
+//	return ({
+//		initToken: initToken,
+//		removeToken: removeToken,
+//		initCookies: initCookies,
+//		removeCookies: removeCookies
+//	});
+//	
+//	function initToken(token){
+//		httpHeaders.common['Authorization'] = token || $cookies.token;
+//	};
+//	
+//	function initCookies() {
 //		var jsessionid = $cookies.JSESSIONID;
-//		$cookieStore.put('JSESSIONID', jsessionid);create
-		console.log("Add Cookies");
-	};
-	
-	function removeToken() {
-		httpHeaders.common['Authorization'] = null;
-	};
-	
-	function removeCookies() {
+//		$cookieStore.put('JSESSIONID', jsessionid);
+//		console.log("Add Cookies");
+//	};
+//	
+//	function removeToken() {
+//		httpHeaders.common['Authorization'] = null;
+//	};
+//	
+//	function removeCookies() {
 //		$cookieStore.remove('JSESSIONID');
 //		delete $cookies.JSESSIONID;
-		console.log("Renmove Cookies");
-	};
-});
+//		console.log("Renmove Cookies");
+//	};
+//});
 
-AppServices.service('balanceService', function($http, $q) {
-	return({
-		getBalance: getBalance
-	});
+AppServices.service('mainRequestFactory', function($http, $q) {
+	var mainRequestFactory = {};
 	
-	function getBalance(){
+	mainRequestFactory.getMainRequestObjects = function() {
 		var request = $http({
-			method: 'GET', 
-			url: 'home/balance'
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
+			url: 'home/mainRequestObjects'
 		});
-		
-		return( request.then(handleSuccess, handleError));
-	}
-		
-	function handleSuccess( response ){
-		return(response.data);
-	}
+		return (request.then(mainRequestFactory.handleSucess, mainRequestFactory.handleError));
+	};
 	
-	function handleError( response ){
+	mainRequestFactory.handleSuccess = function(response){
+		return(response.data);
+	};
+	
+	mainRequestFactory.handleError = function( response ){
 		if(!angular.isObject(response.data) || !response.data.message){
 			return($q.reject("Request failed"));
 		}
 		
 		return($q.reject(response.data));
-	}
+	};
+	
+	return mainRequestFactory;
 });
 
 AppServices.factory('serverTransactionsFactory', function($http, $q) {
 	var serverTransactionsFactory = {};
 	
-	serverTransactionsFactory.getLastThreeTransactions = function() {
-		var request = $http({
-			method: 'GET',
-			url: 'home/lastThreeTransaction'
-		});
-		return (request.then(serverTransactionsFactory.handleSucess, serverTransactionsFactory.handleError));
-	};
-	
 	serverTransactionsFactory.getLastAccountTransactions = function(id) {
 		var request = $http({
-			method: 'GET',
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 			url: 'serveraccount/lastAccountTransaction/' + id
 		});
 		return (request.then(serverTransactionsFactory.handleSucess, serverTransactionsFactory.handleError));
@@ -83,7 +76,8 @@ AppServices.factory('serverTransactionsFactory', function($http, $q) {
 	
 	serverTransactionsFactory.getHistory = function() {
 		var request = $http({
-			method: 'GET',
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 			url: "history/transactions"
 		});
 		return (request.then(serverTransactionsFactory.handleSuccess, serverTransactionsFactory.handleError));
@@ -104,12 +98,13 @@ AppServices.factory('serverTransactionsFactory', function($http, $q) {
 	return serverTransactionsFactory;
 });
 
-AppServices.factory('userAccountFactory', function($http, $q) {
+AppServices.factory('userAccountFactory', function($http, $q, transformRequestAsFormPost) {
 	var userAccountFactory = {};
 	
 	userAccountFactory.getAdmins = function() {
 		var request = $http({
-			method: 'GET',
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 			url: 'home/admins'
 		});
 		return (request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
@@ -117,46 +112,53 @@ AppServices.factory('userAccountFactory', function($http, $q) {
 	
 	userAccountFactory.getUsers = function() {
 		var request = $http({
-			method: 'GET',
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 			url: 'users/all'
 		});
 		return (request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
 	};
 	
-	userAccountFactory.getLoggedUser = function(username){
-		var request = $http({
-			method: 'GET',
-			url: 'home/user/' + username
-		});
-		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
-	};
-	
 	userAccountFactory.updateMail = function(user){
+		
 		var request = $http({
-			method: 'GET',
-			url: 'home/updateMail/' + user.username,
-			params: {
-				"newemail": user.new_email
-			}
+			method: 'POST',
+			url: 'home/updateMail',
+			headers: { 'Content-Type': 'application/json;charset=utf-8'},
+			transformRequest: function(){
+				angular.isObject(data) && String(data) !== '[object File]' ? transformRequestAsFormPost : data;
+			},
+			data: {"username":user.username,
+					"email":user.email
+					}
 		});
 		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
 	};
 	
 	userAccountFactory.updatePassword = function(user){
 		var request = $http({
-			method: 'GET',
-			url: 'home/updatePassword/' + user.username,
-			params: {
-				"password": user.password
-			}
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json;charset=utf-8'},
+			url: 'home/updatePassword',
+			data: {"username":user.username,"password":user.password}
+		});
+		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
+	};
+
+	userAccountFactory.getLoggedUser = function(){
+		var request = $http({
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json;charset=utf-8'},
+			url: 'home/userAccount'
 		});
 		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
 	};
 	
 	userAccountFactory.inviteAdmin = function(user){
 		var request = $http({
-			method: 'GET',
+			method: 'POST',
 			url: 'home/inviteAdmin',
+			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 			params:{
 				"email": user.email
 			}
@@ -166,7 +168,8 @@ AppServices.factory('userAccountFactory', function($http, $q) {
 	
 	userAccountFactory.sendMailToAll = function(emailContent){
 		var request = $http({
-			method: 'GET',
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 			url: 'users/sendMailToAll',
 			params:{
 				"subject": emailContent.subject,
@@ -196,7 +199,8 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 	
 	serverAccountFactory.getAccounts = function() {
 		var request = $http({
-			method: 'GET',
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json;charset=utf-8'},
 			url: 'relation/accounts'
 		});
 		return (request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError));
@@ -204,7 +208,8 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 	
 	serverAccountFactory.getServerAccount = function(id){
 		var request = $http({
-			method: 'GET',
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 			url: 'serveraccount/account/' + id
 		});
 		return (request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError));
@@ -213,17 +218,17 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 	serverAccountFactory.createNewAccount = function(url){
 		var request = $http({
 			method: 'POST',
+			headers: { 'Content-Type': 'application/json;charset=utf-8'},
 			url: 'relation/createNewAccount',
-			params:{
-				"url": url
-			}
+			params:{"url":url.toString()}
 		});
 		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
 	};
 	
 	serverAccountFactory.deletedAccount = function(url){
 		var request= $http({
-			method: 'GET',
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 			url: 'serveraccount/deleteAccount',
 			params:{
 				"url": url
@@ -234,7 +239,8 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 	
 	serverAccountFactory.updateTrustLevel = function(serverAccount, trustLevel){
 		var request = $http({
-			method: 'GET',
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 			url: 'serveraccount/updateTrustLevel',
 			params: {
 				"url": serverAccount.url,
@@ -247,7 +253,8 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 	
 	serverAccountFactory.updateBalanceLimit  = function(serverAccount, balanceLimit){
 		var request = $http({
-			method: 'GET',
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 			url: 'serveraccount/updateBalanceLimit',
 			params: {
 				"url": serverAccount.url,
@@ -278,7 +285,8 @@ AppServices.factory('activitiesFactory', function($http, $q) {
 	
 	activitiesFactory.getActivities = function() {
 		var request = $http({
-			method: 'GET',
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 			url: 'activities/logs'
 		});
 		return (request.then(activitiesFactory.handleSuccess, activitiesFactory.handleError));
@@ -297,6 +305,60 @@ AppServices.factory('activitiesFactory', function($http, $q) {
 	};
 	
 	return activitiesFactory;
+});
+
+AppServices.factory('messagesFactory', function($http, $q) {
+	var messagesFactory = {};
+	
+	messagesFactory.getMessages = function() {
+		var request = $http({
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
+			url: 'messages/all'
+		});
+		return (request.then(messagesFactory.handleSuccess, messagesFactory.handleError));
+	};
+
+	messagesFactory.accept = function(updatedAccount) {
+		var request = $http({
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
+			url: 'messages/accept',
+			data: {
+				"url": updatedAccount.url,
+				"trustLevel": updatedAccount.trustLevel
+			}
+		});
+		return (request.then(messagesFactory.handleSuccess, messagesFactory.handleError));
+	};
+
+	messagesFactory.decline = function(updatedAccount) {
+		var request = $http({
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
+			url: 'messages/decline',
+			data: {
+				"url": updatedAccount.url,
+				"trustLevel": updatedAccount.trustLevel
+			}
+		});
+		return (request.then(messagesFactory.handleSuccess, messagesFactory.handleError));
+	};
+	
+	
+	messagesFactory.handleSuccess = function( response ){
+		return(response.data);
+	};
+	
+	messagesFactory.handleError = function( response ){
+		if(!angular.isObject(response.data) || !response.data.message){
+			return($q.reject("Request failed"));
+		}
+		
+		return($q.reject(response.data));
+	};
+	
+	return messagesFactory;
 });
 
 //TODO: mehmet set link http://wemadeyoulook.at/en/blog/implementing-basic-http-authentication-http-requests-angular/
@@ -387,4 +449,47 @@ AppServices.factory('base64Factory', function() {
     };
     
     return base64Factory;
+});
+
+AppServices.factory("transformRequestAsFormPost",function() {
+		 
+	// I prepare the request data for the form post.
+	function transformRequest( data) {
+		return( param( data ) );
+	}
+		 
+		 
+	// Return the factory value.
+	return( transformRequest );
+	
+	function param(obj) {
+		var query = '', name, value, fullSubName, subName, subValue, innerObj, i;  
+	    for(name in obj) {
+	      value = obj[name];
+	        
+	      if(value instanceof Array) {
+	        for(i=0; i<value.length; ++i) {
+	          subValue = value[i];
+	          fullSubName = name + '[' + i + ']';
+	          innerObj = {};
+	          innerObj[fullSubName] = subValue;
+	          query += param(innerObj) + '&';
+	        }
+	      }
+	      else if(value instanceof Object) {
+	        for(subName in value) {
+	          subValue = value[subName];
+	          fullSubName = name + '[' + subName + ']';
+	          innerObj = {};
+	          innerObj[fullSubName] = subValue;
+	          query += param(innerObj) + '&';
+	        }
+	      }
+	      else if(value !== undefined && value !== null)
+	        query += encodeURIComponent(name) + '=' + encodeURIComponent(value) + '&';
+	    }
+	      
+	    return query.length ? query.substr(0, query.length - 1) : query;
+	  };
+		 
 });

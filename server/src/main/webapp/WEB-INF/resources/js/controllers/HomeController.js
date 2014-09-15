@@ -5,28 +5,24 @@
  * @constructor
  */
 
-var HomeController = function($rootScope, $scope, $modal, $log, $location, balanceService, serverTransactionsFactory, userAccountFactory) {
-	$scope.user = $rootScope.loggedUser;
+var HomeController = function($rootScope, $scope, $modal, $log, $location, mainRequestFactory, userAccountFactory) {
+//	$scope.user = $rootScope.loggedUser;
 	$scope.editMode = false;
-	$scope.lastTransactions = [];
-	$scope.allAdmins = [];
-	$scope.homeObject = {
-			balance: ""
-	};
+	$scope.balance = "";
+	$scope.user = [];
+	$scope.transactions = [];
+	$scope.messages = [];
+
 	
 	loadRemoteData();
 
 	function loadRemoteData(){
-		balanceService.getBalance().then(function(balance){
-			$scope.homeObject.balance = balance;
-		});
-		
-		serverTransactionsFactory.getLastThreeTransactions().then(function(transactions){
-			$scope.lastTransactions = transactions.data;
-		});
-		
-		userAccountFactory.getAdmins().then(function(admins){
-			$scope.allAdmins = admins; 
+		mainRequestFactory.getMainRequestObjects().then(function(mainResponseObject){
+			$scope.balance = mainResponseObject.data.balance;
+			$scope.user = mainResponseObject.data.userModelObject;
+			$scope.transactions = mainResponseObject.data.getHistoryTransferObject.transactionHistory;
+			$scope.messages = mainResponseObject.data.getMessageTransferObject.messagesList;
+
 		});
 
 	}
@@ -39,12 +35,11 @@ var HomeController = function($rootScope, $scope, $modal, $log, $location, balan
 		});
 		
 		modalInstance.result.then(function(user){
-			user.id = $rootScope.loggedUser.id;
-			user.username = $rootScope.loggedUser.username;
 			console.log(user);
+			user.username = "malib";
 			userAccountFactory.updateMail(user).then(function(){
-				userAccountFactory.getLoggedUser($rootScope.loggedUser.username).then(function(loggedUser){
-					$rootScope.loggedUser = loggedUser;
+				userAccountFactory.getLoggedUser().then(function(loggedUser){
+					$scope.user = loggedUser;
 				});
 			});
 		});
@@ -57,33 +52,14 @@ var HomeController = function($rootScope, $scope, $modal, $log, $location, balan
 		});
 			
 		modalPasswordInstance.result.then(function(user){
-			user.id = $rootScope.loggedUser.id;
-			user.username = $rootScope.loggedUser.username;
+			user.username = $scope.user.username;
+			console.log(user);
 			userAccountFactory.updatePassword(user).then(function(){
-				userAccountFactory.getLoggedUser($rootScope.loggedUser.username).then(function(loggedUser){
-					$rootScope.loggedUser = loggedUser;
+				userAccountFactory.getLoggedUser().then(function(loggedUser){
+					$scope.user = loggedUser;
 				});
 			});
 		});
-	  };
-  
-	  $scope.openAdminsModal = function () {
-		  var modalAdminsInstance = $modal.open({
-			  templateUrl: 'modalInviteAdmin.html',
-			  controller: ModalAdminsInstanceController
-		  });
-		  
-		  modalAdminsInstance.result.then(function(user){
-			 $scope.userAdmins = user;
-			 if(!_.include($scope.allAdmins, user.email)){
-				 userAccountFactory.inviteAdmin(user).then(function(){
-					 
-				 });
-			 }else{
-				 $scope.setError("The email address " + user.email + " is already an admin!");
-			 }
-		  });
-	  
 	  };
 	  
 	  $scope.resetError = function() {
@@ -100,14 +76,13 @@ var HomeController = function($rootScope, $scope, $modal, $log, $location, balan
 var ModalEmailInstanceController = function ($scope, $modalInstance) {
 	
 	$scope.user = {
-			id: "",
-			usernaem: "",
-			new_email: ""
+			username: "",
+			email: ""
 	};
 	
 	$scope.submit = function() {
 		$scope.resetError();
-		if($scope.user.new_email.length != 0){			
+		if($scope.user.email.length != 0){			
 			$modalInstance.close($scope.user);
 		}else{
 			$scope.setError("Field has to be filled out!");
@@ -133,9 +108,7 @@ var ModalEmailInstanceController = function ($scope, $modalInstance) {
 var ModalPasswordInstanceController = function ($scope, $modalInstance) {
 
 	$scope.user = {
-			id: "",
 			username: "",
-			old_password: "",
 			password: "",
 			password_confirm: ""
 	};
@@ -145,37 +118,6 @@ var ModalPasswordInstanceController = function ($scope, $modalInstance) {
 			$modalInstance.close($scope.user);
 		}else{
 			$scope.setError("All fields have to be filled out!");
-		}
-	};
-
-	$scope.cancel = function () {
-		$scope.resetError();
-		$modalInstance.dismiss('cancel');	
-	};
-	
-    $scope.resetError = function() {
-        $scope.error = false;
-        $scope.errorMessage = '';
-    };
-
-    $scope.setError = function(message) {
-        $scope.error = true;
-        $scope.errorMessage = message;
-    };
-};
-
-var ModalAdminsInstanceController = function ($rootScope, $scope, $modalInstance) {
-	
-	$scope.user = {
-			email: ""
-	};
-	
-	$scope.submit = function() {
-		$scope.resetError();
-		if($scope.user.email.length != 0){
-			$modalInstance.close($scope.user);
-		}else{
-			$scope.setError("field has to be filled out!");
 		}
 	};
 

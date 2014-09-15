@@ -15,7 +15,7 @@ var UsersController = function($rootScope, $scope, $location, $modal, userAccoun
 		userAccountFactory.getUsers()
 		.then(
 				function(users){
-					$scope.allUsers = users; 
+					$scope.allUsers = users.userAccountObjectList; 
 				});
 	}
 	

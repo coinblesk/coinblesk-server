@@ -3,11 +3,12 @@
     	<div class="navbar-inner">
     		<div class="container">
     			<ul class="menu">
-     				<li data-ng-class="{ active: isActive('/home')}"><a href="#/home">Home</a></li>
-    				<li data-ng-class="{ active: isActive('/relation')}"><a href="#/relation">Trust Relation</a></li>
-    				<li data-ng-class="{ active: isActive('/users')}"><a href="#/users">Users</a></li>
-    				<li data-ng-class="{ active: isActive('/history')}"><a href="#/history">History</a></li>
-    				<li data-ng-class="{ active: isActive('/activities')}"><a href="#/activities">Activities</a></li>
+    				<li class="active"><a href="#/home">Home</a></li>
+    				<li><a href="#/relation">Relation</a></li>
+    				<li><a href="#/users">Users</a></li>
+    				<li><a href="#/history">History</a></li>
+    				<li><a href="#/messages">Messages</a></li>    				
+    				<li><a href="#/activities">Activities</a></li>
     			</ul>
     		</div>
     	</div>
@@ -17,14 +18,18 @@
  	<div class="col-lg-5">
 		<p></p>
 		<h2 class="title_2">Balance</h2>
-		<div id="balance">{{homeObject.balance}} </div>
+		<div id="balance">{{balance}} </div>
  	</div>
  	<div class="col-lg-5">
  		<p></p>
- 		<h2 class="title_2">Latest Transactions</h2>
- 		<div class="transaction_list" data-ng-repeat="trans in lastTransactions" data-ng-non-bindable="">{{trans.timestamp | date:'yyyy-MM-dd HH:mm'}} - {{trans.amount}} - {{trans.serverUrl}} - {{trans.received}}</div>
+ 		<h2 class="title_2"><a herf="#/history">Latest Transactions</a></h2>
+ 		<div class="transaction_list" data-ng-repeat="trans in transactions" data-ng-non-bindable="">{{trans.timestamp | date:'yyyy-MM-dd HH:mm'}} - {{trans.amount}} - {{trans.serverUrl}} - {{trans.received}}</div>
  	</div>
   	<div class="col-lg-5">
+		<h4 class="title_4">User</h4>
+		<div class="left_side">
+			<div class="text-left">{{user.username}}</div>
+		</div>
 		<p></p>
 		<h4 class="title_4">Email</h4>
 		<div class="left_side">
@@ -38,7 +43,7 @@
   						</div>
   						<div class="modal-body">
 							<p>Please enter a new email address:</p>
-							<input class="form-control" data-ng-model="user.new_email" type="email" name="new_email" placeholder="new email address"/>
+							<input class="form-control" data-ng-model="user.email" type="email" name="email" placeholder="new email address"/>
   						</div>
   						<div class="modal-footer">
     						<button class="btn btn-primary" type="submit">OK</button>
@@ -61,11 +66,6 @@
     						<h3>Set a new Password</h3>
   						</div>
   						<div class="modal-body">
-							<div class="form-group" data-ng-class="{'has-error':!passwordUpdateForm.oldpassword.$valid}"><label for="oldpassword">Actual Password</label>
-    							<input class="form-control" type="password" name="oldpassword" 
-									placeholder="actual password" data-ng-model="user.old_password" required="required"/>
-								<span class="help-block" data-ng-show="passwordUpdateForm.oldpassword.$error.required">Field is required!</span>
-							</div>
 							<div class="form-group" data-ng-class="{'has-error':!passwordUpdateForm.password.$valid}"><label for="password">New Password</label>
 								<input class="form-control" type="password" name="password" 
 									placeholder="new password" data-ng-model="user.password" required="required"/>
@@ -90,29 +90,10 @@
   	</div>
   	<div class="col-lg-5">
   		<p></p>
-  		<h2 class="title_2">Admins</h2>
+  		<h2 class="title_2"><a herf="#">Messages</a></h2>
   		<div class="left_side">
-  			<script type="text/ng-template" id="modalInviteAdmin.html">
-        		<div class="modal-body">
-					<div class="alert alert-danger" ng-show="error">{{errorMessage}}</div>
-          			<form name="inviteAdminForm" novalidate="novalidate" ng-submit="submit()">
-  					<div class="modal-header">
-    					<h3>Invite a new User as Admin</h3>
-  					</div>
-  					<div class="modal-body">
-						<p>Please enter Email Address:</p>
-   						<input class="form-control" data-ng-model="user.email" type="email" name="email" placeholder="Email Address" required="required"/>
-  					</div>
-  					<div class="modal-footer">
-    					<button class="btn btn-primary" type="submit">OK</button>
-    					<button class="btn btn-warning" ng-click="cancel()">Cancel</button>
-  					</div>
-					</form>
-				</div>
-    		</script>
-  			<button class="btn btn-default" data-ng-click="openAdminsModal()">Invite a new Admin</button>
   		</div>
-  		<div class="admin_list" data-ng-repeat="admin in allAdmins">{{admin.username}} - {{admin.email}}</div>
+  		<div class="messages_list" data-ng-repeat="message in messages">{{message.creationDate}} - {{message.subject}} - {{message.serverUrl}}</div>
   	</div>
 </div>
 <div class="row">

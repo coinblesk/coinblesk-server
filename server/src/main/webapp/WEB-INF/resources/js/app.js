@@ -44,6 +44,10 @@ App.config(['$routeProvider', '$httpProvider', '$provide', function($routeProvid
         templateUrl: 'activities',
         controller: ActivitiesController
     });
+    $routeProvider.when('/messages', {
+    	templateUrl: 'messages',
+    	controller: MessagesController
+    });
     $routeProvider.otherwise({redirectTo: '/login'});
 
     // ======== http configuration
@@ -53,7 +57,6 @@ App.config(['$routeProvider', '$httpProvider', '$provide', function($routeProvid
 	    return {
 		    // On request success
 		    request: function (config) {
-		    	console.log(config); // Contains the data about the request before it is sent.
 		    	
 		    	if (angular.isDefined($rootScope.authToken)) {
       			var authToken = $rootScope.authToken;
@@ -110,10 +113,9 @@ App.config(['$routeProvider', '$httpProvider', '$provide', function($routeProvid
   $httpProvider.defaults.useXDomain = true;
   $httpProvider.defaults.withCredentials = true;
   delete $httpProvider.defaults.headers.common['X-Requested-With'];
-  httpHeaders = $httpProvider.defaults.headers;
 }]);
 
-App.run(function($rootScope, $http, $location, $cookieStore, $injector, base64Factory, userAccountFactory, accessTokenCookieService) {
+App.run(function($rootScope, $http, $location, $cookieStore, $injector, base64Factory) {
 
     /**
      * Holds all the requests which failed due to 401 response.
@@ -151,7 +153,6 @@ App.run(function($rootScope, $http, $location, $cookieStore, $injector, base64Fa
      */
 	$rootScope.$on('event:loginRequest', function (event, credentials) {
 		var token = 'Basic ' + base64Factory.encode(credentials.username + ':' + credentials.password);
-		accessTokenCookieService.initToken(token);
 		var payload = 'j_username=' + credentials.username + '&j_password=' + credentials.password;
 		var config = {
 				headers: {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'}
@@ -159,15 +160,9 @@ App.run(function($rootScope, $http, $location, $cookieStore, $injector, base64Fa
 
 		$http.post('j_spring_security_check', payload, config)
 		.success(function(data) {
-			accessTokenCookieService.initCookies();
 			$rootScope.loggeduser = {
 					username: ''
 			};
-			
-			userAccountFactory.getLoggedUser(credentials.username).then(function(loggedUser){
-				$rootScope.loggedUser = loggedUser;
-				console.log(loggedUser);
-			});
 			
 			$rootScope.loggeduser.username = credentials.username;
 			$rootScope.initialized = true;
@@ -182,8 +177,8 @@ App.run(function($rootScope, $http, $location, $cookieStore, $injector, base64Fa
      * On 'logoutRequest' invoke logout on the server and broadcast 'event:loginRequired'.
      */
     $rootScope.$on('event:logoutRequest', function (event) {
-    	accessTokenCookieService.removeToken();
-    	accessTokenCookieService.removeCookies();
+//    	accessTokenCookieService.removeToken();
+//    	accessTokenCookieService.removeCookies();
     	$rootScope.initialized = null;
     	$http.put('/j_spring_security_logout', {})
     	.success(function() {
