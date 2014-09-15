@@ -29,6 +29,7 @@
 		<listener-class>org.springframework.security.web.session.HttpSessionEventPublisher</listener-class>
 	</listener>
 
+	
 	<!--  Enconding helper reads request input using UTF-8 encoding  -->
     <filter>
         <filter-name>encodingFilter</filter-name>
@@ -47,11 +48,20 @@
         <servlet-name>/*</servlet-name>
     </filter-mapping>
 	
+	<!-- Cors filters for resource sharing between angular and spring -->
+	<filter>
+    	<filter-name>corsFilter</filter-name>
+    	<filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
+	</filter>
     <!--  Apply Spring Security Filter to all Requests  -->
 	<filter>
 		<filter-name>springSecurityFilterChain</filter-name>
 		<filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
 	</filter>
+	<filter-mapping>
+    	<filter-name>corsFilter</filter-name>
+    	<url-pattern>/*</url-pattern>
+	</filter-mapping>
 	<filter-mapping>
 		<filter-name>springSecurityFilterChain</filter-name>
 		<url-pattern>/*</url-pattern>

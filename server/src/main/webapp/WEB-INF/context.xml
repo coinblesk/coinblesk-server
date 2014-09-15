@@ -19,7 +19,7 @@
 	<context:annotation-config/>
 	
 	<mvc:annotation-driven>
-    	<mvc:message-converters>
+    	<mvc:message-converters register-defaults="true">
 <!--         	<bean class="org.springframework.http.converter.StringHttpMessageConverter"/> -->
 <!--         	<bean class="org.springframework.http.converter.ByteArrayHttpMessageConverter"/> -->
         	<bean class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter">
@@ -28,7 +28,7 @@
     	</mvc:message-converters>
 	</mvc:annotation-driven>
 
-	<bean id="jacksonObjectMapper" class="ch.uzh.csg.mbps.server.json.CustomObjectMapper" />	
+	<bean id="jacksonObjectMapper" class="ch.uzh.csg.mbps.server.json.CustomObjectMapper" />
 
 	<!-- Handles HTTP GET requests for /resources/** by efficiently serving up static resources in the ${webappRoot}/WEB-INF/resources/ directory -->
 	<mvc:resources mapping="/resources/**" location="/WEB-INF/resources/" />
@@ -40,6 +40,8 @@
 	<bean id="bitcoindController" class="ch.uzh.csg.mbps.server.util.BitcoindController" >
 	    <property name="listenTransactions" value="true" />
 	</bean>
+
+	<bean id="corsFilter" class="ch.uzh.csg.mbps.server.cors.CorsFilter" />
 	
 	<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
 		<property name="ignoreResourceNotFound" value="true" />
