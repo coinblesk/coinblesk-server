@@ -36,7 +36,7 @@ var HomeController = function($rootScope, $scope, $modal, $log, $location, mainR
 		
 		modalInstance.result.then(function(user){
 			console.log(user);
-			user.username = "malib";
+			user.username = $scope.user.username;
 			userAccountFactory.updateMail(user).then(function(){
 				userAccountFactory.getLoggedUser().then(function(loggedUser){
 					$scope.user = loggedUser;

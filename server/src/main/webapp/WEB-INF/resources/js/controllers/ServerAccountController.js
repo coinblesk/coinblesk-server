@@ -10,13 +10,10 @@ function ServerAccountController($rootScope, $scope, $location, $modal, $routePa
 	loadRemoteData();
 	
 	function loadRemoteData(){
-		serverAccountFactory.getServerAccount($routeParams.serverId).then(function(account){
-			$scope.serverAccount = account;
+		serverAccountFactory.getServerAccountData($routeParams.serverId).then(function(data){
+			$scope.serverAccount = data.serverAccountObject;
+			$scope.lastTransactions = data.getHistoryTransferObject.transactionHistory;
 		});
-
-		serverTransactionsFactory.getLastAccountTransactions($routeParams.serverId).then(function(transactions){
-			$scope.lastTransactions = transactions.data;
-		});	
 	}
 	
 	$scope.openDeleteModal = function () {
@@ -66,8 +63,27 @@ function ServerAccountController($rootScope, $scope, $location, $modal, $routePa
 			}
 		});
 		
-		modalInstance.result.then(function(balanceLimit){
+		modalInstance.result.then(function(balanceLimit){		
 			serverAccountFactory.updateBalanceLimit($scope.serverAccount, balanceLimit).then(function(){
+					
+			});
+		});
+	};
+
+	$scope.openUserBalanceLimitModal = function () {
+		
+		var modalInstance = $modal.open({
+			templateUrl: 'modalUSerBalanceLimit.html',
+			controller: ModalUSerBalanceLimitController,
+			resolve: {
+				modalLimit: function() {
+					return $scope.serverAccount.userBalanceLimit;
+				}
+			}
+		});
+		
+		modalInstance.result.then(function(userBalanceLimit){		
+			serverAccountFactory.updateUserBalanceLimit($scope.serverAccount, userBalanceLimit).then(function(){
 				
 			});
 		});
@@ -179,6 +195,34 @@ var ModalBalanceLimitController = function ($scope, $modalInstance, modalLimit) 
     };
 };
 
+var ModalBalanceLimitController = function ($scope, $modalInstance, modalLimit) {
+	
+	$scope.beforeLimit = modalLimit;
+	$scope.userBalanceLimit = modalLimit;
+	
+	$scope.submit = function() {
+		$scope.resetError();
+		if($scope.userBalanceLimit != $scope.beforeLimit && $scope.userBalanceLimit > 0){			
+			$modalInstance.close($scope.userBalanceLimit);
+		}
+	};
+	
+	$scope.cancel = function () {
+		$scope.resetError();
+		$modalInstance.dismiss('cancel');	
+	};
+	
+	$scope.resetError = function() {
+		$scope.error = false;
+		$scope.errorMessage = '';
+	};
+	
+	$scope.setError = function(message) {
+		$scope.error = true;
+		$scope.errorMessage = message;
+	};
+};
+
 var ModalPayoutAmountController = function ($scope, $modalInstance) {
 	
 	$scope.submit = function() {
@@ -203,6 +247,34 @@ var ModalPayoutAmountController = function ($scope, $modalInstance) {
 };
 
 var ModalPayoutRuleController = function ($scope, $modalInstance) {
+	
+	$scope.mytime = new Date();
+	
+	$scope.hstep = 1;
+	$scope.dstep = 0;
+	
+	$scope.options = {
+			hstep: [1,2,3],
+			dstep: []
+	};
+	
+	$scope.ismeridian = true;
+	$scope.toggleMode = function(){
+		$scope.ismeridian = ! $scope.ismeridian;
+	};
+	
+	$scope.update = function() {
+		var d = new Date();
+		d.setHours(14);
+	};
+	
+	$scope.changed = function(){
+		console.log("Time changed to: " + $scope.mytime);
+	};
+	
+	$scope.clear = function(){
+		$scope.mytime = null;
+	};
 	
 	$scope.submit = function() {
 		$scope.resetError();

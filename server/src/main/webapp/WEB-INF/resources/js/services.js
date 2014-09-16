@@ -6,35 +6,6 @@ var AppServices = angular.module('SpringAngularApp.services', []);
 
 AppServices.value('version', '0.1');
 
-//AppServices.service('accessTokenCookieService', function($cookies, $cookieStore){
-//	return ({
-//		initToken: initToken,
-//		removeToken: removeToken,
-//		initCookies: initCookies,
-//		removeCookies: removeCookies
-//	});
-//	
-//	function initToken(token){
-//		httpHeaders.common['Authorization'] = token || $cookies.token;
-//	};
-//	
-//	function initCookies() {
-//		var jsessionid = $cookies.JSESSIONID;
-//		$cookieStore.put('JSESSIONID', jsessionid);
-//		console.log("Add Cookies");
-//	};
-//	
-//	function removeToken() {
-//		httpHeaders.common['Authorization'] = null;
-//	};
-//	
-//	function removeCookies() {
-//		$cookieStore.remove('JSESSIONID');
-//		delete $cookies.JSESSIONID;
-//		console.log("Renmove Cookies");
-//	};
-//});
-
 AppServices.service('mainRequestFactory', function($http, $q) {
 	var mainRequestFactory = {};
 	
@@ -65,15 +36,6 @@ AppServices.service('mainRequestFactory', function($http, $q) {
 AppServices.factory('serverTransactionsFactory', function($http, $q) {
 	var serverTransactionsFactory = {};
 	
-	serverTransactionsFactory.getLastAccountTransactions = function(id) {
-		var request = $http({
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
-			url: 'serveraccount/lastAccountTransaction/' + id
-		});
-		return (request.then(serverTransactionsFactory.handleSucess, serverTransactionsFactory.handleError));
-	};
-	
 	serverTransactionsFactory.getHistory = function() {
 		var request = $http({
 			method: 'POST',
@@ -98,7 +60,7 @@ AppServices.factory('serverTransactionsFactory', function($http, $q) {
 	return serverTransactionsFactory;
 });
 
-AppServices.factory('userAccountFactory', function($http, $q, transformRequestAsFormPost) {
+AppServices.factory('userAccountFactory', function($http, $q) {
 	var userAccountFactory = {};
 	
 	userAccountFactory.getAdmins = function() {
@@ -120,17 +82,16 @@ AppServices.factory('userAccountFactory', function($http, $q, transformRequestAs
 	};
 	
 	userAccountFactory.updateMail = function(user){
+		var data = {
+					"email":user.email,
+					"username":user.username
+		};
 		
 		var request = $http({
 			method: 'POST',
 			url: 'home/updateMail',
 			headers: { 'Content-Type': 'application/json;charset=utf-8'},
-			transformRequest: function(){
-				angular.isObject(data) && String(data) !== '[object File]' ? transformRequestAsFormPost : data;
-			},
-			data: {"username":user.username,
-					"email":user.email
-					}
+			data: data
 		});
 		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
 	};
@@ -140,7 +101,10 @@ AppServices.factory('userAccountFactory', function($http, $q, transformRequestAs
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json;charset=utf-8'},
 			url: 'home/updatePassword',
-			data: {"username":user.username,"password":user.password}
+			data: {
+				"password":user.password,
+				"username":user.username
+		}
 		});
 		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
 	};
@@ -206,21 +170,26 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 		return (request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError));
 	};
 	
-	serverAccountFactory.getServerAccount = function(id){
+	serverAccountFactory.getServerAccountData = function(id){
 		var request = $http({
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
-			url: 'serveraccount/account/' + id
+			url: 'serveraccount/accountData',
+			data:{
+				'id': id
+			}
 		});
 		return (request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError));
 	};
-	
+
 	serverAccountFactory.createNewAccount = function(url){
 		var request = $http({
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json;charset=utf-8'},
 			url: 'relation/createNewAccount',
-			params:{"url":url.toString()}
+			data:{
+				"url":url
+			}
 		});
 		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
 	};
@@ -243,26 +212,44 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 			url: 'serveraccount/updateTrustLevel',
 			params: {
-				"url": serverAccount.url,
-				"oldLevel": serverAccount.trustLevel,
-				"newLevel": trustLevel
+				"trustLevel": trustLevel,
+				"trustLevelOld": serverAccount.trustLevel,
+				"url": serverAccount.url
 			}
 		});
 		request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError);
 	};
 	
 	serverAccountFactory.updateBalanceLimit  = function(serverAccount, balanceLimit){
-		var request = $http({
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
-			url: 'serveraccount/updateBalanceLimit',
-			params: {
-				"url": serverAccount.url,
-				"oldLimit": serverAccount.balanceLimit,
-				"newLimit": balanceLimit
-			}
-		});
-		request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError);
+		if(serverAccount.balanaceLimit != balanceLimit){			
+			var request = $http({
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json; charset=UTF-8'},
+				url: 'serveraccount/updateBalanceLimit',
+				params: {
+					"activeBalance": serverAccount.activeBalance,
+					"balanceLimit": balanceLimit,
+					"url": serverAccount.url
+				}
+			});
+			request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError);
+		}
+	};
+
+	serverAccountFactory.updateUserBalanceLimit  = function(serverAccount, userBalanceLimit){
+		if(serverAccount.userBalanaceLimit != userBalanceLimit){			
+			var request = $http({
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json; charset=UTF-8'},
+				url: 'serveraccount/updateUserBalanceLimit',
+				params: {
+					"activeBalance": serverAccount.activeBalance,
+					"userBalanceLimit": userBalanceLimit,
+					"url": serverAccount.url
+				}
+			});
+			request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError);
+		}
 	};
 	
 	serverAccountFactory.handleSuccess = function(response){
@@ -325,8 +312,8 @@ AppServices.factory('messagesFactory', function($http, $q) {
 			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 			url: 'messages/accept',
 			data: {
-				"url": updatedAccount.url,
-				"trustLevel": updatedAccount.trustLevel
+				"trustLevel": updatedAccount.trustLevel,
+				"url": updatedAccount.url
 			}
 		});
 		return (request.then(messagesFactory.handleSuccess, messagesFactory.handleError));
@@ -338,8 +325,8 @@ AppServices.factory('messagesFactory', function($http, $q) {
 			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 			url: 'messages/decline',
 			data: {
-				"url": updatedAccount.url,
-				"trustLevel": updatedAccount.trustLevel
+				"trustLevel": updatedAccount.trustLevel,
+				"url": updatedAccount.url
 			}
 		});
 		return (request.then(messagesFactory.handleSuccess, messagesFactory.handleError));
@@ -449,47 +436,4 @@ AppServices.factory('base64Factory', function() {
     };
     
     return base64Factory;
-});
-
-AppServices.factory("transformRequestAsFormPost",function() {
-		 
-	// I prepare the request data for the form post.
-	function transformRequest( data) {
-		return( param( data ) );
-	}
-		 
-		 
-	// Return the factory value.
-	return( transformRequest );
-	
-	function param(obj) {
-		var query = '', name, value, fullSubName, subName, subValue, innerObj, i;  
-	    for(name in obj) {
-	      value = obj[name];
-	        
-	      if(value instanceof Array) {
-	        for(i=0; i<value.length; ++i) {
-	          subValue = value[i];
-	          fullSubName = name + '[' + i + ']';
-	          innerObj = {};
-	          innerObj[fullSubName] = subValue;
-	          query += param(innerObj) + '&';
-	        }
-	      }
-	      else if(value instanceof Object) {
-	        for(subName in value) {
-	          subValue = value[subName];
-	          fullSubName = name + '[' + subName + ']';
-	          innerObj = {};
-	          innerObj[fullSubName] = subValue;
-	          query += param(innerObj) + '&';
-	        }
-	      }
-	      else if(value !== undefined && value !== null)
-	        query += encodeURIComponent(name) + '=' + encodeURIComponent(value) + '&';
-	    }
-	      
-	    return query.length ? query.substr(0, query.length - 1) : query;
-	  };
-		 
 });
