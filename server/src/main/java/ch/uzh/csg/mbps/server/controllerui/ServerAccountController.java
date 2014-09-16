@@ -2,7 +2,6 @@ package ch.uzh.csg.mbps.server.controllerui;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.List;
 
 import net.minidev.json.JSONObject;
 
@@ -11,10 +10,9 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.util.EntityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import ch.uzh.csg.mbps.responseobject.ServerAccountObject;
@@ -27,13 +25,15 @@ import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.response.HttpRequestHandler;
-import ch.uzh.csg.mbps.server.util.ActivitiesTitle;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.SecurityConfig;
+import ch.uzh.csg.mbps.server.util.Subjects;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
-import ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction;
+import ch.uzh.csg.mbps.server.web.response.GetHistoryServerTransaction;
+import ch.uzh.csg.mbps.server.web.response.ServerAccountDataTransferObject;
+import ch.uzh.csg.mbps.server.web.response.WebRequestTransferObject;
 
 @Controller
 @RequestMapping("/serveraccount")
@@ -54,85 +54,111 @@ public class ServerAccountController {
 	public String history() {
 		return "html/serveraccount";
 	}
-
-	@RequestMapping(value = { "/account/{id}" }, method = RequestMethod.GET)
-	public @ResponseBody
-	ServerAccount account(@PathVariable("id") long id) throws ServerAccountNotFoundException {
-		return serverAccountService.getById(id);
+	
+	@RequestMapping(value = { "/accountData" }, method = RequestMethod.POST, consumes="application/json", produces="application/json")
+	@ResponseBody public ServerAccountDataTransferObject accountData(@RequestBody ServerAccountObject request) throws ServerAccountNotFoundException {
+		ServerAccountDataTransferObject response = new ServerAccountDataTransferObject();
+		ServerAccount account = serverAccountService.getById(request.getId());
+		response.setServerAccountObject(transformServerObject(account));
+		GetHistoryServerTransaction ghsto = new GetHistoryServerTransaction();
+		ghsto.setTransactionHistory(serverTransactionService.getLast5ServerAccountTransaction(account.getUrl()));
+		response.setGetHistoryTransferObject(ghsto);
+		response.setMessage(Config.SUCCESS);
+		response.setSuccessful(true);
+		return response;
 	}
 
-	@RequestMapping(value = { "/lastAccountTransaction/{url}" }, method = RequestMethod.GET, produces = "application/json")
-	public @ResponseBody
-	List<HistoryServerAccountTransaction> getLastAccountTransaction(@PathVariable("url") String url) throws ServerAccountNotFoundException {
-		return serverTransactionService.getLast5ServerAccountTransaction(url);
+	private ServerAccountObject transformServerObject(ServerAccount account) {
+		ServerAccountObject o = new ServerAccountObject();
+		o.setId(account.getId());
+		o.setUrl(account.getUrl());
+		o.setPayinAddress(account.getPayinAddress());
+		o.setPayoutAddress(account.getPayoutAddress());
+		o.setTrustLevel(account.getTrustLevel());
+		o.setActiveBalance(account.getActiveBalance());
+		o.setBalanceLimit(account.getBalanceLimit());
+		o.setUserBalanceLimit(account.getUserBalanceLimit());
+		return o;
 	}
 
 	@RequestMapping(value = { "/deleteAccount" }, method = RequestMethod.POST, consumes="application/json")
-	public @ResponseBody
-	boolean delete(@RequestParam(value = "url", required = false) String url) throws Exception {
-		boolean passed = serverAccountService.checkPredefinedDeleteArguments(url);
-		if (passed) {
-			ServerAccountObject deleteAccount = new ServerAccountObject();
-			deleteAccount.setUrl(SecurityConfig.BASE_URL);
-			JSONObject jsonObj = new JSONObject();
-			try {
-				deleteAccount.encode(jsonObj);
-			} catch (Exception e) {
-				throw new Exception(e.getMessage());
-			}
-			
-			CloseableHttpResponse resBody;
-			TransferObject response = new TransferObject();
-			try {
-				resBody = HttpRequestHandler.prepPostResponse(jsonObj, url + Config.DELETE_ACCOUNT);									
+	public @ResponseBody TransferObject delete(@RequestBody ServerAccountObject request) throws Exception {
+		TransferObject response = new TransferObject();
+		
+		UserAccount user;
+		try{			
+			user = userAccountService.getByUsername(AuthenticationInfo.getPrincipalUsername());
+		} catch (UserAccountNotFoundException e){
+			response.setMessage("User is not authorized");
+			response.setSuccessful(false);
+			throw new UserAccountNotFoundException(null);
+		}
+		
+		if(serverAccountService.checkIfExistsByUrl(request.getUrl())){			
+			boolean passed = serverAccountService.checkPredefinedDeleteArguments(request.getUrl());
+			if (passed) {
+				ServerAccountObject deleteAccount = new ServerAccountObject();
+				deleteAccount.setUrl(SecurityConfig.BASE_URL);
+				JSONObject jsonObj = new JSONObject();
 				try {
-					HttpEntity entity1 = resBody.getEntity();
-					String respString = EntityUtils.toString(entity1);
-					if(respString != null && respString.trim().length() > 0) {
-						response.decode(respString);
-					}
+					deleteAccount.encode(jsonObj);
 				} catch (Exception e) {
 					throw new Exception(e.getMessage());
-				} finally {
-					resBody.close();
 				}
-			} catch (IOException e) {
-				throw new IOException(e.getMessage());
-			}
-
-			if(response.isSuccessful()){				
-				boolean success = serverAccountService.deleteAccount(url);
-				if (success) {
-					return true;
+				
+				CloseableHttpResponse resBody;
+				try {
+					resBody = HttpRequestHandler.prepPostResponse(jsonObj, request.getUrl() + Config.DELETE_ACCOUNT);									
+					try {
+						HttpEntity entity1 = resBody.getEntity();
+						String respString = EntityUtils.toString(entity1);
+						if(respString != null && respString.trim().length() > 0) {
+							response.decode(respString);
+						}
+					} catch (Exception e) {
+						throw new Exception(e.getMessage());
+					} finally {
+						resBody.close();
+					}
+				} catch (IOException e) {
+					throw new IOException(e.getMessage());
 				}
-			} else {
-				//TODO: mehmet ServerAccountTask??
-			}
-		}	
-		//TODO: mehmet ServerAccountTask??
-		return false;
+				
+				if(response.isSuccessful()){				
+					boolean success = serverAccountService.deleteAccount(request.getUrl());
+					if (success) {
+						activitiesService.activityLog(user.getUsername(), Subjects.DELETE_ACCOUNT, "The server account with url " + request.getUrl() +" is deleted.");
+						response.setMessage(Config.SUCCESS);
+						response.setSuccessful(true);
+						return response;
+					}
+				}
+			}	
+		}
+		response.setMessage(Config.FAILED);
+		response.setSuccessful(false);
+		return response;
 	}
 
 	@RequestMapping(value = { "/updateTrustLevel" }, method = RequestMethod.POST, consumes="application/json")
-	public @ResponseBody void updateTrustLevel(
-			@RequestParam(value = "url", required = false) String url,
-			@RequestParam(value = "oldLevel", required = false) int oldLevel,
-			@RequestParam(value = "newLevel", required = false) int newLevel) throws Exception {
-		
+	@ResponseBody public TransferObject updateTrustLevel(@RequestBody WebRequestTransferObject request) throws Exception {
+		TransferObject response = new TransferObject();
 		UserAccount user = null;
 		try {
 			user = userAccountService.getByUsername(AuthenticationInfo.getPrincipalUsername());
 		} catch (UserAccountNotFoundException e) {
+			response.setMessage("User is not authorized");
+			response.setSuccessful(false);
 			throw new UserAccountNotFoundException(AuthenticationInfo.getPrincipalUsername());
 		}
 		
 		//Get the account that has a trust level update
-		ServerAccount tmpAccount = serverAccountService.getByUrl(url);
+		ServerAccount tmpAccount = serverAccountService.getByUrl(request.getUrl());
 		
 		if(tmpAccount.getActiveBalance().compareTo(BigDecimal.ZERO)==0){
 			// Prepare your data to send
 			ServerAccountObject updatedAccount = new ServerAccountObject(SecurityConfig.BASE_URL, user.getEmail());
-			updatedAccount.setTrustLevel(newLevel);
+			updatedAccount.setTrustLevel(request.getTrustLevel());
 			JSONObject jsonObj = new JSONObject();
 			try {
 				updatedAccount.encode(jsonObj);
@@ -144,10 +170,10 @@ public class ServerAccountController {
 			TransferObject transferObject = new TransferObject();
 			try {
 				//execute post request
-				if(oldLevel < newLevel){				
-					resBody = HttpRequestHandler.prepPostResponse(jsonObj, url + Config.DOWNGRADE_TRUST);					
+				if(request.getTrustLevelOld() < request.getTrustLevel()){				
+					resBody = HttpRequestHandler.prepPostResponse(jsonObj, request.getUrl() + Config.DOWNGRADE_TRUST);					
 				} else {
-					resBody = HttpRequestHandler.prepPostResponse(jsonObj, url + Config.UPGRADE_TRUST);
+					resBody = HttpRequestHandler.prepPostResponse(jsonObj, request.getUrl() + Config.UPGRADE_TRUST);
 				}
 				
 				try {
@@ -167,37 +193,82 @@ public class ServerAccountController {
 			
 			if(transferObject.isSuccessful()){
 				// update the trust level of the server account who's level was downgraded 
-				// upgrade will be ignored --> depends on the other server
+				// upgrade will be ignored --> other server can answer async
 				if(transferObject.getMessage().equals(Config.DOWNGRADE_SUCCEEDED)){
 					ServerAccount trustUpdated = new ServerAccount();
-					trustUpdated.setTrustLevel(newLevel);
-					boolean success = serverAccountService.updateAccount(url, trustUpdated);
+					trustUpdated.setTrustLevel(request.getTrustLevel());
+					boolean success = serverAccountService.updateAccount(request.getUrl(), trustUpdated);
 					if(success) {
-						activitiesService.activityLog(AuthenticationInfo.getPrincipalUsername(), ActivitiesTitle.DOWNGRADE_TRUST_LEVEL, "Server account "+ url +" is downgrade to " + newLevel);
+						activitiesService.activityLog(AuthenticationInfo.getPrincipalUsername(), Subjects.DOWNGRADE_TRUST_LEVEL, "Server account "+ request.getUrl() +" is downgrade to " + request.getTrustLevel());
+						response.setMessage(Config.SUCCESS);
+						response.setSuccessful(true);
+						return response;
 					}
 				}
 			}
 			
 		}
-		
+		response.setMessage(Config.FAILED);
+		response.setSuccessful(false);
+		return response;
 	}
 
 	@RequestMapping(value = { "/updateBalanceLimit}" }, method = RequestMethod.GET)
-	public @ResponseBody boolean updateBalanceLimit(
-			@RequestParam(value = "url", required = false) String url,
-			@RequestParam(value = "newLimit", required = false) BigDecimal newLimit) throws ServerAccountNotFoundException {
-		ServerAccount updatedAccount = new ServerAccount();
-		updatedAccount.setBalanceLimit(newLimit);
-		return serverAccountService.updateAccount(url, updatedAccount);
+	@ResponseBody public TransferObject updateBalanceLimit(@RequestBody WebRequestTransferObject request) throws ServerAccountNotFoundException, UserAccountNotFoundException {
+		TransferObject response = new TransferObject();
+		UserAccount user = null;
+		try {
+			user = userAccountService.getByUsername(AuthenticationInfo.getPrincipalUsername());
+		} catch (UserAccountNotFoundException e) {
+			response.setMessage("User is not authorized");
+			response.setSuccessful(false);
+			throw new UserAccountNotFoundException(AuthenticationInfo.getPrincipalUsername());
+		}
+		
+		if(request.getActiveBalance().compareTo(BigDecimal.ZERO) == 0){			
+			ServerAccount updatedAccount = new ServerAccount();
+			updatedAccount.setBalanceLimit(request.getBalanceLimit());
+			boolean success = serverAccountService.updateAccount(request.getUrl(), updatedAccount);
+			
+			if(success){
+				response.setMessage(Config.SUCCESS);
+				response.setSuccessful(true);
+				activitiesService.activityLog(user.getUsername(), Subjects.UPDATE_BALANCE_LIMIT, "The balance limit of the server url " + request.getUrl() + " is updated to "+ request.getBalanceLimit() + " BTC.");
+				return response;
+			}
+		}
+		response.setMessage(Config.FAILED);
+		response.setSuccessful(false);
+		return response;
 	}
 	
 	@RequestMapping(value = { "/updateUserBalanceLimit}" }, method = RequestMethod.GET)
-	public @ResponseBody boolean updateUserBalanceLimit(
-			@RequestParam(value = "url", required = false) String url,
-			@RequestParam(value = "newLimit", required = false) BigDecimal newLimit) throws ServerAccountNotFoundException {
+	@ResponseBody public TransferObject updateUserBalanceLimit(@RequestBody WebRequestTransferObject request) throws ServerAccountNotFoundException, UserAccountNotFoundException {
 		
-		ServerAccount updatedAccount = new ServerAccount();
-		updatedAccount.setUserBalanceLimit(newLimit);
-		return serverAccountService.updateAccount(url, updatedAccount);
+		TransferObject response = new TransferObject();
+		UserAccount user = null;
+		try {
+			user = userAccountService.getByUsername(AuthenticationInfo.getPrincipalUsername());
+		} catch (UserAccountNotFoundException e) {
+			response.setMessage("User is not authorized");
+			response.setSuccessful(false);
+			throw new UserAccountNotFoundException(AuthenticationInfo.getPrincipalUsername());
+		}
+
+		if(request.getActiveBalance().compareTo(BigDecimal.ZERO) == 0){				
+			ServerAccount updatedAccount = new ServerAccount();
+			updatedAccount.setUserBalanceLimit(request.getUserBalanceLimit());
+			boolean success = serverAccountService.updateAccount(request.getUrl(), updatedAccount);
+			
+			if(success){
+				response.setMessage(Config.SUCCESS);
+				response.setSuccessful(true);
+				activitiesService.activityLog(user.getUsername(), Subjects.UPDATE_BALANCE_LIMIT, "The user balance limit of the server url " + request.getUrl() + " is updated to "+ request.getUserBalanceLimit() + " BTC.");
+				return response;
+			}
+		}
+		response.setMessage(Config.FAILED);
+		response.setSuccessful(false);
+		return response;
 	}
 }

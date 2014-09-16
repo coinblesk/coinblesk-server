@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import ch.uzh.csg.mbps.server.clientinterface.IServerTransaction;
-import ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction;
+import ch.uzh.csg.mbps.server.util.Config;
+import ch.uzh.csg.mbps.server.web.model.HistoryServerAccountTransaction;
+import ch.uzh.csg.mbps.server.web.response.GetHistoryServerTransaction;
 
 @Controller
 @RequestMapping("/history")
@@ -23,8 +25,13 @@ public class HistoryController {
         return "html/history";
     }
 	
-	@RequestMapping(value={"/transactions"}, method = RequestMethod.GET)
-	public @ResponseBody List<HistoryServerAccountTransaction> getHistory(){
-		return serverTransactionService.getHistory(0);
+	@RequestMapping(value={"/transactions"}, method = RequestMethod.POST, produces="application/json")
+	@ResponseBody public GetHistoryServerTransaction getHistory(){
+		GetHistoryServerTransaction response = new GetHistoryServerTransaction();
+		List<HistoryServerAccountTransaction> transactions = serverTransactionService.getHistory(0);
+		response.setTransactionHistory(transactions);
+		response.setMessage(Config.SUCCESS);
+		response.setSuccessful(true);
+		return response;
 	}
 }

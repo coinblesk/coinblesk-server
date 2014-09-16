@@ -1,7 +1,5 @@
 package ch.uzh.csg.mbps.server.controllerui;
 
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -9,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import ch.uzh.csg.mbps.server.clientinterface.IActivities;
-import ch.uzh.csg.mbps.server.domain.Activities;
+import ch.uzh.csg.mbps.server.web.response.ActivitiesTransferObject;
 
 @Controller
 @RequestMapping("/activities")
@@ -23,9 +21,11 @@ public class ActivitiesController {
         return "html/activities";
     }
 	
-	@RequestMapping(value={"/logs"}, method = RequestMethod.GET)
-	public @ResponseBody List<Activities> getlogs(){
+	@RequestMapping(value={"/logs"}, method = RequestMethod.POST, produces="application/json")
+	public @ResponseBody ActivitiesTransferObject getlogs(){
 		//TODO: mehmet page number should be passed too
-		return activitiesService.getLogs(0);
+		ActivitiesTransferObject response = new ActivitiesTransferObject();
+		response.setActivitiessList(activitiesService.getLogs(0));
+		return response;
 	}
 }
