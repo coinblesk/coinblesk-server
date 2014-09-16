@@ -11,6 +11,9 @@ import javax.persistence.Index;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
+import net.minidev.json.JSONObject;
+import ch.uzh.csg.mbps.responseobject.TransferObject;
+
 @Entity
 @Table(name = "ACTIVITIES", indexes = {
 		@Index(name = "USERNAME_INDEX",  columnList="USERNAME")})
@@ -20,14 +23,14 @@ public class Activities {
 	@Column(name = "ID", nullable = false)
 	@SequenceGenerator(name = "pk_sequence", sequenceName = "activities_id_seq", allocationSize = 1)
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "pk_sequence")
-	private long id;
+	private Long id;
 	@Column(name = "USERNAME")
 	private String username;
 	@Column(name = "SUBJECT")
 	private String subject;
 	@Column(name = "MESSAGE")
 	private String message;
-	@Column(name = "CREATION_DATE", nullable = false)
+	@Column(name = "CREATIONDATE", nullable = false)
 	private Date creationDate;
 
 	public Activities() {
@@ -41,11 +44,11 @@ public class Activities {
 		this.creationDate = new Date();
 	}
 
-	public long getId(){
+	public Long getId(){
 		return this.id;
 	}
 	
-	public void setId(long id){
+	public void setId(Long id){
 		this.id = id;
 	}
 	
@@ -61,7 +64,7 @@ public class Activities {
 		return subject;
 	}
 
-	public void setTitle(String subject) {
+	public void setSubject(String subject) {
 		this.subject = subject;
 	}
 	
@@ -96,4 +99,30 @@ public class Activities {
 		sb.append(getCreationDate());
 		return sb.toString();
 	}
+	
+	public void encode(JSONObject o) {
+		if(username!=null) {
+			o.put("username", username);
+		}
+		if(subject!=null) {
+			o.put("subject", subject);
+		}
+		if(message!=null) {
+			o.put("message", message);
+		}
+		if(id!=null){
+			o.put("id", id);
+		}
+		if(creationDate!=null){
+			o.put("creationDate", creationDate);
+		}
+    }
+
+	public void decode(JSONObject o) {
+		setUsername(TransferObject.toStringOrNull(o.get("username")));
+		setSubject(TransferObject.toStringOrNull(o.get("subject")));
+		setMessage(TransferObject.toStringOrNull(o.get("message")));
+		setId(TransferObject.toLongOrNull((o).get("id")));
+		setCreationDate(TransferObject.toDateOrNull(o.get("creationDate")));
+    }
 }

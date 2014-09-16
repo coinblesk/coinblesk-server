@@ -33,11 +33,15 @@ public class Messages {
 	@Column(name = "ANSWERED_DATE")
 	private Date answeredDate;
 	@Column(name = "ANSWERED", nullable = false)
-	boolean answered;
+	private boolean answered;
+	@Column(name="TRUST_LEVEL")
+	private int trustLevel;
+	
 
 	public Messages(){
 		this.creationDate = new Date();
 		this.answered = false;
+		this.trustLevel = -1;
 	}
 	
 	public Messages(String subject, String message, String url){
@@ -45,6 +49,7 @@ public class Messages {
 		this.subject = subject;
 		this.message = message;
 		this.serverUrl = url;
+		this.trustLevel = -1;
 	}
 
 	public long getId() {
@@ -95,6 +100,14 @@ public class Messages {
 		this.answeredDate = answeredDate;
 	}
 	
+	public int getTrustLevel() {
+		return trustLevel;
+	}
+
+	public void setTrustLevel(int trustLevel) {
+		this.trustLevel = trustLevel;
+	}
+
 	public boolean getAnswered() {
 		return answered;
 	}
@@ -122,4 +135,5 @@ public class Messages {
 		sb.append(getAnswered());
 		return sb.toString();
 	}
+
 }
