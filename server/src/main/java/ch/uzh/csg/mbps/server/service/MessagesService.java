@@ -51,7 +51,7 @@ public class MessagesService implements IMessages{
 	
 	@Override
 	@Transactional
-	public boolean createMessage(Messages message) throws MessageNotFoundException{
+	public boolean createMessage(Messages message){
 		if(isTestingMode()){			
 			String strDate = "2014-08-31 15:15:15";
 			Date date = new Date();

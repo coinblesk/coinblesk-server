@@ -23,7 +23,7 @@ import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerPayOutRuleNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerPayOutRulesAlreadyDefinedException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
-import ch.uzh.csg.mbps.server.util.web.ServerPayOutRulesTransferObject;
+import ch.uzh.csg.mbps.server.web.response.ServerPayOutRulesTransferObject;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
@@ -57,8 +57,8 @@ public class ServerPayOutRuleService implements IServerPayOutRule {
 		}
 		if(noRulesDefined || testingMode){			
 			ServerPayOutRule spor;
-			for (int i = 0; i < sporto.getPayOutRulesList().size(); i++) {
-				spor = sporto.getPayOutRulesList().get(i);
+			for (int i = 0; i < sporto.getServerPayOutRulesList().size(); i++) {
+				spor = sporto.getServerPayOutRulesList().get(i);
 				spor.setServerAccountId(serverAccountId);
 				if (!BitcoindController.validateAddress(spor.getPayoutAddress())) {
 					throw new BitcoinException("Invalid Payout Address");
@@ -67,7 +67,7 @@ public class ServerPayOutRuleService implements IServerPayOutRule {
 		}  else {
 			throw new ServerPayOutRulesAlreadyDefinedException();
 		}
-		serverPayOutRuleDAO.createPayOutRules(sporto.getPayOutRulesList());
+		serverPayOutRuleDAO.createPayOutRules(sporto.getServerPayOutRulesList());
 	}
 
 	@Override

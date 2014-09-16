@@ -32,7 +32,7 @@ import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.VerificationTokenNotFoundException;
-import ch.uzh.csg.mbps.server.util.web.model.UserModel;
+import ch.uzh.csg.mbps.server.web.model.UserModelObject;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
@@ -203,8 +203,8 @@ public class UserAccountService implements IUserAccount {
 			userAccount.setPassword(CustomPasswordEncoder.getEncodedPassword(updatedAccount.getPassword()));
 		
 		//TODO: no logic behind....changes the role always to user 
-		if (UserRoles.isValidRole(updatedAccount.getRoles()))
-			userAccount.setRoles(updatedAccount.getRoles());
+//		if (UserRoles.isValidRole(updatedAccount.getRoles()))
+//			userAccount.setRoles(updatedAccount.getRoles());
 
 		
 		userAccountDAO.updateAccount(userAccount);
@@ -377,14 +377,14 @@ public class UserAccountService implements IUserAccount {
 	
 	@Override
 	@Transactional(readOnly = true)
-	public UserModel getLoggedAdmin(String username) {
+	public UserModelObject getLoggedAdmin(String username) {
 		UserAccount account = null;
 		try {
 			account = userAccountDAO.getByUsername(username);
 		} catch (UserAccountNotFoundException e) {
 			return null;
 		}
-		return new UserModel(account.getId(), account.getUsername(), account.getCreationDate(), 
+		return new UserModelObject(account.getId(), account.getUsername(), account.getCreationDate(), 
 				account.getEmail(), account.getPassword(), account.getPaymentAddress(), account.getRoles());
 	}
 
