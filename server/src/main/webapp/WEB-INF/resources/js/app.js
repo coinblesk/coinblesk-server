@@ -152,25 +152,41 @@ App.run(function($rootScope, $http, $location, $cookieStore, $injector, base64Fa
      * On 'event:loginRequest' send credentials to the server.
      */
 	$rootScope.$on('event:loginRequest', function (event, credentials) {
-		var token = 'Basic ' + base64Factory.encode(credentials.username + ':' + credentials.password);
-		var payload = 'j_username=' + credentials.username + '&j_password=' + credentials.password;
-		var config = {
-				headers: {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'}
-		};
 
-		$http.post('j_spring_security_check', payload, config)
-		.success(function(data) {
-			$rootScope.loggeduser = {
-					username: ''
+		var getUrlrequest = $http({
+			method: 'GET',
+			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
+			url: 'login/url'
+		});
+		
+		getUrlrequest.then(function(data){
+			var username = credentials.username;
+			credentials.username = username +"@"+ data.data.url;
+			var payload = 'j_username=' + credentials.username + '&j_password=' + credentials.password;
+			var config = {
+					headers: {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'}
 			};
+			var request = $http.post('j_spring_security_check', payload, config)
+			.success(function(data) {
+				$rootScope.loggeduser = {
+						username: ''
+				};
+				
+				$rootScope.loggeduser.username = credentials.username;
+				$rootScope.initialized = true;
+				$rootScope.$broadcast('event:loginConfirmed');
+			})
+			.error(function(data, status){
+				console.log(status);
+			});
 			
-			$rootScope.loggeduser.username = credentials.username;
-			$rootScope.initialized = true;
-			$rootScope.$broadcast('event:loginConfirmed');
-		})
-		.error(function(data, status){
+			request.then(function(){
+				$location.path('/home');
+			});
+		}, function(data, status){
 			console.log(status);
 		});
+		
 	});
 	
 	/**
