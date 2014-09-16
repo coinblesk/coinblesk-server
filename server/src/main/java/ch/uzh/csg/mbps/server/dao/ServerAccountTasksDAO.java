@@ -178,5 +178,26 @@ public class ServerAccountTasksDAO {
 		ServerAccountTasks account = getSingle(cq, em);
 		return account;
 	}
+
+	/**
+	 * Get all not proceeded accounts by given parameter type. 
+	 * 
+	 * @param type
+	 * @return List of ServerAccountTasks
+	 */
+	public List<ServerAccountTasks> getAccountsByType(int type) {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ServerAccountTasks> cq = cb.createQuery(ServerAccountTasks.class);
+		Root<ServerAccountTasks> root = cq.from(ServerAccountTasks.class);
+		Predicate condition1 = cb.equal(root.get("type"), type);
+		Predicate condition2 = cb.equal(root.get("proceed"), false);
+		Predicate condition3 = cb.and(condition1, condition2);
+		cq.where(condition3);
+
+		List<ServerAccountTasks> resultWithAliasedBean = em.createQuery(cq)
+				.getResultList();
+		
+		return resultWithAliasedBean;
+	}
 	
 }

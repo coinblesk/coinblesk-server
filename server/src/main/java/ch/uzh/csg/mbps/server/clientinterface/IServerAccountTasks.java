@@ -103,4 +103,12 @@ public interface IServerAccountTasks {
 	 */
 	public void persistsDowngradeAccount(String url, String username,String email, Integer trustLevel);
 
+	/**
+	 * Get all not proceeded accounts by a given parameter type.
+	 * 
+	 * @param type
+	 * @return ServerAccountTasks
+	 */
+	public List<ServerAccountTasks> getAccountsByType(int type);
+
 }
