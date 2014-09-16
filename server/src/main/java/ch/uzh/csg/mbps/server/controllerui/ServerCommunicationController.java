@@ -17,10 +17,12 @@ import ch.uzh.csg.mbps.responseobject.CreateSAObject;
 import ch.uzh.csg.mbps.responseobject.ServerAccountObject;
 import ch.uzh.csg.mbps.responseobject.TransferObject;
 import ch.uzh.csg.mbps.server.clientinterface.IActivities;
+import ch.uzh.csg.mbps.server.clientinterface.IMessages;
 import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
+import ch.uzh.csg.mbps.server.domain.Messages;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
-import ch.uzh.csg.mbps.server.util.ActivitiesTitle;
+import ch.uzh.csg.mbps.server.util.Subjects;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.SecurityConfig;
@@ -45,9 +47,11 @@ public class ServerCommunicationController {
 	private IUserAccount userAccountService;
 	@Autowired
 	private IActivities activitiesService;
+	@Autowired
+	private IMessages messagesService;
 	
 	@RequestMapping(value = "/createNewAccount", method = RequestMethod.POST, consumes="application/json", produces = "application/json")
-	@ResponseBody public CreateSAObject createNewAccount(@RequestBody CreateSAObject request){
+	public @ResponseBody CreateSAObject createNewAccount(@RequestBody CreateSAObject request){
 		CreateSAObject response = new CreateSAObject();
 		PKIAlgorithm pkiAlgorithm;
 		ServerAccount account;
@@ -99,7 +103,6 @@ public class ServerCommunicationController {
 			return response;	
 		} 
 		catch (UnknownPKIAlgorithmException e) {
-			// TODO Auto-generated catch block
 			response.setSuccessful(false);
 			response.setMessage(e.getMessage());
 			return response;	
@@ -127,7 +130,7 @@ public class ServerCommunicationController {
 	}
 
 	@RequestMapping(value = "/createNewAccountData", method = RequestMethod.POST, produces = "application/json")
-	@ResponseBody public ServerAccountObject createNewAccountData(@RequestBody ServerAccountObject request){
+	public @ResponseBody ServerAccountObject createNewAccountData(@RequestBody ServerAccountObject request){
 		ServerAccountObject response = new ServerAccountObject();
 		ServerAccount account;
 		
@@ -166,7 +169,7 @@ public class ServerCommunicationController {
 	}
 	
 	@RequestMapping(value = "/downgradeTrustLevel", method = RequestMethod.POST,consumes="application/json", produces = "application/json")
-	@ResponseBody public TransferObject downgradeTrustLevel(@RequestBody ServerAccountObject request) throws ServerAccountNotFoundException{
+	public @ResponseBody TransferObject downgradeTrustLevel(@RequestBody ServerAccountObject request) throws ServerAccountNotFoundException{
 		TransferObject response = new TransferObject();
 		try{
 			ServerAccount account = serverAccountService.getByUrl(request.getUrl());
@@ -175,7 +178,7 @@ public class ServerCommunicationController {
 				updated.setTrustLevel(request.getTrustLevel());
 				boolean success = serverAccountService.updateAccount(request.getUrl(), updated);
 				if(success){
-					activitiesService.activityLog(Config.NOT_AVAILABLE, ActivitiesTitle.DOWNGRADE_TRUST_LEVEL, "Trust level of Server account "+ request.getUrl() + " is downgraded to " + request.getTrustLevel());
+					activitiesService.activityLog(Config.NOT_AVAILABLE, Subjects.DOWNGRADE_TRUST_LEVEL, "Trust level of Server account "+ request.getUrl() + " is downgraded to " + request.getTrustLevel());
 					response.setSuccessful(true);
 					response.setMessage("Succeeded to downgrade!");
 					return response;
@@ -192,15 +195,17 @@ public class ServerCommunicationController {
 	}
 	
 	@RequestMapping(value = "/upgradeTrustLevel", method = RequestMethod.POST, consumes="application/json", produces = "application/json")
-	@ResponseBody public TransferObject upgradeTrustLevel(@RequestBody ServerAccountObject request) throws ServerAccountNotFoundException{
+	public @ResponseBody TransferObject upgradeTrustLevel(@RequestBody ServerAccountObject request) throws ServerAccountNotFoundException{
 		TransferObject response = new TransferObject();
 		try{
 			ServerAccount account = serverAccountService.getByUrl(request.getUrl());
 			if(account.getTrustLevel() < request.getTrustLevel()){
-				//TODO: mehmet make a table which is responsible for yes no answers
-
+				String messageInput = "Upgrade trust level to " + request.getTrustLevel();
+				Messages message = new Messages(Config.UPGRADE_TRUST, messageInput, request.getUrl());
+				message.setTrustLevel(request.getTrustLevel());
+				messagesService.createMessage(message);
 				response.setSuccessful(true);
-				response.setMessage("Succeeded to downgrade!");
+				response.setMessage("upgrade message is created");
 				return response;
 			}
 		} catch (ServerAccountNotFoundException e) {
@@ -213,8 +218,44 @@ public class ServerCommunicationController {
 		return response;
 	}
 	
+	@RequestMapping(value = "/upgradeAccepted", method = RequestMethod.POST, consumes="application/json", produces = "application/json")
+	public @ResponseBody TransferObject upgradeAccepted(@RequestBody ServerAccountObject request) throws ServerAccountNotFoundException{
+		TransferObject response = new TransferObject();
+		try{
+			serverAccountService.getByUrl(request.getUrl());
+		} catch (ServerAccountNotFoundException e) {
+			response.setSuccessful(false);
+			response.setMessage("Server Account does not exists!");
+			return response;
+		}
+		ServerAccount account = new ServerAccount();
+		account.setTrustLevel(request.getTrustLevel());
+		
+		serverAccountService.updateAccount(request.getUrl(), account);
+		activitiesService.activityLog(Config.NOT_AVAILABLE, Config.UPGRADE_TRUST, "Trust level of url: " + request.getUrl() + " is updated to " + request.getTrustLevel());
+		response.setSuccessful(true);
+		response.setMessage("Upgrade trust level to " + request.getTrustLevel());
+		return response;
+	}
+	
+	@RequestMapping(value = "/upgradeDeclined", method = RequestMethod.POST, consumes="application/json", produces = "application/json")
+	public @ResponseBody TransferObject upgradeDeclined(@RequestBody ServerAccountObject request) throws ServerAccountNotFoundException{
+		TransferObject response = new TransferObject();
+		try{
+			serverAccountService.getByUrl(request.getUrl());
+		} catch (ServerAccountNotFoundException e) {
+			response.setSuccessful(false);
+			response.setMessage("Server Account does not exists!");
+			return response;
+		}
+		activitiesService.activityLog(Config.NOT_AVAILABLE, Config.UPGRADE_TRUST, "Trust level of url: " + request.getUrl() + " is declined to updated to level " + request.getTrustLevel());
+		response.setSuccessful(true);
+		response.setMessage("Upgrade trust level to " + request.getTrustLevel());
+		return response;
+	}
+	
 	@RequestMapping(value ="/communication/deletedAccount", method = RequestMethod.POST, consumes="application/json")
-	@ResponseBody public TransferObject deleteAccount(@RequestBody ServerAccountObject request){
+	public @ResponseBody TransferObject deleteAccount(@RequestBody ServerAccountObject request){
 		TransferObject response = new TransferObject();
 		try{
 			if(!serverAccountService.isDeletedByUrl(request.getUrl())){
@@ -222,7 +263,7 @@ public class ServerCommunicationController {
 				if(success){					
 					response.setSuccessful(true);
 					response.setMessage("Succeeded to deleted!");
-					activitiesService.activityLog(Config.NOT_AVAILABLE, ActivitiesTitle.DELETE_ACCOUNT, "Server account "+ request.getUrl()+ " is deleted");
+					activitiesService.activityLog(Config.NOT_AVAILABLE, Subjects.DELETE_ACCOUNT, "Server account "+ request.getUrl()+ " is deleted");
 					return response;
 				}
 			} else {
