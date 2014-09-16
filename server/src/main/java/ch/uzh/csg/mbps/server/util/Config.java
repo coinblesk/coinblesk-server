@@ -83,10 +83,4 @@ public class Config {
 	
 	public static final String NOT_AVAILABLE = "n.A.";
 
-
-
-
-
-
-
 }
