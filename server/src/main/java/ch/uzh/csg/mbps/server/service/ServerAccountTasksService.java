@@ -51,7 +51,8 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 	
 	public enum ServerAccountTaskTypes {
 		CREATE_ACCOUNT((int) 1),
-		UPDATE_ACCOUNT((int) 2);
+		ACCEPT_TRUST_ACCOUNT((int) 2),
+		DECLINE_TRUST_ACCOUNT((int) 3);
 		
 		private int code;
 		
@@ -68,7 +69,9 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 	public static boolean isValidServerAccountTaskType(int code) {
 		if (code == ServerAccountTaskTypes.CREATE_ACCOUNT.getCode())
 			return true;
-		else if (code == ServerAccountTaskTypes.UPDATE_ACCOUNT.getCode())
+		else if (code == ServerAccountTaskTypes.ACCEPT_TRUST_ACCOUNT.getCode())
+			return true;
+		else if (code == ServerAccountTaskTypes.DECLINE_TRUST_ACCOUNT.getCode())
 			return true;
 		else
 			return false;
@@ -96,7 +99,7 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 			task.setToken("123456");
 		}
 		
-		serverAccountTasksDAO.persistCreateNewAccount(task);
+		serverAccountTasksDAO.persistAccount(task);
 	}
 
 	@Override
@@ -122,13 +125,72 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 			task.setToken("123457");
 		}
 		
-		serverAccountTasksDAO.persistCreateNewAccount(task);
+		serverAccountTasksDAO.persistAccount(task);
+	}
+	
+	@Override
+	@Transactional
+	public void persistsUpgradeAccount(String url, String username, String email, int trustLevel){
+		ServerAccountTasks task = new ServerAccountTasks();
+		task.setType(ServerAccountTaskTypes.ACCEPT_TRUST_ACCOUNT.getCode());
+		task.setUrl(url);
+		task.setUsername(username);
+		task.setEmail(email);
+		task.setTrustLevel(trustLevel);
+		task.setToken(java.util.UUID.randomUUID().toString());
+		
+		if(isTestingMode()){			
+			String strDate = "2014-08-31 15:15:15.0";
+			Date date = new Date();
+			try {
+				date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(strDate);
+			} catch (ParseException e) {
+				//ignore
+			}
+			task.setTimestamp(date);
+			task.setToken("123456");
+		}
+		
+		serverAccountTasksDAO.persistAccount(task);
+	}
+
+	@Override
+	@Transactional
+	public void persistsDowngradeAccount(String url, String username, String email, Integer trustLevel) {
+		ServerAccountTasks task = new ServerAccountTasks();
+		task.setType(ServerAccountTaskTypes.DECLINE_TRUST_ACCOUNT.getCode());
+		task.setUrl(url);
+		task.setUsername(username);
+		task.setEmail(email);
+		task.setTrustLevel(trustLevel);
+		task.setToken(java.util.UUID.randomUUID().toString());
+		
+		if(isTestingMode()){			
+			String strDate = "2014-08-31 15:15:15.0";
+			Date date = new Date();
+			try {
+				date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(strDate);
+			} catch (ParseException e) {
+				//ignore
+			}
+			task.setTimestamp(date);
+			task.setToken("123456");
+		}
+		
+		serverAccountTasksDAO.persistAccount(task);
+		
 	}
 	
 	@Override
 	@Transactional(readOnly = true)
 	public ServerAccountTasks getAccountTasksCreateByUrl(String url){
 		return serverAccountTasksDAO.getAccountTasksCreateByUrl(url);
+	}
+	
+	@Override
+	@Transactional(readOnly=true)
+	public ServerAccountTasks getAccountTaskByUrlAndDate(String url, Date date){
+		return serverAccountTasksDAO.getAccountTaskByUrlAndDate(url, date);
 	}
 	
 	@Override
@@ -165,6 +227,12 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 	public List<ServerAccountTasks> getProceedAccounts(){
 		return serverAccountTasksDAO.getProceedAccounts();
 	}
+
+	@Override
+	@Transactional
+	public List<ServerAccountTasks> getAccountsByType(int type){
+		return serverAccountTasksDAO.getAccountsByType(type);
+	}
 	
 	@Override
 	@Transactional
@@ -172,4 +240,5 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 		ServerAccountTasks task = serverAccountTasksDAO.getAccountTasksByToken(token);
 		serverAccountTasksDAO.updatedProceed(task);
 	}
+
 }
