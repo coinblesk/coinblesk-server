@@ -68,16 +68,23 @@ public class Config {
 	public static final String ACCOUNT_EXISTS = "Account already exists";
 	public static final String ACCOUNT_SUCCESS = "Creation succeeded";
 	public static final String ACCOUNT_FAILED = "Account failed";
+	public static final String ACCOUNT_UPDATED = "Updated succeeded";
+	public static final String SUCCESS = "success";
 	public static final Object DOWNGRADE_SUCCEEDED = "Downgrade succeeded";
 	
 	//url for server communication 
-	public static final String DOWNGRADE_TRUST = "/communication/downgradeTrustLevel";
-	public static final String UPGRADE_TRUST = "/communication/upgradeTrustLevel";
-	public static final String DELETE_ACCOUNT ="/communication/deletedAccount";
-	public static final String CREATE_NEW_SERVER = "/communication/createNewAccount";
-	public static final String CREATE_NEW_SERVER_PUBLIC_KEY = "/communication/createNewAccountData";
+	public static final String DOWNGRADE_TRUST = "/server/communication/downgradeTrustLevel";
+	public static final String UPGRADE_TRUST = "/server/communication/upgradeTrustLevel";
+	public static final String DELETE_ACCOUNT ="/server/communication/deletedAccount";
+	public static final String CREATE_NEW_SERVER = "/server/communication/createNewAccount";
+	public static final String CREATE_NEW_SERVER_PUBLIC_KEY = "/server/communication/createNewAccountData";
+	public static final String ACCEPT_UPGRADE_TRUST_LEVEL = "/server/communication/upgradeAccepted";
+	public static final String DECLINE_UPGRADE_TRUST_LEVEL = "/server/communication/upgradeDeclined";
 	
 	public static final String NOT_AVAILABLE = "n.A.";
+
+
+
 
 
 
