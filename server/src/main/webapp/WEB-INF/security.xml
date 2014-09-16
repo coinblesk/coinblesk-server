@@ -23,7 +23,8 @@
 		<intercept-url pattern="/history/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
 		<intercept-url pattern="/activities/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
 		<intercept-url pattern="/serveraccount/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
-		<intercept-url pattern="/messages/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>		
+		<intercept-url pattern="/messages/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
+		<intercept-url pattern="/login/**" access="permitAll" requires-channel="http"/>		
 		<intercept-url pattern="/communication/**" access="permitAll" requires-channel="http"/>
 		<intercept-url pattern="/**" access="isFullyAuthenticated()" requires-channel="http" />
 
@@ -72,12 +73,12 @@
 			org.springframework.security.authentication.ProviderManager. Otherwise we get an error 
 			A probable bug. This is still under investigation-->
 	<!-- <authentication-manager/> -->
-	<authentication-manager>
-    <authentication-provider>
+	<authentication-manager/>
+<!--     <authentication-provider>
         <user-service>
             <user name="admin" password="$2a$10$IbT4Y1NXCYakXmZwGYArjuD91CIucsgxCOU3s4GEPuVcuxIpmIRiq" authorities="ROLE_ADMIN" />
         </user-service>
     </authentication-provider>
-</authentication-manager>
+</authentication-manager> -->
  
 </beans:beans>
