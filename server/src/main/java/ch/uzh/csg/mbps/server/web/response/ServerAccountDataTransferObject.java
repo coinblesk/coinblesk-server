@@ -1,7 +1,6 @@
 package ch.uzh.csg.mbps.server.web.response;
 
 import net.minidev.json.JSONObject;
-import ch.uzh.csg.mbps.responseobject.ServerAccountObject;
 import ch.uzh.csg.mbps.responseobject.TransferObject;
 
 public class ServerAccountDataTransferObject extends TransferObject{

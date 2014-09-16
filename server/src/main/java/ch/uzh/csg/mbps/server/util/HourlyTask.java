@@ -2,19 +2,27 @@ package ch.uzh.csg.mbps.server.util;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.GregorianCalendar;
+import java.util.List;
 
 import net.minidev.json.parser.ParseException;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-
 import ch.uzh.csg.mbps.server.clientinterface.IPayOutRule;
+import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
+import ch.uzh.csg.mbps.server.clientinterface.IServerAccountTasks;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
+import ch.uzh.csg.mbps.server.dao.ServerPublicKeyDAO;
+import ch.uzh.csg.mbps.server.domain.PayOutRule;
+import ch.uzh.csg.mbps.server.domain.ServerAccount;
+import ch.uzh.csg.mbps.server.domain.ServerAccountTasks;
+import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.service.ServerAccountTasksService.ServerAccountTaskTypes;
+import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
+import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
+
+import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
 /**
  * Task executed by cron job for checking all {@link PayOutRule}s.
@@ -29,6 +37,12 @@ public class HourlyTask {
 	private MensaXLSExporter mensaXLSExporter;
 	@Autowired
 	private IPayOutRule payOutRuleService;
+	@Autowired
+	IServerAccountTasks serverAccountTasksService;
+	@Autowired
+	ServerPublicKeyDAO serverPublicKeyDAO;
+	@Autowired
+	IServerAccount serverAccountService;
 
 	/**
 	 * Update is executed every 60minutes.
@@ -40,25 +54,66 @@ public class HourlyTask {
 
 		// update USD/CHF-ExchangeRate
 		updateUsdChf();
+		
+		List<ServerAccountTasks> proceeds =  serverAccountTasksService.getProceedAccounts();
+		for(ServerAccountTasks remove: proceeds){
+			ServerAccountTasksHandler.getInstance().removeProceedTasks(remove.getToken());
+		}
+		
+		List<ServerAccountTasks> creates = serverAccountTasksService.getAccountsByType(ServerAccountTaskTypes.CREATE_ACCOUNT.getCode());
+		for(ServerAccountTasks create: creates){
+			UserAccount user = null;
+			ServerAccount account = null;
+			try {
+				user = userAccountService.getByUsername(create.getUsername());
+			} catch (UserAccountNotFoundException e1) {
+				//ignore
+			}
+			try {
+				account = serverAccountService.getByUrl(create.getUrl());
+			} catch (ServerAccountNotFoundException e1) {
+				//ignore
+			}
+			if(account == null && user == null){				
+				if(create.getPayoutAddress() == null){				
+					try {
+						ServerAccountTasksHandler.getInstance().createNewAccount(create.getUrl(), create.getEmail(), user, create.getToken());
+					} catch (Exception e) {
+						// ignore
+					}
+				} else {
+					try {
+						ServerAccountTasksHandler.getInstance().updatedPayoutAddress(create.getUrl(), create.getEmail(), user, create.getToken());
+					} catch (Exception e) {
+						// ignore
+					}
+				}
+			}
+		}
 
+		
+		List<ServerAccountTasks> upgrades = serverAccountTasksService.getAccountsByType(ServerAccountTaskTypes.ACCEPT_TRUST_ACCOUNT.getCode());
+		for(ServerAccountTasks upgrade: upgrades){
+			try {
+				ServerAccountTasksHandler.getInstance().upgradedTrustLevel(upgrade.getUsername(), upgrade.getEmail(), upgrade.getUrl(), upgrade.getTrustLevel(), upgrade.getToken());
+			} catch (Exception e) {
+				//ignore
+			}
+		}
+		
+		List<ServerAccountTasks> downgrades = serverAccountTasksService.getAccountsByType(ServerAccountTaskTypes.DECLINE_TRUST_ACCOUNT.getCode());
+		for(ServerAccountTasks downgrade: downgrades){
+			try {
+				ServerAccountTasksHandler.getInstance().upgradedTrustLevel(downgrade.getUsername(), downgrade.getEmail(), downgrade.getUrl(), downgrade.getTrustLevel(), downgrade.getToken());
+			} catch (Exception e) {
+				//ignore
+			}
+			
+		}
 		//TODO: mehmet include server payout rules hourly task
 		//TODO: mehmet include createnewaccount
 		//TODO: mehmet include upgrade of account
 
-		//check if enough Bitcoins are available in the system
-		sanityCheck();
-
-		//Check for MensaXLS Export
-		Date date = new Date();
-		Calendar calendar = GregorianCalendar.getInstance();
-		calendar.setTime(date);
-		int hour = calendar.get(Calendar.HOUR_OF_DAY); // hour formatted in 24h
-
-		//TODO: for mensa testrun only, delete afterwards
-		//do mensa export
-		if(hour == 23){
-			mensaXLSExporter.doQuery();
-		}
 	}
 
 	/**
