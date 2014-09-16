@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import ch.uzh.csg.mbps.responseobject.ServerAccountObject;
 import ch.uzh.csg.mbps.responseobject.TransferObject;
 import ch.uzh.csg.mbps.server.clientinterface.IActivities;
 import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
@@ -33,6 +32,7 @@ import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.web.response.GetHistoryServerTransaction;
 import ch.uzh.csg.mbps.server.web.response.ServerAccountDataTransferObject;
+import ch.uzh.csg.mbps.server.web.response.ServerAccountObject;
 import ch.uzh.csg.mbps.server.web.response.WebRequestTransferObject;
 
 @Controller

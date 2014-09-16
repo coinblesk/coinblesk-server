@@ -13,8 +13,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.customserialization.exceptions.UnknownPKIAlgorithmException;
 import ch.uzh.csg.mbps.keys.CustomPublicKey;
-import ch.uzh.csg.mbps.responseobject.CreateSAObject;
-import ch.uzh.csg.mbps.responseobject.ServerAccountObject;
 import ch.uzh.csg.mbps.responseobject.TransferObject;
 import ch.uzh.csg.mbps.server.clientinterface.IActivities;
 import ch.uzh.csg.mbps.server.clientinterface.IMessages;
@@ -32,6 +30,8 @@ import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UrlAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
+import ch.uzh.csg.mbps.server.web.response.CreateSAObject;
+import ch.uzh.csg.mbps.server.web.response.ServerAccountObject;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 

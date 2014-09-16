@@ -73,11 +73,7 @@ public class MessagesServiceTests {
 		message.setSubject(Subjects.UPGRADE_TRUST_LEVEL);
 		
 		boolean success = false;
-		try {
-			success = messagesService.createMessage(message);
-		} catch (MessageNotFoundException e) {
-			throw new MessageNotFoundException();
-		}
+		success = messagesService.createMessage(message);
 		
 		List<Messages> allNewMessages = messagesService.getMessages(0);
 		assertNotNull(allNewMessages);

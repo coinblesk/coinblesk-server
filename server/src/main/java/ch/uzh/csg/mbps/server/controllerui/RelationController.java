@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import ch.uzh.csg.mbps.responseobject.ServerAccountObject;
 import ch.uzh.csg.mbps.responseobject.ServerAccountTransferObject;
 import ch.uzh.csg.mbps.responseobject.TransferObject;
 import ch.uzh.csg.mbps.server.clientinterface.IActivities;
@@ -28,6 +27,7 @@ import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountTasksAlreadyExists;
 import ch.uzh.csg.mbps.server.util.exceptions.UrlAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
+import ch.uzh.csg.mbps.server.web.response.ServerAccountObject;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
