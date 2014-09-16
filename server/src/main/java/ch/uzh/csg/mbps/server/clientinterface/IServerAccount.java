@@ -124,7 +124,7 @@ public interface IServerAccount {
 	public ServerAccount prepareAccount(UserAccount userAccount, ServerAccount account) throws UserAccountNotFoundException, InvalidUrlException, InvalidEmailException;
 
 	/**
-	 * Checks if Url is allready existing
+	 * Checks if url is already existing
 	 * 
 	 * @param url
 	 * @return boolean
