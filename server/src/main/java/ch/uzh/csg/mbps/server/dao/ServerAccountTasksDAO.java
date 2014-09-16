@@ -1,5 +1,6 @@
 package ch.uzh.csg.mbps.server.dao;
 
+import java.util.Date;
 import java.util.List;
 
 import javax.persistence.EntityManager;
@@ -28,18 +29,10 @@ public class ServerAccountTasksDAO {
 	@PersistenceContext
 	private EntityManager em;
 	
-	public void persistCreateNewAccount(ServerAccountTasks account){
+	public void persistAccount(ServerAccountTasks account){
 		em.persist(account);
 		em.flush();
 		LOGGER.info("Server Account saved: serverAccount token: " + account.getToken() + ", url: " + account.getUrl());
-	}
-	
-	public void saveUpdateTrustLevel(ServerAccountTasks account) {
-		
-	}
-	
-	public void saveDeleteAccount(ServerAccountTasks account){
-		
 	}
 	
 	public ServerAccountTasks getAccountTasksCreateByUrl(String url){
@@ -165,6 +158,25 @@ public class ServerAccountTasksDAO {
 	public void updatedProceed(ServerAccountTasks task) {
 		task.setProceed(true);
 		em.merge(task);
+	}
+
+	/**
+	 * 
+	 * @param url
+	 * @param date
+	 * @return ServerAccountTasks
+	 */
+	public ServerAccountTasks getAccountTaskByUrlAndDate(String url, Date date) {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<ServerAccountTasks> cq = cb.createQuery(ServerAccountTasks.class);
+		Root<ServerAccountTasks> root = cq.from(ServerAccountTasks.class);
+		Predicate condition1 = cb.equal(root.get("url"), url);
+		Predicate condition2 = cb.equal(root.get("creationDate"), date);
+		Predicate condition3 = cb.and(condition1, condition2);
+		cq.where(condition3);
+		
+		ServerAccountTasks account = getSingle(cq, em);
+		return account;
 	}
 	
 }

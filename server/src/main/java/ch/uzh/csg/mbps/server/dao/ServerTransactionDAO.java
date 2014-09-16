@@ -18,7 +18,7 @@ import ch.uzh.csg.mbps.server.domain.ServerTransaction;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.TransactionException;
-import ch.uzh.csg.mbps.server.util.web.model.HistoryServerAccountTransaction;
+import ch.uzh.csg.mbps.server.web.model.HistoryServerAccountTransaction;
 import ch.uzh.csg.mbps.util.Converter;
 
 /**

@@ -38,16 +38,10 @@ public class MessagesDAO {
 	 * @return boolean
 	 * @throws MessageNotFoundException
 	 */
-	public boolean createMessage(Messages message) throws MessageNotFoundException{
+	public boolean createMessage(Messages message){
 		em.persist(message);
-		try{
-			Messages created = getMessageByDateAndSubject(message.getCreationDate(), message.getSubject());
-			
-			LOGGER.info("Message is created with id " + created.getId() + " and subject " + created.getSubject());
-			return true;
-		} catch (MessageNotFoundException e) {
-			return false;
-		}
+		LOGGER.info("Message is created with id " + message.getId() + " and subject " + message.getSubject());
+		return true;
 	}
 	
 	/**
