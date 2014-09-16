@@ -11,6 +11,7 @@ public class SecurityConfig {
 	protected static final String EMAIL_USER = "mbps-notification";
 	protected static final String EMAIL_PASSWORD = "4iu7xvEG";
 	public static final String BASE_URL = "http://bitcoin-clone2.csg.uzh.ch/server";
+	public static final String URL = "http://bitcoin-clone2.csg.uzh.ch";
 
 	//Bitcoin Controller Configuration
 	public static final String ACCOUNT = "bitcoinrpc";
