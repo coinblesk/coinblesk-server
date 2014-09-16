@@ -11,6 +11,9 @@ import javax.persistence.Index;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
+import net.minidev.json.JSONObject;
+import ch.uzh.csg.mbps.responseobject.TransferObject;
+
 @Entity
 @Table(name = "SERVER_PAYOUT_RULES", indexes = {@Index(name = "SERVER_ACCOUNT_ID_INDEX_PAYOUTRULES",  columnList="SERVER_ACCOUNT_ID")})
 public class ServerPayOutRule {
@@ -19,13 +22,13 @@ public class ServerPayOutRule {
 	@SequenceGenerator(name = "pk_sequence", sequenceName = "server_payout_rules_id_seq", allocationSize = 1)
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "pk_sequence")
 	@Column(name = "ID", nullable = false)
-	private long id;
+	private Long id;
 	@Column(name = "HOUR")
-	private int hour;
+	private Integer hour;
 	@Column(name = "DAY")
-	private int day;
+	private Integer day;
 	@Column(name = "SERVER_ACCOUNT_ID", nullable = false)
-	private long serverAccountId;
+	private Long serverAccountId;
 	@Column(name = "BALANCE_LIMIT", precision = 25, scale = 8)
 	private BigDecimal balanceLimit;
 	@Column(name = "PAYOUT_ADDRESS")
@@ -34,48 +37,48 @@ public class ServerPayOutRule {
 	public ServerPayOutRule() {
 	}
 
-	public ServerPayOutRule(long accountId, BigDecimal balance, String address){
+	public ServerPayOutRule(Long accountId, BigDecimal balance, String address){
 		this.serverAccountId = accountId;
 		this.balanceLimit = balance;
 		this.payoutAddress = address;
 	}
 	
-	public ServerPayOutRule(long accountId, int hour, int day, String address){
+	public ServerPayOutRule(Long accountId, Integer hour, Integer day, String address){
 		this.serverAccountId = accountId;
 		this.payoutAddress = address;
 		this.day = day;
 		this.hour = hour;
 	}
 	
-	public long getId() {
+	public Long getId() {
 		return id;
 	}
 
-	public void setId(long id) {
+	public void setId(Long id) {
 		this.id = id;
 	}
 
-	public int getHour() {
+	public Integer getHour() {
 		return hour;
 	}
 
-	public void setHour(int hour) {
+	public void setHour(Integer hour) {
 		this.hour = hour;
 	}
 
-	public int getDay() {
+	public Integer getDay() {
 		return day;
 	}
 
-	public void setDay(int day) {
+	public void setDay(Integer day) {
 		this.day = day;
 	}
 
-	public long getServerAccountId() {
+	public Long getServerAccountId() {
 		return serverAccountId;
 	}
 
-	public void setServerAccountId(long serverAccountId) {
+	public void setServerAccountId(Long serverAccountId) {
 		this.serverAccountId = serverAccountId;
 	}
 
@@ -112,4 +115,32 @@ public class ServerPayOutRule {
 		sb.append(getBalanceLimit());
 		return sb.toString();
 	}
+	
+	public void encode(JSONObject o) {
+		if(hour!=null) {
+			o.put("hour", hour);
+		}
+		if(day!=null) {
+			o.put("day", day);
+		}
+		if(balanceLimit!=null) {
+			o.put("balanceLimit", balanceLimit + "BTC");
+		}
+		if(id!=null){
+			o.put("id", id);
+		}
+		if(serverAccountId!=null){
+			o.put("serverAccountId", serverAccountId);
+		}
+	    o.put("payoutAddress", payoutAddress);
+	    //userId never sent like this over the network
+    }
+
+	public void decode(JSONObject o) {
+		setHour(TransferObject.toIntOrNull(o.get("hour")));
+		setDay(TransferObject.toIntOrNull(o.get("day")));
+		setId(TransferObject.toLongOrNull((o).get("id")));
+		setServerAccountId(TransferObject.toLongOrNull(o.get("serverAccountId")));
+		setPayoutAddress(TransferObject.toStringOrNull(o.get("payoutAddress")));
+    }
 }
