@@ -6,9 +6,9 @@ import ch.uzh.csg.mbps.server.web.model.UserModelObject;
 
 public class MainWebRequestObject extends TransactionObject {
 	
-	private UserModelObject userModelObject;
 	private GetHistoryServerTransaction getHistoryTransferObject;
 	private MessagesTransferObject getMessageTransferObject;
+	private UserModelObject userModelObject;
 
 	public UserModelObject getUserModelObject() {
 		return userModelObject;
@@ -32,11 +32,6 @@ public class MainWebRequestObject extends TransactionObject {
 	@Override
 	public void encode(JSONObject jsonObject) throws Exception {
 		super.encode(jsonObject);
-		if (userModelObject != null) {
-			JSONObject jsonObject2 = new JSONObject();
-			userModelObject.encodeThis(jsonObject2);
-			jsonObject.put("userModelObject", jsonObject2);
-		}
 		if (getHistoryTransferObject != null) {
 			JSONObject jsonObject2 = new JSONObject();
 			getHistoryTransferObject.encodeThis(jsonObject2);
@@ -47,18 +42,16 @@ public class MainWebRequestObject extends TransactionObject {
 			getMessageTransferObject.encodeThis(jsonObject2);
 			jsonObject.put("getMessageTransferObject", jsonObject2);
 		}
+		if (userModelObject != null) {
+			JSONObject jsonObject2 = new JSONObject();
+			userModelObject.encodeThis(jsonObject2);
+			jsonObject.put("userModelObject", jsonObject2);
+		}
 	}
 
 	@Override
 	public JSONObject decode(String responseString) throws Exception {
 		JSONObject o = super.decode(responseString);
-
-		JSONObject o2 = toJSONObjectOrNull(o.get("userModelObject"));
-		if (o2 != null) {
-			UserModelObject userAccount = new UserModelObject();
-			userAccount.decode(o2);
-			setUserModelObject(userAccount);
-		}
 
 		JSONObject o3 = toJSONObjectOrNull(o.get("getHistoryTransferObject"));
 		if (o3 != null) {
@@ -72,6 +65,13 @@ public class MainWebRequestObject extends TransactionObject {
 			MessagesTransferObject getMessageTransferObject = new MessagesTransferObject();
 			getMessageTransferObject.decode(o4);
 			setGetMessageTransferObject(getMessageTransferObject);
+		}
+
+		JSONObject o2 = toJSONObjectOrNull(o.get("userModelObject"));
+		if (o2 != null) {
+			UserModelObject userAccount = new UserModelObject();
+			userAccount.decode(o2);
+			setUserModelObject(userAccount);
 		}
 
 		return o;

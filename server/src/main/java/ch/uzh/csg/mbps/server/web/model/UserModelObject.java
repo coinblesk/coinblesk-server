@@ -7,13 +7,13 @@ import ch.uzh.csg.mbps.responseobject.TransferObject;
 
 public class UserModelObject extends TransferObject {
 		
-	private Long id;
 	private Date creationDate;
-	private String username;
 	private String email;
+	private Long id;
 	private String password;
 	private String paymentAddress;
 	public Byte role;
+	private String username;
 		
 	public UserModelObject() {}
 	
@@ -104,11 +104,14 @@ public class UserModelObject extends TransferObject {
 	}
 	
 	public void encodeThis(JSONObject jsonObject) throws Exception {
-		if (username != null) {
-			jsonObject.put("username", username);
+		if (creationDate != null) {
+			jsonObject.put("creationDate", creationDate);
 		}
 		if (email != null) {
 			jsonObject.put("email", email);
+		}
+		if (id != null) {
+			jsonObject.put("id", id);
 		}
 		if (password != null) {
 			jsonObject.put("password", password);
@@ -116,17 +119,13 @@ public class UserModelObject extends TransferObject {
 		if (paymentAddress != null) {
 			jsonObject.put("paymentAddress", paymentAddress);
 		}
-		if (id != null) {
-			jsonObject.put("id", id);
+		if (role != null){
+			jsonObject.put("role", role);			
 		}
-		if (creationDate != null) {
-			jsonObject.put("creationDate", creationDate);
+		if (username != null) {
+			jsonObject.put("username", username);
 		}
-		if (role != null)
-			jsonObject.put("role", role);
 	}
-
-
 	@Override
 	public void encode(JSONObject jsonObject) throws Exception {
 		super.encode(jsonObject);
@@ -140,13 +139,13 @@ public class UserModelObject extends TransferObject {
 	}
 
 	public JSONObject decode(JSONObject o) {
-		setUsername(toStringOrNull(o.get("username")));
+		setCreationDate(toDateOrNull(o.get("creationDate")));
 		setEmail(toStringOrNull(o.get("email")));
+		setId(toLongOrNull(o.get("id")));
 		setPassword(toStringOrNull(o.get("password")));
 		setPaymentAddress(toStringOrNull(o.get("paymentAddress")));
-		setId(toLongOrNull(o.get("id")));
-		setCreationDate(toDateOrNull(o.get("creationDate")));
 		setRole(toByteOrNull(o.get("role")));
+		setUsername(toStringOrNull(o.get("username")));
 		return o;
 	}
 }

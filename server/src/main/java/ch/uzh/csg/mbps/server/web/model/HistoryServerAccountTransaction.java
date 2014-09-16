@@ -13,10 +13,10 @@ import ch.uzh.csg.mbps.responseobject.TransferObject;
 public class HistoryServerAccountTransaction extends AbstractServerHistory {
 	private static final long serialVersionUID = -6411119193220293391L;
 
-	private String serverUrl;
 	private Boolean received;
-	private Boolean verified;
+	private String serverUrl;
 	private String transactionID;
+	private Boolean verified;
 	
 	public HistoryServerAccountTransaction(){
 	}
@@ -88,25 +88,25 @@ public class HistoryServerAccountTransaction extends AbstractServerHistory {
 
 	public void encode(JSONObject o) {
 		super.encode(o);
-		if(serverUrl!=null) {
-			o.put("serverUrl", serverUrl);
-		}
 		if(received!=null){
 			o.put("received", received);
 		}
-		if(verified!=null){
-			o.put("verified", verified);
+		if(serverUrl!=null) {
+			o.put("serverUrl", serverUrl);
 		}
 		if(transactionID!=null){
 			o.put("transactionID", transactionID);
+		}
+		if(verified!=null){
+			o.put("verified", verified);
 		}
     }
 
 	public void decode(JSONObject o) {
 		super.decode(o);
-		setServerUrl(TransferObject.toStringOrNull(o.get("serverUrl")));
 		setReceived(TransferObject.toBooleanOrNull(o.get("received")));
-		setVerified(TransferObject.toBooleanOrNull(o.get("verified")));
+		setServerUrl(TransferObject.toStringOrNull(o.get("serverUrl")));
 		setTransactionId(TransferObject.toStringOrNull(o.get("transactionID")));
+		setVerified(TransferObject.toBooleanOrNull(o.get("verified")));
     }
 }

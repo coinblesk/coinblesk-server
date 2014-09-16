@@ -10,8 +10,8 @@ import ch.uzh.csg.mbps.responseobject.TransferObject;
 public abstract class AbstractServerHistory implements Serializable {
 	private static final long serialVersionUID = -5481972138777437871L;
 	
-	protected Date timestamp;
 	protected BigDecimal amount;
+	protected Date timestamp;
 	
 	public Date getTimestamp() {
 		return timestamp;
@@ -30,17 +30,17 @@ public abstract class AbstractServerHistory implements Serializable {
 	}
 	
 	public void encode(JSONObject o) {
-		if(timestamp!=null) {
-			o.put("timestamp", TransferObject.encodeToString(timestamp));
-		}
 		if(amount!=null) {
 			o.put("amount", amount+"BTC");
+		}
+		if(timestamp!=null) {
+			o.put("timestamp", TransferObject.encodeToString(timestamp));
 		}
     }
 
 	public void decode(JSONObject o) {
-		setTimestamp(TransferObject.toDateOrNull(o.get("timestamp")));
 		setAmount(TransferObject.toBigDecimalOrNull(o.get("amount")));
+		setTimestamp(TransferObject.toDateOrNull(o.get("timestamp")));
     }
 	
 }

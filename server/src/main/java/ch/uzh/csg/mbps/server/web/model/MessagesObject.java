@@ -7,13 +7,13 @@ import ch.uzh.csg.mbps.responseobject.TransferObject;
 
 public class MessagesObject extends TransferObject {
 	
+	private Boolean answered;
+	private Date answeredDate;
+	private Date creationDate;
 	private Long id;
-	private String subject;
 	private String message;
 	private String serverUrl;
-	private Date creationDate;
-	private Date answeredDate;
-	private Boolean answered;
+	private String subject;
 	private Integer trustLevel;
 
 	public MessagesObject(){
@@ -113,8 +113,14 @@ public class MessagesObject extends TransferObject {
 	}
 	
 	public void encode(JSONObject o) {
-		if(subject!=null) {
-			o.put("subject", subject);
+		if(answered!=null){
+			o.put("answered", answered);
+		}
+		if(answeredDate!=null){
+			o.put("answeredDate", answeredDate);
+		}
+		if(creationDate!=null){
+			o.put("creationDate", creationDate);
 		}
 		if(message!=null) {
 			o.put("message", message);
@@ -125,14 +131,8 @@ public class MessagesObject extends TransferObject {
 		if(serverUrl!=null) {
 			o.put("serverUrl", serverUrl);
 		}
-		if(creationDate!=null){
-			o.put("creationDate", creationDate);
-		}
-		if(answeredDate!=null){
-			o.put("answeredDate", answeredDate);
-		}
-		if(answered!=null){
-			o.put("answered", answered);
+		if(subject!=null) {
+			o.put("subject", subject);
 		}
 		if(trustLevel!=null){
 			o.put("trustLevel", trustLevel);
@@ -140,13 +140,13 @@ public class MessagesObject extends TransferObject {
     }
 
 	public void decode(JSONObject o) {
-		setSubject(TransferObject.toStringOrNull(o.get("subject")));
+		setAnswered(TransferObject.toBooleanOrNull(o.get("answered")));
+		setAnsweredDate(TransferObject.toDateOrNull(o.get("answeredDate")));
+		setCreationDate(TransferObject.toDateOrNull(o.get("creationDate")));
 		setMessage(TransferObject.toStringOrNull(o.get("message")));
 		setId(TransferObject.toLongOrNull((o).get("id")));
 		setServerUrl(TransferObject.toStringOrNull(o.get("serverUrl")));
-		setCreationDate(TransferObject.toDateOrNull(o.get("creationDate")));
-		setAnsweredDate(TransferObject.toDateOrNull(o.get("answeredDate")));
-		setAnswered(TransferObject.toBooleanOrNull(o.get("answered")));
+		setSubject(TransferObject.toStringOrNull(o.get("subject")));
 		setTrustLevel(TransferObject.toIntOrNull(o.get("trustLevel")));
     }
 

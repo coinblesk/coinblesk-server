@@ -1,12 +1,17 @@
 package ch.uzh.csg.mbps.server.web.response;
 
+import java.math.BigDecimal;
 import java.util.Date;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import net.minidev.json.JSONObject;
 import ch.uzh.csg.mbps.responseobject.TransferObject;
 
 public class WebRequestTransferObject extends TransferObject {
 
+	private BigDecimal activeBalance;
+	private BigDecimal balanceLimit;
 	private Long id;
 	private String url;
 	private String username;
@@ -15,32 +20,53 @@ public class WebRequestTransferObject extends TransferObject {
 	private String subject;
 	private String message;
 	private Integer trustLevel;
+	private Integer trustLevelOld;
+	private BigDecimal userBalanceLimit;
+	
+	public BigDecimal getActiveBalance() {
+		return activeBalance;
+	}
+	public void setActiveBalance(BigDecimal activeBalance) {
+		this.activeBalance = activeBalance;
+	}
+	public BigDecimal getBalanceLimit() {
+		return balanceLimit;
+	}
+	public void setBalanceLimit(BigDecimal balanceLimit) {
+		this.balanceLimit = balanceLimit;
+	}
+	public BigDecimal getUserBalanceLimit() {
+		return userBalanceLimit;
+	}
+	public void setUserBalanceLimit(BigDecimal userBalanceLimit) {
+		this.userBalanceLimit = userBalanceLimit;
+	}
+	public Integer getTrustLevelOld() {
+		return trustLevelOld;
+	}
+	public void setTrustLevelOld(Integer trustLevelOld) {
+		this.trustLevelOld = trustLevelOld;
+	}
 	private Date date;
 	
 	public Date getDate() {
 		return date;
 	}
-
 	public void setDate(Date date) {
 		this.date = date;
 	}
-
 	public Integer getTrustLevel() {
 		return trustLevel;
 	}
-
 	public void setTrustLevel(Integer trustLevel) {
 		this.trustLevel = trustLevel;
 	}
-
 	public Long getId(){
 		return id;
 	}
-	
 	public void setId(Long id){
 		this.id = id;
 	}
-	
 	public String getUrl() {
 		return url;
 	}
@@ -79,17 +105,23 @@ public class WebRequestTransferObject extends TransferObject {
 	}
 	
 	public void encodeThis(JSONObject jsonObject) throws Exception {
-		if (id != null) {
-			jsonObject.put("id", id);
+		if (activeBalance != null) {
+			jsonObject.put("activeBalance",activeBalance + "BTC");
 		}
-		if (url != null) {
-			jsonObject.put("url", url);
+		if (balanceLimit != null) {
+			jsonObject.put("balanceLimit",balanceLimit + "BTC");
 		}
-		if (username != null) {
-			jsonObject.put("username", username);
+		if (date!=null){
+			jsonObject.put("date",date);
 		}
 		if (email != null) {
 			jsonObject.put("email", email);
+		}
+		if (id != null) {
+			jsonObject.put("id", id);
+		}
+		if (message != null) {
+			jsonObject.put("message", message);
 		}
 		if (password != null) {
 			jsonObject.put("password", password);
@@ -97,14 +129,20 @@ public class WebRequestTransferObject extends TransferObject {
 		if (subject != null) {
 			jsonObject.put("subject", subject);
 		}
-		if (message != null) {
-			jsonObject.put("message", message);
-		}
 		if (trustLevel != null) {
 			jsonObject.put("trustLevel", trustLevel);
 		}
-		if (date!=null){
-			jsonObject.put("date",date);
+		if (trustLevelOld != null) {
+			jsonObject.put("trustLevelOld", trustLevelOld);
+		}
+		if (url != null) {
+			jsonObject.put("url", url);
+		}
+		if (username != null) {
+			jsonObject.put("username", username);
+		}
+		if (userBalanceLimit != null) {
+			jsonObject.put("userBalanceLimit",userBalanceLimit + "BTC");
 		}
 	}
 
@@ -121,15 +159,73 @@ public class WebRequestTransferObject extends TransferObject {
 	}
 
 	public JSONObject decode(JSONObject o) {
-		setId(toLongOrNull(o.get("id")));
-		setUrl(toStringOrNull(o.get("url")));
-		setUsername(toStringOrNull(o.get("username")));
+		String activeBalance = toStringOrNull(o.get("activeBalance"));
+		if (balanceLimit != null) {
+			
+			Pattern pattern = Pattern.compile("[A-Za-z]");
+			Matcher matcher = pattern.matcher(activeBalance);
+			if (matcher.find()) {
+				int start = matcher.start();
+				if (start >= 0) {
+					String number = activeBalance.substring(0, start);
+					try {
+						setBalanceLimit(new BigDecimal(number));
+					} catch (NumberFormatException nfe) {
+						setBalanceLimit(BigDecimal.ZERO);
+					}
+				}
+			}
+			
+		}
+
+	String balanceLimit = toStringOrNull(o.get("balanceLimit"));
+		if (balanceLimit != null) {
+
+			Pattern pattern = Pattern.compile("[A-Za-z]");
+			Matcher matcher = pattern.matcher(balanceLimit);
+			if (matcher.find()) {
+				int start = matcher.start();
+				if (start >= 0) {
+					String number = balanceLimit.substring(0, start);
+					try {
+						setBalanceLimit(new BigDecimal(number));
+					} catch (NumberFormatException nfe) {
+						setBalanceLimit(BigDecimal.ZERO);
+					}
+				}
+			}
+
+		}
+		
+		setDate(toDateOrNull(o.get("date")));
 		setEmail(toStringOrNull(o.get("email")));
+		setId(toLongOrNull(o.get("id")));
+		setMessage(toStringOrNull(o.get("message")));
 		setPassword(toStringOrNull(o.get("password")));
 		setSubject(toStringOrNull(o.get("subject")));
-		setMessage(toStringOrNull(o.get("message")));
 		setTrustLevel(toIntOrNull(o.get("trustLevel")));
-		setDate(toDateOrNull(o.get("date")));
+		setTrustLevel(toIntOrNull(o.get("trustLevelOld")));
+		setUrl(toStringOrNull(o.get("url")));
+		setUsername(toStringOrNull(o.get("username")));
+		
+		String userBalanceLimit = toStringOrNull(o.get("userBalanceLimit"));
+		if (userBalanceLimit != null) {
+
+			Pattern pattern = Pattern.compile("[A-Za-z]");
+			Matcher matcher = pattern.matcher(userBalanceLimit);
+			if (matcher.find()) {
+				int start = matcher.start();
+				if (start >= 0) {
+					String number = userBalanceLimit.substring(0, start);
+					try {
+						setBalanceLimit(new BigDecimal(number));
+					} catch (NumberFormatException nfe) {
+						setBalanceLimit(BigDecimal.ZERO);
+					}
+				}
+			}
+
+		}
 		return o;
 	}
 	
