@@ -137,7 +137,7 @@ AppServices.factory('userAccountFactory', function($http, $q) {
 			url: 'users/sendMailToAll',
 			params:{
 				"subject": emailContent.subject,
-				"text": emailContent.text
+				"message": emailContent.text
 			}
 		});
 		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
@@ -173,25 +173,27 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 	serverAccountFactory.getServerAccountData = function(id){
 		var request = $http({
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
+			headers: {'Content-Type': 'application/json; charset=UTF-8'},
 			url: 'serveraccount/accountData',
 			data:{
-				'id': id
+				"id":id
 			}
 		});
 		return (request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError));
 	};
 
-	serverAccountFactory.createNewAccount = function(url){
+	serverAccountFactory.createNewAccount = function(serveraccount){
+		console.log(serveraccount);
 		var request = $http({
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json;charset=utf-8'},
 			url: 'relation/createNewAccount',
-			data:{
-				"url":url
+			data: {
+				"email": serveraccount.email,
+				"url":serveraccount.url
 			}
 		});
-		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
+		return(request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError));
 	};
 	
 	serverAccountFactory.deletedAccount = function(url){

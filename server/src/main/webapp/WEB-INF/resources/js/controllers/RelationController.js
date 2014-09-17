@@ -7,7 +7,10 @@
 var RelationController = function( $rootScope, $scope, $modal, $location, serverAccountFactory) {
 	$scope.trust = {};
 	$scope.editMode = false;
-	$scope.serveraccounts = [];
+	$scope.serveraccounts = {
+			'url':'',
+			'email': ''
+	};
 	$scope.trust = {
 		'0':'No-Trust',
 		'1':'Hyprid-Trust',
@@ -31,10 +34,12 @@ var RelationController = function( $rootScope, $scope, $modal, $location, server
 			controller: ModalAccountInstanceController
 		});
 		
-		modalInstance.result.then(function(url){
-			 $scope.serverRelation = url;
-			 if(!_.include($scope.serveraccounts, url)){
-				 serverAccountFactory.createNewAccount(url).then(function(){
+		modalInstance.result.then(function(account){
+			 $scope.serveraccounts.url = account.url;
+			 $scope.serveraccounts.email = account.email;
+			 console.log(account.url+ " " + account.email);
+			 if(!_.include($scope.serveraccounts, account.url)){
+				 serverAccountFactory.createNewAccount($scope.serveraccounts).then(function(){
 					 
 				 });
 			 }else{
@@ -54,8 +59,9 @@ var ModalAccountInstanceController = function ($scope, $modalInstance) {
 	
 	$scope.submit = function() {
 		$scope.resetError();
-		if($scope.account.url.length != 0){			
-			$modalInstance.close($scope.acccount);
+		if($scope.account.url.length != 0 && $scope.account.email.length != 0){
+			console.log($scope.account.url + " " + $scope.account.email);
+			$modalInstance.close($scope.account);
 		}else{
 			$scope.setError("Field has to be filled out!");
 		}
