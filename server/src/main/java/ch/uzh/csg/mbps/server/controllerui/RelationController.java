@@ -5,9 +5,9 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import ch.uzh.csg.mbps.responseobject.ServerAccountTransferObject;
@@ -20,7 +20,6 @@ import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.Config;
-import ch.uzh.csg.mbps.server.util.ServerAccountTasksHandler;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
@@ -91,7 +90,7 @@ public class RelationController {
     }
 	
 	@RequestMapping(value={"/account"}, method = RequestMethod.POST, consumes="application/json", produces="application/json")
-	@ResponseBody public ServerAccountObject account(ServerAccountObject request) throws ServerAccountNotFoundException{
+	@ResponseBody public ServerAccountObject account(@RequestBody ServerAccountObject request) throws ServerAccountNotFoundException{
 		ServerAccountObject response = new ServerAccountObject();
 		ServerAccount account = serverAccountService.getById(request.getId());
 		response = transformServerObject(account);
@@ -113,9 +112,13 @@ public class RelationController {
 		return o;
 	}
 	
-	@RequestMapping(value = { "/createNewAccount" }, method = RequestMethod.POST, consumes="application/json")
-	@ResponseBody public TransferObject createAccount( ServerAccountObject request) throws Exception {		
+	@RequestMapping(value = { "/createNewAccount" }, method = RequestMethod.POST, consumes="application/json", produces="application/json")
+	@ResponseBody public TransferObject createAccount(@RequestBody ServerAccountObject request) throws Exception {		
 
+		if(request.getUrl()== null){
+			throw new UserAccountNotFoundException(request.getUrl());
+		}
+		
 		TransferObject response = new TransferObject();
 		UserAccount user;
 		try{			
@@ -131,7 +134,7 @@ public class RelationController {
 		}
 		
 		if(!serverAccountService.checkIfExistsByUrl(request.getUrl())){
-			ServerAccountTasksHandler.getInstance().createNewAccount(request.getUrl(),request.getEmail(),user, null);
+			serverAccountTasksService.createNewAccount(request.getUrl(),request.getEmail(),user, null);
 		
 		}
 		response.setMessage(Config.SUCCESS);
@@ -141,10 +144,10 @@ public class RelationController {
 	
 	//DOTO: mehmet not used. Does this is needed?
 	@RequestMapping(value = { "/persistNewAccount" }, method = RequestMethod.POST, consumes="application/json")
-	@ResponseBody public TransferObject persistAccount(@RequestParam(value = "serverAccount", required = false) ServerAccount persistAccount) {
+	@ResponseBody public TransferObject persistAccount(@RequestBody ServerAccount request) {
 		TransferObject response = new TransferObject();
 		try {
-			serverAccountService.persistAccount(persistAccount);
+			serverAccountService.persistAccount(request);
 			response.setMessage(Config.SUCCESS);
 			response.setSuccessful(true);
 			return response;

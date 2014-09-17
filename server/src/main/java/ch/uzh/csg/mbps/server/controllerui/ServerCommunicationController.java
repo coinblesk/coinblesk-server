@@ -56,6 +56,8 @@ public class ServerCommunicationController {
 		PKIAlgorithm pkiAlgorithm;
 		ServerAccount account;
 		
+		
+		
 		try {
 			pkiAlgorithm = PKIAlgorithm.getPKIAlgorithm(request.getCustomPublicKey().getPkiAlgorithm());
 
@@ -254,7 +256,7 @@ public class ServerCommunicationController {
 		return response;
 	}
 	
-	@RequestMapping(value ="/communication/deletedAccount", method = RequestMethod.POST, consumes="application/json")
+	@RequestMapping(value ="/deletedAccount", method = RequestMethod.POST, consumes="application/json")
 	public @ResponseBody TransferObject deleteAccount(@RequestBody ServerAccountObject request){
 		TransferObject response = new TransferObject();
 		try{

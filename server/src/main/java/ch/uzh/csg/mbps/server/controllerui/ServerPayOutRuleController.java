@@ -17,6 +17,7 @@ import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerPayOutRuleNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerPayOutRulesAlreadyDefinedException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
+import ch.uzh.csg.mbps.server.web.response.ServerAccountObject;
 import ch.uzh.csg.mbps.server.web.response.ServerPayOutRulesTransferObject;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
@@ -122,7 +123,7 @@ public class ServerPayOutRuleController {
 	 */
 	@RequestMapping(value = "/reset", method = RequestMethod.POST, produces = "application/json")
 	@ResponseBody
-	public ServerPayOutRulesTransferObject resetRules(String url) {
+	public ServerPayOutRulesTransferObject resetRules(@RequestBody ServerAccountObject request) {
 		ServerPayOutRulesTransferObject response = new ServerPayOutRulesTransferObject();
 		try {
 			userAccountService.getByUsername(AuthenticationInfo.getPrincipalUsername());
@@ -132,7 +133,7 @@ public class ServerPayOutRuleController {
 			return response;
 		}
 		try {
-			serverPayOutRuleService.deleteRules(url);
+			serverPayOutRuleService.deleteRules(request.getUrl());
 			response.setMessage(RESET_SUCCESS);
 			response.setSuccessful(false);
 			return response;

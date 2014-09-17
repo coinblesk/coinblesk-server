@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -20,7 +21,6 @@ import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.Config;
-import ch.uzh.csg.mbps.server.util.ServerAccountTasksHandler;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.web.model.MessagesObject;
@@ -72,7 +72,7 @@ public class MessagesController {
 	}
 	
 	@RequestMapping(value={"/accept"}, method = RequestMethod.POST, consumes="application/json", produces="application/json")
-	@ResponseBody public TransferObject accept(WebRequestTransferObject request){
+	@ResponseBody public TransferObject accept(@RequestBody WebRequestTransferObject request){
 		TransferObject response = new TransferObject();
 
 		UserAccount sessionUser = null;
@@ -105,7 +105,7 @@ public class MessagesController {
 		
 		try {
 			//communicated with the other server that the upgrade was accepted
-			ServerAccountTasksHandler.getInstance().upgradedTrustLevel(sessionUser.getUsername(), sessionUser.getEmail(), request.getUrl(), request.getTrustLevel(), null);
+			serverAccountTasksService.upgradedTrustLevel(sessionUser.getUsername(), sessionUser.getEmail(), request.getUrl(), request.getTrustLevel(), null);
 		} catch (Exception e1) {
 			response.setMessage(Config.FAILED);
 			response.setSuccessful(false);
@@ -126,7 +126,7 @@ public class MessagesController {
 	} 
 	
 	@RequestMapping(value={"/decline"}, method = RequestMethod.POST, consumes="application/json", produces="application/json")
-	@ResponseBody public TransferObject decline(WebRequestTransferObject request){
+	@ResponseBody public TransferObject decline(@RequestBody WebRequestTransferObject request){
 		TransferObject response = new TransferObject();
 
 		UserAccount sessionUser = null;
@@ -158,7 +158,7 @@ public class MessagesController {
 		
 		try {
 			//communicated with the other server that the upgrade was declined
-			ServerAccountTasksHandler.getInstance().downgradeTrustLevel(sessionUser.getUsername(), sessionUser.getEmail(), request.getUrl(), request.getTrustLevel(), null);
+			serverAccountTasksService.downgradeTrustLevel(sessionUser.getUsername(), sessionUser.getEmail(), request.getUrl(), request.getTrustLevel(), null);
 		} catch (Exception e1) {
 			response.setMessage(Config.FAILED);
 			response.setSuccessful(false);

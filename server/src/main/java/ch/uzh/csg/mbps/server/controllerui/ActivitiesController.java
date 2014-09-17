@@ -22,7 +22,7 @@ public class ActivitiesController {
     }
 	
 	@RequestMapping(value={"/logs"}, method = RequestMethod.POST, produces="application/json")
-	public @ResponseBody ActivitiesTransferObject getlogs(){
+	@ResponseBody public ActivitiesTransferObject getlogs(){
 		//TODO: mehmet page number should be passed too
 		ActivitiesTransferObject response = new ActivitiesTransferObject();
 		response.setActivitiessList(activitiesService.getLogs(0));

@@ -5,9 +5,9 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import ch.uzh.csg.mbps.responseobject.TransferObject;
@@ -16,6 +16,7 @@ import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.web.response.UserAccountTransferObject;
+import ch.uzh.csg.mbps.server.web.response.WebRequestTransferObject;
 
 @Controller
 @RequestMapping("/users")
@@ -55,11 +56,9 @@ public class UsersController {
 	}
 	
 	@RequestMapping(value = { "/sendMailToAll" }, method = RequestMethod.POST, consumes="application/json")
-	@ResponseBody public TransferObject sendMailToAll(
-			@RequestParam(value = "subject", required = false) String subject,
-			@RequestParam(value = "text", required = false) String text) {
+	@ResponseBody public TransferObject sendMailToAll(@RequestBody WebRequestTransferObject request) {
 		TransferObject response = new TransferObject();
-		userAccountService.sendMailToAll(subject, text);
+		userAccountService.sendMailToAll(request.getSubject(), request.getMessage());
 		response.setMessage(Config.SUCCESS);
 		response.setSuccessful(true);
 		return null;
