@@ -1,20 +1,45 @@
 package ch.uzh.csg.mbps.server.service;
 
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
+import net.minidev.json.JSONObject;
+
+import org.apache.http.HttpEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.util.EntityUtils;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
+import ch.uzh.csg.mbps.customserialization.exceptions.UnknownPKIAlgorithmException;
+import ch.uzh.csg.mbps.keys.CustomPublicKey;
+import ch.uzh.csg.mbps.responseobject.TransferObject;
 import ch.uzh.csg.mbps.server.clientinterface.IActivities;
+import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
 import ch.uzh.csg.mbps.server.clientinterface.IServerAccountTasks;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.dao.ServerAccountTasksDAO;
+import ch.uzh.csg.mbps.server.dao.ServerPublicKeyDAO;
+import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.ServerAccountTasks;
+import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.response.HttpRequestHandler;
+import ch.uzh.csg.mbps.server.util.Config;
+import ch.uzh.csg.mbps.server.util.Constants;
+import ch.uzh.csg.mbps.server.util.SecurityConfig;
+import ch.uzh.csg.mbps.server.util.Subjects;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
+import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountTasksAlreadyExists;
+import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
+import ch.uzh.csg.mbps.server.web.response.CreateSAObject;
+import ch.uzh.csg.mbps.server.web.response.ServerAccountObject;
 
 /**
  * Service class for {@link ServerAccountTasks}.
@@ -22,6 +47,7 @@ import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountTasksAlreadyExists;
  */
 @Service
 public class ServerAccountTasksService implements IServerAccountTasks{
+	private static Logger LOGGER = Logger.getLogger(ServerAccountTasksService.class);
 	private static boolean TESTING_MODE = false;
 
 	@Autowired
@@ -30,6 +56,10 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 	private IUserAccount userAccountService;
 	@Autowired
 	private IActivities activitiesService;
+	@Autowired
+	private IServerAccount serverAccountService;
+	@Autowired
+	private ServerPublicKeyDAO serverPublicKeyDAO;
 
 	/**
 	 * Enables testing mode for JUnit Tests.
@@ -86,7 +116,6 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 		task.setUsername(username);
 		task.setEmail(email);
 		task.setToken(java.util.UUID.randomUUID().toString());
-		
 		if(isTestingMode()){			
 			String strDate = "2014-08-31 15:15:15.0";
 			Date date = new Date();
@@ -99,6 +128,7 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 			task.setToken("123456");
 		}
 		
+		LOGGER.info(task.toString());
 		serverAccountTasksDAO.persistAccount(task);
 	}
 
@@ -239,6 +269,352 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 	public void updateProceed(String token){
 		ServerAccountTasks task = serverAccountTasksDAO.getAccountTasksByToken(token);
 		serverAccountTasksDAO.updatedProceed(task);
+	}
+	
+	@Override
+	@Transactional
+	public void createNewAccount(String url, String email, UserAccount user, String token) throws Exception {
+		//Get custom public key of the server
+		CustomPublicKey cpk = new CustomPublicKey(Constants.SERVER_KEY_PAIR.getKeyNumber(), 
+				Constants.SERVER_KEY_PAIR.getPkiAlgorithm(), Constants.SERVER_KEY_PAIR.getPublicKey());
+		CreateSAObject create = new CreateSAObject();
+		create.setUrl(SecurityConfig.BASE_URL);
+		create.setEmail(user.getEmail());
+		create.setCustomPublicKey(cpk);
+		//encode object to json
+		JSONObject jsonObj = new JSONObject();
+		try {
+			create.encode(jsonObj);
+		} catch (Exception e) {
+			throw new Exception(e.getMessage());
+		}
+
+		CloseableHttpResponse resBody;
+		CreateSAObject csao = new CreateSAObject();
+		String urlCreate = url+ Config.CREATE_NEW_SERVER;
+		LOGGER.info(urlCreate);
+		try {
+			//execute post request
+			resBody = HttpRequestHandler.prepPostResponse(jsonObj, urlCreate);
+			try {
+				HttpEntity entity1 = resBody.getEntity();
+				String respString = EntityUtils.toString(entity1);
+				if(respString != null && respString.trim().length() > 0) {
+					LOGGER.info(respString);
+					csao.decode(respString);
+				} else {
+					//if response not correct store account into db for hourly tasks
+					if(token == null)
+						persistsCreateNewAccount(url, user.getUsername(), email);
+				}
+			} catch (Exception e) {
+				//if response not correct store account into db for hourly tasks
+				if(token == null){				
+					persistsCreateNewAccount(url, user.getUsername(), email);
+				}
+				throw new Exception(e.getMessage());
+			} finally {
+				resBody.close();
+			}
+		} catch (IOException e) {
+			//if response not correct store account into db for hourly tasks
+			if(token == null){
+				persistsCreateNewAccount(url, user.getUsername(), email);
+			}
+			throw new IOException(e.getMessage());
+		}		
+		
+		if (csao.isSuccessful()) {
+			// if urls are different throw exception
+			if (url != csao.getUrl()) {
+				if (token == null)
+					persistsCreateNewAccount(url, user.getUsername(), email);
+				
+				throw new InvalidUrlException();
+			}
+			ServerAccount serverAccount = new ServerAccount(csao.getUrl(),email);
+
+			// if serveraccount is deleted undo delete
+			if (serverAccountService.isDeletedByUrl(csao.getUrl())) {
+				serverAccountService.undeleteServerAccountByUrl(csao.getUrl());
+			} else {
+				boolean success = serverAccountService.persistAccount(serverAccount);
+				// if creation failed throw exception
+				if (!success) {
+					if (token == null)
+						persistsCreateNewAccount(url, user.getUsername(), email);
+					
+					throw new Exception();
+				}
+				PKIAlgorithm pkiAlgorithm;
+				try {
+					pkiAlgorithm = PKIAlgorithm.getPKIAlgorithm(cpk.getPkiAlgorithm());
+				} catch (UnknownPKIAlgorithmException e1) {
+					if(token == null)
+						persistsCreateNewAccount(url, user.getUsername(), email);
+					throw new UnknownPKIAlgorithmException();
+				}
+				serverPublicKeyDAO.saveUserPublicKey(csao.getId(), pkiAlgorithm, csao.getCustomPublicKey().getPublicKey());
+			}
+			
+			try {
+				updatedPayoutAddress(csao.getUrl(), email, user, token);
+			} catch (Exception e) {
+				if (token == null)
+					persistsCreateNewAccount(url, user.getUsername(), email);
+				
+				throw new Exception();
+			}
+			
+			if(token != null)
+				updateProceed(token);
+		} else {
+			if (token == null)
+				persistsCreateNewAccount(url, user.getUsername(), email);
+
+			activitiesService.activityLog(user.getUsername(), Subjects.FAILED_CREATE_SERVER_ACCOUNT,"Failed to create a new relation with the server " + url + " and email " + email);
+		}
+		activitiesService.activityLog(user.getUsername(), Subjects.CREATE_SERVER_ACCOUNT,"Create a new relation with the server " + url + " and email " + email);
+	}
+	
+	@Override
+	@Transactional
+	public void updatedPayoutAddress(String url, String email, UserAccount user, String token) throws Exception{
+		ServerAccount account;
+		try {
+			account = serverAccountService.getByUrl(url);
+		} catch (ServerAccountNotFoundException e1) {
+			throw new ServerAccountNotFoundException(url);
+		}
+		ServerAccountObject createAccount = new ServerAccountObject();
+		createAccount.setUrl(account.getUrl());
+		createAccount.setEmail(account.getEmail());
+		// The payin address for a new server relation is created 
+		createAccount.setPayoutAddress(account.getPayinAddress());
+
+		JSONObject jsonAccount = new JSONObject();
+		try {
+			createAccount.encode(jsonAccount);
+		} catch (Exception e) {
+			if(token == null)
+				persistsCreateNewAccountPayOutAddress(url, user.getUsername(), email, createAccount.getPayinAddress());
+				
+			throw new Exception(e.getMessage());
+		}
+		
+		ServerAccountObject sao = new ServerAccountObject();
+		
+		// The http request is prepared and send with the information$
+		//TODO: mehmet sign object
+		CloseableHttpResponse resBody2;
+		String urlCreateData = url+ Config.CREATE_NEW_SERVER_PUBLIC_KEY;
+		try {
+			//execute post request
+			resBody2 = HttpRequestHandler.prepPostResponse(jsonAccount, urlCreateData);
+			try {
+				HttpEntity entity1 = resBody2.getEntity();
+				String responseString = EntityUtils.toString(entity1);
+				if (responseString != null && responseString.trim().length() > 0) {
+					sao.decode(responseString);
+				} 
+			} catch (Exception e) {
+				if(token == null)
+					persistsCreateNewAccountPayOutAddress(url, user.getUsername(), email, createAccount.getPayinAddress());
+				
+				throw new Exception(e.getMessage());
+			} finally {
+				resBody2.close();
+			}
+			
+		} catch (IOException e) {
+			if(token == null)
+				persistsCreateNewAccountPayOutAddress(url, user.getUsername(), email, createAccount.getPayinAddress());
+			
+			throw new IOException(e.getMessage());
+		}
+		
+		// If successful store the received payout address into the database.
+		if(sao.isSuccessful()) {
+			ServerAccount responseAccount = serverAccountService.getByUrl(sao.getUrl());
+			responseAccount.setPayoutAddress(sao.getPayoutAddress());
+			serverAccountService.updatePayOutAddress(responseAccount.getUrl(), responseAccount);
+		} else {
+			if (token == null)
+				persistsCreateNewAccountPayOutAddress(url, user.getUsername(), email, createAccount.getPayinAddress());
+		}
+	}
+	
+	/**
+	 * Remove the database entries which are accomplished successfully.
+	 * 
+	 * @param token
+	 * @return boolean
+	 */
+	@Override
+	@Transactional
+	public boolean removeProceedTasks(String token){
+		ServerAccountTasks task = getAccountTasksByToken(token);
+		if(ServerAccountTasksService.isValidServerAccountTaskType(task.getType())){			
+			deleteTask(task.getType(), token);
+			return true;
+		}
+		return false;
+	}
+	
+	@Override
+	@Transactional
+	public void upgradedTrustLevel(String username, String email, String url, int trustLevel, String token) throws Exception {
+		ServerAccount account;
+		try {
+			account = serverAccountService.getByUrl(url);
+		} catch (ServerAccountNotFoundException e1) {
+			if(token == null)
+				persistsUpgradeAccount(url, username, email, trustLevel);
+			throw new ServerAccountNotFoundException(url);
+		}
+		CustomPublicKey cpk = new CustomPublicKey(Constants.SERVER_KEY_PAIR.getKeyNumber(), 
+				Constants.SERVER_KEY_PAIR.getPkiAlgorithm(), Constants.SERVER_KEY_PAIR.getPublicKey());
+		PKIAlgorithm pkiAlgorithm;
+		try {
+			pkiAlgorithm = PKIAlgorithm.getPKIAlgorithm(cpk.getPkiAlgorithm());
+		} catch (UnknownPKIAlgorithmException e1) {
+			if(token == null)
+				persistsUpgradeAccount(url, username, email, trustLevel);
+			throw new UnknownPKIAlgorithmException();
+		}
+		try {
+			byte KeyNumber = serverAccountService.saveServerPublicKey(account.getId(), pkiAlgorithm, cpk.getPublicKey());
+		} catch (UserAccountNotFoundException | ServerAccountNotFoundException  e1) {
+			if(token == null)
+				persistsUpgradeAccount(url, username, email, trustLevel);
+			throw new Exception();
+		}
+		
+		ServerAccountObject updatedAccount = new ServerAccountObject(SecurityConfig.BACKUP_DESTINATION, email);
+		updatedAccount.setTrustLevel(trustLevel);
+		JSONObject jsonAccount = new JSONObject();
+		try {
+			updatedAccount.encode(jsonAccount);
+		} catch (Exception e) {
+			if(token == null)
+				persistsUpgradeAccount(url, username, email, trustLevel);
+			throw new Exception(e.getMessage());
+		}
+		
+		// The http request is prepared and send with the information
+		//TODO: mehmet sign object
+		CloseableHttpResponse resBody;
+		String urlData = url+ Config.ACCEPT_UPGRADE_TRUST_LEVEL;
+		TransferObject response = new TransferObject();
+		try {
+			//execute post request
+			resBody = HttpRequestHandler.prepPostResponse(jsonAccount, urlData);
+			try {
+				HttpEntity entity1 = resBody.getEntity();
+				String responseString = EntityUtils.toString(entity1);
+				if (responseString != null && responseString.trim().length() > 0) {
+					response.decode(responseString);
+				} 
+			} catch (Exception e) {
+				if(token == null)
+					persistsUpgradeAccount(url, username, email, trustLevel);
+				throw new Exception(e.getMessage());
+			} finally {
+				resBody.close();
+			}
+			
+		} catch (IOException e) {
+			if(token == null)
+				persistsUpgradeAccount(url, username, email, trustLevel);
+			throw new IOException(e.getMessage());
+		}
+		
+		if(response.isSuccessful()){
+			serverAccountService.updateTrustLevel(urlData, trustLevel);
+			updateProceed(token);
+			activitiesService.activityLog(username, Subjects.UPGRADE_TRUST_LEVEL,"Trust relation with server " + url + " is updated to " + trustLevel);
+		} else{
+			if(token == null)
+				persistsUpgradeAccount(url, username, email, trustLevel);
+		}
+	}
+
+	@Override
+	@Transactional
+	public void downgradeTrustLevel(String username, String email, String url, Integer trustLevel, String token) throws Exception {
+		ServerAccount account;
+		try {
+			account = serverAccountService.getByUrl(url);
+		} catch (ServerAccountNotFoundException e1) {
+			if(token == null)
+				persistsDowngradeAccount(url, username, email, trustLevel);
+			throw new ServerAccountNotFoundException(url);
+		}
+		CustomPublicKey cpk = new CustomPublicKey(Constants.SERVER_KEY_PAIR.getKeyNumber(), 
+				Constants.SERVER_KEY_PAIR.getPkiAlgorithm(), Constants.SERVER_KEY_PAIR.getPublicKey());
+		PKIAlgorithm pkiAlgorithm;
+		try {
+			pkiAlgorithm = PKIAlgorithm.getPKIAlgorithm(cpk.getPkiAlgorithm());
+		} catch (UnknownPKIAlgorithmException e2) {
+			if(token == null)
+				persistsDowngradeAccount(url, username, email, trustLevel);
+			throw new UnknownPKIAlgorithmException();
+		}
+		try {
+			byte KeyNumber = serverAccountService.saveServerPublicKey(account.getId(), pkiAlgorithm, cpk.getPublicKey());
+		} catch (UserAccountNotFoundException | ServerAccountNotFoundException e1) {
+			if(token == null)
+				persistsDowngradeAccount(url, username, email, trustLevel);
+			throw new Exception();
+		}
+		
+		ServerAccountObject updatedAccount = new ServerAccountObject(SecurityConfig.BACKUP_DESTINATION, email);
+		updatedAccount.setTrustLevel(trustLevel);
+		JSONObject jsonAccount = new JSONObject();
+		try {
+			updatedAccount.encode(jsonAccount);
+		} catch (Exception e) {
+			if(token == null)
+				persistsDowngradeAccount(url, username, email, trustLevel);
+			throw new Exception(e.getMessage());
+		}
+		
+		// The http request is prepared and send with the information
+		//TODO: mehmet sign object
+		CloseableHttpResponse resBody;
+		String urlData = url+ Config.DECLINE_UPGRADE_TRUST_LEVEL;
+		TransferObject response = new TransferObject();
+		try {
+			//execute post request
+			resBody = HttpRequestHandler.prepPostResponse(jsonAccount, urlData);
+			try {
+				HttpEntity entity1 = resBody.getEntity();
+				String responseString = EntityUtils.toString(entity1);
+				if (responseString != null && responseString.trim().length() > 0) {
+					response.decode(responseString);
+				} 
+			} catch (Exception e) {
+				if(token == null)
+					persistsDowngradeAccount(url, username, email, trustLevel);
+				throw new Exception(e.getMessage());
+			} finally {
+				resBody.close();
+			}
+			
+		} catch (IOException e) {
+			if(token == null)
+				persistsDowngradeAccount(url, username, email, trustLevel);
+			throw new IOException(e.getMessage());
+		}
+		
+		if(response.isSuccessful()){
+			serverAccountService.updateTrustLevel(urlData, trustLevel);
+			updateProceed(token);
+			activitiesService.activityLog(username, Subjects.UPGRADE_TRUST_LEVEL,"Trust relation with server " + url + " is updated to " + trustLevel);
+		} else{
+			if(token == null)
+				persistsUpgradeAccount(url, username, email, trustLevel);
+		}
 	}
 
 }

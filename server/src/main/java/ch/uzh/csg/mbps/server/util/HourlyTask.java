@@ -57,7 +57,7 @@ public class HourlyTask {
 		
 		List<ServerAccountTasks> proceeds =  serverAccountTasksService.getProceedAccounts();
 		for(ServerAccountTasks remove: proceeds){
-			ServerAccountTasksHandler.getInstance().removeProceedTasks(remove.getToken());
+			serverAccountTasksService.removeProceedTasks(remove.getToken());
 		}
 		
 		List<ServerAccountTasks> creates = serverAccountTasksService.getAccountsByType(ServerAccountTaskTypes.CREATE_ACCOUNT.getCode());
@@ -77,13 +77,13 @@ public class HourlyTask {
 			if(account == null && user == null){				
 				if(create.getPayoutAddress() == null){				
 					try {
-						ServerAccountTasksHandler.getInstance().createNewAccount(create.getUrl(), create.getEmail(), user, create.getToken());
+						serverAccountTasksService.createNewAccount(create.getUrl(), create.getEmail(), user, create.getToken());
 					} catch (Exception e) {
 						// ignore
 					}
 				} else {
 					try {
-						ServerAccountTasksHandler.getInstance().updatedPayoutAddress(create.getUrl(), create.getEmail(), user, create.getToken());
+						serverAccountTasksService.updatedPayoutAddress(create.getUrl(), create.getEmail(), user, create.getToken());
 					} catch (Exception e) {
 						// ignore
 					}
@@ -95,7 +95,7 @@ public class HourlyTask {
 		List<ServerAccountTasks> upgrades = serverAccountTasksService.getAccountsByType(ServerAccountTaskTypes.ACCEPT_TRUST_ACCOUNT.getCode());
 		for(ServerAccountTasks upgrade: upgrades){
 			try {
-				ServerAccountTasksHandler.getInstance().upgradedTrustLevel(upgrade.getUsername(), upgrade.getEmail(), upgrade.getUrl(), upgrade.getTrustLevel(), upgrade.getToken());
+				serverAccountTasksService.upgradedTrustLevel(upgrade.getUsername(), upgrade.getEmail(), upgrade.getUrl(), upgrade.getTrustLevel(), upgrade.getToken());
 			} catch (Exception e) {
 				//ignore
 			}
@@ -104,15 +104,13 @@ public class HourlyTask {
 		List<ServerAccountTasks> downgrades = serverAccountTasksService.getAccountsByType(ServerAccountTaskTypes.DECLINE_TRUST_ACCOUNT.getCode());
 		for(ServerAccountTasks downgrade: downgrades){
 			try {
-				ServerAccountTasksHandler.getInstance().upgradedTrustLevel(downgrade.getUsername(), downgrade.getEmail(), downgrade.getUrl(), downgrade.getTrustLevel(), downgrade.getToken());
+				serverAccountTasksService.upgradedTrustLevel(downgrade.getUsername(), downgrade.getEmail(), downgrade.getUrl(), downgrade.getTrustLevel(), downgrade.getToken());
 			} catch (Exception e) {
 				//ignore
 			}
 			
 		}
 		//TODO: mehmet include server payout rules hourly task
-		//TODO: mehmet include createnewaccount
-		//TODO: mehmet include upgrade of account
 
 	}
 
