@@ -4,6 +4,7 @@ import java.util.Date;
 import java.util.List;
 
 import ch.uzh.csg.mbps.server.domain.ServerAccountTasks;
+import ch.uzh.csg.mbps.server.domain.UserAccount;
 
 public interface IServerAccountTasks {
 
@@ -110,5 +111,61 @@ public interface IServerAccountTasks {
 	 * @return ServerAccountTasks
 	 */
 	public List<ServerAccountTasks> getAccountsByType(int type);
+
+	/**
+	 * Sends data to other server and gets an answer back. 
+	 * The process of creating new server account. 
+	 * 
+	 * 
+	 * @param url
+	 * @param email
+	 * @param user
+	 * @param token
+	 * @throws Exception
+	 */
+	public void createNewAccount(String url, String email, UserAccount user,String token) throws Exception;
+
+	/**
+	 * Downgrade trust level 
+	 * 
+	 * @param username
+	 * @param email
+	 * @param url
+	 * @param trustLevel
+	 * @param token
+	 * @throws Exception
+	 */
+	public void downgradeTrustLevel(String username, String email, String url,Integer trustLevel, String token) throws Exception;
+
+	/**
+	 * Upgrade trust level 
+	 * 
+	 * @param string
+	 * @param string2
+	 * @param string3
+	 * @param trustLevel 
+	 * @throws Exception 
+	 */
+	public void upgradedTrustLevel(String username, String email, String url,int trustLevel, String token) throws Exception;
+
+	/**
+	 * Remove the database entries which are accomplished successfully.
+	 * 
+	 * @param token
+	 * @return boolean
+	 */
+	public boolean removeProceedTasks(String token);
+
+	/**
+	 * Creates a new payout address and sends to another server. Receives also a payout address.
+	 * 
+	 * @param url
+	 * @param email
+	 * @param user
+	 * @param cpk
+	 * @param token
+	 * @throws Exception
+	 */
+	public void updatedPayoutAddress(String url, String email, UserAccount user,String token) throws Exception;
 
 }
