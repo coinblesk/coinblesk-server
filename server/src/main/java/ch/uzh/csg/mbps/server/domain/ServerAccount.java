@@ -71,6 +71,7 @@ public class ServerAccount {
 		this.creationDate = new Date();
 		this.nOfKeys = 0;
 		this.trustLevel = 0;
+		this.userBalanceLimit = new BigDecimal(0.0);
 	}
 	
 	/**
@@ -92,6 +93,7 @@ public class ServerAccount {
 		this.creationDate = new Date();
 		this.nOfKeys = nOfKeys;
 		this.trustLevel = trustLevel;
+		this.userBalanceLimit = new BigDecimal(0.0);
 	}
 
 	public long getId() {

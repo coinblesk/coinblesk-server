@@ -20,8 +20,8 @@ public class AdminRole {
 	@SequenceGenerator(name = "pk_sequence", sequenceName = "adminRole_id_seq", allocationSize = 1)
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "pk_sequence")
 	private long id;
-	@Column(name = "USER_ID")
-	private long userID;
+	@Column(name = "ADMIN_EMAIL")
+	private String adminEmail;
 	@Column(name = "TOKEN")
 	private String token;
 	@Column(name = "CREATIONDATE", nullable = false)
@@ -31,18 +31,18 @@ public class AdminRole {
 		this.creationDate = new Date();
 	}
 
-	public AdminRole(long UserID, String token) {
-		this.userID = UserID;
+	public AdminRole(String adminEmail, String token) {
+		this.adminEmail = adminEmail;
 		this.token = token;
 		this.creationDate = new Date();
 	}
 
-	public long getUserID() {
-		return userID;
+	public String getAdminId() {
+		return adminEmail;
 	}
 
-	public void setUserID(long userID) {
-		this.userID = userID;
+	public void setAdminId(String adminEmail) {
+		this.adminEmail = adminEmail;
 	}
 
 	public String getToken() {

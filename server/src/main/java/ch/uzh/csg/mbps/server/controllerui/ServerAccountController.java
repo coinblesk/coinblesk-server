@@ -108,14 +108,12 @@ public class ServerAccountController {
 				} catch (Exception e) {
 					throw new Exception(e.getMessage());
 				}
-				LOGGER.info(jsonObj);
 				CloseableHttpResponse resBody;
 				try {
 					resBody = HttpRequestHandler.prepPostResponse(jsonObj, request.getUrl() + Config.DELETE_ACCOUNT);									
 					try {
 						HttpEntity entity1 = resBody.getEntity();
 						String respString = EntityUtils.toString(entity1);
-						LOGGER.info(respString);
 						if(respString != null && respString.trim().length() > 0) {
 							response.decode(respString);
 						}

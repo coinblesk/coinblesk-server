@@ -28,8 +28,6 @@ import ch.uzh.csg.mbps.util.Converter;
  */
 @Repository
 public class ServerTransactionDAO {
-	
-	
 	private static Logger LOGGER = Logger.getLogger(ServerTransactionDAO.class);
 	
 	@Autowired

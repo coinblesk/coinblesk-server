@@ -298,6 +298,30 @@ public class UserAccountDAO {
 	}
 	
 	/**
+	 * Returns {@link AdminRole} for given adminRoleToken.
+	 * 
+	 * @param AdminRoleToken
+	 * @return AdminRole matching between
+	 * @throws VerificationTokenNotFoundException
+	 */
+	public AdminRole getAdminRole(String token) throws VerificationTokenNotFoundException{
+		
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<AdminRole> cq = cb.createQuery(AdminRole.class);
+		Root<AdminRole> root = cq.from(AdminRole.class);
+		Predicate condition = cb.equal(root.get("token"), token);
+		cq.where(condition);
+
+		AdminRole adminRole = getSingle(cq, em);
+		
+		if (adminRole == null) {
+			throw new VerificationTokenNotFoundException(token);			
+		}
+		
+		return adminRole;
+	}
+	
+	/**
 	 * Returns verification token for given user-id as a string.
 	 * 
 	 * @param id
@@ -374,15 +398,28 @@ public class UserAccountDAO {
 	}
 
 	/**
+	 * Deletes {@link AdminRole} entry for given AdminRoleToken from DB.
+	 * 
+	 * @param AdminRoleToken
+	 *            of AdminRole to be deleted
+	 * @throws VerificationTokenNotFoundException
+	 */
+	public void deleteAdminRole(String adminRoleToken) throws VerificationTokenNotFoundException {	
+		AdminRole adminRole = getAdminRole(adminRoleToken);
+		em.remove(adminRole);
+		LOGGER.info("Deleted AdminRole: " + adminRoleToken);
+	}
+	
+	/**
 	 * Saves a token for resetting password of a {@link UserAccount}.
 	 * 
 	 * @param user
 	 * @param token
 	 */
-	public void createAdminToken(UserAccount user, String token){
-		AdminRole ar = new AdminRole(user.getId(), token);
+	public void createAdminToken(String emailAddress, String token){
+		AdminRole ar = new AdminRole(emailAddress, token);
 		em.persist(ar);
-		LOGGER.info("Created AdminRoleToken for UserAccount with ID: " + user.getId());
+		LOGGER.info("Created AdminRoleToken for UserAccount with eamil address: " + emailAddress);
 	}
 
 	/**
@@ -422,6 +459,19 @@ public class UserAccountDAO {
 		return em.createQuery(cq).getResultList();
 	}
 
+	/**
+	 * Returns a list with all {@link AdminRole} objects saved in the
+	 * database.
+	 * 
+	 * @return List<AdminRole>
+	 */
+	public List<AdminRole> getAllAdminRole() {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<AdminRole> cq = cb.createQuery(AdminRole.class);
+		cq.from(AdminRole.class);
+		return em.createQuery(cq).getResultList();
+	}
+	
 	public UserAccount getByEmailIgnoreCaseAndDeletedFlag(String email) throws UserAccountNotFoundException {
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<UserAccount> cq = cb.createQuery(UserAccount.class);
@@ -448,7 +498,10 @@ public class UserAccountDAO {
 	public List<UserAccount> getAllUserAccounts() {
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<UserAccount> cq = cb.createQuery(UserAccount.class);
-		cq.from(UserAccount.class);
+		Root<UserAccount> root = cq.from(UserAccount.class);
+		
+		cq.orderBy(cb.asc(root.get("username")));
+		
 		return em.createQuery(cq).getResultList();
 	}
 	
@@ -498,25 +551,18 @@ public class UserAccountDAO {
 		return resultWithAliasedBean;
 	}
 
-	public String getAdminEmail() {
+	public UserAccount getAdminEmail() {
 		CriteriaBuilder cb = em.getCriteriaBuilder();
-		CriteriaQuery<String> cq = cb.createQuery(String.class);
+		CriteriaQuery<UserAccount> cq = cb.createQuery(UserAccount.class);
 		Root<UserAccount> root = cq.from(UserAccount.class);
-		cq.select(cb.construct(String.class, root.get("email")));
 		
 		Predicate condition1 = cb.equal(root.get("roles"), Role.ADMIN.getCode());
-		Predicate condition2 = cb.equal(root.get("roles"), Role.BOTH.getCode());
-		Predicate condition3 = cb.equal(root.get("deleted"), false);
+		Predicate condition2 = cb.equal(root.get("deleted"), false);
 		
 		Predicate condition4 = cb.or(condition1, condition2);
-		Predicate condition5 = cb.and(condition3, condition4);
-		cq.where(condition5);
+		cq.where(condition4);
 		
-		cq.orderBy(cb.asc(root.get("id")));
-		
-		System.out.println("***************** " + cq.toString());
-		String resultWithAliasedBean = em.createQuery(cq).getSingleResult();
-		
-		return resultWithAliasedBean;
+		UserAccount account  = getSingle(cq, em);
+		return account;
 	}
 }

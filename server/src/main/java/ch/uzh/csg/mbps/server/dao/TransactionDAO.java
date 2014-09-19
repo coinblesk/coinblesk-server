@@ -112,6 +112,28 @@ public class TransactionDAO {
 		em.merge(sellerAccount);
 		LOGGER.info("Transaction created: " + tx.toString());
 	}
+
+	/**
+	 * Saves a new {@link DbTransaction} in the database. But this is called
+	 * when a cross server transaction happened. 
+	 * 
+	 * @param tx
+	 *            to save in the DB
+	 * @param account
+	 *           UserAccount from which transaction-amount is subtracted or added.
+	 * @param received
+	 *           Boolean tells if the user is a receiver or sender.
+	 */
+	public void createTransaction(DbTransaction tx, UserAccount account, boolean received) {
+		em.persist(tx);
+		if(received){
+			account.setBalance(account.getBalance().add(tx.getAmount()));			
+		}else{			
+			account.setBalance(account.getBalance().subtract(tx.getAmount()));
+		}
+		em.merge(account);
+		LOGGER.info("Transaction created: " + tx.toString());
+	}
 	
 	/**
 	 * Checks if a Transaction with the given parameters does already exist.
@@ -230,5 +252,37 @@ public class TransactionDAO {
 				.getSingleResult().toString());
 
 		return sum;
+	}
+
+	/**
+	 * Returns the sum of all transaction made as payer by the given parameter server url.
+	 * 
+	 * @return sumOfBalances
+	 */
+	public BigDecimal getCurrentBalanceTransactionAsPayer(String serverUrl, String username) {
+		BigDecimal amount = new BigDecimal(em.createQuery("SELECT SUM(db.amount) "
+				+ "FROM dbTransaction db "
+				+ "WHERE db.usernamePayer=:username AND db.serverPayee:serverUrl")
+				.setParameter("username", username)
+				.setParameter("serverUrl", serverUrl)
+				.getSingleResult().toString());
+		
+		return amount;
+	}
+
+	/**
+	 * Returns the sum of all transaction made as payee by the given parameter server url.
+	 * 
+	 * @return sumOfBalances
+	 */
+	public BigDecimal getCurrentBalanceTransactionAsPayee(String serverUrl, String username) {
+		BigDecimal amount = new BigDecimal(em.createQuery("SELECT SUM(db.amount) "
+				+ "FROM dbTransaction db "
+				+ "WHERE db.usernamePayee=:username AND db.serverPayer:serverUrl")
+				.setParameter("username", username)
+				.setParameter("serverUrl", serverUrl)
+				.getSingleResult().toString());
+		
+		return amount;
 	}
 }

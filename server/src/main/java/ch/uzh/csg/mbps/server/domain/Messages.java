@@ -45,11 +45,12 @@ public class Messages {
 	}
 	
 	public Messages(String subject, String message, String url){
-		super();
+		this.creationDate = new Date();
+		this.answered = false;
+		this.trustLevel = -1;
 		this.subject = subject;
 		this.message = message;
 		this.serverUrl = url;
-		this.trustLevel = -1;
 	}
 
 	public long getId() {

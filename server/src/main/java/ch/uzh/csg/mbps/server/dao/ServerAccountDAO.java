@@ -444,8 +444,6 @@ public class ServerAccountDAO {
 	 * @throws ServerAccountNotFoundException
 	 */
 	public boolean isDeletedById(long id) {
-		
-		
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<ServerAccount> cq = cb.createQuery(ServerAccount.class);
 		Root<ServerAccount> root = cq.from(ServerAccount.class);
@@ -472,5 +470,20 @@ public class ServerAccountDAO {
 		em.merge(account);
 	}
 
+	/**
+	 * Matches the server account active balance to the new balance.
+	 * 
+	 * @param url
+	 * @param amount
+	 * @param received
+	 */
+	public void persistsTransaction(ServerAccount account, BigDecimal amount, boolean received) {
+		if(received){
+			account.setActiveBalance(account.getActiveBalance().add(amount));
+		}else{
+			account.setActiveBalance(account.getActiveBalance().subtract(amount));
+		}
+		em.persist(account);
+	}
 	
 }
