@@ -1,5 +1,6 @@
 package ch.uzh.csg.mbps.server.service;
 
+import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -16,13 +17,14 @@ import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
 import ch.uzh.csg.mbps.server.dao.ServerAccountDAO;
 import ch.uzh.csg.mbps.server.dao.ServerPublicKeyDAO;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
+import ch.uzh.csg.mbps.server.domain.DbTransaction;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
-import ch.uzh.csg.mbps.server.util.Subjects;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.SecurityConfig;
+import ch.uzh.csg.mbps.server.util.Subjects;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidPublicKeyException;
@@ -231,13 +233,13 @@ public class ServerAccountService implements IServerAccount {
 			serverAccount.setTrustLevel(updatedAccount.getTrustLevel());
 		}
 
-		if (updatedAccount.getBalanceLimit() != serverAccount.getBalanceLimit()){			
+		if (updatedAccount.getBalanceLimit() != null && updatedAccount.getBalanceLimit() != serverAccount.getBalanceLimit()){			
 			title = Subjects.UPDATE_BALANCE_LIMIT;
 			message = "Balance limit is updated to " + updatedAccount.getBalanceLimit();
 			serverAccount.setBalanceLimit(updatedAccount.getBalanceLimit());
 		}
 		
-		if (updatedAccount.getUserBalanceLimit() != serverAccount.getUserBalanceLimit()){
+		if (updatedAccount.getUserBalanceLimit() != null && updatedAccount.getUserBalanceLimit() != serverAccount.getUserBalanceLimit()){
 			title = Subjects.UPDATE_USER_BALANCE_LIMIT;
 			message = "User balance limit is updated to " + updatedAccount.getUserBalanceLimit();			
 			serverAccount.setUserBalanceLimit(updatedAccount.getUserBalanceLimit());
@@ -248,6 +250,34 @@ public class ServerAccountService implements IServerAccount {
 		if(!TESTING_MODE)
 			activitiesService.activityLog(username, title, message);
 
+		return true;
+	}
+	
+	@Override
+	@Transactional
+	public boolean updatePayoutAddressAccount(String url, ServerAccount updatedAccount) throws ServerAccountNotFoundException {
+		ServerAccount serverAccount = getByUrl(url);
+		String title = "";
+		String message = "";
+		String username;
+		try {
+			UserAccount user = userAccountDAO.getByUsername(AuthenticationInfo.getPrincipalUsername());
+			username = user.getUsername();
+		} catch (UserAccountNotFoundException e) {
+			username = "n.V.";
+		}
+		
+		if (updatedAccount.getPayoutAddress() != null && !updatedAccount.getPayoutAddress().isEmpty()){			
+			title = Subjects.UPDATE_PAYOUT_ADDRESS;
+			message = "Payout address is updated to " + updatedAccount.getPayoutAddress();
+			serverAccount.setPayoutAddress(updatedAccount.getEmail());
+		}
+		
+		serverAccountDAO.updatedAccount(serverAccount);
+		
+		if(!TESTING_MODE)
+			activitiesService.activityLog(username, title, message);
+		
 		return true;
 	}
 
@@ -363,5 +393,51 @@ public class ServerAccountService implements IServerAccount {
 		}
 	}
 
-	
+	@Override
+	@Transactional
+	public boolean verifyTrustAndBalance(ServerAccount account, BigDecimal amount) {
+		ServerAccount serverAccount = null;
+		boolean verified = false;
+		
+		try {
+			serverAccount = getByUrl(account.getUrl());
+		} catch (ServerAccountNotFoundException e) {
+			return false;
+		}
+		
+		if(serverAccount.getTrustLevel() == 1){
+			verified = verifyHypridTrustBalance(serverAccount, amount);
+		} else if(serverAccount.getTrustLevel() == 2){
+			verified = verifyFullTrustBalance(serverAccount, amount);
+		}
+		
+		return verified;
+	}
+
+	/**
+	 * Verifies if the Balance limit is not reached by the new transaction.
+	 * 
+	 * @param serverAccount
+	 * @param amount
+	 * @return boolean
+	 */
+	private boolean verifyFullTrustBalance(ServerAccount serverAccount, BigDecimal amount) {
+		//Amount how much active balance will be if the transaction will be verified. 
+		BigDecimal changedActiveBalance = serverAccount.getActiveBalance().abs().add(amount);
+		if(serverAccount.getBalanceLimit().subtract(changedActiveBalance).compareTo(BigDecimal.ZERO) > 0)
+			return true;
+
+		return false;
+	}
+
+	private boolean verifyHypridTrustBalance(ServerAccount serverAccount, BigDecimal amount) {
+		//This method verifies that amount in comparison to the balance limit and bitcoins in escrow
+		return false;
+	}
+
+	@Override
+	@Transactional
+	public void persistsTransactionAmount(ServerAccount serverAccount, DbTransaction dbTransaction, boolean received) {
+		serverAccountDAO.persistsTransaction(serverAccount, dbTransaction.getAmount(), received);
+	}	
 }

@@ -2,6 +2,8 @@ package ch.uzh.csg.mbps.server.clientinterface;
 
 import java.util.List;
 
+import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
+
 import ch.uzh.csg.mbps.server.domain.ServerTransaction;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.web.model.HistoryServerAccountTransaction;
@@ -9,12 +11,12 @@ import ch.uzh.csg.mbps.server.web.model.HistoryServerAccountTransaction;
 public interface IServerTransaction {
 
 	/**
-	 * Creates a new {@link ServerTransaction} on the server/database.
+	 * Creates a new {@link Transaction} on the server/database.
 	 * 
 	 * @param serverTransaction the ServerTransaction which will be stored in the DB. 
 	 * @throws ServerAccountNotFoundException
 	 */
-	public void createServerTransaction(ServerTransaction serverTransaction) throws ServerAccountNotFoundException;
+	public void createServerTransaction(Transaction transaction, boolean recieved);
 	
 	/**
 	 * Returns the last 5 {@link ServerTransaction}s

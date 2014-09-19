@@ -27,4 +27,5 @@ public class Subjects {
 	public static final String FAILED_ANSWERED_MESSAGE = "Message answer failed";
 	public static final String SUCCEDED_ANSWERED_MESSAGE = "Message answer succeeded";
 	public static final String FAILED_HOURLY_TASK = "Hourly task failed";
+	public static final String UPDATE_PAYOUT_ADDRESS = "Payout address is updated";
 }

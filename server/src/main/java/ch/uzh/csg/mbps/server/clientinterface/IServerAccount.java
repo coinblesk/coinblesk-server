@@ -1,10 +1,12 @@
 package ch.uzh.csg.mbps.server.clientinterface;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.hibernate.HibernateException;
 
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
+import ch.uzh.csg.mbps.server.domain.DbTransaction;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
@@ -191,4 +193,33 @@ public interface IServerAccount {
 	 * @throws ServerAccountNotFoundException
 	 */
 	public void updateTrustLevel(String url, int newLevel) throws ServerAccountNotFoundException;
+
+	/**
+	 * Updates the payout address.
+	 * 
+	 * @param url
+	 * @param account
+	 * @return
+	 * @throws ServerAccountNotFoundException 
+	 */
+	public boolean updatePayoutAddressAccount(String url, ServerAccount account) throws ServerAccountNotFoundException;
+
+	/**
+	 * Verifies the trust relation and the balance limit
+	 * 
+	 * @param payerServerUrl
+	 * @param payeeServerUrl
+	 * @param amount 
+	 * @return boolean
+	 */
+	public boolean verifyTrustAndBalance(ServerAccount account, BigDecimal amount);
+
+	/**
+	 * Matches the active balance to the current balance.
+	 * 
+	 * @param serverAccount 
+	 * @param dbTransaction
+	 * @param received
+	 */
+	public void persistsTransactionAmount(ServerAccount serverAccount, DbTransaction dbTransaction, boolean received);
 }

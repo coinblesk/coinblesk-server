@@ -55,8 +55,8 @@ public class Config {
 	public static final BigDecimal BITSTAMP_BUY_EXCHANGE_RATE_LIMIT = new BigDecimal("1.05");
 	
 	//Limits for the HttpRequestHandler
-	public static final int HTTP_CONNECTION_TIMEOUT = 7 * 1000;
-	public static final int HTTP_SOCKET_TIMEOUT = 7 * 1000;
+	public static final int HTTP_CONNECTION_TIMEOUT = 5 * 1000;
+	public static final int HTTP_SOCKET_TIMEOUT = 5 * 1000;
 	public static final int DEFAULT_MAX_TOTAL_CONNECTIONS = 100;
 	public static final int DEFAULT_MAX_CONNECTIONS_PER_ROUTE = 10;
 	
@@ -80,7 +80,9 @@ public class Config {
 	public static final String CREATE_NEW_SERVER_PUBLIC_KEY = "/server/communication/createNewAccountData";
 	public static final String ACCEPT_UPGRADE_TRUST_LEVEL = "/server/communication/upgradeAccepted";
 	public static final String DECLINE_UPGRADE_TRUST_LEVEL = "/server/communication/upgradeDeclined";
+	public static final String SERVER_PAYMENT_TRANSACTION = "/server/communication/paymentTransaction";
 	
 	public static final String NOT_AVAILABLE = "n.A.";
+
 
 }

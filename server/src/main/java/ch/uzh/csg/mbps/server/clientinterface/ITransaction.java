@@ -54,6 +54,26 @@ public interface ITransaction {
 	public ServerPaymentResponse createTransaction(String authenticatedUser, ServerPaymentRequest toVerify) throws TransactionException, UserAccountNotFoundException;
 
 	/**
+	 * Creates a new Transaction on the server/database.
+	 * 
+	 * @param toVerify
+	 *            the {@link ServerPaymentRequest} containing one or two
+	 *            {@link PaymentRequest}
+	 * @return If the server has accepted and executed this given Transaction,
+	 *         than it signs the object with his private key. The callers can
+	 *         then verify the Transaction which has been executed.
+	 * @throws TransactionException
+	 *             If the {@link PaymentRequest} objects (contained in the
+	 *             object {@link ServerPaymentRequest}) received are not
+	 *             identical, if the signatures are not valid, or if any other
+	 *             transaction specific problem occurs.
+	 * @throws UserAccountNotFoundException
+	 *             If the a {@link UserAccount} contained in one or both
+	 *             Transaction objects cannot be found.
+	 */
+	public ServerPaymentResponse createTransactionOtherServer(ServerPaymentRequest serverPaymentRequest) throws TransactionException, UserAccountNotFoundException;
+
+	/**
 	 * Returns the five last Transactions of a given {@link UserAccount}.
 	 * The returned lists are ordered by the item's time stamp in descending
 	 * order.
@@ -89,4 +109,5 @@ public interface ITransaction {
 	 * @return BigDecimal
 	 */
 	public BigDecimal transactionSumByServerAsPayee(String url, String username);
+
 }

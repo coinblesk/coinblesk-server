@@ -150,6 +150,11 @@ public class ServerAccountObject extends TransferObject {
 		sb.append(getUserBalanceLimit());
 		sb.append(", trust level: ");
 		sb.append(getTrustLevel());
+		sb.append(" payout address: ");
+		sb.append(getPayoutAddress());
+		sb.append(" payin address: ");
+		sb.append(getPayinAddress());
+		
 		return sb.toString();
 	}
 

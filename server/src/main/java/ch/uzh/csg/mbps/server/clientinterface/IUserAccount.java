@@ -9,6 +9,7 @@ import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.server.domain.ResetPassword;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.domain.UserPublicKey;
+import ch.uzh.csg.mbps.server.util.AdminObject;
 import ch.uzh.csg.mbps.server.util.PasswordMatcher;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
@@ -158,9 +159,9 @@ public interface IUserAccount {
 	 * Returns a {@link UserModelObject} of a given parameter username.
 	 * 
 	 * @param username
-	 * @return User Model
+	 * @return User Account
 	 */
-	public UserModelObject getLoggedAdmin(String username);
+	public UserAccount getLoggedAdmin(String username);
 
 	/**
 	 * Updates a user with the role user to both
@@ -203,6 +204,7 @@ public interface IUserAccount {
 	 * 
 	 * @param subject
 	 * @param text
+	 * @throws UserAccountNotFoundException 
 	 */
 	public void sendMailToAll(String subject, String text);
 
@@ -216,5 +218,19 @@ public interface IUserAccount {
 	 * Returns the email of the first admin
 	 * @return Email
 	 */
-	public String getAdminEmail();
+	public UserAccount getAdminEmail();
+
+	/**
+	 * All users registered in the system.
+	 * 
+	 * @return List of all users
+	 */
+	public List<UserAccount> getAllUsers();
+
+	/**
+	 * Deletes all old tokens first, afterwards creates the admin user and deletes the used token.
+	 * @param admin
+	 * @return true if admin has successfully been created
+	 */
+	public boolean createRole(AdminObject admin);
 }

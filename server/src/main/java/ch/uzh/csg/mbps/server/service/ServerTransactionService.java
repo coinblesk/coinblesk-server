@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
+
 import ch.uzh.csg.mbps.server.clientinterface.IServerTransaction;
 import ch.uzh.csg.mbps.server.dao.ServerTransactionDAO;
 import ch.uzh.csg.mbps.server.domain.ServerTransaction;
@@ -30,7 +32,7 @@ public class ServerTransactionService implements IServerTransaction{
 	
 	@Override
 	@Transactional
-	public void createServerTransaction(ServerTransaction serverTransaction) throws ServerAccountNotFoundException {
+	public void createServerTransaction(Transaction transaction, boolean recieved){
 		// TODO mehmet what should be passed (ServerTransaction)
 		
 	}

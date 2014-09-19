@@ -17,12 +17,14 @@ import ch.uzh.csg.mbps.server.domain.AdminRole;
 import ch.uzh.csg.mbps.server.domain.ResetPassword;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.domain.UserPublicKey;
+import ch.uzh.csg.mbps.server.util.AdminObject;
 import ch.uzh.csg.mbps.server.util.BitcoindController;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.CustomPasswordEncoder;
 import ch.uzh.csg.mbps.server.util.Emailer;
 import ch.uzh.csg.mbps.server.util.PasswordMatcher;
-import ch.uzh.csg.mbps.server.util.UserRoles;
+import ch.uzh.csg.mbps.server.util.SecurityConfig;
+import ch.uzh.csg.mbps.server.util.SplitNameHandler;
 import ch.uzh.csg.mbps.server.util.UserRoles.Role;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
@@ -32,7 +34,6 @@ import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.VerificationTokenNotFoundException;
-import ch.uzh.csg.mbps.server.web.model.UserModelObject;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
@@ -90,9 +91,8 @@ public class UserAccountService implements IUserAccount {
 		if (email == null)
 			throw new InvalidEmailException();
 
-		int splitIndex = username.indexOf(Config.SPLIT_USERNAME);
-		String userName = username.substring(0, splitIndex);
-		String userUrl = username.substring(splitIndex + 1);
+		String userName = SplitNameHandler.getInstance().getUsername(username);
+		String userUrl = SplitNameHandler.getInstance().getServerUrl(username);
 		
 		if(!userName.matches(Config.USERNAME_REGEX))
 			throw new InvalidUsernameException();
@@ -368,6 +368,14 @@ public class UserAccountService implements IUserAccount {
 	
 	@Override
 	@Transactional(readOnly = true)
+	public List<UserAccount> getAllUsers(){
+		List<UserAccount> users; 
+		users = userAccountDAO.getAllUserAccounts();
+		return users;
+	}
+	
+	@Override
+	@Transactional(readOnly=true)
 	public List<UserAccount> getUsers(){
 		List<UserAccount> users; 
 		users = userAccountDAO.getAllUsersByRoles(Role.USER);
@@ -377,15 +385,12 @@ public class UserAccountService implements IUserAccount {
 	
 	@Override
 	@Transactional(readOnly = true)
-	public UserModelObject getLoggedAdmin(String username) {
-		UserAccount account = null;
+	public UserAccount getLoggedAdmin(String username) {
 		try {
-			account = userAccountDAO.getByUsername(username);
+			return userAccountDAO.getByUsername(username);
 		} catch (UserAccountNotFoundException e) {
 			return null;
 		}
-		return new UserModelObject(account.getId(), account.getUsername(), account.getCreationDate(), 
-				account.getEmail(), account.getPassword(), account.getPaymentAddress(), account.getRoles());
 	}
 
 	@Override
@@ -396,14 +401,66 @@ public class UserAccountService implements IUserAccount {
 		Emailer.sendUpdateRoleBothLink(admin);
 	}
 	
+	/**
+	 * Deletes every time when an admin user is created the old entries ({@link AdminRole}s) (older than 24h) from the table.
+	 */
+	@Transactional
+	public void deleteOldCreateAdmin(){
+		Date currentDate = new Date();
+		List<AdminRole> list = userAccountDAO.getAllAdminRole();
+		for(int i=0; i< list.size();i++){
+			if(list.get(i).getCreationDate().getTime() < (currentDate.getTime() - Config.DELETE_TOKEN_LIMIT)){
+				try {
+					userAccountDAO.deleteAdminRole(list.get(i).getToken());
+				} catch (VerificationTokenNotFoundException e) {
+				}
+			}
+		}
+	}
+	
+	@Override
+	@Transactional
+	public boolean createRole(AdminObject admin) {
+		if (!isValidAdminRoleLink(admin.getToken())) {
+			return false;
+		}
+		
+		//clean table and delete all old tokens
+		deleteOldResetPasswords();
+
+		if (admin.compare()){
+			try {
+				String username = admin.getUsername() + Config.SPLIT_USERNAME + SecurityConfig.URL;
+				String passwordHash = CustomPasswordEncoder.getEncodedPassword(admin.getPw1());
+				UserAccount userAccount = new UserAccount(username,admin.getEmail(),passwordHash);
+				userAccount.setRoles(Role.ADMIN.getCode());
+				String token = java.util.UUID.randomUUID().toString();
+				userAccountDAO.createAccount(userAccount,token);
+				try {
+					UserAccount fromDB = getByUsername(username);
+					if (!fromDB.isEmailVerified()) {
+						resendVerificationEmail(fromDB);
+					}
+				} catch (UserAccountNotFoundException e) {
+					//
+				}
+				userAccountDAO.deleteAdminRole(admin.getToken());	
+				return true;
+			} catch (VerificationTokenNotFoundException e) {
+				return false;
+			}
+		} else {
+			return false;
+		}
+	}
+
 	@Override
 	@Transactional
 	public void changeRoleAdmin(String emailAddress) throws UserAccountNotFoundException {
-		UserAccount user = userAccountDAO.getByEmail(emailAddress);
 		String token = java.util.UUID.randomUUID().toString();
-		userAccountDAO.createAdminToken(user, token);
+		userAccountDAO.createAdminToken(emailAddress, token);
 		
-		Emailer.sendCreateRoleAdminLink(user, token);
+		Emailer.sendCreateRoleAdminLink(emailAddress, token);
 	}
 
 	@Override
@@ -440,7 +497,7 @@ public class UserAccountService implements IUserAccount {
 
 	@Override
 	@Transactional
-	public void sendMailToAll(String subject, String text) {
+	public void sendMailToAll(String subject, String text){
 		List<String> emails = getEmailOfAllUsers();
 		String emailToSend = "";
 		for (String email : emails) {
@@ -454,13 +511,15 @@ public class UserAccountService implements IUserAccount {
 	public List<String> getEmailOfAllUsers() {
 		List<String> emails = new ArrayList<String>();
 		emails = userAccountDAO.getEmailOfAllUsersByRoles(Role.USER);
+		emails.addAll(userAccountDAO.getEmailOfAllUsersByRoles(Role.ADMIN));
 		emails.addAll(userAccountDAO.getEmailOfAllUsersByRoles(Role.BOTH));
 		return emails;
 	}
 
 	@Override
 	@Transactional(readOnly=true)
-	public String getAdminEmail() {
+	public UserAccount getAdminEmail() {
 		return userAccountDAO.getAdminEmail();
 	}
+
 }

@@ -280,7 +280,9 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 		CreateSAObject create = new CreateSAObject();
 		create.setUrl(SecurityConfig.BASE_URL);
 		create.setEmail(user.getEmail());
-		create.setCustomPublicKey(cpk);
+		create.setKeyNumber(cpk.getKeyNumber());
+		create.setPkiAlgorithm(cpk.getPkiAlgorithm());
+		create.setPublicKey(cpk.getPublicKey());
 		//encode object to json
 		JSONObject jsonObj = new JSONObject();
 		try {
@@ -346,15 +348,16 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 					
 					throw new Exception();
 				}
+				ServerAccount serverAccountPK = serverAccountService.getByUrl(csao.getUrl());
 				PKIAlgorithm pkiAlgorithm;
 				try {
-					pkiAlgorithm = PKIAlgorithm.getPKIAlgorithm(cpk.getPkiAlgorithm());
+					pkiAlgorithm = PKIAlgorithm.getPKIAlgorithm(csao.getPkiAlgorithm());
 				} catch (UnknownPKIAlgorithmException e1) {
 					if(token == null)
 						persistsCreateNewAccount(url, user.getUsername(), email);
 					throw new UnknownPKIAlgorithmException();
 				}
-				serverPublicKeyDAO.saveUserPublicKey(csao.getId(), pkiAlgorithm, csao.getCustomPublicKey().getPublicKey());
+				serverPublicKeyDAO.saveUserPublicKey(serverAccountPK.getId(), pkiAlgorithm, csao.getPublicKey());
 			}
 			
 			try {
@@ -490,7 +493,7 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 			throw new Exception();
 		}
 		
-		ServerAccountObject updatedAccount = new ServerAccountObject(SecurityConfig.BACKUP_DESTINATION, email);
+		ServerAccountObject updatedAccount = new ServerAccountObject(SecurityConfig.BASE_URL, email);
 		updatedAccount.setTrustLevel(trustLevel);
 		JSONObject jsonAccount = new JSONObject();
 		try {
