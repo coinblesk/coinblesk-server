@@ -73,7 +73,7 @@
 							</div>
 							<div class="form-group" data-ng-class="{'has-error':!passwordUpdateForm.confirm_password.$valid}"><label for="confirm_password">Confirm New Password</label>
 								<input class="form-control" type="password" name="confirm_password" placeholder="confirm new password" 
-									data-ng-model="user.password_confirm" required="required" data-ng-match="user.password"/>
+									data-ng-model="user.confirm_password" required="required" data-ng-match="user.password"/>
 								<span class="help-block" data-ng-show="passwordUpdateForm.confirm_password.$error.required">Field is required!</span>
       							<span class="help-block" data-ng-show="passwordUpdateForm.confirm_password.$error.match">Passwords do not match!</span>
 							</div>

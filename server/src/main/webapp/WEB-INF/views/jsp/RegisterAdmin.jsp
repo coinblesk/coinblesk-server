@@ -6,7 +6,7 @@
 </head>
 <body>
 <h2>MBPS Admin Registration</h2>
-<form:form method="POST" action="setPassword">
+<form:form method="POST" action="createRole">
 <table>
 <tr>
 <td><form:label path="pw1">Username</form:label></td>

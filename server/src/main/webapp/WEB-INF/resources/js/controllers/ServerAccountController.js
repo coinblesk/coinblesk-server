@@ -7,6 +7,12 @@
 
 function ServerAccountController($rootScope, $scope, $location, $modal, $routeParams, serverAccountFactory, serverTransactionsFactory) {
 	
+	$scope.trust = {
+		'0':'No-Trust',
+		'1':'Hyprid-Trust',
+		'2':'Full-Trust'
+	};
+	
 	loadRemoteData();
 	
 	function loadRemoteData(){
@@ -45,7 +51,7 @@ function ServerAccountController($rootScope, $scope, $location, $modal, $routePa
 		});
 		
 		modalInstance.result.then(function(trustLevel){
-			serverAccountFactory.updateTrustLevel($scope.serverAccount, trustLevel).then(function(){
+			serverAccountFactory.updateTrustLevel($scope.serverAccount, trustLevel).then(function(data){
 				
 			});
 		});
@@ -73,10 +79,13 @@ function ServerAccountController($rootScope, $scope, $location, $modal, $routePa
 	$scope.openUserBalanceLimitModal = function () {
 		
 		var modalInstance = $modal.open({
-			templateUrl: 'modalUSerBalanceLimit.html',
-			controller: ModalUSerBalanceLimitController,
+			templateUrl: 'modalUserBalanceLimit.html',
+			controller: ModalUserBalanceLimitController,
 			resolve: {
 				modalLimit: function() {
+					return $scope.serverAccount.balanceLimit;
+				},
+				modalUserLimit: function() {
 					return $scope.serverAccount.userBalanceLimit;
 				}
 			}
@@ -115,7 +124,9 @@ function ServerAccountController($rootScope, $scope, $location, $modal, $routePa
 };
 
 var ModalDeleteController = function ($scope, $modalInstance) {
-		
+	
+	$scope.deleted = false;
+	
 	$scope.submit = function() {
 		$scope.resetError();
 		$scope.deleted = true;
@@ -139,18 +150,20 @@ var ModalDeleteController = function ($scope, $modalInstance) {
 };
 
 var ModalChangeRelationController = function ($scope, $modalInstance, modalLevel) {
-	
 	$scope.beforeTrust = modalLevel;
 	$scope.levelOptions = [{'name': 'No-Trust', "value":0},{'name': 'Hyprid-Trust', "value":1},{'name': 'Full-Trust', "value":2}];
-	$scope.levelOptions.value = modalLevel;
 	
 	$scope.submit = function() {
 		$scope.resetError();
-		if($scope.beforeTrust != $scope.levelOptions.value){			
-			$modalInstance.close($scope.levelOptions.value);
+		if($scope.beforeTrust != $scope.selected){
+			$modalInstance.close($scope.selected);
 		}
 	};
 
+	$scope.selectValue = function(selected){
+		$scope.selected = selected;
+	};
+	
 	$scope.cancel = function () {
 		$scope.resetError();
 		$modalInstance.dismiss('cancel');	
@@ -171,7 +184,6 @@ var ModalBalanceLimitController = function ($scope, $modalInstance, modalLimit) 
 	
 	$scope.beforeLimit = modalLimit;
 	$scope.balanceLimit = modalLimit;
-	
 	$scope.submit = function() {
 		$scope.resetError();
 		if($scope.balanceLimit != $scope.beforeLimit && $scope.balanceLimit > 0){			
@@ -195,7 +207,7 @@ var ModalBalanceLimitController = function ($scope, $modalInstance, modalLimit) 
     };
 };
 
-var ModalBalanceLimitController = function ($scope, $modalInstance, modalLimit) {
+var ModalUserBalanceLimitController = function ($scope, $modalInstance, modalLimit, modalUserLimit) {
 	
 	$scope.beforeLimit = modalLimit;
 	$scope.userBalanceLimit = modalLimit;
@@ -252,10 +264,19 @@ var ModalPayoutRuleController = function ($scope, $modalInstance) {
 	
 	$scope.hstep = 1;
 	$scope.dstep = 0;
+	$scope.days = {
+			'0':'Sunday',
+			'1':'Monday',
+			'2':'Tuesday',
+			'3':'Wednesday',
+			'4':'Thursday',
+			'5':'Friday',
+			'6':'Saturday'
+		};
 	
 	$scope.options = {
-			hstep: [1,2,3],
-			dstep: []
+			hstep: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23],
+			dstep: [0,1,2,3,4,5,6]
 	};
 	
 	$scope.ismeridian = true;

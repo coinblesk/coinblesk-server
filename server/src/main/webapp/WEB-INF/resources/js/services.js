@@ -104,14 +104,14 @@ AppServices.factory('userAccountFactory', function($http, $q) {
 			data: {
 				"password":user.password,
 				"username":user.username
-		}
+			}
 		});
 		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
 	};
 
 	userAccountFactory.getLoggedUser = function(){
 		var request = $http({
-			method: 'POST',
+			method: 'GET',
 			headers: { 'Content-Type': 'application/json;charset=utf-8'},
 			url: 'home/userAccount'
 		});
@@ -121,9 +121,9 @@ AppServices.factory('userAccountFactory', function($http, $q) {
 	userAccountFactory.inviteAdmin = function(user){
 		var request = $http({
 			method: 'POST',
-			url: 'home/inviteAdmin',
+			url: 'users/inviteAdmin',
 			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
-			params:{
+			data:{
 				"email": user.email
 			}
 		});
@@ -135,9 +135,9 @@ AppServices.factory('userAccountFactory', function($http, $q) {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 			url: 'users/sendMailToAll',
-			params:{
-				"subject": emailContent.subject,
-				"message": emailContent.text
+			data:{
+				"message": emailContent.message,
+				"subject": emailContent.subject
 			}
 		});
 		return(request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError));
@@ -183,7 +183,7 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 	};
 
 	serverAccountFactory.createNewAccount = function(serveraccount){
-		console.log(serveraccount);
+	console.log(serveraccount);
 		var request = $http({
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json;charset=utf-8'},
@@ -193,7 +193,7 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 				"url":serveraccount.url
 			}
 		});
-		return(request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError));
+		request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError);
 	};
 	
 	serverAccountFactory.deletedAccount = function(url){
@@ -201,11 +201,11 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 			url: 'serveraccount/deleteAccount',
-			params:{
+			data:{
 				"url": url
 			}
 		});
-		request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError);
+		request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError);
 	};
 	
 	serverAccountFactory.updateTrustLevel = function(serverAccount, trustLevel){
@@ -213,13 +213,13 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 			url: 'serveraccount/updateTrustLevel',
-			params: {
-				"trustLevel": trustLevel,
-				"trustLevelOld": serverAccount.trustLevel,
-				"url": serverAccount.url
+			data: {
+				"trustLevel":trustLevel,
+				"trustLevelOld":serverAccount.trustLevel,
+				"url":serverAccount.url
 			}
 		});
-		request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError);
+		request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError);
 	};
 	
 	serverAccountFactory.updateBalanceLimit  = function(serverAccount, balanceLimit){
@@ -228,13 +228,13 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 				url: 'serveraccount/updateBalanceLimit',
-				params: {
+				data: {
 					"activeBalance": serverAccount.activeBalance,
 					"balanceLimit": balanceLimit,
 					"url": serverAccount.url
 				}
 			});
-			request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError);
+			request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError);
 		}
 	};
 
@@ -244,13 +244,13 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 				url: 'serveraccount/updateUserBalanceLimit',
-				params: {
+				data: {
 					"activeBalance": serverAccount.activeBalance,
 					"userBalanceLimit": userBalanceLimit,
 					"url": serverAccount.url
 				}
 			});
-			request.then(userAccountFactory.handleSuccess, userAccountFactory.handleError);
+			request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError);
 		}
 	};
 	

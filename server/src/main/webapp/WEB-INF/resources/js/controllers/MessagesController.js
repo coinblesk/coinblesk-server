@@ -25,7 +25,7 @@ loadRemoteData();
 		$scope.updatedAccount.url = url;
 		$scope.updatedAccount.trustLevel = trustLevel;
 		$scope.updatedAccount.creationDate = creationDate;
-		account = $scope.updatedAccount;
+		var account = $scope.updatedAccount;
 		messagesFactory.accept(account).then(function(data){
 			$route.reload();
 		});

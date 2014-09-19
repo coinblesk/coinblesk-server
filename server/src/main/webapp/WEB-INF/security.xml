@@ -12,11 +12,25 @@
     <http pattern="/" security='none' />
     
 	<http auto-config="false" use-expressions="true" entry-point-ref="restAuthenticationEntryPoint">
+		<intercept-url pattern="/user/afterLogin" access="hasAnyRole('ROLE_USER', 'ROLE_BOTH')" requires-channel="http" />
+		<intercept-url pattern="/user/update" access="hasAnyRole('ROLE_USER', 'ROLE_BOTH')" requires-channel="http" />
+		<intercept-url pattern="/user/delete" access="hasAnyRole('ROLE_USER', 'ROLE_BOTH')" requires-channel="http" />
+		<intercept-url pattern="/user/mainActivityRequests" access="hasAnyRole('ROLE_USER', 'ROLE_BOTH')" requires-channel="http" />
+		<intercept-url pattern="/user/savePublicKey" access="hasAnyRole('ROLE_USER', 'ROLE_BOTH')" requires-channel="http" />
 		<intercept-url pattern="/user/create" access="permitAll" requires-channel="http" />
 		<intercept-url pattern="/user/resetPassword/**" access="permitAll" requires-channel="http" />
 		<intercept-url pattern="/user/resetPasswordRequest" access="permitAll" requires-channel="http" />
+		<intercept-url pattern="/user/createAdmin/**" access="permitAll" requires-channel="http" />
 		<intercept-url pattern="/user/verify/**" access="permitAll" requires-channel="http" />
+		<intercept-url pattern="/transaction/create" access="hasAnyRole('ROLE_USER', 'ROLE_BOTH')" requires-channel="http" />
+		<intercept-url pattern="/transaction/history/**" access="hasAnyRole('ROLE_USER', 'ROLE_BOTH')" requires-channel="http" />
+		<intercept-url pattern="/transaction/payOut" access="hasAnyRole('ROLE_USER', 'ROLE_BOTH')" requires-channel="http" />
+		<intercept-url pattern="/transaction/payIn/**" access="hasAnyRole('ROLE_USER', 'ROLE_BOTH')" requires-channel="http" />
 		<intercept-url pattern="/transaction/exchange-rate" access="permitAll" requires-channel="http" />
+		<intercept-url pattern="/serveraccounts/**" access="hasAnyRole('ROLE_USER', 'ROLE_BOTH')" requires-channel="http" />
+		<intercept-url pattern="/rules/**" access="hasAnyRole('ROLE_USER', 'ROLE_BOTH')" requires-channel="http" />
+		<intercept-url pattern="/communication/**" access="permitAll" requires-channel="http"/>
+		<intercept-url pattern="/login/**" access="permitAll" requires-channel="http"/>		
 		<intercept-url pattern="/home/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
 		<intercept-url pattern="/relation/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
 		<intercept-url pattern="/users/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
@@ -24,8 +38,6 @@
 		<intercept-url pattern="/activities/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
 		<intercept-url pattern="/serveraccount/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
 		<intercept-url pattern="/messages/**" access="hasAnyRole('ROLE_ADMIN', 'ROLE_BOTH')" requires-channel="http"/>
-		<intercept-url pattern="/login/**" access="permitAll" requires-channel="http"/>		
-		<intercept-url pattern="/communication/**" access="permitAll" requires-channel="http"/>
 		<intercept-url pattern="/**" access="isFullyAuthenticated()" requires-channel="http" />
 
 		<logout invalidate-session="true" 

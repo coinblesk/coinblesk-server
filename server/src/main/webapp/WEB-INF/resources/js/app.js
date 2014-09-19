@@ -89,6 +89,7 @@ App.config(['$routeProvider', '$httpProvider', '$provide', function($routeProvid
       		var method = config.method;
       		var url = config.url;
       		var unauthorized = 401;
+      		var accessdenied = 403;
       		
 		    	if (status === unauthorized) {
                   var deferred = $q.defer(),
@@ -96,9 +97,17 @@ App.config(['$routeProvider', '$httpProvider', '$provide', function($routeProvid
                           config: config,
                           deferred: deferred
                       };
-                  $rootScope.requests401.push(req);
                   $rootScope.$broadcast('event:loginRequired');
                   return deferred.promise;
+              } else if(status === accessdenied){
+            	  var deferred = $q.defer(),
+                  req = {
+                      config: config,
+                      deferred: deferred
+                  };
+              $rootScope.requests401.push(req);
+              $rootScope.$broadcast('event:loginRequired');
+              return deferred.promise;
               }else {
       			$rootScope.error = method + " on " + url + " failed with status " + status;
       		}

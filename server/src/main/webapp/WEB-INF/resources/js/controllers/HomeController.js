@@ -13,6 +13,10 @@ var HomeController = function($rootScope, $scope, $modal, $log, $location, mainR
 	$scope.transactions = [];
 	$scope.messages = [];
 
+	$scope.Split = function(string, nb) {
+	    $scope.array = string.split('@');
+	    return $scope.result = $scope.array[nb];
+	};
 	
 	loadRemoteData();
 
@@ -35,7 +39,6 @@ var HomeController = function($rootScope, $scope, $modal, $log, $location, mainR
 		});
 		
 		modalInstance.result.then(function(user){
-			console.log(user);
 			user.username = $scope.user.username;
 			userAccountFactory.updateMail(user).then(function(){
 				userAccountFactory.getLoggedUser().then(function(loggedUser){
@@ -53,7 +56,6 @@ var HomeController = function($rootScope, $scope, $modal, $log, $location, mainR
 			
 		modalPasswordInstance.result.then(function(user){
 			user.username = $scope.user.username;
-			console.log(user);
 			userAccountFactory.updatePassword(user).then(function(){
 				userAccountFactory.getLoggedUser().then(function(loggedUser){
 					$scope.user = loggedUser;
@@ -110,11 +112,11 @@ var ModalPasswordInstanceController = function ($scope, $modalInstance) {
 	$scope.user = {
 			username: "",
 			password: "",
-			password_confirm: ""
+			confirm_password: ""
 	};
 	
 	$scope.submit = function() {
-		if($scope.user.old_password.length != 0 || $scope.user.password.length != 0 || $scope.user.password_confirm.length != 0){			
+		if($scope.user.password.length != 0 || $scope.user.confirm_password.length != 0){			
 			$modalInstance.close($scope.user);
 		}else{
 			$scope.setError("All fields have to be filled out!");
