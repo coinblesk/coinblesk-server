@@ -14,9 +14,19 @@ import ch.uzh.csg.mbps.responseobject.TransferObject;
 import ch.uzh.csg.mbps.responseobject.UserAccountObject;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.Config;
+import ch.uzh.csg.mbps.server.util.exceptions.EmailAlreadyExistsException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
+import ch.uzh.csg.mbps.server.util.exceptions.InvalidUsernameException;
+import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
+import ch.uzh.csg.mbps.server.util.exceptions.UsernameAlreadyExistsException;
+import ch.uzh.csg.mbps.server.web.model.UserModelObject;
 import ch.uzh.csg.mbps.server.web.response.UserAccountTransferObject;
 import ch.uzh.csg.mbps.server.web.response.WebRequestTransferObject;
+
+import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
 @Controller
 @RequestMapping("/users")
@@ -33,7 +43,7 @@ public class UsersController {
 	@RequestMapping(value={"/all"}, method = RequestMethod.POST, produces="application/json")
 	public @ResponseBody UserAccountTransferObject getUsers() {
 		UserAccountTransferObject response = new UserAccountTransferObject();
-		List<UserAccount> users = userAccountService.getUsers();
+		List<UserAccount> users = userAccountService.getAllUserAccounts();
 		List<UserAccountObject> usersObject = new ArrayList<UserAccountObject>();
 		for(UserAccount user: users){
 			usersObject.add(transform1(user));
@@ -52,6 +62,7 @@ public class UsersController {
 		o.setPassword(userAccount.getPassword());
 		o.setPaymentAddress(userAccount.getPaymentAddress());
 		o.setUsername(userAccount.getUsername());
+		o.setRole(userAccount.getRoles());
 		return o;
 	}
 	
@@ -62,5 +73,37 @@ public class UsersController {
 		response.setMessage(Config.SUCCESS);
 		response.setSuccessful(true);
 		return null;
+	}
+	
+	@RequestMapping(value={"/inviteAdmin"}, method=RequestMethod.POST, consumes="application/json", produces="application/json")
+	@ResponseBody public TransferObject inviteAdmin(@RequestBody UserModelObject request) throws UserAccountNotFoundException, UsernameAlreadyExistsException, BitcoinException,
+			InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
+		
+		TransferObject response = new TransferObject();
+		
+		try{			
+			userAccountService.getByUsername(AuthenticationInfo.getPrincipalUsername());
+		} catch (UserAccountNotFoundException e) {
+			response.setMessage(Config.FAILED);
+			response.setSuccessful(false);
+			return response;
+		}
+		
+		UserAccount admin = null;
+		try {
+			admin = userAccountService.getByEmail(request.getEmail());
+		} catch (UserAccountNotFoundException e) {
+			//ignore
+		}
+
+		if (admin != null) {
+			userAccountService.changeRoleBoth(admin);
+		} else {
+			userAccountService.changeRoleAdmin(request.getEmail());
+		}
+		
+		response.setMessage(Config.SUCCESS);
+		response.setSuccessful(true);
+		return response;
 	}
 }

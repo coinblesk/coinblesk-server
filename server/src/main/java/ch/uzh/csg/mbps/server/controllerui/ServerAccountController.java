@@ -8,6 +8,7 @@ import net.minidev.json.JSONObject;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.util.EntityUtils;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -38,6 +39,8 @@ import ch.uzh.csg.mbps.server.web.response.WebRequestTransferObject;
 @Controller
 @RequestMapping("/serveraccount")
 public class ServerAccountController {
+	
+	private static Logger LOGGER = Logger.getLogger(ServerAccountController.class);
 	
 	@Autowired
 	private IServerAccount serverAccountService;
@@ -105,13 +108,14 @@ public class ServerAccountController {
 				} catch (Exception e) {
 					throw new Exception(e.getMessage());
 				}
-				
+				LOGGER.info(jsonObj);
 				CloseableHttpResponse resBody;
 				try {
 					resBody = HttpRequestHandler.prepPostResponse(jsonObj, request.getUrl() + Config.DELETE_ACCOUNT);									
 					try {
 						HttpEntity entity1 = resBody.getEntity();
 						String respString = EntityUtils.toString(entity1);
+						LOGGER.info(respString);
 						if(respString != null && respString.trim().length() > 0) {
 							response.decode(respString);
 						}
@@ -140,7 +144,7 @@ public class ServerAccountController {
 		return response;
 	}
 
-	@RequestMapping(value = { "/updateTrustLevel" }, method = RequestMethod.POST, consumes="application/json")
+	@RequestMapping(value = { "/updateTrustLevel" }, method = RequestMethod.POST, consumes="application/json", produces="application/json")
 	@ResponseBody public TransferObject updateTrustLevel(@RequestBody WebRequestTransferObject request) throws Exception {
 		TransferObject response = new TransferObject();
 		UserAccount user = null;
@@ -175,7 +179,6 @@ public class ServerAccountController {
 				} else {
 					resBody = HttpRequestHandler.prepPostResponse(jsonObj, request.getUrl() + Config.UPGRADE_TRUST);
 				}
-				
 				try {
 					HttpEntity entity1 = resBody.getEntity();
 					String respString = EntityUtils.toString(entity1);

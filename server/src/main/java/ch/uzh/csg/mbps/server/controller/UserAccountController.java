@@ -442,11 +442,34 @@ public class UserAccountController {
 		}
 		return response;
 	}
-
-	// TODO: mehmet create Account should be called
+	
+	/**
+	 * Resets {@link UserAccount} password if passwords match. Returns java server page
+	 * with information if password reset was successful or not.
+	 * 
+	 * @param matcher
+	 *            Object which stores the two passwords entered by the user
+	 * @return Java Server Page with information about successful/non successful
+	 *         password reset.
+	 */
+	@RequestMapping(value = "/createAdmin/createRole", method = RequestMethod.POST)
+	public String createRole(@ModelAttribute("server")AdminObject admin) {
+		try {
+			userAccountService.getByUsername(admin.getUsername());
+			return "FailedAdminRegistrationUsernameExists";
+		} catch (UserAccountNotFoundException e) {
+			// ignore the new username should not be used already
+		}
+		if (userAccountService.createRole(admin)) {
+			return "SuccessfulAdminRegistration";
+		} else {
+			return "FailedAdminRegistration";
+		}
+	}
+	
 	@RequestMapping(value = "/createAdmin/{adminRoleToken}", method = RequestMethod.GET)
 	public ModelAndView createAdminProcessing(@PathVariable String adminRoleToken) {
-		if (userAccountService.isValidResetPasswordLink(adminRoleToken)) {
+		if (userAccountService.isValidAdminRoleLink(adminRoleToken)) {
 			AdminObject admin = new AdminObject();
 			ModelAndView mv = new ModelAndView("RegisterAdmin", "command",admin);
 			mv.addObject("token", adminRoleToken);

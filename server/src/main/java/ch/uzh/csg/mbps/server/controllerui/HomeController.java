@@ -45,7 +45,8 @@ public class HomeController {
 	@ResponseBody public MainWebRequestObject mainViewRequests() throws Exception {
 		MainWebRequestObject response = new MainWebRequestObject();
 		String username = AuthenticationInfo.getPrincipalUsername();
-		UserModelObject userAccount = userAccountService.getLoggedAdmin(username);
+		UserAccount account = userAccountService.getLoggedAdmin(username);
+		UserModelObject userAccount = transformUser(account);
 		
 		response.setSuccessful(true);
 
@@ -135,7 +136,7 @@ public class HomeController {
 		return response;
 	}
 	
-	@RequestMapping(value={"/userAccount"}, method=RequestMethod.POST, consumes="application/json", produces="application/json")
+	@RequestMapping(value={"/userAccount"}, method=RequestMethod.GET, produces="application/json")
 	@ResponseBody public UserModelObject getUserAccount(){
 		UserModelObject response = new UserModelObject();
 		
@@ -145,10 +146,28 @@ public class HomeController {
 			response.setSuccessful(false);
 			return response;
 		}
-		response = userAccountService.getLoggedAdmin("malib");
+		UserAccount account = userAccountService.getLoggedAdmin(username);
 		
+		if(account == null){
+			response.setMessage(Config.FAILED);
+			response.setSuccessful(false);
+			return response;
+		}
+		response = transformUser(account);
 		response.setMessage(Config.SUCCESS);
 		response.setSuccessful(true);
 		return response;
+	}
+	
+	private UserModelObject transformUser(UserAccount account) {
+		UserModelObject o = new UserModelObject();
+		o.setId(account.getId());
+		o.setUsername(account.getUsername());
+		o.setCreationDate(account.getCreationDate());
+		o.setPassword(account.getPassword());
+		o.setPaymentAddress(account.getPaymentAddress());
+		o.setEmail(account.getEmail());
+		o.setRole(account.getRoles());
+		return o;
 	}
 }
