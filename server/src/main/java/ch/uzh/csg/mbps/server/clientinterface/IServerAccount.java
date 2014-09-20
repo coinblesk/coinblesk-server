@@ -178,15 +178,6 @@ public interface IServerAccount {
 	public void undeleteServerAccountById(Long id) throws ServerAccountNotFoundException;
 
 	/**
-	 * Updates the payoutaddress
-	 * 
-	 * @param url
-	 * @param updatedAccount
-	 * @throws ServerAccountNotFoundException
-	 */
-	public void updatePayOutAddress(String url, ServerAccount updatedAccount) throws ServerAccountNotFoundException;
-
-	/**
 	 * 
 	 * @param url
 	 * @param newLevel

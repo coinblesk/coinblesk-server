@@ -443,7 +443,7 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 		if(sao.isSuccessful()) {
 			ServerAccount responseAccount = serverAccountService.getByUrl(sao.getUrl());
 			responseAccount.setPayoutAddress(sao.getPayoutAddress());
-			serverAccountService.updatePayOutAddress(responseAccount.getUrl(), responseAccount);
+			serverAccountService.updatePayoutAddressAccount(responseAccount.getUrl(), responseAccount);
 		} else {
 			if (token == null)
 				persistsCreateNewAccountPayOutAddress(url, user.getUsername(), email, createAccount.getPayinAddress());

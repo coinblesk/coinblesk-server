@@ -252,11 +252,12 @@ public class ServerAccountService implements IServerAccount {
 
 		return true;
 	}
-	
+
 	@Override
 	@Transactional
 	public boolean updatePayoutAddressAccount(String url, ServerAccount updatedAccount) throws ServerAccountNotFoundException {
 		ServerAccount serverAccount = getByUrl(url);
+		String payoutAddress = serverAccount.getPayoutAddress() != null ? serverAccount.getPayoutAddress() : "";
 		String title = "";
 		String message = "";
 		String username;
@@ -264,13 +265,14 @@ public class ServerAccountService implements IServerAccount {
 			UserAccount user = userAccountDAO.getByUsername(AuthenticationInfo.getPrincipalUsername());
 			username = user.getUsername();
 		} catch (UserAccountNotFoundException e) {
-			username = "n.V.";
+			username = Config.NOT_AVAILABLE;
 		}
 		
-		if (updatedAccount.getPayoutAddress() != null && !updatedAccount.getPayoutAddress().isEmpty()){			
+		if (updatedAccount.getPayoutAddress() != null && !updatedAccount.getPayoutAddress().isEmpty() && 
+				!updatedAccount.getPayoutAddress().equals(payoutAddress)){			
 			title = Subjects.UPDATE_PAYOUT_ADDRESS;
 			message = "Payout address is updated to " + updatedAccount.getPayoutAddress();
-			serverAccount.setPayoutAddress(updatedAccount.getEmail());
+			serverAccount.setPayoutAddress(updatedAccount.getPayoutAddress());
 		}
 		
 		serverAccountDAO.updatedAccount(serverAccount);
@@ -366,34 +368,6 @@ public class ServerAccountService implements IServerAccount {
 		updateAccount(url, updatedAccount);
 	}
 
-	@Override
-	@Transactional
-	public void updatePayOutAddress(String url, ServerAccount updatedAccount) throws ServerAccountNotFoundException {
-		ServerAccount serverAccount = getByUrl(url);
-		String payaoutAddress = serverAccount.getPayoutAddress() != null ? serverAccount.getPayoutAddress() : "";
-		String title = "";
-		String message = "";
-		String username;
-		try {
-			UserAccount user = userAccountDAO.getByUsername(AuthenticationInfo.getPrincipalUsername());
-			username = user.getUsername();
-		} catch (UserAccountNotFoundException e) {
-			username = "n.V.";
-		}
-		
-		if (updatedAccount.getPayoutAddress() != null && !updatedAccount.getPayoutAddress().isEmpty() && 
-				!updatedAccount.getPayoutAddress().equals(payaoutAddress)){
-			title = Subjects.UPDATE_BALANCE_LIMIT;
-			message = "PayoutAddress is updated from  limit is updated to " + updatedAccount.getBalanceLimit();
-			serverAccount.setPayoutAddress(updatedAccount.getPayoutAddress());
-		}
-		
-		serverAccountDAO.updatedAccount(serverAccount);
-		
-		if(!TESTING_MODE){
-			activitiesService.activityLog(username, title, message);
-		}
-	}
 
 	@Override
 	@Transactional
