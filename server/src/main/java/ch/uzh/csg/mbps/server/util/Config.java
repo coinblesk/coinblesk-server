@@ -55,8 +55,10 @@ public class Config {
 	public static final BigDecimal BITSTAMP_BUY_EXCHANGE_RATE_LIMIT = new BigDecimal("1.05");
 	
 	//Limits for the HttpRequestHandler
-	public static final int HTTP_CONNECTION_TIMEOUT = 5 * 1000;
-	public static final int HTTP_SOCKET_TIMEOUT = 5 * 1000;
+	public static final int HTTP_CONNECTION_TIMEOUT = 10 * 1000;
+	public static final int HTTP_SOCKET_TIMEOUT = 10 * 1000;
+	public static final int HTTP_CONNECTION_TIMEOUT_PAYMENT = 5 * 1000;
+	public static final int HTTP_SOCKET_TIMEOUT_PAYMENT = 5 * 1000;
 	public static final int DEFAULT_MAX_TOTAL_CONNECTIONS = 100;
 	public static final int DEFAULT_MAX_CONNECTIONS_PER_ROUTE = 10;
 	

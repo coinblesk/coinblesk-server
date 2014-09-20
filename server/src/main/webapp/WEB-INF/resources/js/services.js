@@ -183,7 +183,6 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 	};
 
 	serverAccountFactory.createNewAccount = function(serveraccount){
-	console.log(serveraccount);
 		var request = $http({
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json;charset=utf-8'},

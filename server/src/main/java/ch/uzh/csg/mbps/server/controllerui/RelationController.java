@@ -26,6 +26,7 @@ import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountTasksAlreadyExists;
 import ch.uzh.csg.mbps.server.util.exceptions.UrlAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
+import ch.uzh.csg.mbps.server.web.response.CreateSAObject;
 import ch.uzh.csg.mbps.server.web.response.ServerAccountObject;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
@@ -141,8 +142,37 @@ public class RelationController {
 		response.setSuccessful(true);
 		return response;
 	}
+
+	@RequestMapping(value = { "/createNewAccount2" }, method = RequestMethod.POST, consumes="application/json", produces="application/json")
+	@ResponseBody public TransferObject createAccount2(@RequestBody CreateSAObject request) throws Exception {		
+		
+		if(request.getUrl()== null){
+			throw new UserAccountNotFoundException(request.getUrl());
+		}
+		
+		TransferObject response = new TransferObject();
+		UserAccount user;
+		try{			
+			user = userAccountService.getByUsername(AuthenticationInfo.getPrincipalUsername());
+		} catch(UserAccountNotFoundException e) {
+			throw new UserAccountNotFoundException(AuthenticationInfo.getPrincipalUsername());
+		}
+		
+		//check if the request is already launched
+		//if yes do not proceed throw exception
+		if(serverAccountTasksService.checkIfExists(request.getUrl())){
+			throw new ServerAccountTasksAlreadyExists();
+		}
+		
+		if(!serverAccountService.checkIfExistsByUrl(request.getUrl())){
+			serverAccountTasksService.createNewAccount(request.getUrl(),request.getEmail(),user, null);
+			
+		}
+		response.setMessage(Config.SUCCESS);
+		response.setSuccessful(true);
+		return response;
+	}
 	
-	//DOTO: mehmet not used. Does this is needed?
 	@RequestMapping(value = { "/persistNewAccount" }, method = RequestMethod.POST, consumes="application/json")
 	@ResponseBody public TransferObject persistAccount(@RequestBody ServerAccount request) {
 		TransferObject response = new TransferObject();

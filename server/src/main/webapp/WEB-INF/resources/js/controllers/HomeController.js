@@ -6,13 +6,15 @@
  */
 
 var HomeController = function($rootScope, $scope, $modal, $log, $location, mainRequestFactory, userAccountFactory) {
-//	$scope.user = $rootScope.loggedUser;
 	$scope.editMode = false;
 	$scope.balance = "";
 	$scope.user = [];
 	$scope.transactions = [];
 	$scope.messages = [];
-
+	$rootScope.loggeduser = {
+			username: ''
+	};
+	
 	$scope.Split = function(string, nb) {
 	    $scope.array = string.split('@');
 	    return $scope.result = $scope.array[nb];
@@ -27,6 +29,7 @@ var HomeController = function($rootScope, $scope, $modal, $log, $location, mainR
 			$scope.transactions = mainResponseObject.data.getHistoryTransferObject.transactionHistory;
 			$scope.messages = mainResponseObject.data.getMessageTransferObject.messagesList;
 
+			$rootScope.loggeduser.username = $scope.Split($scope.user.username, 0);
 		});
 
 	}

@@ -30,6 +30,7 @@ import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.ServerAccountTasks;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.response.HttpRequestHandler;
+import ch.uzh.csg.mbps.server.response.HttpResponseHandler;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.Constants;
 import ch.uzh.csg.mbps.server.util.SecurityConfig;
@@ -292,29 +293,29 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 		}
 
 		CloseableHttpResponse resBody;
-		CreateSAObject csao = new CreateSAObject();
 		String urlCreate = url+ Config.CREATE_NEW_SERVER;
-		LOGGER.info(urlCreate);
+		CreateSAObject csao = new CreateSAObject();
 		try {
 			//execute post request
 			resBody = HttpRequestHandler.prepPostResponse(jsonObj, urlCreate);
 			try {
-				HttpEntity entity1 = resBody.getEntity();
-				String respString = EntityUtils.toString(entity1);
-				if(respString != null && respString.trim().length() > 0) {
-					LOGGER.info(respString);
-					csao.decode(respString);
-				} else {
-					//if response not correct store account into db for hourly tasks
-					if(token == null)
-						persistsCreateNewAccount(url, user.getUsername(), email);
-				}
-			} catch (Exception e) {
-				//if response not correct store account into db for hourly tasks
-				if(token == null){				
-					persistsCreateNewAccount(url, user.getUsername(), email);
-				}
-				throw new Exception(e.getMessage());
+				csao = HttpResponseHandler.getResponse(csao, resBody);
+//				HttpEntity entity1 = resBody.getEntity();
+//				String respString = EntityUtils.toString(entity1);
+//				if(respString != null && respString.trim().length() > 0) {
+//					LOGGER.info(respString);
+//					csao.decode(respString);
+//				} else {
+//					//if response not correct store account into db for hourly tasks
+//					if(token == null)
+//						persistsCreateNewAccount(url, user.getUsername(), email);
+//				}
+//			} catch (Exception e) {
+//				//if response not correct store account into db for hourly tasks
+//				if(token == null){				
+//					persistsCreateNewAccount(url, user.getUsername(), email);
+//				}
+//				throw new Exception(e.getMessage());
 			} finally {
 				resBody.close();
 			}
@@ -375,6 +376,7 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 			if (token == null)
 				persistsCreateNewAccount(url, user.getUsername(), email);
 
+			LOGGER.info("Http request failed");
 			activitiesService.activityLog(user.getUsername(), Subjects.FAILED_CREATE_SERVER_ACCOUNT,"Failed to create a new relation with the server " + url + " and email " + email);
 		}
 		activitiesService.activityLog(user.getUsername(), Subjects.CREATE_SERVER_ACCOUNT,"Create a new relation with the server " + url + " and email " + email);
@@ -405,26 +407,27 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 			throw new Exception(e.getMessage());
 		}
 		
-		ServerAccountObject sao = new ServerAccountObject();
 		
 		// The http request is prepared and send with the information$
 		//TODO: mehmet sign object
 		CloseableHttpResponse resBody2;
 		String urlCreateData = url+ Config.CREATE_NEW_SERVER_PUBLIC_KEY;
+		ServerAccountObject sao = new ServerAccountObject();
 		try {
 			//execute post request
 			resBody2 = HttpRequestHandler.prepPostResponse(jsonAccount, urlCreateData);
 			try {
-				HttpEntity entity1 = resBody2.getEntity();
-				String responseString = EntityUtils.toString(entity1);
-				if (responseString != null && responseString.trim().length() > 0) {
-					sao.decode(responseString);
-				} 
-			} catch (Exception e) {
-				if(token == null)
-					persistsCreateNewAccountPayOutAddress(url, user.getUsername(), email, createAccount.getPayinAddress());
-				
-				throw new Exception(e.getMessage());
+				sao = HttpResponseHandler.getResponse(sao, resBody2);
+//				HttpEntity entity1 = resBody2.getEntity();
+//				String responseString = EntityUtils.toString(entity1);
+//				if (responseString != null && responseString.trim().length() > 0) {
+//					sao.decode(responseString);
+//				} 
+//			} catch (Exception e) {
+//				if(token == null)
+//					persistsCreateNewAccountPayOutAddress(url, user.getUsername(), email, createAccount.getPayinAddress());
+//				
+//				throw new Exception(e.getMessage());
 			} finally {
 				resBody2.close();
 			}
@@ -513,15 +516,16 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 			//execute post request
 			resBody = HttpRequestHandler.prepPostResponse(jsonAccount, urlData);
 			try {
-				HttpEntity entity1 = resBody.getEntity();
-				String responseString = EntityUtils.toString(entity1);
-				if (responseString != null && responseString.trim().length() > 0) {
-					response.decode(responseString);
-				} 
-			} catch (Exception e) {
-				if(token == null)
-					persistsUpgradeAccount(url, username, email, trustLevel);
-				throw new Exception(e.getMessage());
+				response = HttpResponseHandler.getResponse(response, resBody);
+//				HttpEntity entity1 = resBody.getEntity();
+//				String responseString = EntityUtils.toString(entity1);
+//				if (responseString != null && responseString.trim().length() > 0) {
+//					response.decode(responseString);
+//				} 
+//			} catch (Exception e) {
+//				if(token == null)
+//					persistsUpgradeAccount(url, username, email, trustLevel);
+//				throw new Exception(e.getMessage());
 			} finally {
 				resBody.close();
 			}
@@ -591,15 +595,16 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 			//execute post request
 			resBody = HttpRequestHandler.prepPostResponse(jsonAccount, urlData);
 			try {
-				HttpEntity entity1 = resBody.getEntity();
-				String responseString = EntityUtils.toString(entity1);
-				if (responseString != null && responseString.trim().length() > 0) {
-					response.decode(responseString);
-				} 
-			} catch (Exception e) {
-				if(token == null)
-					persistsDowngradeAccount(url, username, email, trustLevel);
-				throw new Exception(e.getMessage());
+				response = HttpResponseHandler.getResponse(response, resBody);
+//				HttpEntity entity1 = resBody.getEntity();
+//				String responseString = EntityUtils.toString(entity1);
+//				if (responseString != null && responseString.trim().length() > 0) {
+//					response.decode(responseString);
+//				} 
+//			} catch (Exception e) {
+//				if(token == null)
+//					persistsDowngradeAccount(url, username, email, trustLevel);
+//				throw new Exception(e.getMessage());
 			} finally {
 				resBody.close();
 			}

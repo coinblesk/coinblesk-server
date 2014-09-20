@@ -34,8 +34,6 @@ import ch.uzh.csg.mbps.server.util.Config;
  */
 public class HttpRequestHandler {
 	
-	//TODO: mehmet does get need params and jsonObject?
-	
 	/**
 	 * build the http async client with connection timeout and pooling
 	 * 
@@ -67,6 +65,26 @@ public class HttpRequestHandler {
 		requestBuilder.setConnectTimeout(Config.HTTP_CONNECTION_TIMEOUT);
 		requestBuilder.setConnectionRequestTimeout(Config.HTTP_CONNECTION_TIMEOUT);
 		requestBuilder.setSocketTimeout(Config.HTTP_SOCKET_TIMEOUT);
+		PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
+		cm.setMaxTotal(Config.DEFAULT_MAX_TOTAL_CONNECTIONS);
+		cm.setDefaultMaxPerRoute(Config.DEFAULT_MAX_CONNECTIONS_PER_ROUTE);
+		HttpClientBuilder builder = HttpClientBuilder.create();
+		builder.setConnectionManager(cm);
+		builder.setDefaultRequestConfig(requestBuilder.build());
+		builder.setMaxConnPerRoute(20);
+		return builder.build();
+	}
+
+	/**
+	 * build the http client with connection timeout and pooling
+	 * 
+	 * @return CloseableHttpClient
+	 */
+	public static CloseableHttpClient createDefaultHttpsPaymentClient() {
+		RequestConfig.Builder requestBuilder = RequestConfig.custom();
+		requestBuilder.setConnectTimeout(Config.HTTP_CONNECTION_TIMEOUT_PAYMENT);
+		requestBuilder.setConnectionRequestTimeout(Config.HTTP_CONNECTION_TIMEOUT_PAYMENT);
+		requestBuilder.setSocketTimeout(Config.HTTP_SOCKET_TIMEOUT_PAYMENT);
 		PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
 		cm.setMaxTotal(Config.DEFAULT_MAX_TOTAL_CONNECTIONS);
 		cm.setDefaultMaxPerRoute(Config.DEFAULT_MAX_CONNECTIONS_PER_ROUTE);

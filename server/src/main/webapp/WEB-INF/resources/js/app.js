@@ -177,12 +177,6 @@ App.run(function($rootScope, $http, $location, $cookieStore, $injector, base64Fa
 			};
 			var request = $http.post('j_spring_security_check', payload, config)
 			.success(function(data) {
-				$rootScope.loggeduser = {
-						username: ''
-				};
-				
-				$rootScope.loggeduser.username = credentials.username;
-				$rootScope.initialized = true;
 				$rootScope.$broadcast('event:loginConfirmed');
 			})
 			.error(function(data, status){
@@ -190,6 +184,7 @@ App.run(function($rootScope, $http, $location, $cookieStore, $injector, base64Fa
 			});
 			
 			request.then(function(){
+				$rootScope.initialized = true;
 				$location.path('/home');
 			});
 		}, function(data, status){
@@ -202,12 +197,11 @@ App.run(function($rootScope, $http, $location, $cookieStore, $injector, base64Fa
      * On 'logoutRequest' invoke logout on the server and broadcast 'event:loginRequired'.
      */
     $rootScope.$on('event:logoutRequest', function (event) {
-//    	accessTokenCookieService.removeToken();
-//    	accessTokenCookieService.removeCookies();
     	$rootScope.initialized = null;
-    	$http.put('/j_spring_security_logout', {})
+    	$http.get('/j_spring_security_logout', {})
     	.success(function() {
       	});
+    	 $rootScope.$broadcast('event:loginRequired');
     });
 
 });

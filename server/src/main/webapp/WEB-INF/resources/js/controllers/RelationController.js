@@ -22,7 +22,6 @@ var RelationController = function( $rootScope, $scope, $modal, $location, server
 	function loadRemoteData(){
 		serverAccountFactory.getAccounts()
 		.then(function(accounts){
-					console.log(accounts.serverAccountList);
 					$scope.serveraccounts = accounts.serverAccountList; 
 		});
 	}
@@ -37,7 +36,6 @@ var RelationController = function( $rootScope, $scope, $modal, $location, server
 		modalInstance.result.then(function(account){
 			 $scope.serveraccounts.url = account.url;
 			 $scope.serveraccounts.email = account.email;
-			 console.log(account.url+ " " + account.email);
 			 if(!_.include($scope.serveraccounts, account.url)){
 				 serverAccountFactory.createNewAccount($scope.serveraccounts).then(function(){
 					 

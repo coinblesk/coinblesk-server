@@ -388,6 +388,8 @@ public class ServerAccountService implements IServerAccount {
 			serverAccount.setPayoutAddress(updatedAccount.getPayoutAddress());
 		}
 		
+		serverAccountDAO.updatedAccount(serverAccount);
+		
 		if(!TESTING_MODE){
 			activitiesService.activityLog(username, title, message);
 		}

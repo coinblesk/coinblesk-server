@@ -275,6 +275,31 @@ public class ServerCommunicationController {
 		response.setMessage("Failed to upgrade");
 		return response;
 	}
+		
+	@RequestMapping(value = "/updateTrustLevelAnswer", method = RequestMethod.POST, consumes="application/json", produces = "application/json")
+	public @ResponseBody TransferObject updateTrustLevelAnswer(@RequestBody ServerAccountObject request) throws ServerAccountNotFoundException{
+		TransferObject response = new TransferObject();
+		try{
+			serverAccountService.getByUrl(request.getUrl());
+		} catch (ServerAccountNotFoundException e) {
+			response.setSuccessful(false);
+			response.setMessage("Server Account does not exists!");
+			return response;
+		}
+		
+		if(request.isSuccessful()){
+			ServerAccount account = new ServerAccount();
+			account.setTrustLevel(request.getTrustLevel());
+			
+			serverAccountService.updateAccount(request.getUrl(), account);
+			activitiesService.activityLog(Config.NOT_AVAILABLE, Config.UPGRADE_TRUST, "Trust level of url: " + request.getUrl() + " is updated to " + request.getTrustLevel());			
+		} else {			
+			activitiesService.activityLog(Config.NOT_AVAILABLE, Config.UPGRADE_TRUST, "Trust level of url: " + request.getUrl() + " is declined to updated to level " + request.getTrustLevel());
+		}
+		response.setSuccessful(true);
+		response.setMessage("Updated succeeded");
+		return response;
+	}
 	
 	@RequestMapping(value = "/upgradeAccepted", method = RequestMethod.POST, consumes="application/json", produces = "application/json")
 	public @ResponseBody TransferObject upgradeAccepted(@RequestBody ServerAccountObject request) throws ServerAccountNotFoundException{

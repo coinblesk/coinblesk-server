@@ -25,6 +25,7 @@ import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.response.HttpRequestHandler;
+import ch.uzh.csg.mbps.server.response.HttpResponseHandler;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.SecurityConfig;
@@ -112,13 +113,14 @@ public class ServerAccountController {
 				try {
 					resBody = HttpRequestHandler.prepPostResponse(jsonObj, request.getUrl() + Config.DELETE_ACCOUNT);									
 					try {
-						HttpEntity entity1 = resBody.getEntity();
-						String respString = EntityUtils.toString(entity1);
-						if(respString != null && respString.trim().length() > 0) {
-							response.decode(respString);
-						}
-					} catch (Exception e) {
-						throw new Exception(e.getMessage());
+						response = HttpResponseHandler.getResponse(response, resBody);
+//						HttpEntity entity1 = resBody.getEntity();
+//						String respString = EntityUtils.toString(entity1);
+//						if(respString != null && respString.trim().length() > 0) {
+//							response.decode(respString);
+//						}
+//					} catch (Exception e) {
+//						throw new Exception(e.getMessage());
 					} finally {
 						resBody.close();
 					}
