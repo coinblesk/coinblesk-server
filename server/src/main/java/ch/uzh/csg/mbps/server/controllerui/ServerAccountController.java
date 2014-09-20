@@ -102,7 +102,7 @@ public class ServerAccountController {
 			boolean passed = serverAccountService.checkPredefinedDeleteArguments(request.getUrl());
 			if (passed) {
 				ServerAccountObject deleteAccount = new ServerAccountObject();
-				deleteAccount.setUrl(SecurityConfig.BASE_URL);
+				deleteAccount.setUrl(SecurityConfig.URL);
 				JSONObject jsonObj = new JSONObject();
 				try {
 					deleteAccount.encode(jsonObj);
@@ -161,7 +161,7 @@ public class ServerAccountController {
 		
 		if(tmpAccount.getActiveBalance().compareTo(BigDecimal.ZERO)==0){
 			// Prepare your data to send
-			ServerAccountObject updatedAccount = new ServerAccountObject(SecurityConfig.BASE_URL, user.getEmail());
+			ServerAccountObject updatedAccount = new ServerAccountObject(SecurityConfig.URL, user.getEmail());
 			updatedAccount.setTrustLevel(request.getTrustLevel());
 			JSONObject jsonObj = new JSONObject();
 			try {

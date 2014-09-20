@@ -20,6 +20,7 @@ import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.Config;
+import ch.uzh.csg.mbps.server.util.SecurityConfig;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
@@ -119,6 +120,9 @@ public class RelationController {
 		if(request.getUrl()== null){
 			throw new UserAccountNotFoundException(request.getUrl());
 		}
+		
+		if(request.getUrl().equals(SecurityConfig.URL))
+			throw new InvalidUrlException();
 		
 		TransferObject response = new TransferObject();
 		UserAccount user;

@@ -90,6 +90,7 @@ public class MessagesController {
 			//get the server account which is involved
 			account = serverAccountService.getByUrl(request.getUrl());
 		} catch (ServerAccountNotFoundException e) {
+			//TODO: mehmet change status to answered
 			response.setMessage("Url " + request.getUrl()+ " does not exits" );
 			response.setSuccessful(false);
 			return response;
@@ -105,7 +106,7 @@ public class MessagesController {
 		
 		try {
 			//communicated with the other server that the upgrade was accepted
-			serverAccountTasksService.upgradedTrustLevel(sessionUser.getUsername(), sessionUser.getEmail(), request.getUrl(), request.getTrustLevel(), null);
+			//TODO: mehmet
 		} catch (Exception e1) {
 			response.setMessage(Config.FAILED);
 			response.setSuccessful(false);
@@ -143,6 +144,7 @@ public class MessagesController {
 			//get the server account which is involved
 			account = serverAccountService.getByUrl(request.getUrl());
 		} catch (ServerAccountNotFoundException e) {
+			//TODO: mehmet change status to answered
 			response.setMessage("Url " + request.getUrl()+ " does not exits" );
 			response.setSuccessful(false);
 			return response;
@@ -158,7 +160,7 @@ public class MessagesController {
 		
 		try {
 			//communicated with the other server that the upgrade was declined
-			serverAccountTasksService.downgradeTrustLevel(sessionUser.getUsername(), sessionUser.getEmail(), request.getUrl(), request.getTrustLevel(), null);
+			//TODO: downgrade declined
 		} catch (Exception e1) {
 			response.setMessage(Config.FAILED);
 			response.setSuccessful(false);

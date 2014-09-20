@@ -8,9 +8,7 @@ import java.util.List;
 
 import net.minidev.json.JSONObject;
 
-import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.util.EntityUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -279,7 +277,7 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 		CustomPublicKey cpk = new CustomPublicKey(Constants.SERVER_KEY_PAIR.getKeyNumber(), 
 				Constants.SERVER_KEY_PAIR.getPkiAlgorithm(), Constants.SERVER_KEY_PAIR.getPublicKey());
 		CreateSAObject create = new CreateSAObject();
-		create.setUrl(SecurityConfig.BASE_URL);
+		create.setUrl(SecurityConfig.URL);
 		create.setEmail(user.getEmail());
 		create.setKeyNumber(cpk.getKeyNumber());
 		create.setPkiAlgorithm(cpk.getPkiAlgorithm());
@@ -300,22 +298,6 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 			resBody = HttpRequestHandler.prepPostResponse(jsonObj, urlCreate);
 			try {
 				csao = HttpResponseHandler.getResponse(csao, resBody);
-//				HttpEntity entity1 = resBody.getEntity();
-//				String respString = EntityUtils.toString(entity1);
-//				if(respString != null && respString.trim().length() > 0) {
-//					LOGGER.info(respString);
-//					csao.decode(respString);
-//				} else {
-//					//if response not correct store account into db for hourly tasks
-//					if(token == null)
-//						persistsCreateNewAccount(url, user.getUsername(), email);
-//				}
-//			} catch (Exception e) {
-//				//if response not correct store account into db for hourly tasks
-//				if(token == null){				
-//					persistsCreateNewAccount(url, user.getUsername(), email);
-//				}
-//				throw new Exception(e.getMessage());
 			} finally {
 				resBody.close();
 			}
@@ -329,7 +311,7 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 		
 		if (csao.isSuccessful()) {
 			// if urls are different throw exception
-			if (url != csao.getUrl()) {
+			if (!url.equals(csao.getUrl())) {
 				if (token == null)
 					persistsCreateNewAccount(url, user.getUsername(), email);
 				
@@ -418,16 +400,6 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 			resBody2 = HttpRequestHandler.prepPostResponse(jsonAccount, urlCreateData);
 			try {
 				sao = HttpResponseHandler.getResponse(sao, resBody2);
-//				HttpEntity entity1 = resBody2.getEntity();
-//				String responseString = EntityUtils.toString(entity1);
-//				if (responseString != null && responseString.trim().length() > 0) {
-//					sao.decode(responseString);
-//				} 
-//			} catch (Exception e) {
-//				if(token == null)
-//					persistsCreateNewAccountPayOutAddress(url, user.getUsername(), email, createAccount.getPayinAddress());
-//				
-//				throw new Exception(e.getMessage());
 			} finally {
 				resBody2.close();
 			}
@@ -496,7 +468,7 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 			throw new Exception();
 		}
 		
-		ServerAccountObject updatedAccount = new ServerAccountObject(SecurityConfig.BASE_URL, email);
+		ServerAccountObject updatedAccount = new ServerAccountObject(SecurityConfig.URL, email);
 		updatedAccount.setTrustLevel(trustLevel);
 		JSONObject jsonAccount = new JSONObject();
 		try {
@@ -517,15 +489,7 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 			resBody = HttpRequestHandler.prepPostResponse(jsonAccount, urlData);
 			try {
 				response = HttpResponseHandler.getResponse(response, resBody);
-//				HttpEntity entity1 = resBody.getEntity();
-//				String responseString = EntityUtils.toString(entity1);
-//				if (responseString != null && responseString.trim().length() > 0) {
-//					response.decode(responseString);
-//				} 
-//			} catch (Exception e) {
-//				if(token == null)
-//					persistsUpgradeAccount(url, username, email, trustLevel);
-//				throw new Exception(e.getMessage());
+
 			} finally {
 				resBody.close();
 			}
@@ -596,15 +560,6 @@ public class ServerAccountTasksService implements IServerAccountTasks{
 			resBody = HttpRequestHandler.prepPostResponse(jsonAccount, urlData);
 			try {
 				response = HttpResponseHandler.getResponse(response, resBody);
-//				HttpEntity entity1 = resBody.getEntity();
-//				String responseString = EntityUtils.toString(entity1);
-//				if (responseString != null && responseString.trim().length() > 0) {
-//					response.decode(responseString);
-//				} 
-//			} catch (Exception e) {
-//				if(token == null)
-//					persistsDowngradeAccount(url, username, email, trustLevel);
-//				throw new Exception(e.getMessage());
 			} finally {
 				resBody.close();
 			}
