@@ -30,7 +30,7 @@ public class Activities {
 	private String subject;
 	@Column(name = "MESSAGE")
 	private String message;
-	@Column(name = "CREATIONDATE", nullable = false)
+	@Column(name = "CREATION_DATE", nullable = false)
 	private Date creationDate;
 
 	public Activities() {

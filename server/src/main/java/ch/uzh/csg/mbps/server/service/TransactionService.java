@@ -7,9 +7,7 @@ import java.util.List;
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.ParseException;
 
-import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.util.EntityUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,6 +35,7 @@ import ch.uzh.csg.mbps.server.domain.DbTransaction;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.response.HttpRequestHandler;
+import ch.uzh.csg.mbps.server.response.HttpResponseHandler;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.util.BitstampController;
 import ch.uzh.csg.mbps.server.util.Config;
@@ -147,9 +146,9 @@ public class TransactionService implements ITransaction {
 		ServerAccount payeeServerAccount = null;
 		boolean internalTransaction = true;
 		try {
-			internalTransaction = false;
 			payerUserAccount = userAccountService.getByUsername(payerUsername);
 		} catch (UserAccountNotFoundException e) {
+			internalTransaction = false;
 			// if useraccount not found check if the user is from another server which has a trust relation
 			String payerUrl = SplitNameHandler.getInstance().getServerUrl(payerUsername);
 			try {
@@ -176,7 +175,7 @@ public class TransactionService implements ITransaction {
 		}
 		
 		//This serverpaymentRequest is for comparison
-		PaymentResponse spResponse = null;
+		ServerPaymentResponse serverPaymentResponse = null;
 		//When the transaction is between two different servers with at least Hyprid trust
 		if(!internalTransaction){
 			long start = System.currentTimeMillis();
@@ -219,13 +218,7 @@ public class TransactionService implements ITransaction {
 				//execute post request
 				responseBody = HttpRequestHandler.prepPostResponse(jsonObject, paymentUrl);
 				try {
-					HttpEntity entity1 = responseBody.getEntity();
-					String responseString = EntityUtils.toString(entity1);
-					if (responseString != null && responseString.trim().length() > 0) {
-						troResponse.decode(responseString);
-					} 
-				} catch (Exception e) {
-					throw new TransactionException(PAYMENT_REFUSE);
+					troResponse = HttpResponseHandler.getResponse(troResponse, responseBody);
 				} finally {
 					responseBody.close();
 				}				
@@ -233,21 +226,27 @@ public class TransactionService implements ITransaction {
 				throw new TransactionException(PAYMENT_REFUSE);
 			}
 			
+			if(!troResponse.isSuccessful()){
+				throw new TransactionException(PAYMENT_REFUSE);
+			}
+			
 			try {
-				spResponse = DecoderFactory.decode(ServerPaymentResponse.class, troResponse.getServerPaymentResponse());
+				serverPaymentResponse = DecoderFactory.decode(ServerPaymentResponse.class, troResponse.getServerPaymentResponse());
 			} catch (Throwable e) {
 				e.printStackTrace();
 				LOGGER.error(e.getMessage());
 				throw new TransactionException(PAYMENT_REFUSE);				
 			}
 			
-			if(!spResponse.getStatus().equals(ServerResponseStatus.SUCCESS)){
+			if(serverPaymentResponse.getPaymentResponsePayer().getStatus()!=ServerResponseStatus.SUCCESS){
 				throw new TransactionException(PAYMENT_REFUSE);
 			}
 			
-			if(!(Converter.getBigDecimalFromLong(payerRequest.getAmount()).compareTo(Converter.getBigDecimalFromLong(spResponse.getAmount())) == 0 
-					&& payerRequest.getTimestamp() == spResponse.getTimestamp() && payerRequest.getUsernamePayee().equals(spResponse.getUsernamePayee())
-					&& payerRequest.getUsernamePayer().equals(spResponse.getUsernamePayer()))){
+			//TODO: timestamp has to be the same
+//			&& payerRequest.getTimestamp() == serverPaymentResponse.getPaymentResponsePayer().getTimestamp()
+			if(!(Converter.getBigDecimalFromLong(payerRequest.getAmount()).compareTo(Converter.getBigDecimalFromLong(serverPaymentResponse.getPaymentResponsePayer().getAmount())) == 0 
+					&& payerRequest.getUsernamePayee().equals(serverPaymentResponse.getPaymentResponsePayer().getUsernamePayee())
+					&& payerRequest.getUsernamePayer().equals(serverPaymentResponse.getPaymentResponsePayer().getUsernamePayer()))){
 				throw new TransactionException(PAYMENT_REFUSE);
 			}
 			
@@ -281,8 +280,12 @@ public class TransactionService implements ITransaction {
 			}
 		}
 
-		if ((payerUserAccount.getBalance().subtract(Converter.getBigDecimalFromLong(payerRequest.getAmount()))).compareTo(BigDecimal.ZERO) < 0)
-			throw new TransactionException(BALANCE);
+		if(payerUserAccount == null){
+			//ignore
+		} else {
+			if ((payerUserAccount.getBalance().subtract(Converter.getBigDecimalFromLong(payerRequest.getAmount()))).compareTo(BigDecimal.ZERO) < 0)
+				throw new TransactionException(BALANCE);			
+		}
 
 		if (transactionDAO.exists(payerRequest.getUsernamePayer(), payerRequest.getUsernamePayee(), payerRequest.getCurrency(), payerRequest.getAmount(), payerRequest.getTimestamp())) {
 			try {
@@ -316,21 +319,25 @@ public class TransactionService implements ITransaction {
 		if(internalTransaction){			
 			transactionDAO.createTransaction(dbTransaction, payerUserAccount, payeeUserAccount);
 		} else {			
-			if(payeeUserAccount == null){
-				transactionDAO.createTransaction(dbTransaction, payerUserAccount, false);			
+			if(payerUserAccount == null){
+				transactionDAO.createTransaction(dbTransaction, payeeUserAccount, true);			
 				serverAccountService.persistsTransactionAmount(payerServerAccount, dbTransaction, false);
 			} else {
-				transactionDAO.createTransaction(dbTransaction, payeeUserAccount, true);
+				transactionDAO.createTransaction(dbTransaction, payerUserAccount, false);
 				serverAccountService.persistsTransactionAmount(payeeServerAccount, dbTransaction, true);			
 			}
 		}
 		
 
 		//check if user account balance limit has been exceeded (according to PayOutRules)
-		try {
-			payOutRuleService.checkBalanceLimitRules(payeeUserAccount);
-		} catch (PayOutRuleNotFoundException | BitcoinException e) {
-			// do nothing as user requests actually a transaction and not a payout
+		if(payeeUserAccount == null){
+			//ignore
+		} else {			
+			try {
+				payOutRuleService.checkBalanceLimitRules(payeeUserAccount);
+			} catch (PayOutRuleNotFoundException | BitcoinException e) {
+				// do nothing as user requests actually a transaction and not a payout
+			}
 		}
 
 		ServerPaymentResponse signedResponse = null;
@@ -414,7 +421,7 @@ public class TransactionService implements ITransaction {
 			throw new TransactionException(PAYMENT_REFUSE_USER_LIMIT);
 		}
 		
-		if(fromServerUsername == payerRequest.getUsernamePayer()){				
+		if(fromServerUsername.equals(payerRequest.getUsernamePayer())){				
 			try {
 				if (!payerRequest.verify(KeyHandler.decodePublicKey(userPublicKeyDAO.getUserPublicKey(payerUserAccount.getId(), (byte) payerRequest.getKeyNumber()).getPublicKey()))) {
 					throw new TransactionException(PAYMENT_REFUSE);
@@ -428,7 +435,7 @@ public class TransactionService implements ITransaction {
 			if (!payerRequest.requestsIdentic(payeeRequest)) {
 				throw new TransactionException(PAYMENT_REFUSE);
 			}
-			if(fromServerUsername == payeeRequest.getUsernamePayee()){					
+			if(fromServerUsername.equals(payeeRequest.getUsernamePayee())){					
 				try {
 					if (!payeeRequest.verify(KeyHandler.decodePublicKey(userPublicKeyDAO.getUserPublicKey(payeeUserAccount.getId(), (byte) payeeRequest.getKeyNumber()).getPublicKey()))) {
 						throw new TransactionException(PAYMENT_REFUSE);
@@ -439,8 +446,12 @@ public class TransactionService implements ITransaction {
 			}
 		}
 		
-		if ((payerUserAccount.getBalance().subtract(Converter.getBigDecimalFromLong(payerRequest.getAmount()))).compareTo(BigDecimal.ZERO) < 0)
-			throw new TransactionException(BALANCE);
+		if(payerUserAccount == null){
+			//ignore
+		} else {			
+			if ((payerUserAccount.getBalance().subtract(Converter.getBigDecimalFromLong(payerRequest.getAmount()))).compareTo(BigDecimal.ZERO) < 0)
+				throw new TransactionException(BALANCE);
+		}
 		
 		if (transactionDAO.exists(payerRequest.getUsernamePayer(), payerRequest.getUsernamePayee(), payerRequest.getCurrency(), payerRequest.getAmount(), payerRequest.getTimestamp())) {
 			try {
@@ -470,15 +481,16 @@ public class TransactionService implements ITransaction {
 				dbTransaction.setInputCurrencyAmount(Converter.getBigDecimalFromLong(payeeRequest.getInputAmount()));
 			}
 		}
+		
 		if(payeeUserAccount == null){
 			transactionDAO.createTransaction(dbTransaction, payerUserAccount, false);			
-			serverAccountService.persistsTransactionAmount(serverAccount, dbTransaction, false);
+			serverAccountService.persistsTransactionAmount(serverAccount, dbTransaction, true);
 		} else {
 			transactionDAO.createTransaction(dbTransaction, payeeUserAccount, true);
-			serverAccountService.persistsTransactionAmount(serverAccount, dbTransaction, true);			
+			serverAccountService.persistsTransactionAmount(serverAccount, dbTransaction, false);			
 		}
 		//check if user account balance limit has been exceeded (according to PayOutRules)
-		if(fromServerUsername == payeeRequest.getUsernamePayee()){			
+		if(fromServerUsername.equals(payerRequest.getUsernamePayee())){			
 			try {
 				payOutRuleService.checkBalanceLimitRules(payeeUserAccount);
 			} catch (PayOutRuleNotFoundException | BitcoinException e) {
@@ -486,6 +498,8 @@ public class TransactionService implements ITransaction {
 			}
 		}
 		
+		//Caution: here you put the timestamp which was send and not the one which was
+		//generated by dbTransaction. This timestamp will be used to verify
 		ServerPaymentResponse signedResponse = null;
 		try {
 			PaymentResponse paymentResponsePayer = new PaymentResponse(
@@ -497,7 +511,7 @@ public class TransactionService implements ITransaction {
 					dbTransaction.getUsernamePayee(),
 					Currency.getCurrency(dbTransaction.getCurrency()),
 					Converter.getLongFromBigDecimal(dbTransaction.getAmount()),
-					dbTransaction.getTimestamp().getTime());
+					payerRequest.getTimestamp());
 			paymentResponsePayer.sign(KeyHandler.decodePrivateKey(Constants.SERVER_KEY_PAIR.getPrivateKey()));
 			signedResponse = new ServerPaymentResponse(paymentResponsePayer);
 		} catch (Exception e) {
@@ -521,7 +535,7 @@ public class TransactionService implements ITransaction {
 			BigDecimal payerAmount = transactionDAO.getCurrentBalanceTransactionAsPayer(serverUrl, username);
 			BigDecimal payeeAmount = transactionDAO.getCurrentBalanceTransactionAsPayee(serverUrl, username);
 			BigDecimal currentAmount = payeeAmount.subtract(payerAmount);
-			if(account.getUserBalanceLimit().compareTo((currentAmount.add(amount))) > 0)
+			if(account.getUserBalanceLimit().compareTo((currentAmount.abs().add(amount))) > 0)
 				return false;
 		} catch (ServerAccountNotFoundException e) {
 			throw new TransactionException(PAYMENT_REFUSE);

@@ -1,9 +1,11 @@
 package ch.uzh.csg.mbps.server.dao;
 
 import java.math.BigDecimal;
+import java.util.Calendar;
 import java.util.List;
 
 import javax.persistence.EntityManager;
+import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
@@ -260,13 +262,23 @@ public class TransactionDAO {
 	 * @return sumOfBalances
 	 */
 	public BigDecimal getCurrentBalanceTransactionAsPayer(String serverUrl, String username) {
-		BigDecimal amount = new BigDecimal(em.createQuery("SELECT SUM(db.amount) "
-				+ "FROM dbTransaction db "
-				+ "WHERE db.usernamePayer=:username AND db.serverPayee:serverUrl")
-				.setParameter("username", username)
-				.setParameter("serverUrl", serverUrl)
-				.getSingleResult().toString());
-		
+		BigDecimal amount;
+		Calendar today = Calendar.getInstance();
+		today.set(Calendar.HOUR_OF_DAY, 0);
+		today.set(Calendar.MINUTE,0);
+		today.set(Calendar.SECOND, 0);
+		try{			
+			amount = new BigDecimal(em.createQuery("SELECT SUM(db.amount) "
+					+ "FROM DbTransaction db "
+					+ "WHERE db.usernamePayer=:username AND db.serverPayee=:serverUrl AND db.timestamp >=:time")
+					.setParameter("username", username)
+					.setParameter("serverUrl", serverUrl)
+					.setParameter("time", today.getTime())
+					.getSingleResult().toString());
+		} catch(Exception e) {
+			String s = e.getMessage();
+			amount = new BigDecimal("0.00000000");
+		}
 		return amount;
 	}
 
@@ -276,13 +288,23 @@ public class TransactionDAO {
 	 * @return sumOfBalances
 	 */
 	public BigDecimal getCurrentBalanceTransactionAsPayee(String serverUrl, String username) {
-		BigDecimal amount = new BigDecimal(em.createQuery("SELECT SUM(db.amount) "
-				+ "FROM dbTransaction db "
-				+ "WHERE db.usernamePayee=:username AND db.serverPayer:serverUrl")
-				.setParameter("username", username)
-				.setParameter("serverUrl", serverUrl)
-				.getSingleResult().toString());
-		
+		BigDecimal amount;
+		Calendar today = Calendar.getInstance();
+		today.set(Calendar.HOUR_OF_DAY, 0);
+		today.set(Calendar.MINUTE,0);
+		today.set(Calendar.SECOND, 0);
+		try{			
+			amount= new BigDecimal(em.createQuery("SELECT SUM(db.amount) "
+					+ "FROM DbTransaction db "
+					+ "WHERE db.usernamePayee=:username AND db.serverPayer=:serverUrl AND db.timestamp >=:time")
+					.setParameter("username", username)
+					.setParameter("serverUrl", serverUrl)
+					.setParameter("time", today.getTime())
+					.getSingleResult().toString());
+		} catch(Exception e) {
+			String s = e.getMessage();
+			amount = new BigDecimal("0.00000000");			
+		}
 		return amount;
 	}
 }

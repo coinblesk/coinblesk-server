@@ -91,7 +91,7 @@ public class ServerAccountService implements IServerAccount {
 		String otherUrl = otherAccount.getUrl();
 		String otherEmail = otherAccount.getEmail();
 		
-		ServerAccount serverAccount = new ServerAccount(SecurityConfig.BASE_URL, user.getEmail());
+		ServerAccount serverAccount = new ServerAccount(SecurityConfig.URL, user.getEmail());
 
 		if (!otherUrl.matches(Config.URL_NAME_REGEX))
 			throw new InvalidUrlException();
@@ -414,6 +414,12 @@ public class ServerAccountService implements IServerAccount {
 	@Override
 	@Transactional
 	public void persistsTransactionAmount(ServerAccount serverAccount, DbTransaction dbTransaction, boolean received) {
-		serverAccountDAO.persistsTransaction(serverAccount, dbTransaction.getAmount(), received);
+		try {
+			ServerAccount account = getByUrl(serverAccount.getUrl());
+			serverAccountDAO.persistsTransaction(account, dbTransaction.getAmount(), received);
+		} catch (ServerAccountNotFoundException e) {
+			//ignore it should no happen
+		}
+		
 	}	
 }

@@ -141,7 +141,7 @@ public class ServerCommunicationController {
 			serverAccountService.saveServerPublicKey(account.getId(), pkiAlgorithm, cpkSave.getPublicKey());
 			
 
-			String serverUrl = SecurityConfig.BASE_URL;
+			String serverUrl = SecurityConfig.URL;
 			UserAccount emailAccount = userAccountService.getAdminEmail();
 			
 			CustomPublicKey cpk = new CustomPublicKey(Constants.SERVER_KEY_PAIR.getKeyNumber(), Constants.SERVER_KEY_PAIR.getPkiAlgorithm(), Constants.SERVER_KEY_PAIR.getPublicKey());
@@ -200,7 +200,7 @@ public class ServerCommunicationController {
 					account.setPayoutAddress(request.getPayoutAddress());
 					boolean success = serverAccountService.updatePayoutAddressAccount(request.getUrl(), account);
 					if(success){
-						String serverUrl = SecurityConfig.BASE_URL;
+						String serverUrl = SecurityConfig.URL;
 						response.setUrl(serverUrl);
 						response.setPayoutAddress(account.getPayinAddress());
 						response.setSuccessful(true);

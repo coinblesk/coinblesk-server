@@ -209,6 +209,10 @@ public class ServerAccount {
 		sb.append(getActiveBalance());
 		sb.append(", trust level: ");
 		sb.append(getTrustLevel());
+		sb.append(", balance limit ");
+		sb.append(getBalanceLimit());
+		sb.append(", user balance limit ");
+		sb.append(getUserBalanceLimit());
 		return sb.toString();
 	}
 	

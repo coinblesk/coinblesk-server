@@ -106,12 +106,12 @@ public class ServerAccountTasksDAO {
 		Predicate condition = cb.equal(root.get("url"), url);
 		cq.where(condition);
 		
-		ServerAccountTasks account = ServerAccountTasksDAO.getSingle(cq, em);
-		
-		if(account == null){
+		try{			
+			ServerAccountTasks account = em.createQuery(cq).getSingleResult();
+			return account;
+		} catch (Exception e){			
 			throw new ServerAccountTasksAlreadyExists();
 		}
-		return account;
 	}
 
 	/**
