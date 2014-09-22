@@ -212,14 +212,12 @@ public class ServerAccountObject extends TransferObject {
 		if(nOfKeys != null){
 			setnOfKeys(Integer.parseInt(nOfKeysStr));
 		}
-//		setnOfKeys(TransferObject.toIntOrNull(o.get("nOfKeys")));		
 		setPayinAddress(TransferObject.toStringOrNull(o.get("payinAddress")));
 		setPayoutAddress(TransferObject.toStringOrNull(o.get("payoutAddress")));
 		String trustLevelStr = toStringOrNull(o.get("trustLevel"));
 		if(trustLevel != null){
 			setTrustLevel(Integer.parseInt(trustLevelStr));
 		}
-//		setTrustLevel(TransferObject.toIntOrNull(o.get("trustLevel")));
 		setUrl(TransferObject.toStringOrNull(o.get("url")));
 		setUserBalanceLimit(TransferObject.toBigDecimalOrNull(o.get("userBalanceLimit")));
 		return o;
