@@ -1,5 +1,12 @@
 package ch.uzh.csg.mbps.server.controllerui;
 
+import java.math.BigDecimal;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.SignatureException;
+import java.security.spec.InvalidKeySpecException;
+
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -15,18 +22,20 @@ import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
+import ch.uzh.csg.mbps.customserialization.exceptions.IllegalArgumentException;
+import ch.uzh.csg.mbps.customserialization.exceptions.NotSignedException;
+import ch.uzh.csg.mbps.customserialization.exceptions.SerializationException;
 import ch.uzh.csg.mbps.customserialization.exceptions.UnknownPKIAlgorithmException;
 import ch.uzh.csg.mbps.keys.CustomPublicKey;
-import ch.uzh.csg.mbps.responseobject.TransactionObject;
 import ch.uzh.csg.mbps.responseobject.TransferObject;
 import ch.uzh.csg.mbps.server.clientinterface.IActivities;
 import ch.uzh.csg.mbps.server.clientinterface.IMessages;
 import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
 import ch.uzh.csg.mbps.server.clientinterface.ITransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
+import ch.uzh.csg.mbps.server.dao.ServerPublicKeyDAO;
 import ch.uzh.csg.mbps.server.domain.Messages;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
-import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.security.KeyHandler;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.Constants;
@@ -39,8 +48,14 @@ import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.TransactionException;
 import ch.uzh.csg.mbps.server.util.exceptions.UrlAlreadyExistsException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
+import ch.uzh.csg.mbps.server.web.customserialize.CustomServerPaymentRequest;
+import ch.uzh.csg.mbps.server.web.customserialize.CustomServerPaymentResponse;
+import ch.uzh.csg.mbps.server.web.customserialize.PayOutAdrressRequest;
+import ch.uzh.csg.mbps.server.web.customserialize.PayOutAdrressResponse;
 import ch.uzh.csg.mbps.server.web.response.CreateSAObject;
-import ch.uzh.csg.mbps.server.web.response.ServerAccountObject;
+import ch.uzh.csg.mbps.server.web.response.ServerAccountUpdatedObject;
+import ch.uzh.csg.mbps.server.web.response.TransferPOAObject;
+import ch.uzh.csg.mbps.server.web.response.TransferServerObject;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
@@ -61,18 +76,46 @@ public class ServerCommunicationController {
 	private IMessages messagesService;
 	@Autowired
 	private ITransaction transactionService;
+	@Autowired
+	private ServerPublicKeyDAO serverPublicKeyDAO;
 	
-	@RequestMapping(value="/paymentTransaction", method = RequestMethod.POST, consumes="application/json", produces = "application/json")
-	@ResponseBody public TransactionObject paymentTransaction(@RequestBody TransactionObject requestObject){
+	@RequestMapping(value="/paymentTransaction", method = RequestMethod.POST, consumes = "application/json", produces = "application/json")
+	@ResponseBody public TransferServerObject paymentTransaction(@RequestBody TransferServerObject requestObject){
 		long start = System.currentTimeMillis();
-		TransactionObject responseObject = new TransactionObject();
+		TransferServerObject responseObject = new TransferServerObject();
 		try {
-			ServerPaymentRequest serverPaymentRequest = DecoderFactory.decode(ServerPaymentRequest.class, requestObject.getServerPaymentResponse());
+			//get keys
+			CustomPublicKey cpk = new CustomPublicKey(Constants.SERVER_KEY_PAIR.getKeyNumber(), 
+					Constants.SERVER_KEY_PAIR.getPkiAlgorithm(), Constants.SERVER_KEY_PAIR.getPublicKey());
+			PKIAlgorithm pkiAlgorithm = null;
 			try {
-				
-				ServerPaymentResponse serverPaymentResponse = transactionService.createTransactionOtherServer(serverPaymentRequest);
+				pkiAlgorithm = PKIAlgorithm.getPKIAlgorithm(cpk.getPkiAlgorithm());
+			} catch (UnknownPKIAlgorithmException e1) {
+				new TransactionException(PAYMENT_REFUSE);
+			}
+			//initialize payment response
+			CustomServerPaymentResponse responseServerPaymentResponse;
+			
+			CustomServerPaymentRequest customServerPaymentRequest = DecoderFactory.decode(CustomServerPaymentRequest.class, requestObject.getCustomServerPaymentResponse());
+			ServerPaymentRequest serverPaymentRequest = DecoderFactory.decode(ServerPaymentRequest.class, customServerPaymentRequest.getServerPaymentRequestRaw());
+			
+			try {
+				ServerPaymentResponse serverPaymentResponse = transactionService.createTransactionOtherServer(serverPaymentRequest, customServerPaymentRequest);
 				responseObject.setSuccessful(true);
-				responseObject.setServerPaymentResponse(serverPaymentResponse.encode());
+				
+				try {
+					responseServerPaymentResponse = new CustomServerPaymentResponse(1, pkiAlgorithm, cpk.getKeyNumber(), serverPaymentResponse);
+					responseServerPaymentResponse.sign(KeyHandler.decodePrivateKey(Constants.SERVER_KEY_PAIR.getPrivateKey()));
+				} catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException | UnknownPKIAlgorithmException
+						| NoSuchProviderException | InvalidKeySpecException | NotSignedException | IllegalArgumentException e3) {
+					throw new TransactionException(PAYMENT_REFUSE);
+				}
+				try {
+					responseObject.setCustomServerPaymentResponse(responseServerPaymentResponse.encode());
+				} catch (NotSignedException e2) {
+					throw new TransactionException(PAYMENT_REFUSE);
+				}
+				
 				long diff = System.currentTimeMillis() - start;
 				System.err.println("server time1:"+diff+"ms");
 				return responseObject;
@@ -91,7 +134,18 @@ public class ServerCommunicationController {
 				paymentResponsePayer.sign(KeyHandler.decodePrivateKey(Constants.SERVER_KEY_PAIR.getPrivateKey()));
 				
 				responseObject.setSuccessful(true);
-				responseObject.setServerPaymentResponse(new ServerPaymentResponse(paymentResponsePayer).encode());
+				try {
+					responseServerPaymentResponse = new CustomServerPaymentResponse(1, pkiAlgorithm, cpk.getKeyNumber(), new ServerPaymentResponse(paymentResponsePayer));
+					responseServerPaymentResponse.sign(KeyHandler.decodePrivateKey(Constants.SERVER_KEY_PAIR.getPrivateKey()));
+				} catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException | UnknownPKIAlgorithmException
+						| NoSuchProviderException | InvalidKeySpecException | NotSignedException | IllegalArgumentException e3) {
+					throw new TransactionException(PAYMENT_REFUSE);
+				}
+				try {
+					responseObject.setCustomServerPaymentResponse(responseServerPaymentResponse.encode());
+				} catch (NotSignedException e2) {
+					throw new TransactionException(PAYMENT_REFUSE);
+				}
 				long diff = System.currentTimeMillis() - start;
 				System.err.println("server time2:"+diff+"ms");
 				
@@ -135,99 +189,104 @@ public class ServerCommunicationController {
 			// retrieve existing account and added public key to the server account
 			account = serverAccountService.getByUrl(request.getUrl());
 			CustomPublicKey cpkSave = new CustomPublicKey();
-			cpkSave.setKeyNumber(request.getKeyNumber());
+			cpkSave.setKeyNumber((byte) request.getKeyNumber());
 			cpkSave.setPublicKey(request.getPublicKey());
 			cpkSave.setPkiAlgorithm(request.getPkiAlgorithm());
 			serverAccountService.saveServerPublicKey(account.getId(), pkiAlgorithm, cpkSave.getPublicKey());
 			
 
 			String serverUrl = SecurityConfig.URL;
-			UserAccount emailAccount = userAccountService.getAdminEmail();
 			
 			CustomPublicKey cpk = new CustomPublicKey(Constants.SERVER_KEY_PAIR.getKeyNumber(), Constants.SERVER_KEY_PAIR.getPkiAlgorithm(), Constants.SERVER_KEY_PAIR.getPublicKey());
 			response.setUrl(serverUrl);
-			response.setEmail(emailAccount.getEmail());
 			response.setPkiAlgorithm(cpk.getPkiAlgorithm());
-			response.setKeyNumber(cpk.getKeyNumber());
+			response.setKeyNumber((byte)cpk.getKeyNumber());
 			response.setPublicKey(cpk.getPublicKey());
 			response.setMessage(Config.ACCOUNT_SUCCESS);
 			response.setSuccessful(true);
 
 			return response;
-		} 
-		catch (UserAccountNotFoundException | ServerAccountNotFoundException e) {
-			response.setSuccessful(false);
-			response.setMessage(e.getMessage());
-			return response;	
-		} 
-		catch (UnknownPKIAlgorithmException e) {
-			response.setSuccessful(false);
-			response.setMessage(e.getMessage());
-			return response;	
-		} 
-		catch (UrlAlreadyExistsException e) {
-			response.setSuccessful(false);
-			response.setMessage(e.getMessage());
-			return response;
-		} 
-		catch (BitcoinException e) {
-			response.setSuccessful(false);
-			response.setMessage(e.getMessage());
-			return response;
-		} 
-		catch (InvalidUrlException e) {
-			response.setSuccessful(false);
-			response.setMessage(e.getMessage());
-			return response;
-		} 
-		catch (InvalidEmailException e) {
-			response.setSuccessful(false);
-			response.setMessage(e.getMessage());
-			return response;
+		} catch (UnknownPKIAlgorithmException e) {
+			//ignore
+		} catch (UrlAlreadyExistsException e) {
+			//ignore
+		} catch (BitcoinException e) {
+			//ignore
+		} catch (UserAccountNotFoundException | ServerAccountNotFoundException e) {
+			//ignore
+		} catch (InvalidUrlException | InvalidEmailException e) {
+			//ignore
 		}
+		response.setSuccessful(false);
+		response.setMessage(Config.FAILED);
+		return response;	
+		
 	}
 
 	@RequestMapping(value = "/createNewAccountData", method = RequestMethod.POST, produces = "application/json")
-	public @ResponseBody ServerAccountObject createNewAccountData(@RequestBody ServerAccountObject request){
-		ServerAccountObject response = new ServerAccountObject();
+	public @ResponseBody TransferPOAObject createNewAccountData(@RequestBody TransferPOAObject request){
+		TransferPOAObject response = new TransferPOAObject();
 		ServerAccount account;
-		
 		try {
+			
+			PayOutAdrressRequest paarRequest = DecoderFactory.decode(PayOutAdrressRequest.class, request.getPayOutAddress());
 			//check if account exists already
 			if(serverAccountService.checkIfExistsByUrl(request.getUrl())){
 				if(!serverAccountService.isDeletedByUrl(request.getUrl())){
 					account = serverAccountService.getByUrl(request.getUrl());
-					account.setPayoutAddress(request.getPayoutAddress());
-					boolean success = serverAccountService.updatePayoutAddressAccount(request.getUrl(), account);
-					if(success){
-						String serverUrl = SecurityConfig.URL;
-						response.setUrl(serverUrl);
-						response.setPayoutAddress(account.getPayinAddress());
-						response.setSuccessful(true);
-						response.setMessage(Config.ACCOUNT_SUCCESS);
-					} else {
+					if(!paarRequest.verify(KeyHandler.decodePublicKey(serverPublicKeyDAO.getServerPublicKey(account.getId(), (byte) paarRequest.getKeyNumber()).getPublicKey()))){
 						response.setSuccessful(false);
 						response.setMessage(Config.ACCOUNT_FAILED);
+						return response;
 					}
-				} else {
-					response.setSuccessful(false);
-					response.setMessage(Config.ACCOUNT_FAILED);
-				}			
-			} else {
-				response.setSuccessful(false);
-				response.setMessage(Config.ACCOUNT_FAILED);				
-			}
-			return response;
+						
+					account.setPayoutAddress(paarRequest.getPayOutAddressRequest());
+					boolean success = serverAccountService.updatePayoutAddressAccount(request.getUrl(), account);
+					if(success){
+						//get keys
+						CustomPublicKey cpk = new CustomPublicKey(Constants.SERVER_KEY_PAIR.getKeyNumber(), 
+								Constants.SERVER_KEY_PAIR.getPkiAlgorithm(), Constants.SERVER_KEY_PAIR.getPublicKey());
+						PKIAlgorithm pkiAlgorithm;
+						try {
+							pkiAlgorithm = PKIAlgorithm.getPKIAlgorithm(cpk.getPkiAlgorithm());
+						} catch (UnknownPKIAlgorithmException e1) {
+							response.setSuccessful(false);
+							response.setMessage(Config.ACCOUNT_FAILED);
+							return response;
+						}
+						PayOutAdrressResponse paarResponse = new PayOutAdrressResponse(1, pkiAlgorithm,(byte) cpk.getKeyNumber(), account.getPayinAddress());
+						paarResponse.sign(KeyHandler.decodePrivateKey(Constants.SERVER_KEY_PAIR.getPrivateKey()));
+						response.setPayOutAddress(paarResponse.encode());
+						response.setUrl(SecurityConfig.URL);
+						response.setSuccessful(true);
+						response.setMessage(Config.ACCOUNT_SUCCESS);
+						return response;
+					}
+				} 		
+			} 
 		} 
 		catch (ServerAccountNotFoundException e) {
-			response.setSuccessful(false);
-			response.setMessage(e.getMessage());
-			return response;	
-		} 
+			//ignore
+		} catch (IllegalArgumentException e) {
+			//ignore
+		} catch (NotSignedException e) {
+			//ignore
+		}  catch (UnknownPKIAlgorithmException e) {
+			//ignore
+		} catch (InvalidKeyException | InvalidKeySpecException e) {
+			//ignore
+		} catch (NoSuchAlgorithmException | NoSuchProviderException e) {
+			//ignore
+		} catch (SignatureException | SerializationException e) {
+			//ignore
+		}
+		response.setSuccessful(false);
+		response.setMessage(Config.FAILED);
+		return response;	
 	}
 	
 	@RequestMapping(value = "/downgradeTrustLevel", method = RequestMethod.POST,consumes="application/json", produces = "application/json")
-	@ResponseBody public TransferObject downgradeTrustLevel(@RequestBody ServerAccountObject request) throws ServerAccountNotFoundException{
+	@ResponseBody public TransferObject downgradeTrustLevel(@RequestBody ServerAccountUpdatedObject request) throws ServerAccountNotFoundException{
 		TransferObject response = new TransferObject();
 		try{
 			ServerAccount account = serverAccountService.getByUrl(request.getUrl());
@@ -238,22 +297,20 @@ public class ServerCommunicationController {
 				if(success){
 					activitiesService.activityLog(Config.NOT_AVAILABLE, Subjects.DOWNGRADE_TRUST_LEVEL, "Trust level of Server account "+ request.getUrl() + " is downgraded to " + request.getTrustLevel());
 					response.setSuccessful(true);
-					response.setMessage("Succeeded to downgrade!");
+					response.setMessage(Config.DOWNGRADE_SUCCEEDED);
 					return response;
 				}
 			}
 		} catch (ServerAccountNotFoundException e) {
-			response.setSuccessful(false);
-			response.setMessage("Server Account does not exists!");
-			return response;
+			//ignore
 		}
 		response.setSuccessful(false);
-		response.setMessage("Failed to downgrade");
+		response.setMessage(Config.FAILED);
 		return response;
 	}
 	
 	@RequestMapping(value = "/upgradeTrustLevel", method = RequestMethod.POST, consumes="application/json", produces = "application/json")
-	@ResponseBody public TransferObject upgradeTrustLevel(@RequestBody ServerAccountObject request) throws ServerAccountNotFoundException{
+	@ResponseBody public TransferObject upgradeTrustLevel(@RequestBody ServerAccountUpdatedObject request) throws ServerAccountNotFoundException{
 		TransferObject response = new TransferObject();
 		try{
 			ServerAccount account = serverAccountService.getByUrl(request.getUrl());
@@ -261,48 +318,52 @@ public class ServerCommunicationController {
 				String messageInput = "Upgrade trust level to " + request.getTrustLevel();
 				Messages message = new Messages(Subjects.UPGRADE_TRUST_LEVEL, messageInput, request.getUrl());
 				message.setTrustLevel(request.getTrustLevel());
-				messagesService.createMessage(message);
-				response.setSuccessful(true);
-				response.setMessage("upgrade message is created");
-				return response;
+				boolean exists = messagesService.exits(Subjects.UPGRADE_TRUST_LEVEL, request.getUrl());
+				if(!exists){					
+					boolean success = messagesService.createMessage(message);
+					if(success){						
+						response.setSuccessful(true);
+						response.setMessage(Config.SUCCESS);
+						return response;
+					}
+				}
 			}
 		} catch (ServerAccountNotFoundException e) {
-			response.setSuccessful(false);
-			response.setMessage("Server Account does not exists!");
-			return response;
+			//ignore
 		}
 		response.setSuccessful(false);
 		response.setMessage("Failed to upgrade");
 		return response;
-	}
-		
-	@RequestMapping(value = "/updateTrustLevelAnswer", method = RequestMethod.POST, consumes="application/json", produces = "application/json")
-	public @ResponseBody TransferObject updateTrustLevelAnswer(@RequestBody ServerAccountObject request) throws ServerAccountNotFoundException{
+	}	
+	
+	@RequestMapping(value ="/deletedAccount", method = RequestMethod.POST, consumes="application/json")
+	public @ResponseBody TransferObject deleteAccount(@RequestBody ServerAccountUpdatedObject request){
 		TransferObject response = new TransferObject();
 		try{
-			serverAccountService.getByUrl(request.getUrl());
+			if(!serverAccountService.isDeletedByUrl(request.getUrl())){
+				ServerAccount account = serverAccountService.getByUrl(request.getUrl());
+				if(account.getTrustLevel() == 0 && account.getActiveBalance().compareTo(BigDecimal.ZERO) == 0){					
+					boolean success = serverAccountService.deleteAccount(request.getUrl());
+					if(success){					
+						response.setSuccessful(true);
+						response.setMessage("Succeeded to deleted!");
+						activitiesService.activityLog(Config.NOT_AVAILABLE, Subjects.DELETE_ACCOUNT, "Server account "+ request.getUrl()+ " is deleted");
+						return response;
+					}
+				}
+			}
 		} catch (ServerAccountNotFoundException e) {
-			response.setSuccessful(false);
-			response.setMessage("Server Account does not exists!");
-			return response;
+			//ignore
+		} catch (BalanceNotZeroException e) {
+			//ignore
 		}
-		
-		if(request.isSuccessful()){
-			ServerAccount account = new ServerAccount();
-			account.setTrustLevel(request.getTrustLevel());
-			
-			serverAccountService.updateAccount(request.getUrl(), account);
-			activitiesService.activityLog(Config.NOT_AVAILABLE, Config.UPGRADE_TRUST, "Trust level of url: " + request.getUrl() + " is updated to " + request.getTrustLevel());			
-		} else {			
-			activitiesService.activityLog(Config.NOT_AVAILABLE, Config.UPGRADE_TRUST, "Trust level of url: " + request.getUrl() + " is declined to updated to level " + request.getTrustLevel());
-		}
-		response.setSuccessful(true);
-		response.setMessage("Updated succeeded");
+		response.setSuccessful(false);
+		response.setMessage(Config.FAILED);
 		return response;
 	}
-	
-	@RequestMapping(value = "/upgradeAccepted", method = RequestMethod.POST, consumes="application/json", produces = "application/json")
-	public @ResponseBody TransferObject upgradeAccepted(@RequestBody ServerAccountObject request) throws ServerAccountNotFoundException{
+
+	@RequestMapping(value = "/updateAccepted", method = RequestMethod.POST, consumes="application/json", produces = "application/json")
+	public @ResponseBody TransferObject upgradeAccepted(@RequestBody ServerAccountUpdatedObject request) throws ServerAccountNotFoundException{
 		TransferObject response = new TransferObject();
 		try{
 			serverAccountService.getByUrl(request.getUrl());
@@ -315,14 +376,14 @@ public class ServerCommunicationController {
 		account.setTrustLevel(request.getTrustLevel());
 		
 		serverAccountService.updateAccount(request.getUrl(), account);
-		activitiesService.activityLog(Config.NOT_AVAILABLE, Config.UPGRADE_TRUST, "Trust level of url: " + request.getUrl() + " is updated to " + request.getTrustLevel());
+		activitiesService.activityLog(Config.NOT_AVAILABLE, Subjects.UPGRADE_TRUST_LEVEL, "Trust level of url: " + request.getUrl() + " is updated to " + request.getTrustLevel());
 		response.setSuccessful(true);
-		response.setMessage("Upgrade trust level to " + request.getTrustLevel());
+		response.setMessage("Update trust level to " + request.getTrustLevel());
 		return response;
 	}
 	
-	@RequestMapping(value = "/upgradeDeclined", method = RequestMethod.POST, consumes="application/json", produces = "application/json")
-	public @ResponseBody TransferObject upgradeDeclined(@RequestBody ServerAccountObject request) throws ServerAccountNotFoundException{
+	@RequestMapping(value = "/updateDeclined", method = RequestMethod.POST, consumes="application/json", produces = "application/json")
+	public @ResponseBody TransferObject upgradeDeclined(@RequestBody ServerAccountUpdatedObject request) throws ServerAccountNotFoundException{
 		TransferObject response = new TransferObject();
 		try{
 			serverAccountService.getByUrl(request.getUrl());
@@ -331,39 +392,9 @@ public class ServerCommunicationController {
 			response.setMessage("Server Account does not exists!");
 			return response;
 		}
-		activitiesService.activityLog(Config.NOT_AVAILABLE, Config.UPGRADE_TRUST, "Trust level of url: " + request.getUrl() + " is declined to updated to level " + request.getTrustLevel());
+		activitiesService.activityLog(Config.NOT_AVAILABLE, Subjects.UPGRADE_TRUST_LEVEL, "Trust level of url: " + request.getUrl() + " is declined to updated to level " + request.getTrustLevel());
 		response.setSuccessful(true);
-		response.setMessage("Upgrade trust level to " + request.getTrustLevel());
-		return response;
-	}
-	
-	@RequestMapping(value ="/deletedAccount", method = RequestMethod.POST, consumes="application/json")
-	public @ResponseBody TransferObject deleteAccount(@RequestBody ServerAccountObject request){
-		TransferObject response = new TransferObject();
-		try{
-			if(!serverAccountService.isDeletedByUrl(request.getUrl())){
-				boolean success = serverAccountService.deleteAccount(request.getUrl());
-				if(success){					
-					response.setSuccessful(true);
-					response.setMessage("Succeeded to deleted!");
-					activitiesService.activityLog(Config.NOT_AVAILABLE, Subjects.DELETE_ACCOUNT, "Server account "+ request.getUrl()+ " is deleted");
-					return response;
-				}
-			} else {
-				response.setSuccessful(true);
-				response.setMessage("Already deleted!");
-				return response;
-			}
-		} catch (ServerAccountNotFoundException e) {
-			response.setSuccessful(false);
-			response.setMessage("Server Account does not exists!");
-			return response;
-		} catch (BalanceNotZeroException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		response.setSuccessful(false);
-		response.setMessage("Failed to deleted");
+		response.setMessage("Update trust level to " + request.getTrustLevel());
 		return response;
 	}
 }

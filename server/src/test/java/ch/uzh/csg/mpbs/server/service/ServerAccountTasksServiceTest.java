@@ -21,6 +21,7 @@ import ch.uzh.csg.mbps.server.clientinterface.IServerAccountTasks;
 import ch.uzh.csg.mbps.server.domain.ServerAccountTasks;
 import ch.uzh.csg.mbps.server.service.ServerAccountTasksService;
 import ch.uzh.csg.mbps.server.service.ServerAccountTasksService.ServerAccountTaskTypes;
+import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mpbs.server.utilTest.ReplacementDataSetLoader;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
@@ -58,11 +59,11 @@ public class ServerAccountTasksServiceTest {
 	  
 	@Test
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/tasksServerAccountData.xml", type=DatabaseOperation.CLEAN_INSERT)
-	public void testPersistsNewCreatedAccount(){
+	public void testPersistsNewCreatedAccount() throws ServerAccountNotFoundException{
 		String url = "https://www.newAccount.ch";
 		String email = "new@mail.ch";
 		String username = "hans@http://server.own.org";
-		ServerAccountTasks task = serverAccountTasksService.getAccountTasksCreateByUrl(url);
+		ServerAccountTasks task = serverAccountTasksService.getAccountTasksByUrl(url, ServerAccountTaskTypes.CREATE_ACCOUNT.getCode());
 
 		assertTrue(task == null);
 
@@ -71,7 +72,7 @@ public class ServerAccountTasksServiceTest {
 		
 		serverAccountTasksService.persistsCreateNewAccount(url, username, email);
 		
-		ServerAccountTasks taskNew = serverAccountTasksService.getAccountTasksCreateByUrl(url);
+		ServerAccountTasks taskNew = serverAccountTasksService.getAccountTasksByUrl(url, ServerAccountTaskTypes.CREATE_ACCOUNT.getCode());
 		assertNotNull(taskNew);
 		
 		assertEquals("123456", taskNew.getToken());
@@ -86,11 +87,11 @@ public class ServerAccountTasksServiceTest {
 		email = "new@mail.ch";
 		username = "martin@http://server.own.org";
 		String payout = "msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW";
-		task = serverAccountTasksService.getAccountTasksCreateByUrl(url);
+		task = serverAccountTasksService.getAccountTasksByUrl(url, ServerAccountTaskTypes.CREATE_ACCOUNT.getCode());
 		
 		serverAccountTasksService.persistsCreateNewAccountPayOutAddress(url, username, email, payout);
 		
-		ServerAccountTasks taskNew2 = serverAccountTasksService.getAccountTasksCreateByUrl(url);
+		ServerAccountTasks taskNew2 = serverAccountTasksService.getAccountTasksByUrl(url, ServerAccountTaskTypes.CREATE_ACCOUNT.getCode());
 		assertNotNull(taskNew2);
 
 		assertEquals(url, taskNew2.getUrl());

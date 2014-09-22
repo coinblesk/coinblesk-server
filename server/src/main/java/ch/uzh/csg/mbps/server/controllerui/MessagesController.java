@@ -1,9 +1,13 @@
 package ch.uzh.csg.mbps.server.controllerui;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.minidev.json.JSONObject;
+
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import ch.uzh.csg.mbps.responseobject.TransferObject;
+import ch.uzh.csg.mbps.server.clientinterface.IActivities;
 import ch.uzh.csg.mbps.server.clientinterface.IMessages;
 import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
 import ch.uzh.csg.mbps.server.clientinterface.IServerAccountTasks;
@@ -19,12 +24,18 @@ import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.Messages;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.response.HttpRequestHandler;
+import ch.uzh.csg.mbps.server.response.HttpResponseHandler;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.Config;
+import ch.uzh.csg.mbps.server.util.SecurityConfig;
+import ch.uzh.csg.mbps.server.util.Subjects;
+import ch.uzh.csg.mbps.server.util.exceptions.MessageNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.web.model.MessagesObject;
 import ch.uzh.csg.mbps.server.web.response.MessagesTransferObject;
+import ch.uzh.csg.mbps.server.web.response.ServerAccountUpdatedObject;
 import ch.uzh.csg.mbps.server.web.response.WebRequestTransferObject;
 
 @Controller
@@ -39,6 +50,8 @@ public class MessagesController {
 	public IUserAccount userAccountService;
 	@Autowired
 	private IServerAccountTasks serverAccountTasksService;
+	@Autowired
+	private IActivities activitiesService;
 	
 	@RequestMapping(method = RequestMethod.GET)
 	public String home() {
@@ -90,7 +103,11 @@ public class MessagesController {
 			//get the server account which is involved
 			account = serverAccountService.getByUrl(request.getUrl());
 		} catch (ServerAccountNotFoundException e) {
-			//TODO: mehmet change status to answered
+			try {
+				messagesService.updatedMessagesAnswered(request.getMessageId());
+			} catch (MessageNotFoundException e1) {
+				//ignore
+			}
 			response.setMessage("Url " + request.getUrl()+ " does not exits" );
 			response.setSuccessful(false);
 			return response;
@@ -104,25 +121,57 @@ public class MessagesController {
 			return response;			
 		}
 		
+		ServerAccountUpdatedObject updatedAccount = new ServerAccountUpdatedObject();
+		updatedAccount.setUrl(SecurityConfig.URL);
+		updatedAccount.setEmail(sessionUser.getEmail());
+		updatedAccount.setTrustLevel(request.getTrustLevel());
+		JSONObject jsonObj = new JSONObject();
 		try {
-			//communicated with the other server that the upgrade was accepted
-			//TODO: mehmet
-		} catch (Exception e1) {
+			updatedAccount.encode(jsonObj);
+		} catch (Exception e) {
 			response.setMessage(Config.FAILED);
 			response.setSuccessful(false);
 			return response;
 		}
 		
-		//persists the upgrade with the new trust level
-		ServerAccount upgrade = new ServerAccount();
-		upgrade.setTrustLevel(request.getTrustLevel());
+		CloseableHttpResponse resBody;
+		TransferObject transferObject = new TransferObject();
 		try {
-			serverAccountService.updateAccount(request.getUrl(), upgrade);
-		} catch (ServerAccountNotFoundException e) {
+			//execute post request
+			resBody = HttpRequestHandler.prepPostResponse(jsonObj, request.getUrl() + Config.ACCEPT_UPGRADE_TRUST);
+			try {
+				transferObject = HttpResponseHandler.getResponse(transferObject, resBody);
+			} catch (Exception e) {
+				//ignore
+			} finally {
+					resBody.close();
+			}
+		} catch (IOException e) {
 			//ignore
+		}		
+			
+		if(transferObject.isSuccessful()){
+			//persists the upgrade with the new trust level
+			ServerAccount upgrade = new ServerAccount();
+			upgrade.setTrustLevel(request.getTrustLevel());
+			try {
+				serverAccountService.updateAccount(request.getUrl(), upgrade);
+			} catch (ServerAccountNotFoundException e) {
+				//ignore
+			}
+			
+			try {
+				messagesService.updatedMessagesAnswered(request.getMessageId());
+				activitiesService.activityLog(sessionUser.getUsername(), Subjects.ACCEPT_UPGRADE_TRUST_LEVEL, "Accepted upgrade trust level to " + request.getTrustLevel() + " of " + request.getUrl());
+				response.setMessage(Config.SUCCESS);
+				response.setSuccessful(true);
+				return response;	
+			} catch (MessageNotFoundException e) {
+				//ignore
+			}
 		}
-		response.setMessage(Config.SUCCESS);
-		response.setSuccessful(true);
+		response.setMessage(Config.FAILED);
+		response.setSuccessful(false);
 		return response;
 	} 
 	
@@ -144,7 +193,11 @@ public class MessagesController {
 			//get the server account which is involved
 			account = serverAccountService.getByUrl(request.getUrl());
 		} catch (ServerAccountNotFoundException e) {
-			//TODO: mehmet change status to answered
+			try {
+				messagesService.updatedMessagesAnswered(request.getMessageId());
+			} catch (MessageNotFoundException e1) {
+				//ignore
+			}
 			response.setMessage("Url " + request.getUrl()+ " does not exits" );
 			response.setSuccessful(false);
 			return response;
@@ -158,17 +211,49 @@ public class MessagesController {
 			return response;			
 		}
 		
+		ServerAccountUpdatedObject updatedAccount = new ServerAccountUpdatedObject();
+		updatedAccount.setUrl(SecurityConfig.URL);
+		updatedAccount.setEmail(sessionUser.getEmail());
+		updatedAccount.setTrustLevel(request.getTrustLevel());
+		JSONObject jsonObj = new JSONObject();
 		try {
-			//communicated with the other server that the upgrade was declined
-			//TODO: downgrade declined
-		} catch (Exception e1) {
+			updatedAccount.encode(jsonObj);
+		} catch (Exception e) {
 			response.setMessage(Config.FAILED);
 			response.setSuccessful(false);
 			return response;
 		}
 		
-		response.setMessage(Config.SUCCESS);
-		response.setSuccessful(true);
+		CloseableHttpResponse resBody;
+		TransferObject transferObject = new TransferObject();
+		try {
+			//execute post request
+			resBody = HttpRequestHandler.prepPostResponse(jsonObj, request.getUrl() + Config.DECLINE_UPGRADE_TRUST);
+			try {
+				transferObject = HttpResponseHandler.getResponse(transferObject, resBody);
+			} catch (Exception e) {
+				//ignore
+			} finally {
+					resBody.close();
+			}
+		} catch (IOException e) {
+			//ignore
+		}		
+			
+		if(transferObject.isSuccessful()){
+			try {
+				messagesService.updatedMessagesAnswered(request.getMessageId());
+				activitiesService.activityLog(sessionUser.getUsername(), Subjects.ACCEPT_UPGRADE_TRUST_LEVEL, "Declined upgrade trust level to " + request.getTrustLevel() + " of " + request.getUrl());
+				response.setMessage(Config.SUCCESS);
+				response.setSuccessful(true);
+				return response;	
+			} catch (MessageNotFoundException e) {
+				//ignore
+			}
+		}
+		
+		response.setMessage(Config.FAILED);
+		response.setSuccessful(false);
 		return response;
 	} 
 }

@@ -4,7 +4,7 @@
  * RelationController
  * @constructor
  */
-var RelationController = function( $rootScope, $scope, $modal, $location, serverAccountFactory) {
+var RelationController = function($rootScope, $scope, $modal, $location, serverAccountFactory) {
 	$scope.trust = {};
 	$scope.editMode = false;
 	$scope.serveraccounts = {
@@ -20,6 +20,7 @@ var RelationController = function( $rootScope, $scope, $modal, $location, server
 	loadRemoteData();
 	
 	function loadRemoteData(){
+		$rootScope.initialized = true;
 		serverAccountFactory.getAccounts()
 		.then(function(accounts){
 					$scope.serveraccounts = accounts.serverAccountList; 

@@ -18,6 +18,7 @@ import ch.uzh.csg.mbps.server.clientinterface.IServerAccountTasks;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.service.ServerAccountTasksService.ServerAccountTaskTypes;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.util.SecurityConfig;
@@ -134,44 +135,14 @@ public class RelationController {
 		
 		//check if the request is already launched
 		//if yes do not proceed throw exception
-		if(serverAccountTasksService.checkIfExists(request.getUrl())){
+		if(serverAccountTasksService.checkIfExists(request.getUrl(), ServerAccountTaskTypes.CREATE_ACCOUNT.getCode())){
 			throw new ServerAccountTasksAlreadyExists();
 		}
 		
-		if(!serverAccountService.checkIfExistsByUrl(request.getUrl())){
+		if(serverAccountService.isDeletedByUrl(request.getUrl()) || !serverAccountService.checkIfExistsByUrl(request.getUrl())){
 			serverAccountTasksService.createNewAccount(request.getUrl(),request.getEmail(),user, null);
-		
-		}
-		response.setMessage(Config.SUCCESS);
-		response.setSuccessful(true);
-		return response;
-	}
-
-	@RequestMapping(value = { "/createNewAccount2" }, method = RequestMethod.POST, consumes="application/json", produces="application/json")
-	@ResponseBody public TransferObject createAccount2(@RequestBody CreateSAObject request) throws Exception {		
-		
-		if(request.getUrl()== null){
-			throw new UserAccountNotFoundException(request.getUrl());
 		}
 		
-		TransferObject response = new TransferObject();
-		UserAccount user;
-		try{			
-			user = userAccountService.getByUsername(AuthenticationInfo.getPrincipalUsername());
-		} catch(UserAccountNotFoundException e) {
-			throw new UserAccountNotFoundException(AuthenticationInfo.getPrincipalUsername());
-		}
-		
-		//check if the request is already launched
-		//if yes do not proceed throw exception
-		if(serverAccountTasksService.checkIfExists(request.getUrl())){
-			throw new ServerAccountTasksAlreadyExists();
-		}
-		
-		if(!serverAccountService.checkIfExistsByUrl(request.getUrl())){
-			serverAccountTasksService.createNewAccount(request.getUrl(),request.getEmail(),user, null);
-			
-		}
 		response.setMessage(Config.SUCCESS);
 		response.setSuccessful(true);
 		return response;

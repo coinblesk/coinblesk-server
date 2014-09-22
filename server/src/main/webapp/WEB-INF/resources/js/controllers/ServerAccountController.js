@@ -5,17 +5,33 @@
  * @constructor
  */
 
-function ServerAccountController($rootScope, $scope, $location, $modal, $routeParams, serverAccountFactory, serverTransactionsFactory) {
+function ServerAccountController($rootScope, $window, $scope, $location, $modal, $routeParams, serverAccountFactory, serverTransactionsFactory) {
 	
 	$scope.trust = {
 		'0':'No-Trust',
 		'1':'Hyprid-Trust',
 		'2':'Full-Trust'
 	};
+	$scope.Split = function(string, nb) {
+		$scope.array = string.split('BTC');
+		return $scope.result = $scope.array[nb];
+	};
+
+	$scope.balanceSplit = function(balanceBTC){
+		if(balanceBTC != undefined){
+			var balance = $scope.Split(balanceBTC, 0);
+			if(balance == "0E-8"){
+				balance = "0.0";
+			}
+			return balance;
+		}
+	};
+	
 	
 	loadRemoteData();
 	
 	function loadRemoteData(){
+		$rootScope.initialized = true;
 		serverAccountFactory.getServerAccountData($routeParams.serverId).then(function(data){
 			$scope.serverAccount = data.serverAccountObject;
 			$scope.lastTransactions = data.getHistoryTransferObject.transactionHistory;
@@ -26,13 +42,22 @@ function ServerAccountController($rootScope, $scope, $location, $modal, $routePa
 
 		var modalInstance = $modal.open({
 			templateUrl: 'modalDelete.html',
-			controller: ModalDeleteController
+			controller: ModalDeleteController,
+			resolve: {
+				modalTrust: function() {
+					return $scope.serverAccount.trustLevel;
+				},
+				modalActiveBalance: function() {
+					return $scope.balanceSplit($scope.serverAccount.activeBalance);
+				}
+			}
 		});
 		
 		modalInstance.result.then(function(deleted){			
 			if(deleted){
-				serverAccountFactory.deletedAccount($scope.serverAccount.url).then(function(success){
-					
+				var url = $scope.serverAccount.url;
+				serverAccountFactory.deletedAccount(url).then(function(){
+					 $window.history.back();
 				});
 			}
 		});
@@ -64,15 +89,20 @@ function ServerAccountController($rootScope, $scope, $location, $modal, $routePa
 			controller: ModalBalanceLimitController,
 			resolve: {
 				modalLimit: function() {
-					return $scope.serverAccount.balanceLimit;
+					return $scope.balanceSplit($scope.serverAccount.balanceLimit);
+				},
+				modalUserLimit: function() {
+					return $scope.balanceSplit($scope.serverAccount.userBalanceLimit);
 				}
 			}
 		});
 		
-		modalInstance.result.then(function(balanceLimit){		
-			serverAccountFactory.updateBalanceLimit($scope.serverAccount, balanceLimit).then(function(){
+		modalInstance.result.then(function(balanceLimit){
+			if($scope.serverAccount.trustLevel > 0){				
+				serverAccountFactory.updateBalanceLimit($scope.serverAccount, balanceLimit).then(function(){
 					
-			});
+				});
+			}
 		});
 	};
 
@@ -83,18 +113,20 @@ function ServerAccountController($rootScope, $scope, $location, $modal, $routePa
 			controller: ModalUserBalanceLimitController,
 			resolve: {
 				modalLimit: function() {
-					return $scope.serverAccount.balanceLimit;
+					return $scope.balanceSplit($scope.serverAccount.balanceLimit);
 				},
 				modalUserLimit: function() {
-					return $scope.serverAccount.userBalanceLimit;
+					return $scope.balanceSplit($scope.serverAccount.userBalanceLimit);
 				}
 			}
 		});
 		
-		modalInstance.result.then(function(userBalanceLimit){		
-			serverAccountFactory.updateUserBalanceLimit($scope.serverAccount, userBalanceLimit).then(function(){
-				
-			});
+		modalInstance.result.then(function(userBalanceLimit){
+			if($scope.serverAccount.trustLevel > 0){				
+				serverAccountFactory.updateUserBalanceLimit($scope.serverAccount, userBalanceLimit).then(function(){
+					
+				});
+			}
 		});
 	};
 	
@@ -123,14 +155,20 @@ function ServerAccountController($rootScope, $scope, $location, $modal, $routePa
 	};
 };
 
-var ModalDeleteController = function ($scope, $modalInstance) {
+var ModalDeleteController = function ($scope, $modalInstance, modalTrust, modalActiveBalance) {
 	
+	$scope.trust = modalTrust;
+	$scope.balance = modalActiveBalance;
 	$scope.deleted = false;
 	
 	$scope.submit = function() {
 		$scope.resetError();
-		$scope.deleted = true;
-		$modalInstance.close($scope.deleted);
+		if($scope.trust == 0 && $scope.balance == 0){			
+			$scope.deleted = true;			
+			$modalInstance.close($scope.deleted);
+		} else {
+			$scope.setError("Please verify that Trust level is 'Non-Trust' and the active balance is '0'");
+		}
 	};
 
 	$scope.cancel = function () {
@@ -180,17 +218,23 @@ var ModalChangeRelationController = function ($scope, $modalInstance, modalLevel
     };
 };
 
-var ModalBalanceLimitController = function ($scope, $modalInstance, modalLimit) {
+var ModalBalanceLimitController = function ($scope, $modalInstance, modalLimit, modalUserLimit) {
 	
 	$scope.beforeLimit = modalLimit;
-	$scope.balanceLimit = modalLimit;
+	$scope.userLimit = modalUserLimit;
 	$scope.submit = function() {
 		$scope.resetError();
-		if($scope.balanceLimit != $scope.beforeLimit && $scope.balanceLimit > 0){			
+		if($scope.balanceLimit < $scope.userLimit){
+			$scope.setError("The balance limit cannot be less then the user balance limit!");
+		} else if($scope.balanceLimit != $scope.beforeLimit && $scope.balanceLimit > 0){			
 			$modalInstance.close($scope.balanceLimit);
 		}
 	};
 
+	$scope.setBalance = function(balance){
+		$scope.balanceLimit = balance;
+	};
+	
 	$scope.cancel = function () {
 		$scope.resetError();
 		$modalInstance.dismiss('cancel');	
@@ -209,14 +253,20 @@ var ModalBalanceLimitController = function ($scope, $modalInstance, modalLimit) 
 
 var ModalUserBalanceLimitController = function ($scope, $modalInstance, modalLimit, modalUserLimit) {
 	
-	$scope.beforeLimit = modalLimit;
-	$scope.userBalanceLimit = modalLimit;
+	$scope.beforeBalanceLimit = modalUserLimit;
+	$scope.balanceLimit = modalLimit;
 	
 	$scope.submit = function() {
 		$scope.resetError();
-		if($scope.userBalanceLimit != $scope.beforeLimit && $scope.userBalanceLimit > 0){			
+		if( $scope.balanceLimit < $scope.userBalanceLimit){
+			$scope.setError("The user balance limit cannot be greater than the balance limit!");
+		} else if($scope.userBalanceLimit != $scope.beforeBalanceLimit && $scope.userBalanceLimit > 0){			
 			$modalInstance.close($scope.userBalanceLimit);
 		}
+	};
+	
+	$scope.setBalance = function(balance){
+		$scope.userBalanceLimit = balance;
 	};
 	
 	$scope.cancel = function () {

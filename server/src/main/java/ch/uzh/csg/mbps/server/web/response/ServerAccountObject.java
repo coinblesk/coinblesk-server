@@ -22,28 +22,28 @@ public class ServerAccountObject extends TransferObject {
 	}
 	
 	public ServerAccountObject(String url, String email){
-		this.url = url;
+		this.activeBalance= BigDecimal.ZERO;
+		this.balanceLimit= BigDecimal.ZERO;
 		this.email = email;
 		this.nOfKeys = 0;
 		this.payinAddress="";
 		this.payoutAddress="";
 		this.trustLevel = 0;
-		this.activeBalance= BigDecimal.ZERO;
-		this.balanceLimit= BigDecimal.ZERO;
+		this.url = url;
 		this.userBalanceLimit = BigDecimal.ZERO;
 	}
 	
 	public ServerAccountObject(Long id, String url,String email, Integer nOfKeys, String payinAddress, String payoutAddress, Integer trustLevel,
 			BigDecimal activeBalance, BigDecimal balanceLimit, BigDecimal userBalanceLimit){
-		this.id = id;
-		this.url = url;
+		this.activeBalance = activeBalance;
+		this.balanceLimit = balanceLimit;
 		this.email = email;
+		this.id = id;
 		this.nOfKeys = nOfKeys;
 		this.payinAddress = payinAddress;
 		this.payoutAddress = payoutAddress;
 		this.trustLevel = trustLevel;
-		this.activeBalance = activeBalance;
-		this.balanceLimit = balanceLimit;
+		this.url = url;
 		this.userBalanceLimit = userBalanceLimit;
 	}
 	
@@ -172,7 +172,7 @@ public class ServerAccountObject extends TransferObject {
 			o.put("id",id);
 		}
 		if(nOfKeys!=null){
-			o.put("publicKey",nOfKeys);
+			o.put("nOfKeys",nOfKeys.toString());
 		}
 		if(payinAddress!=null){
 			o.put("payinAddress",payinAddress);
@@ -181,7 +181,7 @@ public class ServerAccountObject extends TransferObject {
 			o.put("payoutAddress",payoutAddress);
 		}
 		if(trustLevel!=null){
-			o.put("trustLevel", trustLevel);
+			o.put("trustLevel", trustLevel.toString());
 		}
 		if(url!=null){
 			o.put("url",url);
@@ -208,10 +208,18 @@ public class ServerAccountObject extends TransferObject {
 		setBalanceLimit(TransferObject.toBigDecimalOrNull(o.get("balanceLimit")));
 		setEmail(TransferObject.toStringOrNull(o.get("email")));
 		setId(TransferObject.toLongOrNull(o.get("id")));
-		setnOfKeys(TransferObject.toIntOrNull(o.get("nOfKeys")));		
+		String nOfKeysStr = toStringOrNull(o.get("nOfKeys"));
+		if(nOfKeys != null){
+			setnOfKeys(Integer.parseInt(nOfKeysStr));
+		}
+//		setnOfKeys(TransferObject.toIntOrNull(o.get("nOfKeys")));		
 		setPayinAddress(TransferObject.toStringOrNull(o.get("payinAddress")));
 		setPayoutAddress(TransferObject.toStringOrNull(o.get("payoutAddress")));
-		setTrustLevel(TransferObject.toIntOrNull(o.get("trustLevel")));
+		String trustLevelStr = toStringOrNull(o.get("trustLevel"));
+		if(trustLevel != null){
+			setTrustLevel(Integer.parseInt(trustLevelStr));
+		}
+//		setTrustLevel(TransferObject.toIntOrNull(o.get("trustLevel")));
 		setUrl(TransferObject.toStringOrNull(o.get("url")));
 		setUserBalanceLimit(TransferObject.toBigDecimalOrNull(o.get("userBalanceLimit")));
 		return o;

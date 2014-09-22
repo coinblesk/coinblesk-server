@@ -33,8 +33,8 @@
 				<td>{{message.message}}</td>
 				<td>{{message.creationDate | date:'yyyy-MM-dd HH:mm'}}</td>
 				<td>{{message.serverUrl}}</td>
-				<td><button class="btn btn-success" data-ng-click="accept(message.serverUrl,message.trustLevel, message.creationDate)">Accept</button></td>
-				<td><button class="btn btn-danger" data-ng-click="decline(message.serverUrl,message.trustLevel, message.creationDate)">Decline</button></td>
+				<td><button class="btn btn-success" data-ng-click="accept(message.serverUrl,message.trustLevel, message.creationDate, message.id)">Accept</button></td>
+				<td><button class="btn btn-danger" data-ng-click="decline(message.serverUrl,message.trustLevel, message.creationDate, message.id)">Decline</button></td>
 			</tr>
 		</tbody>
 	</table>

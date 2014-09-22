@@ -190,7 +190,7 @@ public class TransactionDAO {
 		
 		Predicate condition1 = cb.equal(root.get("usernamePayer"), userAccount.getUsername());
 		Predicate condition2 = cb.equal(root.get("usernamePayee"), userAccount.getUsername());
-		Predicate condition3= cb.and(condition1, condition2);
+		Predicate condition3= cb.or(condition1, condition2);
 		cq.where(condition3);
 		
 		cq.orderBy(cb.desc(root.get("timestamp")));
@@ -198,7 +198,7 @@ public class TransactionDAO {
 				.setMaxResults(5)
 				.getResultList();
 		
-		return resultWithAliasedBean;
+		return resultWithAliasedBean;	
 	}
 
 	public List<HistoryTransaction> getAll() {

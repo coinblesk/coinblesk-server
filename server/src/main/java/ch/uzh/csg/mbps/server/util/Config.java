@@ -72,7 +72,7 @@ public class Config {
 	public static final String ACCOUNT_FAILED = "Account failed";
 	public static final String ACCOUNT_UPDATED = "Updated succeeded";
 	public static final String SUCCESS = "success";
-	public static final Object DOWNGRADE_SUCCEEDED = "Downgrade succeeded";
+	public static final String DOWNGRADE_SUCCEEDED = "Downgrade succeeded";
 	
 	//url for server communication 
 	public static final String DOWNGRADE_TRUST = "/server/communication/downgradeTrustLevel";
@@ -83,8 +83,11 @@ public class Config {
 	public static final String ACCEPT_UPGRADE_TRUST_LEVEL = "/server/communication/upgradeAccepted";
 	public static final String DECLINE_UPGRADE_TRUST_LEVEL = "/server/communication/upgradeDeclined";
 	public static final String SERVER_PAYMENT_TRANSACTION = "/server/communication/paymentTransaction";
+	public static final String ACCEPT_UPGRADE_TRUST = "/server/communication/updateAccepted";
+	public static final String DECLINE_UPGRADE_TRUST = "/server/communication/updateDeclined";
 	
 	public static final String NOT_AVAILABLE = "n.A.";
+
 
 
 }

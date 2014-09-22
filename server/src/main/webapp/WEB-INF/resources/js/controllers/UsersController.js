@@ -24,6 +24,7 @@ var UsersController = function($rootScope, $scope, $location, $modal, userAccoun
 	loadRemoteData();
 	
 	function loadRemoteData(){
+		$rootScope.initialized = true;
 		userAccountFactory.getUsers()
 		.then(
 				function(users){

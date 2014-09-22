@@ -5,6 +5,7 @@ import java.util.List;
 
 import ch.uzh.csg.mbps.server.domain.ServerAccountTasks;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
+import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 
 public interface IServerAccountTasks {
 
@@ -30,13 +31,6 @@ public interface IServerAccountTasks {
 
 	/**
 	 * 
-	 * @param url
-	 * @return ServerAccountTasks
-	 */
-	public ServerAccountTasks getAccountTasksCreateByUrl(String url);
-
-	/**
-	 * 
 	 * @param token
 	 * @return ServerAccountTasks
 	 */
@@ -52,9 +46,10 @@ public interface IServerAccountTasks {
 	/**
 	 * 
 	 * @param url
-	 * @return
+	 * @param type 
+	 * @return boolean
 	 */
-	public boolean checkIfExists(String url);
+	public boolean checkIfExists(String url, int type);
 
 	/**
 	 * This method is called by the HourlyTask to request failed request to create new Account
@@ -167,5 +162,15 @@ public interface IServerAccountTasks {
 	 * @throws Exception
 	 */
 	public void updatedPayoutAddress(String url, String email, UserAccount user,String token) throws Exception;
+
+	/**
+	 * Return a {@link ServerAccountTasks}.
+	 * 
+	 * @param url
+	 * @param code
+	 * @return Server Account tasks
+	 * @throws ServerAccountNotFoundException 
+	 */
+	public ServerAccountTasks getAccountTasksByUrl(String url, int code) throws ServerAccountNotFoundException;
 
 }

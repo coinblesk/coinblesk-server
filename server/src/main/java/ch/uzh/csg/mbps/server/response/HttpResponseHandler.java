@@ -20,8 +20,6 @@ public class HttpResponseHandler {
 			HttpEntity entity1 = responseBody.getEntity();
 			String respString = EntityUtils.toString(entity1);
 			if(respString != null && respString.trim().length() > 0) {
-				//TODO: to delete
-				System.out.println(respString.toString());
 				response.decode(respString);
 			} else {
 				response.setSuccessful(false);

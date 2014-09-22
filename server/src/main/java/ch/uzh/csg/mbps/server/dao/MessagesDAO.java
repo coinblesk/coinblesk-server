@@ -41,6 +41,12 @@ public class MessagesDAO {
 	public boolean createMessage(Messages message){
 		em.persist(message);
 		LOGGER.info("Message is created with id " + message.getId() + " and subject " + message.getSubject());
+		
+		try {
+			getMessageByDateAndSubject(message.getCreationDate(), message.getSubject());
+		} catch (MessageNotFoundException e) {
+			return false;
+		}
 		return true;
 	}
 	
@@ -244,6 +250,25 @@ public class MessagesDAO {
 		return message;
 	}
 
+	public boolean exits(String subject, String url) {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<Messages> cq = cb.createQuery(Messages.class);
+		Root<Messages> root = cq.from(Messages.class);
+		
+		Predicate condition1 = cb.equal(root.get("subject"), subject);
+		Predicate condition2 = cb.equal(root.get("serverUrl"), url);
+		Predicate condition3 = cb.equal(root.get("answered"), false); 
+		Predicate condition4 = cb.and(condition1, condition2, condition3);
+		cq.where(condition4);
+		
+		Messages message = getSingle(cq, em);
+		
+		if(message == null)
+			return false;
+		
+		return true;
+	}
+
 	/**
 	 * 
 	 * @param cq
@@ -257,4 +282,5 @@ public class MessagesDAO {
 		}
 		return list.get(0);
 	}
+
 }

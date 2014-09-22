@@ -5,39 +5,43 @@
  * @constructor
  */
 
-function MessagesController($scope, $route, $location, messagesFactory) {
+function MessagesController($rootScope, $scope, $route, $location, messagesFactory) {
 	
-loadRemoteData();
+	loadRemoteData();
 
 	$scope.updatedAccount = {
 			url: "",
 			trustLevel: "",
-			creationDate: ""
+			creationDate: "",
+			messageId: ""
 	};
 
 	function loadRemoteData(){
+		$rootScope.initialized = true;
 		messagesFactory.getMessages().then(function(data){
 			$scope.messages = data.messagesList; 
 		});
 	}
 	
-	$scope.accept = function(url, trustLevel,creationDate){
+	$scope.accept = function(url, trustLevel, creationDate, messageId){
 		$scope.updatedAccount.url = url;
 		$scope.updatedAccount.trustLevel = trustLevel;
 		$scope.updatedAccount.creationDate = creationDate;
+		$scope.updatedAccount.messageId = messageId;
 		var account = $scope.updatedAccount;
 		messagesFactory.accept(account).then(function(data){
-			$route.reload();
+			loadRemoteData();
 		});
 	};
 
-	$scope.decline = function(url, trustLevel,creationDate){
+	$scope.decline = function(url, trustLevel, creationDate, messageId){
 		$scope.updatedAccount.url = url;
 		$scope.updatedAccount.trustLevel = trustLevel;
 		$scope.updatedAccount.creationDate = creationDate;
-		account = $scope.updatedAccount;
+		$scope.updatedAccount.messageId = messageId;
+		var account = $scope.updatedAccount;
 		messagesFactory.decline(account).then(function(data){
-			$route.reload();
+			loadRemoteData();
 		});
 	};
 };

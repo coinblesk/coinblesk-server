@@ -192,7 +192,7 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 				"url":serveraccount.url
 			}
 		});
-		request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError);
+		return request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError);
 	};
 	
 	serverAccountFactory.deletedAccount = function(url){
@@ -204,7 +204,7 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 				"url": url
 			}
 		});
-		request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError);
+		return request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError);
 	};
 	
 	serverAccountFactory.updateTrustLevel = function(serverAccount, trustLevel){
@@ -218,7 +218,7 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 				"url":serverAccount.url
 			}
 		});
-		request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError);
+		return request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError);
 	};
 	
 	serverAccountFactory.updateBalanceLimit  = function(serverAccount, balanceLimit){
@@ -233,7 +233,7 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 					"url": serverAccount.url
 				}
 			});
-			request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError);
+			return request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError);
 		}
 	};
 
@@ -249,7 +249,7 @@ AppServices.factory('serverAccountFactory', function($http, $q) {
 					"url": serverAccount.url
 				}
 			});
-			request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError);
+			return request.then(serverAccountFactory.handleSuccess, serverAccountFactory.handleError);
 		}
 	};
 	
@@ -313,6 +313,7 @@ AppServices.factory('messagesFactory', function($http, $q) {
 			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 			url: 'messages/accept',
 			data: {
+				"messageId": updatedAccount.messageId,
 				"trustLevel": updatedAccount.trustLevel,
 				"url": updatedAccount.url
 			}
@@ -326,6 +327,7 @@ AppServices.factory('messagesFactory', function($http, $q) {
 			headers: { 'Content-Type': 'application/json; charset=UTF-8'},
 			url: 'messages/decline',
 			data: {
+				"messageId": updatedAccount.messageId,
 				"trustLevel": updatedAccount.trustLevel,
 				"url": updatedAccount.url
 			}

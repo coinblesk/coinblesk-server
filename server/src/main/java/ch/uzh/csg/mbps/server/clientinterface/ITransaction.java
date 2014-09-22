@@ -11,6 +11,7 @@ import ch.uzh.csg.mbps.server.domain.DbTransaction;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.exceptions.TransactionException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
+import ch.uzh.csg.mbps.server.web.customserialize.CustomServerPaymentRequest;
 
 public interface ITransaction {
 	
@@ -55,7 +56,8 @@ public interface ITransaction {
 
 	/**
 	 * Creates a new Transaction on the server/database.
-	 * 
+	 * @param customServerPaymentRequest 
+	 * 			the {@link CustomServerPaymentRequest} contains the {@link ServerPaymentRequest}
 	 * @param toVerify
 	 *            the {@link ServerPaymentRequest} containing one or two
 	 *            {@link PaymentRequest}
@@ -71,7 +73,7 @@ public interface ITransaction {
 	 *             If the a {@link UserAccount} contained in one or both
 	 *             Transaction objects cannot be found.
 	 */
-	public ServerPaymentResponse createTransactionOtherServer(ServerPaymentRequest serverPaymentRequest) throws TransactionException, UserAccountNotFoundException;
+	public ServerPaymentResponse createTransactionOtherServer(ServerPaymentRequest serverPaymentRequest, CustomServerPaymentRequest customServerPaymentRequest) throws TransactionException, UserAccountNotFoundException;
 
 	/**
 	 * Returns the five last Transactions of a given {@link UserAccount}.

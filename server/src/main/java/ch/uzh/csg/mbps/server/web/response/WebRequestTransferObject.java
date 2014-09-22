@@ -19,6 +19,7 @@ public class WebRequestTransferObject extends TransferObject {
 	private String password;
 	private String subject;
 	private String message;
+	private Integer messageId;
 	private Integer trustLevel;
 	private Integer trustLevelOld;
 	private BigDecimal userBalanceLimit;
@@ -103,6 +104,12 @@ public class WebRequestTransferObject extends TransferObject {
 	public void setMessage(String message) {
 		this.message = message;
 	}
+	public Integer getMessageId() {
+		return messageId;
+	}
+	public void setMessageId(Integer messageId) {
+		this.messageId = messageId;
+	}
 	
 	public void encodeThis(JSONObject jsonObject) throws Exception {
 		if (activeBalance != null) {
@@ -122,6 +129,9 @@ public class WebRequestTransferObject extends TransferObject {
 		}
 		if (message != null) {
 			jsonObject.put("message", message);
+		}
+		if (messageId != null) {
+			jsonObject.put("messageId", messageId);
 		}
 		if (password != null) {
 			jsonObject.put("password", password);
@@ -201,6 +211,7 @@ public class WebRequestTransferObject extends TransferObject {
 		setEmail(toStringOrNull(o.get("email")));
 		setId(toLongOrNull(o.get("id")));
 		setMessage(toStringOrNull(o.get("message")));
+		setMessageId(toIntOrNull(o.get("messageId")));
 		setPassword(toStringOrNull(o.get("password")));
 		setSubject(toStringOrNull(o.get("subject")));
 		setTrustLevel(toIntOrNull(o.get("trustLevel")));

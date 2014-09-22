@@ -5,10 +5,7 @@ import java.math.BigDecimal;
 
 import net.minidev.json.JSONObject;
 
-import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.util.EntityUtils;
-import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,14 +32,13 @@ import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.mbps.server.web.response.GetHistoryServerTransaction;
 import ch.uzh.csg.mbps.server.web.response.ServerAccountDataTransferObject;
 import ch.uzh.csg.mbps.server.web.response.ServerAccountObject;
+import ch.uzh.csg.mbps.server.web.response.ServerAccountUpdatedObject;
 import ch.uzh.csg.mbps.server.web.response.WebRequestTransferObject;
 
 @Controller
 @RequestMapping("/serveraccount")
 public class ServerAccountController {
-	
-	private static Logger LOGGER = Logger.getLogger(ServerAccountController.class);
-	
+
 	@Autowired
 	private IServerAccount serverAccountService;
 	@Autowired
@@ -101,7 +97,7 @@ public class ServerAccountController {
 		if(serverAccountService.checkIfExistsByUrl(request.getUrl())){			
 			boolean passed = serverAccountService.checkPredefinedDeleteArguments(request.getUrl());
 			if (passed) {
-				ServerAccountObject deleteAccount = new ServerAccountObject();
+				ServerAccountUpdatedObject deleteAccount = new ServerAccountUpdatedObject();
 				deleteAccount.setUrl(SecurityConfig.URL);
 				JSONObject jsonObj = new JSONObject();
 				try {
@@ -114,13 +110,6 @@ public class ServerAccountController {
 					resBody = HttpRequestHandler.prepPostResponse(jsonObj, request.getUrl() + Config.DELETE_ACCOUNT);									
 					try {
 						response = HttpResponseHandler.getResponse(response, resBody);
-//						HttpEntity entity1 = resBody.getEntity();
-//						String respString = EntityUtils.toString(entity1);
-//						if(respString != null && respString.trim().length() > 0) {
-//							response.decode(respString);
-//						}
-//					} catch (Exception e) {
-//						throw new Exception(e.getMessage());
 					} finally {
 						resBody.close();
 					}
@@ -157,11 +146,18 @@ public class ServerAccountController {
 		}
 		
 		//Get the account that has a trust level update
-		ServerAccount tmpAccount = serverAccountService.getByUrl(request.getUrl());
+		ServerAccount tmpAccount;
+		try{			
+			tmpAccount = serverAccountService.getByUrl(request.getUrl());
+		} catch (ServerAccountNotFoundException e) {
+			throw new ServerAccountNotFoundException(request.getUrl());
+		}
 		
 		if(tmpAccount.getActiveBalance().compareTo(BigDecimal.ZERO)==0){
 			// Prepare your data to send
-			ServerAccountObject updatedAccount = new ServerAccountObject(SecurityConfig.URL, user.getEmail());
+			ServerAccountUpdatedObject updatedAccount = new ServerAccountUpdatedObject();
+			updatedAccount.setUrl(SecurityConfig.URL);
+			updatedAccount.setEmail(user.getEmail());
 			updatedAccount.setTrustLevel(request.getTrustLevel());
 			JSONObject jsonObj = new JSONObject();
 			try {
@@ -175,16 +171,12 @@ public class ServerAccountController {
 			try {
 				//execute post request
 				if(request.getTrustLevelOld() < request.getTrustLevel()){				
-					resBody = HttpRequestHandler.prepPostResponse(jsonObj, request.getUrl() + Config.DOWNGRADE_TRUST);					
+					resBody = HttpRequestHandler.prepPostResponse(jsonObj, request.getUrl() + Config.UPGRADE_TRUST);					
 				} else {
-					resBody = HttpRequestHandler.prepPostResponse(jsonObj, request.getUrl() + Config.UPGRADE_TRUST);
+					resBody = HttpRequestHandler.prepPostResponse(jsonObj, request.getUrl() + Config.DOWNGRADE_TRUST);
 				}
 				try {
-					HttpEntity entity1 = resBody.getEntity();
-					String respString = EntityUtils.toString(entity1);
-					if(respString != null && respString.trim().length() > 0) {
-						transferObject.decode(respString);
-					}
+					transferObject = HttpResponseHandler.getResponse(transferObject, resBody);
 				} catch (Exception e) {
 					throw new Exception(e.getMessage());
 				} finally {
@@ -203,11 +195,11 @@ public class ServerAccountController {
 					boolean success = serverAccountService.updateAccount(request.getUrl(), trustUpdated);
 					if(success) {
 						activitiesService.activityLog(AuthenticationInfo.getPrincipalUsername(), Subjects.DOWNGRADE_TRUST_LEVEL, "Server account "+ request.getUrl() +" is downgrade to " + request.getTrustLevel());
-						response.setMessage(Config.SUCCESS);
-						response.setSuccessful(true);
-						return response;
 					}
 				}
+				response.setMessage(Config.SUCCESS);
+				response.setSuccessful(true);
+				return response;
 			}
 			
 		}
@@ -228,7 +220,8 @@ public class ServerAccountController {
 			throw new UserAccountNotFoundException(AuthenticationInfo.getPrincipalUsername());
 		}
 		
-		if(request.getActiveBalance().compareTo(BigDecimal.ZERO) == 0){			
+		ServerAccount serverAccount = serverAccountService.getByUrl(request.getUrl());
+		if(serverAccount.getTrustLevel() > 0 && request.getActiveBalance().compareTo(BigDecimal.ZERO) == 0){			
 			ServerAccount updatedAccount = new ServerAccount();
 			updatedAccount.setBalanceLimit(request.getBalanceLimit());
 			boolean success = serverAccountService.updateAccount(request.getUrl(), updatedAccount);
@@ -240,6 +233,7 @@ public class ServerAccountController {
 				return response;
 			}
 		}
+		
 		response.setMessage(Config.FAILED);
 		response.setSuccessful(false);
 		return response;
@@ -258,7 +252,8 @@ public class ServerAccountController {
 			throw new UserAccountNotFoundException(AuthenticationInfo.getPrincipalUsername());
 		}
 
-		if(request.getActiveBalance().compareTo(BigDecimal.ZERO) == 0){				
+		ServerAccount serverAccount = serverAccountService.getByUrl(request.getUrl());
+		if(serverAccount.getTrustLevel() > 0 && request.getActiveBalance().compareTo(BigDecimal.ZERO) == 0){				
 			ServerAccount updatedAccount = new ServerAccount();
 			updatedAccount.setUserBalanceLimit(request.getUserBalanceLimit());
 			boolean success = serverAccountService.updateAccount(request.getUrl(), updatedAccount);

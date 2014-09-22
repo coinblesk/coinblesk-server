@@ -2,6 +2,11 @@ package ch.uzh.csg.mbps.server.service;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.SignatureException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.List;
 
 import net.minidev.json.JSONObject;
@@ -21,14 +26,18 @@ import ch.uzh.csg.mbps.customserialization.PaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentRequest;
 import ch.uzh.csg.mbps.customserialization.ServerPaymentResponse;
 import ch.uzh.csg.mbps.customserialization.ServerResponseStatus;
+import ch.uzh.csg.mbps.customserialization.exceptions.IllegalArgumentException;
 import ch.uzh.csg.mbps.customserialization.exceptions.NotSignedException;
+import ch.uzh.csg.mbps.customserialization.exceptions.SerializationException;
+import ch.uzh.csg.mbps.customserialization.exceptions.UnknownPKIAlgorithmException;
+import ch.uzh.csg.mbps.keys.CustomPublicKey;
 import ch.uzh.csg.mbps.model.HistoryTransaction;
-import ch.uzh.csg.mbps.responseobject.TransactionObject;
 import ch.uzh.csg.mbps.server.clientinterface.IPayOutRule;
 import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
 import ch.uzh.csg.mbps.server.clientinterface.IServerTransaction;
 import ch.uzh.csg.mbps.server.clientinterface.ITransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
+import ch.uzh.csg.mbps.server.dao.ServerPublicKeyDAO;
 import ch.uzh.csg.mbps.server.dao.TransactionDAO;
 import ch.uzh.csg.mbps.server.dao.UserPublicKeyDAO;
 import ch.uzh.csg.mbps.server.domain.DbTransaction;
@@ -46,6 +55,9 @@ import ch.uzh.csg.mbps.server.util.exceptions.PayOutRuleNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.mbps.server.util.exceptions.TransactionException;
 import ch.uzh.csg.mbps.server.util.exceptions.UserAccountNotFoundException;
+import ch.uzh.csg.mbps.server.web.customserialize.CustomServerPaymentRequest;
+import ch.uzh.csg.mbps.server.web.customserialize.CustomServerPaymentResponse;
+import ch.uzh.csg.mbps.server.web.response.TransferServerObject;
 import ch.uzh.csg.mbps.util.Converter;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
@@ -83,6 +95,8 @@ public class TransactionService implements ITransaction {
 	private IServerAccount serverAccountService;
 	@Autowired
 	private IServerTransaction serverTransactionService;
+	@Autowired 
+	private ServerPublicKeyDAO serverPublicKeyDAO;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -196,16 +210,44 @@ public class TransactionService implements ITransaction {
 				throw new TransactionException(PAYMENT_REFUSE_USER_LIMIT);
 			}
 			
-			TransactionObject tro = new TransactionObject();
+			//Object which will be send
+			TransferServerObject tso = new TransferServerObject();
+			//get keys
+			CustomPublicKey cpk = new CustomPublicKey(Constants.SERVER_KEY_PAIR.getKeyNumber(), 
+					Constants.SERVER_KEY_PAIR.getPkiAlgorithm(), Constants.SERVER_KEY_PAIR.getPublicKey());
+			PKIAlgorithm pkiAlgorithm = null;
 			try {
-	            tro.setServerPaymentResponse(serverPaymentRequest.encode());
-            } catch (NotSignedException e) {
-            	throw new TransactionException(PAYMENT_REFUSE);
-            }
+				pkiAlgorithm = PKIAlgorithm.getPKIAlgorithm(cpk.getPkiAlgorithm());
+			} catch (UnknownPKIAlgorithmException e1) {
+				new TransactionException(PAYMENT_REFUSE);
+			}
+			
+			//initialize payment request
+			CustomServerPaymentRequest cspr;
+			try {
+				cspr = new CustomServerPaymentRequest(1, pkiAlgorithm, cpk.getKeyNumber(), serverPaymentRequest);
+				cspr.sign(KeyHandler.decodePrivateKey(Constants.SERVER_KEY_PAIR.getPrivateKey()));
+			} catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException | UnknownPKIAlgorithmException
+					| NoSuchProviderException | InvalidKeySpecException | NotSignedException | IllegalArgumentException e3) {
+				String e = e3.getMessage();
+				throw new TransactionException(PAYMENT_REFUSE);
+			}
+			try {
+				tso.setCustomServerPaymentResponse(cspr.encode());
+			} catch (NotSignedException e2) {
+				throw new TransactionException(PAYMENT_REFUSE);
+			}
+//			TransactionObject tro = new TransactionObject();
+//			try {
+//	            tro.setServerPaymentResponse(serverPaymentRequest.encode());
+//            } catch (NotSignedException e) {
+//            	throw new TransactionException(PAYMENT_REFUSE);
+//            }
 			
 			JSONObject jsonObject = new JSONObject();
 			try {
-				tro.encode(jsonObject);
+				tso.encode(jsonObject);
+//				tro.encode(jsonObject);
 			} catch (Exception e1) {
 				throw new TransactionException(PAYMENT_REFUSE);
 			}
@@ -213,12 +255,14 @@ public class TransactionService implements ITransaction {
 			// send payer and payee request to the other server and make checks
 			CloseableHttpResponse responseBody;
 			String paymentUrl = serverUrl + Config.SERVER_PAYMENT_TRANSACTION;
-			TransactionObject troResponse = new TransactionObject();
+			TransferServerObject tsoResponse = new TransferServerObject();
+//			TransactionObject troResponse = new TransactionObject();
 			try {
 				//execute post request
 				responseBody = HttpRequestHandler.prepPostResponse(jsonObject, paymentUrl);
 				try {
-					troResponse = HttpResponseHandler.getResponse(troResponse, responseBody);
+					tsoResponse = HttpResponseHandler.getResponse(tsoResponse, responseBody);
+//					troResponse = HttpResponseHandler.getResponse(troResponse, responseBody);
 				} finally {
 					responseBody.close();
 				}				
@@ -226,16 +270,39 @@ public class TransactionService implements ITransaction {
 				throw new TransactionException(PAYMENT_REFUSE);
 			}
 			
-			if(!troResponse.isSuccessful()){
+			if(!tsoResponse.isSuccessful()){
+				throw new TransactionException(PAYMENT_REFUSE);
+			}
+//			if(!troResponse.isSuccessful()){
+//				throw new TransactionException(PAYMENT_REFUSE);
+//			}
+			
+			CustomServerPaymentResponse customServerPaymentResponse;
+			try {
+				customServerPaymentResponse = DecoderFactory.decode(CustomServerPaymentResponse.class, tso.getCustomServerPaymentResponse());
+			} catch (IllegalArgumentException | SerializationException e1) {
+				LOGGER.error(e1.getMessage());
 				throw new TransactionException(PAYMENT_REFUSE);
 			}
 			
+			
 			try {
-				serverPaymentResponse = DecoderFactory.decode(ServerPaymentResponse.class, troResponse.getServerPaymentResponse());
+				serverPaymentResponse = DecoderFactory.decode(ServerPaymentResponse.class, customServerPaymentResponse.getServerPaymentResponsetRaw());
 			} catch (Throwable e) {
 				e.printStackTrace();
 				LOGGER.error(e.getMessage());
 				throw new TransactionException(PAYMENT_REFUSE);				
+			}
+			
+			boolean serverVerified;
+			if(!internalTransaction){				
+				if(payerServerAccount == null){				
+					serverVerified = verifyPaymentResponse(customServerPaymentResponse, payeeServerAccount, serverPaymentResponse.getPaymentResponsePayer());
+				} else {
+					serverVerified = verifyPaymentResponse(customServerPaymentResponse, payerServerAccount, serverPaymentResponse.getPaymentResponsePayer());					
+				}
+				if(!serverVerified)
+					throw new TransactionException(PAYMENT_REFUSE);
 			}
 			
 			if(serverPaymentResponse.getPaymentResponsePayer().getStatus()!=ServerResponseStatus.SUCCESS){
@@ -361,9 +428,46 @@ public class TransactionService implements ITransaction {
 		return signedResponse;
 	}
 
+	/**
+	 * verifies if the response if is really from the server it claims to be
+	 * 
+	 * @param customServerPaymentResponse
+	 * @param payerResponse
+	 * @return boolean
+	 * @throws TransactionException 
+	 */
+	public boolean verifyPaymentResponse(CustomServerPaymentResponse customServerPaymentResponse, ServerAccount serverAccount, PaymentResponse payerResponse) throws TransactionException {
+		try {
+			if (!customServerPaymentResponse.verify(KeyHandler.decodePublicKey(serverPublicKeyDAO.getServerPublicKey(serverAccount.getId(), (byte) payerResponse.getKeyNumber()).getPublicKey()))) {
+				throw new TransactionException(PAYMENT_REFUSE);
+			}
+		} catch (Exception e) {
+			throw new TransactionException(PAYMENT_REFUSE);
+		}
+		return true;
+	}
+	/**
+	 * verifies if the request if is really from the server it claims to be
+	 * 
+	 * @param customServerPaymentRequest
+	 * @param payerRequest 
+	 * @return boolean
+	 * @throws TransactionException 
+	 */
+	public boolean verifyPaymentRequest(CustomServerPaymentRequest customServerPaymentRequest, ServerAccount serverAccount, PaymentRequest payerRequest) throws TransactionException {
+		try {
+			if (!customServerPaymentRequest.verify(KeyHandler.decodePublicKey(serverPublicKeyDAO.getServerPublicKey(serverAccount.getId(), (byte) payerRequest.getKeyNumber()).getPublicKey()))) {
+				throw new TransactionException(PAYMENT_REFUSE);
+			}
+		} catch (Exception e) {
+			throw new TransactionException(PAYMENT_REFUSE);
+		}
+		return true;
+	}
+	
 	@Override
 	@Transactional
-	public ServerPaymentResponse createTransactionOtherServer(ServerPaymentRequest serverPaymentRequest) throws TransactionException, UserAccountNotFoundException {
+	public ServerPaymentResponse createTransactionOtherServer(ServerPaymentRequest serverPaymentRequest, CustomServerPaymentRequest customServerPaymentRequest) throws TransactionException, UserAccountNotFoundException {
 		
 		int numberOfSignatures = serverPaymentRequest.getNofSignatures();
 		PaymentRequest payerRequest = serverPaymentRequest.getPaymentRequestPayer();
@@ -407,6 +511,10 @@ public class TransactionService implements ITransaction {
 			}
 		}
 
+		boolean serverVerified = verifyPaymentRequest(customServerPaymentRequest, serverAccount, payerRequest);
+		if(!serverVerified)
+			throw new TransactionException(PAYMENT_REFUSE);
+		
 		if(serverAccount.getTrustLevel() == 0)
 			throw new TransactionException(PAYMENT_REFUSE_TRUST);
 		

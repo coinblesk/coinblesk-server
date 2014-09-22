@@ -12,6 +12,7 @@ var HistoryController = function($rootScope, $scope, $location, serverTransactio
 	loadRemoteData();
 	
 	function loadRemoteData(){
+		$rootScope.initialized = true;
 		serverTransactionsFactory.getHistory()
 		.then(function(transactions){
 					$scope.servertransactions = transactions.transactionHistory; 

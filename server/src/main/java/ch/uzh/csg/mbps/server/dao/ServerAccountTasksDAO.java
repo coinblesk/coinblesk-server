@@ -14,8 +14,7 @@ import org.apache.log4j.Logger;
 import org.springframework.stereotype.Repository;
 
 import ch.uzh.csg.mbps.server.domain.ServerAccountTasks;
-import ch.uzh.csg.mbps.server.service.ServerAccountTasksService.ServerAccountTaskTypes;
-import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountTasksAlreadyExists;
+import ch.uzh.csg.mbps.server.util.exceptions.ServerAccountNotFoundException;
 
 /**
  * DatabaseAccessObject for {@link ServerAccountTasks}. Handles all DB operations
@@ -34,20 +33,12 @@ public class ServerAccountTasksDAO {
 		em.flush();
 		LOGGER.info("Server Account saved: serverAccount token: " + account.getToken() + ", url: " + account.getUrl());
 	}
-	
-	public ServerAccountTasks getAccountTasksCreateByUrl(String url){
-		CriteriaBuilder cb = em.getCriteriaBuilder();
-		CriteriaQuery<ServerAccountTasks> cq = cb.createQuery(ServerAccountTasks.class);
-		Root<ServerAccountTasks> root = cq.from(ServerAccountTasks.class);
-		Predicate condition1 = cb.equal(root.get("url"), url);
-		Predicate condition2 = cb.equal(root.get("type"), ServerAccountTaskTypes.CREATE_ACCOUNT.getCode());
-		Predicate condition3 = cb.and(condition1, condition2);
-		cq.where(condition3);
-		
-		ServerAccountTasks account = getSingle(cq, em);
-		return account;
-	}
 
+	/**
+	 * 
+	 * @param token
+	 * @return server account tasks
+	 */
 	public ServerAccountTasks getAccountTasksByToken(String token){
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<ServerAccountTasks> cq = cb.createQuery(ServerAccountTasks.class);
@@ -93,24 +84,29 @@ public class ServerAccountTasksDAO {
 	}
 
 	/**
+	 * Return Server Account Task
 	 * 
 	 * @param url
-	 * @return
-	 * @throws ServerAccountTasksAlreadyExists 
+	 * @param type 
+	 * @return ServerAccountTask
+	 * @throws ServerAccountNotFoundException 
 	 */
-	public ServerAccountTasks checkIfExists(String url) throws ServerAccountTasksAlreadyExists  {
+	public ServerAccountTasks getAccountTasksByUrl(String url, int type) throws ServerAccountNotFoundException {
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<ServerAccountTasks> cq = cb.createQuery(ServerAccountTasks.class);
 		Root<ServerAccountTasks> root = cq.from(ServerAccountTasks.class);
 		
-		Predicate condition = cb.equal(root.get("url"), url);
-		cq.where(condition);
+		Predicate condition1 = cb.equal(root.get("url"), url);
+		Predicate condition2 = cb.equal(root.get("type"), type);
+		Predicate condition3 = cb.equal(root.get("proceed"), false);
+		Predicate condition4 = cb.and(condition1, condition2, condition3);
+		cq.where(condition4);
 		
 		try{			
 			ServerAccountTasks account = em.createQuery(cq).getSingleResult();
 			return account;
 		} catch (Exception e){			
-			throw new ServerAccountTasksAlreadyExists();
+			throw new ServerAccountNotFoundException(url);
 		}
 	}
 
@@ -118,7 +114,7 @@ public class ServerAccountTasksDAO {
 	 * Gets all {@link ServerAccountTasks} by given parameter type
 	 * @param type 
 	 * 
-	 * @return S
+	 * @return List of server account tasks
 	 */
 	public List<ServerAccountTasks> getAllAccountTasksBySubject(int type) {
 		CriteriaBuilder cb = em.getCriteriaBuilder();
@@ -199,5 +195,6 @@ public class ServerAccountTasksDAO {
 		
 		return resultWithAliasedBean;
 	}
+
 	
 }

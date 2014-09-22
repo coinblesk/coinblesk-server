@@ -73,8 +73,10 @@ public class MessagesService implements IMessages{
 				activitiesService.activityLog(AuthenticationInfo.getPrincipalUsername(), Subjects.FAILED_CREATE_MESSAGE, "Message with subject " + message.getSubject() +" is failed");			
 			}
 		}
-		
-		return success;
+		if(success)
+			return true;
+		else
+			return false;
 	}
 
 	@Override
@@ -159,5 +161,10 @@ public class MessagesService implements IMessages{
 	@Transactional(readOnly=true)
 	public Messages getMessageByDateAndSubject(Date date, String subject) throws MessageNotFoundException{		
 		return messagesDAO.getMessageByDateAndSubject(date, subject);
+	}
+
+	@Override
+	public boolean exits(String subject, String url) {
+		return messagesDAO.exits(subject, url);
 	}
 }

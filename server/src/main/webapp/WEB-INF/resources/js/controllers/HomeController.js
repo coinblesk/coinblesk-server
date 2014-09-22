@@ -11,25 +11,26 @@ var HomeController = function($rootScope, $scope, $modal, $log, $location, mainR
 	$scope.user = [];
 	$scope.transactions = [];
 	$scope.messages = [];
-	$rootScope.loggeduser = {
-			username: ''
-	};
+	$rootScope.loggeduser = "";
 	
 	$scope.Split = function(string, nb) {
-	    $scope.array = string.split('@');
-	    return $scope.result = $scope.array[nb];
+		if(string!=undefined){			
+			$scope.array = string.split('@');
+			return $scope.result = $scope.array[nb];
+		}
 	};
 	
 	loadRemoteData();
 
 	function loadRemoteData(){
+		$rootScope.initialized = true;
 		mainRequestFactory.getMainRequestObjects().then(function(mainResponseObject){
 			$scope.balance = mainResponseObject.data.balance;
 			$scope.user = mainResponseObject.data.userModelObject;
 			$scope.transactions = mainResponseObject.data.getHistoryTransferObject.transactionHistory;
 			$scope.messages = mainResponseObject.data.getMessageTransferObject.messagesList;
 
-			$rootScope.loggeduser.username = $scope.Split($scope.user.username, 0);
+			$rootScope.loggeduser = $scope.Split($scope.user.username, 0);
 		});
 
 	}

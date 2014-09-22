@@ -72,6 +72,18 @@ public class ServerAccountDAO {
 		em.merge(serverAccount);
 		LOGGER.info("Updated ServerAccount: " + serverAccount.toString());
 	}
+
+	/**
+	 * Persist account {@link ServerAccount}
+	 * 
+	 * @param serverAccount
+	 */
+	public void persitsAccount(ServerAccount serverAccount){
+		em.getTransaction().begin();
+		em.persist(serverAccount);
+		em.getTransaction().commit();
+		LOGGER.info("Updated ServerAccount: " + serverAccount.toString());
+	}
 	
 	/**
 	 * Returns {@link ServerAccount}-Object for given parameter url. Does not
@@ -89,7 +101,7 @@ public class ServerAccountDAO {
 		Predicate condition = cb.equal(root.get("url"), url);
 		cq.where(condition);
 		
-		ServerAccount serverAccount = UserAccountDAO.getSingle(cq, em);
+		ServerAccount serverAccount = getSingle(cq, em);
 		
 		if(serverAccount == null || serverAccount.isDeleted()) {
 			throw new ServerAccountNotFoundException(url);
@@ -458,16 +470,6 @@ public class ServerAccountDAO {
 		}
 		
 		return true;
-	}
-
-	/**
-	 * Undoes the deletion of the {@link ServerAccount} by a given object ServerAccount.
-	 * 
-	 * @param account
-	 */
-	public void undeleteServerAccount(ServerAccount account) {
-		account.setDeleted(false);
-		em.merge(account);
 	}
 
 	/**

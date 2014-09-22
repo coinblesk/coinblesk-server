@@ -351,13 +351,23 @@ public class ServerAccountService implements IServerAccount {
 	@Override
 	public void undeleteServerAccountByUrl(String url) throws ServerAccountNotFoundException {
 		ServerAccount account = serverAccountDAO.getByUrlIgnoreDelete(url);
-		serverAccountDAO.undeleteServerAccount(account);
+		account.setDeleted(false);
+		account.setActiveBalance(new BigDecimal("0.00000000"));
+		account.setBalanceLimit(new BigDecimal("0.00000000"));
+		account.setUserBalanceLimit(new BigDecimal("0.00000000"));
+		account.setCreationDate(new Date());
+		serverAccountDAO.persitsAccount(account);
 	}
 	
 	@Override
 	public void undeleteServerAccountById(Long id) throws ServerAccountNotFoundException {
 		ServerAccount account = serverAccountDAO.getByIdIgnoreDelete(id);
-		serverAccountDAO.undeleteServerAccount(account);
+		account.setDeleted(false);
+		account.setActiveBalance(new BigDecimal("0.00000000"));
+		account.setBalanceLimit(new BigDecimal("0.00000000"));
+		account.setUserBalanceLimit(new BigDecimal("0.00000000"));
+		account.setCreationDate(new Date());
+		serverAccountDAO.persitsAccount(account);
 	}
 
 	@Override

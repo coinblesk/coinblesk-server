@@ -83,7 +83,7 @@ public class ServerAccountServiceTest {
 		ServerAccount server = new ServerAccount("http://www.neu.ch", "neu@neu.ch");
 		ServerAccount sendAccount = serverAccountService.prepareAccount(account, server);
 		assertNotNull(sendAccount);
-		assertEquals(SecurityConfig.BASE_URL, sendAccount.getUrl());
+		assertEquals(SecurityConfig.URL, sendAccount.getUrl());
 		assertEquals(0, sendAccount.getNOfKeys());
 	}
 

@@ -86,4 +86,13 @@ public interface IMessages {
 	 * @throws MessageNotFoundException
 	 */
 	public Messages getMessageByDateAndSubject(Date date, String subject) throws MessageNotFoundException;
+
+	/**
+	 * Checks if already a message exits by the given parameter subject and url
+	 * 
+	 * @param subject
+	 * @param url
+	 * @return boolean
+	 */
+	public boolean exits(String subject, String url);
 }
