@@ -40,14 +40,15 @@
 		<button class="btn btn-default" data-ng-click="openCreateAccountModal()">Create New Trust</button>
 	</span>
 	<table class="table table-striped table-bordered table-hover table-condensed">
-		<tr><th>URL</th><th>Payin Address</th><th>Payout Address</th><th>Relation</th><th>Balance</th><th>Time</th>
+		<tr><th>URL</th><th>Payin Address</th><th>Payout Address</th><th>Relation</th><th>Balance</th><th>Balance Limit</th>
 		</tr>
 		<tr data-ng-repeat="account in serveraccounts" data-ng-non-bindable="">
 			<td><a class="btn btn-default btn-lg btn-block active" data-role="button" data-ng-href="#/serveraccount/{{account.id}}" data-ng-click="">{{account.url}}</a></td>
 			<td>{{account.payinAddress}}</td>
 			<td>{{account.payoutAddress}}</td>
 			<td>{{trust[account.trustLevel]}}</td>
-			<td>{{account.activeBalance}}</td>
+			<td>{{balanceSplit(account.activeBalance) | textOrNumber:8}} BTC</td>
+			<td>{{balanceSplit(account.balanceLimit) | textOrNumber:8}} BTC</td>
 		</tr>
 	</table>
 </div>

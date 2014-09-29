@@ -18,7 +18,7 @@
  	<div class="col-lg-5">
 		<p></p>
 		<h2 class="title_2">Balance</h2>
-		<div id="balance">{{balance}} </div>
+		<div id="balance">{{SplitBTC(balance,0) | textOrNumber:8}} BTC</div>
  	</div>
  	<div class="col-lg-5">
  		<p></p>
@@ -28,7 +28,7 @@
   	<div class="col-lg-5">
 		<h4 class="title_4">User</h4>
 		<div class="left_side">
-			<div class="text-left">{{user.username}}</div>
+			<div class="text-left">{{Split(user.username,0)}}</div>
 		</div>
 		<p></p>
 		<h4 class="title_4">Email</h4>

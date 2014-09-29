@@ -16,7 +16,7 @@
 </div>
 <div class="container" id="historyController">
 	<div class="history_transaction" data-ng-repeat="transaction in servertransactions" data-ng-non-bindable="">
-		Amount: <b>{{transaction.amount}} BTC</b><span style="margin:20px;"></span> URL: <b>{{transaction.serverUrl}}</b>
+		Amount: <b>{{amountSplit(transaction.amount)}} BTC</b><span style="margin:20px;"></span> URL: <b>{{transaction.serverUrl}}</b>
 		<span style="margin:20px;"></span>Timestamp: <b>{{transaction.timestamp | date:'yyyy-MM-dd HH:mm'}}</b>
 		<span style="margin:20px;"></span>Received: <b>{{transaction.received}}</b> 
 	</div>

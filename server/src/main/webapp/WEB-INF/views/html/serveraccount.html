@@ -75,7 +75,7 @@
   							</div>
   							<div class="modal-body">
 								<div class="input-prepend input-append">
-									<input class="span2" data-ng-change="setBalance(balanceLimit)" data-ng-model="balanceLimit" type="number" name="balanceLimit" step="0.00000001" min="0.00000001" value="{{serverAccount.balanceLimit}}"/>
+									<input class="span2" data-ng-change="setBalance(balanceLimit)" data-ng-model="balanceLimit" type="number" name="balanceLimit" step="0.00000001" min="0.00000001" placeholder="Amount in BTC"/>
 								  	<span class="add-on">BTC</span>
 								</div>
 							</div>
@@ -98,7 +98,7 @@
   							</div>
   							<div class="modal-body">
 								<div class="input-prepend input-append">
-									<input class="span2" data-ng-change="setBalance(userBalanceLimit)" data-ng-model="userBalanceLimit" type="number" name="userBalanceLimit" step="0.00000001" min="0.00000001" value="{{serverAccount.userBalanceLimit}}"/>
+									<input class="span2" data-ng-change="setBalance(userBalanceLimit)" data-ng-model="userBalanceLimit" type="number" name="userBalanceLimit" step="0.00000001" min="0.00000001" placeholder="Amount in BTC"/>
 								  	<span class="add-on">BTC</span>
 								</div>
 							</div>
@@ -114,9 +114,9 @@
 		</span>
 		<div class=""><p>Payment Address: </p><p><b>{{serverAccount.payinAddress}}</b></p></div>
 		<div class=""><p>Relation Level: </p><p><b>{{trust[serverAccount.trustLevel]}}</b></p></div>
-		<div class=""><p>Actual Limit: </p><p><b>{{balanceSplit(serverAccount.activeBalance)}} BTC</b></p></div>
-		<div class=""><p>Balance Limit: </p><p><b>{{balanceSplit(serverAccount.balanceLimit)}} BTC</b></p></div>
-		<div class=""><p>User Balance Limit: </p><p><b>{{balanceSplit(serverAccount.userBalanceLimit)}} BTC</b></p></div>
+		<div class=""><p>Actual Limit: </p><p><b>{{serverAccount.activeBalance | textOrNumber:8:8}} BTC</b></p></div>
+		<div class=""><p>Balance Limit: </p><p><b>{{serverAccount.balanceLimit | textOrNumber:8:8}} BTC</b></p></div>
+		<div class=""><p>User Balance Limit: </p><p><b>{{serverAccount.userBalanceLimit | textOrNumber:8}} BTC</b></p></div>
 	</div>
 	<div class="col-lg-5">
 		<h2 class="title_2">Latest Transactions</h2>
