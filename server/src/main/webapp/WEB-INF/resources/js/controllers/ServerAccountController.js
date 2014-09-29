@@ -13,16 +13,13 @@ function ServerAccountController($rootScope, $window, $scope, $location, $modal,
 		'2':'Full-Trust'
 	};
 	$scope.Split = function(string, nb) {
-		$scope.array = string.split('BTC');
+		$scope.array = string.split("BTC");
 		return $scope.result = $scope.array[nb];
 	};
 
 	$scope.balanceSplit = function(balanceBTC){
 		if(balanceBTC != undefined){
 			var balance = $scope.Split(balanceBTC, 0);
-			if(balance == "0E-8"){
-				balance = "0.0";
-			}
 			return balance;
 		}
 	};
@@ -34,6 +31,9 @@ function ServerAccountController($rootScope, $window, $scope, $location, $modal,
 		$rootScope.initialized = true;
 		serverAccountFactory.getServerAccountData($routeParams.serverId).then(function(data){
 			$scope.serverAccount = data.serverAccountObject;
+			$scope.serverAccount.activeBalance = $scope.balanceSplit(data.serverAccountObject.activeBalance);			
+			$scope.serverAccount.balanceLimit = $scope.balanceSplit(data.serverAccountObject.balanceLimit);			
+			$scope.serverAccount.userBalanceLimit = $scope.balanceSplit(data.serverAccountObject.userBalanceLimit);			
 			$scope.lastTransactions = data.getHistoryTransferObject.transactionHistory;
 		});
 	}
@@ -48,7 +48,7 @@ function ServerAccountController($rootScope, $window, $scope, $location, $modal,
 					return $scope.serverAccount.trustLevel;
 				},
 				modalActiveBalance: function() {
-					return $scope.balanceSplit($scope.serverAccount.activeBalance);
+					return $scope.serverAccount.activeBalance;
 				}
 			}
 		});
@@ -89,18 +89,17 @@ function ServerAccountController($rootScope, $window, $scope, $location, $modal,
 			controller: ModalBalanceLimitController,
 			resolve: {
 				modalLimit: function() {
-					return $scope.balanceSplit($scope.serverAccount.balanceLimit);
+					return $scope.serverAccount.balanceLimit;
 				},
 				modalUserLimit: function() {
-					return $scope.balanceSplit($scope.serverAccount.userBalanceLimit);
+					return $scope.serverAccount.userBalanceLimit;
 				}
 			}
 		});
 		
 		modalInstance.result.then(function(balanceLimit){
-			if($scope.serverAccount.trustLevel > 0){				
-				serverAccountFactory.updateBalanceLimit($scope.serverAccount, balanceLimit).then(function(){
-					
+			if($scope.serverAccount.trustLevel > 0){
+				serverAccountFactory.updateBalanceLimit($scope.serverAccount, balanceLimit+"BTC").then(function(){
 				});
 			}
 		});
@@ -113,17 +112,17 @@ function ServerAccountController($rootScope, $window, $scope, $location, $modal,
 			controller: ModalUserBalanceLimitController,
 			resolve: {
 				modalLimit: function() {
-					return $scope.balanceSplit($scope.serverAccount.balanceLimit);
+					return $scope.serverAccount.balanceLimit;
 				},
 				modalUserLimit: function() {
-					return $scope.balanceSplit($scope.serverAccount.userBalanceLimit);
+					return $scope.serverAccount.userBalanceLimit;
 				}
 			}
 		});
 		
 		modalInstance.result.then(function(userBalanceLimit){
 			if($scope.serverAccount.trustLevel > 0){				
-				serverAccountFactory.updateUserBalanceLimit($scope.serverAccount, userBalanceLimit).then(function(){
+				serverAccountFactory.updateUserBalanceLimit($scope.serverAccount, userBalanceLimit+"BTC").then(function(){
 					
 				});
 			}
@@ -226,7 +225,8 @@ var ModalBalanceLimitController = function ($scope, $modalInstance, modalLimit, 
 		$scope.resetError();
 		if($scope.balanceLimit < $scope.userLimit){
 			$scope.setError("The balance limit cannot be less then the user balance limit!");
-		} else if($scope.balanceLimit != $scope.beforeLimit && $scope.balanceLimit > 0){			
+		} else if($scope.balanceLimit != $scope.beforeLimit && $scope.balanceLimit > 0){
+			$scope.balanceLimit = $scope.balanceLimit.toPrecision(8);
 			$modalInstance.close($scope.balanceLimit);
 		}
 	};
@@ -260,7 +260,8 @@ var ModalUserBalanceLimitController = function ($scope, $modalInstance, modalLim
 		$scope.resetError();
 		if( $scope.balanceLimit < $scope.userBalanceLimit){
 			$scope.setError("The user balance limit cannot be greater than the balance limit!");
-		} else if($scope.userBalanceLimit != $scope.beforeBalanceLimit && $scope.userBalanceLimit > 0){			
+		} else if($scope.userBalanceLimit != $scope.beforeBalanceLimit && $scope.userBalanceLimit > 0){
+			$scope.userBalanceLimit = $scope.userBalanceLimit.toPrecision(8);
 			$modalInstance.close($scope.userBalanceLimit);
 		}
 	};

@@ -4,7 +4,7 @@
  * RelationController
  * @constructor
  */
-var RelationController = function($rootScope, $scope, $modal, $location, serverAccountFactory) {
+var RelationController = function($rootScope, $scope, $modal, $location, $filter, serverAccountFactory) {
 	$scope.trust = {};
 	$scope.editMode = false;
 	$scope.serveraccounts = {
@@ -15,6 +15,17 @@ var RelationController = function($rootScope, $scope, $modal, $location, serverA
 		'0':'No-Trust',
 		'1':'Hyprid-Trust',
 		'2':'Full-Trust'
+	};
+	$scope.Split = function(string, nb) {
+		$scope.array = string.split("BTC");
+		return $scope.result = $scope.array[nb];
+	};
+
+	$scope.balanceSplit = function(balanceBTC){
+		if(balanceBTC != undefined){
+			var balance = $scope.Split(balanceBTC, 0);
+			return balance;
+		}
 	};
 	
 	loadRemoteData();

@@ -92,8 +92,7 @@ App.config(['$routeProvider', '$httpProvider', '$provide', function($routeProvid
       		var accessdenied = 403;
       		
 		    	if (status === unauthorized) {
-                  var deferred = $q.defer(),
-                      req = {
+                  var deferred = $q.defer(), req = {
                           config: config,
                           deferred: deferred
                       };
@@ -131,6 +130,7 @@ App.run(function($rootScope, $http, $location, $cookieStore, $injector, base64Fa
      */
     $rootScope.requests401 = [];
     $rootScope.initialized = null;
+    $rootScope.loggedusername = "";
     
     $rootScope.$on('event:loginRequired', function () {
     	if ($location.path().indexOf("/login") == -1) {
@@ -184,6 +184,7 @@ App.run(function($rootScope, $http, $location, $cookieStore, $injector, base64Fa
 			});
 			
 			request.then(function(){
+				$rootScope.loggedusername = credentials.username;
 				$rootScope.initialized = true;
 				$location.path('/home');
 			});
@@ -197,8 +198,9 @@ App.run(function($rootScope, $http, $location, $cookieStore, $injector, base64Fa
      * On 'logoutRequest' invoke logout on the server and broadcast 'event:loginRequired'.
      */
     $rootScope.$on('event:logoutRequest', function (event) {
+    	$rootScope.loggedusername = "";
     	$rootScope.initialized = null;
-    	$http.get('/j_spring_security_logout', {})
+    	$http.post('/j_spring_security_logout', {})
     	.success(function() {
       	});
     	 $rootScope.$broadcast('event:loginRequired');

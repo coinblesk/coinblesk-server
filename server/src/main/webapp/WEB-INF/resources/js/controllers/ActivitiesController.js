@@ -9,6 +9,9 @@ var ActivitiesController = function($rootScope, $scope, $location, activitiesFac
 	
 	function loadRemoteData(){
 		$rootScope.initialized = true;
+		if($rootScope.loggedusername!=undefined || $rootScope.loggedusername.length > 4){			
+			$scope.loggeduser = $rootScope.loggedusername;
+		}
 		activitiesFactory.getActivities().then(function(logs){
 					$scope.activitylogs = logs.activitiesList; 
 		});

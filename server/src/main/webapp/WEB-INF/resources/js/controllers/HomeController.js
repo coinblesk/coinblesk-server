@@ -5,7 +5,7 @@
  * @constructor
  */
 
-var HomeController = function($rootScope, $scope, $modal, $log, $location, mainRequestFactory, userAccountFactory) {
+var HomeController = function($rootScope, $scope, $modal, $log, $location, $filter, mainRequestFactory, userAccountFactory) {
 	$scope.editMode = false;
 	$scope.balance = "";
 	$scope.user = [];
@@ -16,7 +16,13 @@ var HomeController = function($rootScope, $scope, $modal, $log, $location, mainR
 	$scope.Split = function(string, nb) {
 		if(string!=undefined){			
 			$scope.array = string.split('@');
-			return $scope.result = $scope.array[nb];
+			return $scope.array[nb];
+		}
+	};
+	$scope.SplitBTC = function(string, nb) {
+		if(string != undefined){			
+			$scope.array = string.split("BTC");
+			return $scope.array[nb];
 		}
 	};
 	
