@@ -208,7 +208,7 @@ public class ServerAccountController {
 		return response;
 	}
 
-	@RequestMapping(value = { "/updateBalanceLimit}" }, method = RequestMethod.GET)
+	@RequestMapping(value = { "/updateBalanceLimit" }, method = RequestMethod.POST, consumes="application/json", produces="application/json")
 	@ResponseBody public TransferObject updateBalanceLimit(@RequestBody WebRequestTransferObject request) throws ServerAccountNotFoundException, UserAccountNotFoundException {
 		TransferObject response = new TransferObject();
 		UserAccount user = null;
@@ -239,9 +239,8 @@ public class ServerAccountController {
 		return response;
 	}
 	
-	@RequestMapping(value = { "/updateUserBalanceLimit}" }, method = RequestMethod.GET)
+	@RequestMapping(value = { "/updateUserBalanceLimit" }, method = RequestMethod.POST, consumes="application/json", produces="application/json")
 	@ResponseBody public TransferObject updateUserBalanceLimit(@RequestBody WebRequestTransferObject request) throws ServerAccountNotFoundException, UserAccountNotFoundException {
-		
 		TransferObject response = new TransferObject();
 		UserAccount user = null;
 		try {

@@ -8,6 +8,7 @@ import org.hibernate.HibernateException;
 import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.server.domain.DbTransaction;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
+import ch.uzh.csg.mbps.server.domain.ServerPublicKey;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.mbps.server.util.exceptions.InvalidEmailException;
@@ -213,4 +214,18 @@ public interface IServerAccount {
 	 * @param received
 	 */
 	public void persistsTransactionAmount(ServerAccount serverAccount, DbTransaction dbTransaction, boolean received);
+
+	/**
+	 * 
+	 * @param serverId
+	 * @return Server Public Keys
+	 */
+	public ServerPublicKey getServerAccountPublicKey(long serverId, byte keyNumber);
+
+	/**
+	 * 
+	 * @param serverId
+	 * @return list of server public keys
+	 */
+	public List<ServerPublicKey> getServerAccountPublicKeys(long serverId);
 }

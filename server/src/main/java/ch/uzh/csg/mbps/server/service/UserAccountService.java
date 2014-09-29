@@ -97,8 +97,9 @@ public class UserAccountService implements IUserAccount {
 		if(!userName.matches(Config.USERNAME_REGEX))
 			throw new InvalidUsernameException();
 		
-		if (!userUrl.matches(Config.URL_NAME_REGEX))
+		if (!userUrl.matches(Config.URL_NAME_REGEX)){			
 			throw new InvalidUrlException();
+		}
 		
 //		if (!username.matches(Config.USERNAME_REGEX))
 //			throw new InvalidUsernameException();

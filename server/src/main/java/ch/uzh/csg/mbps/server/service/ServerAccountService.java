@@ -19,6 +19,7 @@ import ch.uzh.csg.mbps.server.dao.ServerPublicKeyDAO;
 import ch.uzh.csg.mbps.server.dao.UserAccountDAO;
 import ch.uzh.csg.mbps.server.domain.DbTransaction;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
+import ch.uzh.csg.mbps.server.domain.ServerPublicKey;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.util.AuthenticationInfo;
 import ch.uzh.csg.mbps.server.util.BitcoindController;
@@ -408,7 +409,7 @@ public class ServerAccountService implements IServerAccount {
 	 * @return boolean
 	 */
 	private boolean verifyFullTrustBalance(ServerAccount serverAccount, BigDecimal amount) {
-		//Amount how much active balance will be if the transaction will be verified. 
+		// add amount to current amount and check if exceeds
 		BigDecimal changedActiveBalance = serverAccount.getActiveBalance().abs().add(amount);
 		if(serverAccount.getBalanceLimit().subtract(changedActiveBalance).compareTo(BigDecimal.ZERO) > 0)
 			return true;
@@ -428,8 +429,20 @@ public class ServerAccountService implements IServerAccount {
 			ServerAccount account = getByUrl(serverAccount.getUrl());
 			serverAccountDAO.persistsTransaction(account, dbTransaction.getAmount(), received);
 		} catch (ServerAccountNotFoundException e) {
-			//ignore it should no happen
+			//ignore
 		}
 		
-	}	
+	}
+	
+	@Override
+	@Transactional(readOnly=true)
+	public List<ServerPublicKey> getServerAccountPublicKeys(long serverId){
+		return serverPublicKeyDAO.getServerPublicKeys(serverId);
+	};
+
+	@Override
+	@Transactional(readOnly=true)
+	public ServerPublicKey getServerAccountPublicKey(long serverId, byte keyNumber){
+		return serverPublicKeyDAO.getServerPublicKey(serverId, keyNumber);
+	};
 }

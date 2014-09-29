@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import ch.uzh.csg.mbps.server.clientinterface.IActivities;
+import ch.uzh.csg.mbps.server.util.Config;
 import ch.uzh.csg.mbps.server.web.response.ActivitiesTransferObject;
 
 @Controller
@@ -26,6 +27,8 @@ public class ActivitiesController {
 		//TODO: mehmet page number should be passed too
 		ActivitiesTransferObject response = new ActivitiesTransferObject();
 		response.setActivitiessList(activitiesService.getLogs(0));
+		response.setSuccessful(true);
+		response.setMessage(Config.SUCCESS);
 		return response;
 	}
 }
