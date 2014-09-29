@@ -5,6 +5,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 import org.junit.After;
@@ -176,5 +179,18 @@ public class MessagesServiceTests {
 		assertEquals(allMessages_2.size(), 0);
 		assertEquals(allAnsweredMessages_2.size(), 0);
 		assertEquals(allNotAnsweredMessages_2.size(), 0);
+	}
+	
+	@Test
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/messagesData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	public void test_GetMessageByDateAndSubject() throws ParseException, MessageNotFoundException{
+		String subject = "Trust level updgrade";
+		String strDate = "2014-06-19 14:35:54.0";
+		Date date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(strDate);
+		Messages message = messagesService.getMessageByDateAndSubject(date, subject);
+		assertNotNull(message);
+		
+		assertEquals(subject, message.getSubject());
+		
 	}
 }

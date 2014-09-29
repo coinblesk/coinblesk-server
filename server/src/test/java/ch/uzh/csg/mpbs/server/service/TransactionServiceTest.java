@@ -511,7 +511,7 @@ public class TransactionServiceTest {
 	}
 	
 	@Test
-	public void testTransactionSumByServerAsPayer() throws Exception{
+	public void testTransactionSumByServerAsPayerAndPayee() throws Exception{
 		UserAccount fromDB = createAccountAndVerifyAndReload("TDAOT_16@https://mbps.csg.uzh.ch", "TDAOT_16@bitcoin.csg.uzh.ch", "my-password", new BigDecimal("0.0"));
 		UserAccount fromDB2 = createAccountAndVerifyAndReload("TDAOT_17@https://mbps.csg.uzh.ch", "TDAOT_17@bitcoin.csg.uzh.ch", "my-password", new BigDecimal("0.0"));
 		
@@ -547,6 +547,7 @@ public class TransactionServiceTest {
 		assertEquals(trans1,  trans4);
 		assertEquals(trans2,  trans3);
 	}
+	
 	
 	
 	private UserAccount createAccountAndVerifyAndReload(String username, String email, String password, BigDecimal bigDecimal) throws Exception {

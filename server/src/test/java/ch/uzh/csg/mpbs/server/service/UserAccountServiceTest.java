@@ -344,10 +344,8 @@ public class UserAccountServiceTest {
 			// do nothing
 		}
 		
-		String admin = userAccountService.getAdminEmail();
+		UserAccount admin = userAccountService.getAdminEmail();
 		assertNotNull(admin);
-		System.out.println(admin);
-		assertTrue(admin.matches(Config.EMAIL_REGEX));
-		
+		assertTrue(admin.getEmail().matches(Config.EMAIL_REGEX));
 	}
 }

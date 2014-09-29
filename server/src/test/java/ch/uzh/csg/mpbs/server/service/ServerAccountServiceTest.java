@@ -19,9 +19,13 @@ import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
 
+import ch.uzh.csg.mbps.customserialization.PKIAlgorithm;
 import ch.uzh.csg.mbps.server.clientinterface.IServerAccount;
+import ch.uzh.csg.mbps.server.clientinterface.ITransaction;
 import ch.uzh.csg.mbps.server.clientinterface.IUserAccount;
+import ch.uzh.csg.mbps.server.domain.DbTransaction;
 import ch.uzh.csg.mbps.server.domain.ServerAccount;
+import ch.uzh.csg.mbps.server.domain.ServerPublicKey;
 import ch.uzh.csg.mbps.server.domain.UserAccount;
 import ch.uzh.csg.mbps.server.service.ServerAccountService;
 import ch.uzh.csg.mbps.server.util.SecurityConfig;
@@ -61,6 +65,9 @@ public class ServerAccountServiceTest {
 	@Autowired
 	private IUserAccount userAccountService;
 	
+	@Autowired
+	private ITransaction transactionService;
+	
 	@Before
 	public void setUp() throws Exception {
 		ServerAccountService.enableTestingMode();
@@ -73,11 +80,35 @@ public class ServerAccountServiceTest {
 	public void teardown(){
 		ServerAccountService.disableTestingMode();
 	}
+	
+	@Test
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverPublicKeyData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	@ExpectedDatabase(value="classpath:DbUnitFiles/Services/serverPublicKeyDataExpected.xml",table="server_public_key")
+	public void testSaveAccount() throws UserAccountNotFoundException, InvalidUrlException, InvalidEmailException, ServerAccountNotFoundException{
+		
+		List<ServerPublicKey> keys = serverAccountService.getServerAccountPublicKeys(12);
+		int testAmount = 1;
+
+		assertEquals(keys.size(), testAmount);		
+		
+		String publicKey = "155c0bdb6a32e8fca5eb2aefab63e5f2b58dc67c2bc8aa15";
+		PKIAlgorithm pki = PKIAlgorithm.DEFAULT;
+		
+		serverAccountService.saveServerPublicKey(12, pki, publicKey);
+		List<ServerPublicKey> keys2 = serverAccountService.getServerAccountPublicKeys(12);
+		assertEquals(keys2.size(), testAmount+1);
+		assertFalse(keys.size() == keys2.size());
+
+		ServerPublicKey testKey = serverAccountService.getServerAccountPublicKey(12, (byte) 2);
+		assertNotNull(testKey);
+		assertEquals(publicKey, testKey.getPublicKey());
+	}
+
 
 	@Test
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/userAccountServerAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
 	public void testPrepareGetAccount() throws UserAccountNotFoundException, InvalidUrlException, InvalidEmailException{
-		UserAccount  account = userAccountService.getByUsername("hans");
+		UserAccount  account = userAccountService.getByUsername("hans@http://server.own.org");
 		assertNotNull(account);
 		
 		ServerAccount server = new ServerAccount("http://www.neu.ch", "neu@neu.ch");
@@ -85,6 +116,20 @@ public class ServerAccountServiceTest {
 		assertNotNull(sendAccount);
 		assertEquals(SecurityConfig.URL, sendAccount.getUrl());
 		assertEquals(0, sendAccount.getNOfKeys());
+	}
+	
+	@Test
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
+	public void testVerifyTrustAndBalance() throws UserAccountNotFoundException, InvalidUrlException, InvalidEmailException, ServerAccountNotFoundException{
+		
+		ServerAccount serverVerified = serverAccountService.getById(13);
+		assertNotNull(serverVerified);
+		BigDecimal amount = new BigDecimal("0.2");
+		assertTrue(serverAccountService.verifyTrustAndBalance(serverVerified, amount));
+		
+		ServerAccount serverNotVerified = serverAccountService.getById(10);
+		assertNotNull(serverNotVerified);
+		assertFalse(serverAccountService.verifyTrustAndBalance(serverNotVerified, amount));
 	}
 
 	@Test(expected=InvalidUrlException.class)
@@ -327,5 +372,32 @@ public class ServerAccountServiceTest {
 		boolean success = serverAccountService.checkIfExistsByUrl(test.getUrl());
 		
 		assertFalse(success==true);
+	}
+	
+	@Test
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountDataPersistsAmount.xml",type=DatabaseOperation.CLEAN_INSERT)
+	@ExpectedDatabase(value="classpath:DbUnitFiles/Services/serverAccountDataPersistsAmountExpected.xml", table="server_account")
+	public void testPersistTransactionAmount() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, ServerAccountNotFoundException {
+
+		ServerAccount testAccount = serverAccountService.getById(11);
+		DbTransaction subtractTrans = new DbTransaction();
+		subtractTrans.setAmount(new BigDecimal("0.3"));
+		DbTransaction addTrans = new DbTransaction();
+		addTrans.setAmount(new BigDecimal("0.15"));
+		
+		assertNotNull(testAccount);
+		assertTrue(testAccount.getActiveBalance().abs().compareTo(BigDecimal.ZERO) == 0);
+		
+		serverAccountService.persistsTransactionAmount(testAccount, subtractTrans, false);
+		testAccount = serverAccountService.getById(11);
+		assertFalse(testAccount.getActiveBalance().abs().compareTo(BigDecimal.ZERO) == 0);
+		assertTrue(testAccount.getActiveBalance().abs().compareTo(new BigDecimal("0.30000000")) == 0);
+		
+		serverAccountService.persistsTransactionAmount(testAccount, addTrans, true);
+		testAccount = serverAccountService.getById(11);
+		assertFalse(testAccount.getActiveBalance().abs().compareTo(new BigDecimal("0.30000000")) == 0);
+		assertTrue(testAccount.getActiveBalance().abs().compareTo(new BigDecimal("0.15000000")) == 0);
+		
+		
 	}
 }

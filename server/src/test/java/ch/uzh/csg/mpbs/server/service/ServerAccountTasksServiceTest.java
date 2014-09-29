@@ -156,4 +156,12 @@ public class ServerAccountTasksServiceTest {
 		assertEquals(5, proceedAfter.size());
 	}
 	
+	
+	@Test
+	@DatabaseSetup(value="classpath:DbUnitFiles/Services/tasksServerAccountProceedData.xml", type=DatabaseOperation.CLEAN_INSERT)
+	@ExpectedDatabase(value="classpath:DbUnitFiles/Services/tasksServerAccountProceedDataExpected.xml", table="server_account")
+	public void testRemoveProceedTasks(){
+		assertTrue(serverAccountTasksService.removeProceedTasks("45656577"));
+	}
+	
 }
