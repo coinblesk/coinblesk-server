@@ -215,7 +215,7 @@ public class HttpRequestHandler {
 	public static CloseableHttpResponse prepPostResponse(JSONObject jsonObj, String url) throws ClientProtocolException, IOException {
 		CloseableHttpClient httpClient = createDefaultHttpsClient();
 		HttpPost post = preparePost(jsonObj, url);
-		return httpClient.execute(post, HttpClientContext.create());
+		return httpClient.execute(post);
 	}
 
 	/**
@@ -229,7 +229,7 @@ public class HttpRequestHandler {
 	public static CloseableHttpResponse prepPostResponse(List<NameValuePair> postParameters, String url) throws ClientProtocolException, IOException {
 		CloseableHttpClient httpClient = createDefaultHttpsClient();
 		HttpPost post = preparePost(postParameters, url);
-		return httpClient.execute(post, HttpClientContext.create());
+		return httpClient.execute(post);
 	}
 	
 }

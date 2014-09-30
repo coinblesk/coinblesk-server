@@ -22,8 +22,7 @@
 	
 	<mvc:annotation-driven>
     	<mvc:message-converters register-defaults="true">
-<!--         	<bean class="org.springframework.http.converter.StringHttpMessageConverter"/> -->
-<!--         	<bean class="org.springframework.http.converter.ByteArrayHttpMessageConverter"/> -->
+        	<bean class="ch.uzh.csg.mbps.server.json.MyHttpMessageConverter"/>
         	<bean class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter">
             	<property name="objectMapper" ref="jacksonObjectMapper" />
         	</bean>        
