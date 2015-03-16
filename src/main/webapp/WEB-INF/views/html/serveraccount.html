@@ -1,0 +1,182 @@
+<div class="masthead">
+    <div class="navbar">
+    	<div class="navbar-inner">
+    		<div class="container">
+    			<ul class="menu">
+    				<li><a href="#/home">Home</a></li>
+    				<li><a href="#/relation">Relation</a></li>
+    				<li><a href="#/users">Users</a></li>
+    				<li><a href="#/history">History</a></li>
+    				<li><a href="#/messages">Messages</a></li>    				
+    				<li><a href="#/activities">Activities</a></li>
+    			</ul>
+    		</div>
+    	</div>
+	</div>
+</div>
+<div class="container" id="serverAccountController">
+	<div class="col-lg-5">
+		<h2><span class="text-left">{{serverAccount.url}}</span></h2>
+		<span class="text-right">
+			<span>
+				<script type="text/ng-template" id="modalDelete.html">
+					<div class="modal-body">
+						<div class="alert alert-danger" ng-show="error">{{errorMessage}}</div>
+          				<form name="delete" data-ng-submit="submit()">
+							<div class="modal-header">
+    							<h3>Delete Relation</h3>
+  							</div>
+  							<div class="modal-body">
+								<p>Before deleting please check:</p>
+								<ol>
+									<li>There are no pending Bitcoin transactions (in- and out going).</li>
+									<li>Trust level is downgraded to "No-Trust".</li> 
+								</ol>
+  							</div>
+  							<div class="modal-footer">
+    							<button class="btn btn-primary" type="submit">Yes</button>
+    							<button class="btn btn-warning" data-ng-click="cancel()">Cancel</button>
+  							</div>
+						</form>
+					</div>
+    			</script>
+				<button class="btn btn-warning" data-ng-click="openDeleteModal('sm')">Delete Relation</button>
+			</span>
+			<span>
+				<script type="text/ng-template" id="modalChangeRelation.html">
+					<div class="modal-body">
+						<div class="alert alert-danger" ng-show="error">{{errorMessage}}</div>
+          				<form name="changeRelation" data-ng-submit="submit()">
+							<div class="modal-header">
+    							<h3>Change Trust Level</h3>
+  							</div>
+  							<div class="modal-body">
+								<p>You can alter the trust level if there are no Bitcoin transaction pending</p>
+								<select class="selectpicker" data-ng-change="selectValue(levelOption)" data-ng-model="levelOption" data-ng-options="levelValue.value as levelValue.name for levelValue in levelOptions">
+									<option style="display:none" value="">select trust level</option>
+								</select>
+  							</div>
+  							<div class="modal-footer">
+    							<button class="btn btn-primary" type="submit()">Yes</button>
+    							<button class="btn btn-warning" data-ng-click="cancel()">Cancel</button>
+  							</div>
+						</form>
+					</div>
+    			</script>
+				<button class="btn btn-primary" data-ng-click="openChangeRelationModal('sm')">Change Relation</button>
+			</span>
+			<span>
+				<script type="text/ng-template" id="modalBalanceLimit.html">
+					<div class="modal-body">
+						<div class="alert alert-danger" ng-show="error">{{errorMessage}}</div>
+          				<form name="BalanceLimit" data-ng-submit="submit()">
+							<div class="modal-header">
+    							<h3>Set Balance Limit</h3>
+  							</div>
+  							<div class="modal-body">
+								<div class="input-prepend input-append">
+									<input class="span2" data-ng-change="setBalance(balanceLimit)" data-ng-model="balanceLimit" type="number" name="balanceLimit" step="0.00000001" min="0.00000001" placeholder="Amount in BTC"/>
+								  	<span class="add-on">BTC</span>
+								</div>
+							</div>
+  							<div class="modal-footer">
+    							<button class="btn btn-primary" type="submit">Yes</button>
+    							<button class="btn btn-warning" data-ng-click="cancel()">Cancel</button>
+  							</div>
+						</form>
+					</div>
+    			</script>
+			<button class="btn btn-primary" data-ng-click="openBalanceLimitModal('sm')">Set Balance Limit</button>
+		</span>
+		<span>
+			<script type="text/ng-template" id="modalUserBalanceLimit.html">
+					<div class="modal-body">
+						<div class="alert alert-danger" ng-show="error">{{errorMessage}}</div>
+          				<form name="BalanceLimit" data-ng-submit="submit()">
+							<div class="modal-header">
+    							<h3>Set Balance Limit</h3>
+  							</div>
+  							<div class="modal-body">
+								<div class="input-prepend input-append">
+									<input class="span2" data-ng-change="setBalance(userBalanceLimit)" data-ng-model="userBalanceLimit" type="number" name="userBalanceLimit" step="0.00000001" min="0.00000001" placeholder="Amount in BTC"/>
+								  	<span class="add-on">BTC</span>
+								</div>
+							</div>
+  							<div class="modal-footer">
+    							<button class="btn btn-primary" type="submit">Yes</button>
+    							<button class="btn btn-warning" data-ng-click="cancel()">Cancel</button>
+  							</div>
+						</form>
+					</div>
+    			</script>
+		<button class="btn btn-primary" data-ng-click="openUserBalanceLimitModal('sm')">Set User Balance Limit</button>
+	</span>
+		</span>
+		<div class=""><p>Payment Address: </p><p><b>{{serverAccount.payinAddress}}</b></p></div>
+		<div class=""><p>Relation Level: </p><p><b>{{trust[serverAccount.trustLevel]}}</b></p></div>
+		<div class=""><p>Actual Limit: </p><p><b>{{serverAccount.activeBalance | textOrNumber:8:8}} BTC</b></p></div>
+		<div class=""><p>Balance Limit: </p><p><b>{{serverAccount.balanceLimit | textOrNumber:8:8}} BTC</b></p></div>
+		<div class=""><p>User Balance Limit: </p><p><b>{{serverAccount.userBalanceLimit | textOrNumber:8}} BTC</b></p></div>
+	</div>
+	<div class="col-lg-5">
+		<h2 class="title_2">Latest Transactions</h2>
+			<span>
+				<script type="text/ng-template" id="modalPayout.html">
+					<div class="modal-body">
+						<div class="alert alert-danger" ng-show="error">{{errorMessage}}</div>
+          				<form name="Payout" data-ng-submit="submit()">
+							<div class="modal-header">
+    							<h3>Set Payout</h3>
+  							</div>
+  							<div class="modal-body">
+								<div class="input-prepend input-append">
+									<input class="span2" data-ng-model="payoutAmount" type="number" name="payoutAmount" step="0.00000001" min="0.00000001" placeholder="Amount in BTC"/>
+								  	<span class="add-on">BTC</span>
+								</div>
+  							</div>
+  							<div class="modal-footer">
+    							<button class="btn btn-primary" type="submit">Yes</button>
+    							<button class="btn btn-warning" data-ng-click="cancel()">Cancel</button>
+  							</div>
+						</form>
+					</div>
+    			</script>
+			<button class="btn btn-primary" data-ng-click="openPayOutModal()">PayOut</button>
+		</span>
+		<div class="transaction_list" data-ng-repeat="transaction in lastTransactions" data-ng-non-bindable="">{{transaction.timestamp | date:'yyyy-MM-dd HH:mm'}} - {{transaction.amount}} - {{transaction.received}}</div>
+	</div>
+	<div class="col-lg-5">
+		<h2 class="title_2">Payout Rules</h2>
+	</div>
+	<div class="col-lg-5">
+		<span>
+			<script type="text/ng-template" id="modalPayoutRule.html">
+				<div class="modal-body">
+					<div class="alert alert-danger" ng-show="error">{{errorMessage}}</div>
+          			<form name="PayoutRule" data-ng-submit="submit()">
+						<div class="modal-header">
+    						<h3>Set Payout Rules</h3>
+  						</div>
+  						<div class="modal-body">
+							<div class="row"> 
+    							<div class="col-xs-6">
+        							Hours step is:
+      								<select class="form-control" data-ng-model="hstep" ng-options="opt for opt in options.hstep"></select>
+    							</div>
+    							<div class="col-xs-6">
+       	 							Days:
+      								<select class="form-control" ng-model="dstep" ng-options="days[opt] for opt in options.dstep"></select>
+    							</div>
+  							</div>
+						</div>
+  						<div class="modal-footer">
+    						<button class="btn btn-primary" type="submit">Yes</button>
+    						<button class="btn btn-warning" data-ng-click="cancel()">Cancel</button>
+  						</div>
+					</form>
+				</div>
+    		</script>
+			<button class="btn btn-primary" data-ng-click="openPayOutRuleModal()">Create Payout Rule</button>
+		</span>
+	</div>
+</div>

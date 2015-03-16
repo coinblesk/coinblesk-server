@@ -1,0 +1,119 @@
+<div class="masthead">
+    <div class="navbar">
+    	<div class="navbar-inner">
+    		<div class="container">
+    			<ul class="menu">
+    				<li class="active"><a href="#/home">Home</a></li>
+    				<li><a href="#/relation">Relation</a></li>
+    				<li><a href="#/users">Users</a></li>
+    				<li><a href="#/history">History</a></li>
+    				<li><a href="#/messages">Messages</a></li>    				
+    				<li><a href="#/activities">Activities</a></li>
+    			</ul>
+    		</div>
+    	</div>
+	</div>
+</div>
+<div class="container" id="homeController">
+ 	<div class="col-lg-5">
+		<p></p>
+		<h2 class="title_2">Balance</h2>
+		<div id="balance">{{SplitBTC(balance,0) | textOrNumber:8}} BTC</div>
+ 	</div>
+ 	<div class="col-lg-5">
+ 		<p></p>
+ 		<h2 class="title_2"><a herf="#/history">Latest Transactions</a></h2>
+ 		<div class="transaction_list" data-ng-repeat="trans in transactions" data-ng-non-bindable="">{{trans.timestamp | date:'yyyy-MM-dd HH:mm'}} - {{trans.amount}} - {{trans.serverUrl}} - {{trans.received}}</div>
+ 	</div>
+  	<div class="col-lg-5">
+		<h4 class="title_4">User</h4>
+		<div class="left_side">
+			<div class="text-left">{{Split(user.username,0)}}</div>
+		</div>
+		<p></p>
+		<h4 class="title_4">Email</h4>
+		<div class="left_side">
+			<div class="text-left">{{user.email}}</div>
+			<script type="text/ng-template" id="modalEmail.html">
+        		<div class="modal-body">
+					<div class="alert alert-danger" ng-show="error">{{errorMessage}}</div>
+          			<form name="emailUpdateForm" data-ng-submit="submit()">
+  						<div class="modal-header">
+    						<h3>Change your Email</h3>
+  						</div>
+  						<div class="modal-body">
+							<p>Please enter a new email address:</p>
+							<input class="form-control" data-ng-model="user.email" type="email" name="email" placeholder="new email address"/>
+  						</div>
+  						<div class="modal-footer">
+    						<button class="btn btn-primary" type="submit">OK</button>
+    						<button class="btn btn-warning" data-ng-click="cancel()">Cancel</button>
+  						</div>
+					</form>
+				</div>
+    		</script>
+  			<button class="btn btn-default" data-ng-click="openEmailModal()">Change Email</button>
+  		</div>
+  		<div class="clear_side"></div>
+  		<p></p>
+  		<h4 class="title_4">Password</h4>
+  		<div class="left_side">
+  			<script type="text/ng-template" id="modalPassword.html">
+        		<div class="modal-body">
+					<div class="alert alert-danger" ng-show="error">{{errorMessage}}</div>
+          			<form name="passwordUpdateForm" novalidate="novalidate" ng-submit="submit()">
+  						<div class="modal-header">
+    						<h3>Set a new Password</h3>
+  						</div>
+  						<div class="modal-body">
+							<div class="form-group" data-ng-class="{'has-error':!passwordUpdateForm.password.$valid}"><label for="password">New Password</label>
+								<input class="form-control" type="password" name="password" 
+									placeholder="new password" data-ng-model="user.password" required="required"/>
+								<span class="help-block" data-ng-show="passwordUpdateForm.password.$error.required">Field is required!</span>
+							</div>
+							<div class="form-group" data-ng-class="{'has-error':!passwordUpdateForm.confirm_password.$valid}"><label for="confirm_password">Confirm New Password</label>
+								<input class="form-control" type="password" name="confirm_password" placeholder="confirm new password" 
+									data-ng-model="user.confirm_password" required="required" data-ng-match="user.password"/>
+								<span class="help-block" data-ng-show="passwordUpdateForm.confirm_password.$error.required">Field is required!</span>
+      							<span class="help-block" data-ng-show="passwordUpdateForm.confirm_password.$error.match">Passwords do not match!</span>
+							</div>
+  						</div>
+  						<div class="modal-footer">
+    						<button class="btn btn-primary" type="submit">OK</button>
+    						<button class="btn btn-warning" ng-click="cancel()">Cancel</button>
+  						</div>
+					</form>
+				</div>
+    		</script>
+  			<button class="btn btn-default" data-ng-click="openPasswordModal()">Change Password</button>
+  		</div>
+  	</div>
+  	<div class="col-lg-5">
+  		<p></p>
+  		<h2 class="title_2"><a herf="#">Messages</a></h2>
+  		<div class="left_side">
+  		</div>
+  		<div class="messages_list" data-ng-repeat="message in messages">{{message.creationDate}} - {{message.subject}} - {{message.serverUrl}}</div>
+  	</div>
+</div>
+<div class="row">
+	<p></p>
+	<div class="col-lg-3">
+	<p></p>
+	<h2 id="Overview">Overview</h2><ul><li>Lorem ipsum</li><li>Lorem ipsum</li></ul><p><a href="overview" class="btn btn-info">View details</a></p>
+	<p></p></div>
+	<div class="col-lg-3">
+	<p></p>
+	<h2 id="AboutMBPS">About MBPS</h2><ul><li>Lorem ipsum</li><li>Lorem ipsum</li></ul><p><a href="aboutmpbs" class="btn btn-info">View details</a></p>
+	<p></p>
+	</div>
+	<div class="col-lg-3">
+	<p></p>
+	<h2 id="Guidelines">Guidelines</h2><ul><li>Lorem ipsum</li><li>Lorem ipsum</li></ul><p><a href="guidlines" class="btn btn-info">View details</a></p>
+	<p></p></div>
+	<div class="col-lg-3">
+	<p></p>
+	<h2 id="Help">Help</h2><ul><li>Lorem ipsum</li><li>Lorem ipsum</li></ul><p><a href="help" class="btn btn-info">View details</a></p>
+	<p></p></div>      
+	<p></p>
+</div>

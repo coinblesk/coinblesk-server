@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dataset>
+	<messages id="10" subject="Trust level updgrade" message="Test" server_url="https://www.my_url.ch" creation_date="2014-06-19 14:35:54.0" answered_date="2014-08-31 15:15:15.0" answered="TRUE" trust_level="-1" />
+	<messages id="11" subject="Trust level updgrade" message="Test" server_url="https://www.haus.ch" creation_date="2014-06-19 14:38:54.0" answered_date="[null]" answered="FALSE" trust_level="-1" />
+	<messages id="12" subject="Trust level updgrade" message="Test" server_url="https://www.mbps.com" creation_date="2014-06-20 14:35:54.0" answered_date="[null]" answered="FALSE" trust_level="-1" />
+	<messages id="13" subject="Trust level updgrade" message="Test" server_url="https://www.mbps.com" creation_date="2014-06-20 14:39:54.0" answered_date="[null]" answered="FALSE" trust_level="-1" />
+	<messages id="14" subject="Trust level updgrade" message="Test" server_url="https://www.haus.ch" creation_date="2014-06-21 14:35:54.0" answered_date="[null]" answered="FALSE" trust_level="-1" />
+	<messages id="15" subject="Trust level updgrade" message="Test" server_url="http://test.com" creation_date="2014-06-21 14:40:54.0" answered_date="[null]" answered="FALSE" trust_level="-1" />
+	<messages id="16" subject="Trust level updgrade" message="Test" server_url="https://www.my_url.ch" creation_date="2014-06-22 14:35:54.0" answered_date="[null]" answered="FALSE" trust_level="-1" />
+	<messages id="17" subject="Trust level updgrade" message="Test" server_url="https://www.my_url.ch" creation_date="2014-05-19 14:35:54.0" answered_date="2014-06-01 14:35:54.0" answered="TRUE" trust_level="-1" />
+	<messages id="18" subject="Trust level updgrade" message="Test" server_url="https://www.haus.ch" creation_date="2014-05-19 14:38:54.0" answered_date="2014-06-02 14:35:54.0" answered="TRUE" trust_level="-1" />
+	<messages id="19" subject="Trust level updgrade" message="Test" server_url="https://www.mbps.com" creation_date="2014-05-20 14:35:54.0" answered_date="2014-06-03 14:35:54.0" answered="TRUE" trust_level="-1" />
+	<messages id="20" subject="Trust level updgrade" message="Test" server_url="https://www.mbps.com" creation_date="2014-05-20 14:39:54.0" answered_date="2014-06-04 14:35:54.0" answered="TRUE" trust_level="-1" />
+	<messages id="21" subject="Trust level updgrade" message="Test" server_url="https://www.haus.ch" creation_date="2014-05-21 14:35:54.0" answered_date="2014-06-05 14:35:54.0" answered="TRUE" trust_level="-1" />
+	<messages id="22" subject="Trust level updgrade" message="Test" server_url="http://test.com" creation_date="2014-05-21 14:40:54.0" answered_date="2014-06-06 14:00:54.0" answered="TRUE" trust_level="-1" />
+	<messages id="23" subject="Trust level updgrade" message="Test" server_url="https://www.my_url.ch" creation_date="2014-05-22 14:35:54.0" answered_date="2014-06-06 14:35:54.0" answered="TRUE" trust_level="-1" />
+</dataset>

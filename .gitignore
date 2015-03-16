@@ -1,20 +1,3 @@
-.classpath
-.project
-.metadata
-*.tmp
-*.bak
-*.swp
-local.properties
-.classpath
-.loadpath
-.settings/
-target/
-bin/**
-tmp/**
-tmp/**/*
-/Users
-Users/
-# Locally stored "Eclipse launch configurations"
-*.launch
-**/SecurityConfig.java
-SecurityConfig.java
+src/main/webapp/WEB-INF/database-prod.properties
+src/main/webapp/WEB-INF/database-test1.properties
+src/main/webapp/WEB-INF/database-test2.properties

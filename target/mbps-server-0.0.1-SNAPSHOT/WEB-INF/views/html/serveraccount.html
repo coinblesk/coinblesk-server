@@ -1,0 +1,39 @@
+<div class="masthead">
+    <div class="navbar">
+    	<div class="navbar-inner">
+    		<div class="container">
+    			<ul class="menu">
+    				<li data-ng-class="{ active: isActive('/home')}"><a href="#/home">Home</a></li>
+    				<li data-ng-class="{ active: isActive('/relation')}"><a href="#/relation">Trust Relation</a></li>
+    				<li data-ng-class="{ active: isActive('/users')}"><a href="#/users">Users</a></li>
+    				<li data-ng-class="{ active: isActive('/history')}"><a href="#/history">History</a></li>
+    				<li data-ng-class="{ active: isActive('/activities')}"><a href="#/activities">Activities</a></li>
+    			</ul>
+    		</div>
+    	</div>
+	</div>
+</div>
+<div class="container" id="serverAccountController">
+	<div class="col-lg-5">
+		<h2><span class="text-left">{{serverAccount.url}}</span></h2>
+		<span class="text-right">
+			<button class="btn btn-default" data-ng-click="openDeleteModal()">Delete Relation</button>
+			<button class="btn btn-default" data-ng-click="openPayInModal()">PayIn</button>
+			<button class="btn btn-default" data-ng-click="openPayOutModal()">PayOut</button>
+		</span>
+		<div class=""><p>Payment Address: </p><p>serverAccount.payinAddress</p></div>
+		<div class=""><p>Relation Level: </p><p>serverAccount.trustLevel</p></div>
+		<div class=""><p>Balance Limit: </p><p>serverAccount.balanceLimit</p></div>
+		<div class=""><p>Actual Limit: </p><p>serverAccount.activeBalance</p></div>
+	</div>
+	<div class="col-lg-5">
+		<h2 class="title_2">Latest Transactions</h2>
+		<div class="transaction_list" data-ng-repeat="transaction in transactions" data-ng-non-bindable="">{{transaction.timestamp | date:'yyyy-MM-dd HH:mm'}} - {{transaction.amount}}</div>
+	</div>
+	<div class="col-lg-5">
+		<h2 class="title_2">Payout Rules</h2>
+	</div>
+	<div class="col-lg-5">
+	<h2 class="title_2">Create Payout Rule</h2>
+	</div>
+</div>
