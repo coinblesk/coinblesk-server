@@ -7,13 +7,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.math.BigDecimal;
 
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import javax.servlet.http.HttpSession;
 
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mock.jndi.SimpleNamingContextBuilder;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.ContextConfiguration;
@@ -27,6 +34,8 @@ import org.springframework.web.context.WebApplicationContext;
 import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.service.UserAccountService;
+import ch.uzh.csg.coinblesk.server.util.Credentials;
+import ch.uzh.csg.coinblesk.server.util.CredentialsBean;
 import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidUrlException;
@@ -78,6 +87,15 @@ public class AuthenticatonTest {
 			initialized = true;
 		}
 	}
+	
+	@BeforeClass
+    public static void setUpClass() throws Exception {
+        // mock JNDI
+	    SimpleNamingContextBuilder contextBuilder = new SimpleNamingContextBuilder();
+	    CredentialsBean credentials = new CredentialsBean();
+        contextBuilder.bind("java:comp/env/bean/CredentialsBean", credentials);
+        contextBuilder.activate();
+    }
 	
 	@After
 	public void tearDown(){
