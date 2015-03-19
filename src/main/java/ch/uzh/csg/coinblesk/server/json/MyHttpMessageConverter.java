@@ -7,11 +7,14 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.List;
 
 import net.minidev.json.JSONObject;
 
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.HttpOutputMessage;
+import org.springframework.http.MediaType;
 import org.springframework.http.converter.AbstractHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.converter.HttpMessageNotWritableException;
@@ -19,6 +22,10 @@ import org.springframework.http.converter.HttpMessageNotWritableException;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
 
 public class MyHttpMessageConverter extends AbstractHttpMessageConverter<TransferObject> {
+    
+    public MyHttpMessageConverter() {
+        super(MediaType.APPLICATION_JSON);
+    }
 
 	@Override
     protected boolean supports(Class<?> clazz) {

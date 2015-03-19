@@ -139,6 +139,10 @@ public class UserAccountService implements IUserAccount {
 		
 		String token = java.util.UUID.randomUUID().toString();
 		
+		System.out.println(getAllUserAccounts());
+        System.out.println(userAccount.getEmail());
+        System.out.println(userAccount.getId());
+        System.out.println(userAccount.getUsername());
 		userAccountDAO.createAccount(userAccount, token);
 		sendEmailVerificationLink(token, userAccount.getEmail());
 		return true;

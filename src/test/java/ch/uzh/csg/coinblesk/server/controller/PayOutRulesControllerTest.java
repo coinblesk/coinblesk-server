@@ -18,10 +18,12 @@ import javax.servlet.http.HttpSession;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.mock.jndi.SimpleNamingContextBuilder;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.ContextConfiguration;
@@ -44,6 +46,7 @@ import ch.uzh.csg.coinblesk.server.security.KeyHandler;
 import ch.uzh.csg.coinblesk.server.service.UserAccountService;
 import ch.uzh.csg.coinblesk.server.util.BitcoindController;
 import ch.uzh.csg.coinblesk.server.util.Constants;
+import ch.uzh.csg.coinblesk.server.util.CredentialsBean;
 import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidUrlException;
@@ -75,6 +78,16 @@ public class PayOutRulesControllerTest {
 	private static UserAccount test41;
 	private static UserAccount test42;
 	private static UserAccount test43;
+	
+    
+    @BeforeClass
+    public static void setUpClass() throws Exception {
+        // mock JNDI
+        SimpleNamingContextBuilder contextBuilder = new SimpleNamingContextBuilder();
+        CredentialsBean credentials = new CredentialsBean();
+        contextBuilder.bind("java:comp/env/bean/CredentialsBean", credentials);
+        contextBuilder.activate();
+    }
 
 	
 	@Before

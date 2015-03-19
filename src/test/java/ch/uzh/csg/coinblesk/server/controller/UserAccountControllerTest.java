@@ -31,6 +31,7 @@ import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.json.CustomObjectMapper;
 import ch.uzh.csg.coinblesk.server.security.KeyHandler;
 import ch.uzh.csg.coinblesk.server.service.UserAccountService;
+import ch.uzh.csg.coinblesk.server.util.CredentialsBean;
 import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidUrlException;
@@ -49,10 +50,12 @@ import javax.servlet.http.HttpSession;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.mock.jndi.SimpleNamingContextBuilder;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.ContextConfiguration;
@@ -99,6 +102,16 @@ public class UserAccountControllerTest {
 	private static UserAccount test31;
 	private static UserAccount test32;
 	private static UserAccount test33;
+	
+	   
+    @BeforeClass
+    public static void setUpClass() throws Exception {
+        // mock JNDI
+        SimpleNamingContextBuilder contextBuilder = new SimpleNamingContextBuilder();
+        CredentialsBean credentials = new CredentialsBean();
+        contextBuilder.bind("java:comp/env/bean/CredentialsBean", credentials);
+        contextBuilder.activate();
+    }
 
 	@Before
 	public void setUp() {
@@ -292,6 +305,7 @@ public class UserAccountControllerTest {
 				.andExpect(status().isOk())
 				.andReturn();
 
+		System.out.println(mvcResult.getResponse().getContentAsString());
 		TransferObject response2 = mapper.readValue(mvcResult.getResponse().getContentAsString(), TransferObject.class);
 
 		assertFalse(response2.isSuccessful());
@@ -385,7 +399,7 @@ public class UserAccountControllerTest {
 		t.setMessage(emailAddress);
 		String mappedString = mapper.writeValueAsString(t);
 
-		MvcResult result = mockMvc.perform(get("/user/resetPasswordRequest").secure(false).contentType(MediaType.APPLICATION_JSON).content(mappedString))
+		MvcResult result = mockMvc.perform(post("/user/resetPasswordRequest").secure(false).contentType(MediaType.APPLICATION_JSON).content(mappedString))
 				.andExpect(status().isOk())
 				.andReturn();
 
@@ -395,7 +409,7 @@ public class UserAccountControllerTest {
 
 		t.setMessage("wrong-email@noemail.com");
 		mappedString = mapper.writeValueAsString(t);
-		result = mockMvc.perform(get("/user/resetPasswordRequest").secure(false).contentType(MediaType.APPLICATION_JSON).content(mappedString))
+		result = mockMvc.perform(post("/user/resetPasswordRequest").secure(false).contentType(MediaType.APPLICATION_JSON).content(mappedString))
 				.andExpect(status().isOk())
 				.andReturn();
 		resultAsString = result.getResponse().getContentAsString();

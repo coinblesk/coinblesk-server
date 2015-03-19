@@ -15,10 +15,12 @@ import javax.servlet.http.HttpSession;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.mock.jndi.SimpleNamingContextBuilder;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.ContextConfiguration;
@@ -51,6 +53,7 @@ import ch.uzh.csg.coinblesk.server.service.TransactionService;
 import ch.uzh.csg.coinblesk.server.service.UserAccountService;
 import ch.uzh.csg.coinblesk.server.util.BitcoindController;
 import ch.uzh.csg.coinblesk.server.util.Constants;
+import ch.uzh.csg.coinblesk.server.util.CredentialsBean;
 import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidUrlException;
@@ -99,6 +102,16 @@ public class TransactionControllerTest {
 	private String password = "asdf";
 	
 	private static final BigDecimal TRANSACTION_AMOUNT = new BigDecimal(10.1).setScale(8, RoundingMode.HALF_UP);
+	
+	   
+    @BeforeClass
+    public static void setUpClass() throws Exception {
+        // mock JNDI
+        SimpleNamingContextBuilder contextBuilder = new SimpleNamingContextBuilder();
+        CredentialsBean credentials = new CredentialsBean();
+        contextBuilder.bind("java:comp/env/bean/CredentialsBean", credentials);
+        contextBuilder.activate();
+    }
 	
 	@Before
 	public void setUp() throws Exception {
@@ -454,6 +467,7 @@ public class TransactionControllerTest {
 		req.setTxPage(0);
 		req.setTxPayInPage(0);
 		req.setTxPayOutPage(0);
+		req.setTxPayInUnverifiedPage(0);
 		
 		
 		asString = mapper.writeValueAsString(req);

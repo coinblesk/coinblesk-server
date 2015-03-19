@@ -40,7 +40,7 @@ public class BitcoindController {
 	private static int keyPoolCounter = 0;
 	public static boolean TESTING = false;
 	
-	private static CredentialsBean credentials;
+	private static final CredentialsBean credentials = null;
 	
 	@Autowired
 	private IPayInTransaction payInTransactionService;
@@ -76,7 +76,7 @@ public class BitcoindController {
 		}
 		
 		// load encryption key from server context
-		credentials = Credentials.getBean();
+		//credentials = Credentials.getBean();
 		
 	}
 	

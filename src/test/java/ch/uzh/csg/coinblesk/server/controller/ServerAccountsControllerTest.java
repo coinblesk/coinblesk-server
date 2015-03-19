@@ -11,10 +11,12 @@ import javax.servlet.http.HttpSession;
 import org.apache.http.HttpStatus;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.mock.jndi.SimpleNamingContextBuilder;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.ContextConfiguration;
@@ -32,6 +34,7 @@ import ch.uzh.csg.coinblesk.responseobject.ServerAccountsRequestObject;
 import ch.uzh.csg.coinblesk.server.json.CustomObjectMapper;
 import ch.uzh.csg.coinblesk.server.service.ServerAccountService;
 import ch.uzh.csg.coinblesk.server.service.UserAccountService;
+import ch.uzh.csg.coinblesk.server.util.CredentialsBean;
 import ch.uzh.csg.coinblesk.server.utilTest.ReplacementDataSetLoader;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
@@ -63,6 +66,15 @@ public class ServerAccountsControllerTest {
 	private static final String PLAIN_TEXT_PASSWORD = "wwww";
 	
 	private static boolean initialized = false;
+	
+	@BeforeClass
+    public static void setUpClass() throws Exception {
+        // mock JNDI
+        SimpleNamingContextBuilder contextBuilder = new SimpleNamingContextBuilder();
+        CredentialsBean credentials = new CredentialsBean();
+        contextBuilder.bind("java:comp/env/bean/CredentialsBean", credentials);
+        contextBuilder.activate();
+    }
 	
 	@Before
 	public void setUp() throws Exception {
@@ -122,6 +134,7 @@ public class ServerAccountsControllerTest {
 		assertTrue(response.isSuccessful());
 		assertEquals(6, response.getServerAccountList().size());
 		
+		session.invalidate();
 		
 	}
 }

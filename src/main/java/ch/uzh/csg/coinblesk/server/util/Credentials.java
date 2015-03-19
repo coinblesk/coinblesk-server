@@ -22,7 +22,7 @@ public class Credentials {
         try {
             initCtx = new InitialContext();
             Context envCtx = (Context) initCtx.lookup("java:comp/env");
-            credentials = (CredentialsBean) envCtx.lookup("bean/CredentialsFactory");
+            credentials = (CredentialsBean) envCtx.lookup("bean/CredentialsBean");
         } catch (NamingException e) {
             LOGGER.error("Could not load credentials from server context");
         }

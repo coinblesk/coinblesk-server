@@ -3,7 +3,7 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
 
-	<display-name>MBPS Server</display-name>
+	<display-name>CoinBlesk Server</display-name>
 	
 	<!-- Application Context -->
 	<listener>
@@ -96,7 +96,7 @@
 	    Object factory for Credentials instances.
 	  </description>
 	  <resource-env-ref-name>
-	    bean/CredentialsFactory
+	    bean/CredentialsBean
 	  </resource-env-ref-name>
 	  <resource-env-ref-type>
 	    ch.uzh.csg.coinblesk.server.util.CredentialsBean
