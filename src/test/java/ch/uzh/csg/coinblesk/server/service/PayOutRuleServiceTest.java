@@ -10,6 +10,7 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -38,209 +39,202 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.PayOutRuleNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.PayOutRulesAlreadyDefinedException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UsernameAlreadyExistsException;
+import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(locations = {
-		"classpath:context.xml",
-		"classpath:test-database.xml"})
-
+@ContextConfiguration(locations = { "classpath:context.xml", "classpath:test-database.xml" })
 public class PayOutRuleServiceTest {
-	
-	@Autowired
-	private IUserAccount userAccountService;
-	
-	@Autowired
-	private IPayOutRule payOutRuleService;
-	
-	private static boolean initialized = false;
-	private static UserAccount test51;
-	private static UserAccount test52;
-	private static UserAccount test53;
-	private static UserAccount test54;
-	
-	 @Rule
-	 public ExpectedException exception = ExpectedException.none();
 
-	@Before
-	public void setUp() throws Exception {
-		BitcoindController.TESTING = true;
-		UserAccountService.enableTestingMode();
-		
-		if (!initialized) {
-			test51 = new UserAccount("test51@https://mbps.csg.uzh.ch", "chuck51@bitcoin.csg.uzh.ch", "asdf");
-			test52 = new UserAccount("test52@https://mbps.csg.uzh.ch", "chuck52@bitcoin.csg.uzh.ch", "asdf");
-			test53 = new UserAccount("test53@https://mbps.csg.uzh.ch", "chuck53@bitcoin.csg.uzh.ch", "asdf");
-			test54 = new UserAccount("test54@https://mbps.csg.uzh.ch", "chuck54@bitcoin.csg.uzh.ch", "asdf");
+    @Autowired
+    private IUserAccount userAccountService;
 
-			KeyPair keypair = KeyHandler.generateKeyPair();
+    @Autowired
+    private IPayOutRule payOutRuleService;
 
-			Constants.SERVER_KEY_PAIR = new CustomKeyPair(PKIAlgorithm.DEFAULT.getCode(), (byte) 1, KeyHandler.encodePublicKey(keypair.getPublic()), KeyHandler.encodePrivateKey(keypair.getPrivate()));
+    private static boolean initialized = false;
+    private static UserAccount test51;
+    private static UserAccount test52;
+    private static UserAccount test53;
+    private static UserAccount test54;
 
-			initialized = true;
-		}
-	}
-	
-	@After
-	public void tearDown() {
-		UserAccountService.disableTestingMode();
-	}
+    @Rule
+    public ExpectedException exception = ExpectedException.none();
 
-	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
-		assertTrue(userAccountService.createAccount(userAccount));
-		userAccount = userAccountService.getByUsername(userAccount.getUsername());
-		userAccount.setEmailVerified(true);
-		userAccount.setBalance(balance);
-		userAccountService.updateAccount(userAccount);
-	}
+    @Before
+    public void setUp() throws Exception {
+        BitcoindController.TESTING = true;
+        UserAccountService.enableTestingMode();
 
-	@Test
-	public void checkBalanceLimitRules() throws Exception{
-		createAccountAndVerifyAndReload(test51,BigDecimal.ONE.add(BigDecimal.ONE));
-		UserAccount fromDB = userAccountService.getByUsername(test51.getUsername());
+        if (!initialized) {
+            test51 = new UserAccount("test51@https://mbps.csg.uzh.ch", "chuck51@bitcoin.csg.uzh.ch", "asdf");
+            test52 = new UserAccount("test52@https://mbps.csg.uzh.ch", "chuck52@bitcoin.csg.uzh.ch", "asdf");
+            test53 = new UserAccount("test53@https://mbps.csg.uzh.ch", "chuck53@bitcoin.csg.uzh.ch", "asdf");
+            test54 = new UserAccount("test54@https://mbps.csg.uzh.ch", "chuck54@bitcoin.csg.uzh.ch", "asdf");
 
-		ch.uzh.csg.coinblesk.model.PayOutRule por = new ch.uzh.csg.coinblesk.model.PayOutRule();
-		por.setBalanceLimitBTC(BigDecimal.ONE);
-		por.setUserId(fromDB.getId());
-		por.setPayoutAddress("msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW");
+            KeyPair keypair = KeyHandler.generateKeyPair();
 
-		ch.uzh.csg.coinblesk.model.PayOutRule por2 = new ch.uzh.csg.coinblesk.model.PayOutRule();
-		por2.setDay(5);
-		por2.setHour(13);
-		por2.setUserId(fromDB.getId());
-		por2.setPayoutAddress("msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW");
+            Constants.SERVER_KEY_PAIR = new CustomKeyPair(PKIAlgorithm.DEFAULT.getCode(), (byte) 1, KeyHandler.encodePublicKey(keypair.getPublic()),
+                    KeyHandler.encodePrivateKey(keypair.getPrivate()));
 
+            initialized = true;
+        }
+    }
 
-		PayOutRulesTransferObject porto = new PayOutRulesTransferObject();
-		ArrayList<ch.uzh.csg.coinblesk.model.PayOutRule> list = new ArrayList<ch.uzh.csg.coinblesk.model.PayOutRule>();
-		list.add(por);
-		list.add(por2);
-		porto.setPayOutRulesList(list);
+    @After
+    public void tearDown() {
+        UserAccountService.disableTestingMode();
+    }
 
-		payOutRuleService.createRule(porto, test51.getUsername());
+    private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException,
+            BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
+        assertTrue(userAccountService.createAccount(userAccount));
+        userAccount = userAccountService.getByUsername(userAccount.getUsername());
+        userAccount.setEmailVerified(true);
+        userAccount.setBalance(balance);
+        userAccountService.updateAccount(userAccount);
+    }
 
-		fromDB = userAccountService.getByUsername(test51.getUsername());
+    @Test
+    public void checkBalanceLimitRules() throws Exception {
+        createAccountAndVerifyAndReload(test51, BigDecimal.ONE.add(BigDecimal.ONE));
+        UserAccount fromDB = userAccountService.getByUsername(test51.getUsername());
 
-		assertTrue(fromDB.getBalance().compareTo(new BigDecimal("2"))==0);
+        ch.uzh.csg.coinblesk.model.PayOutRule por = new ch.uzh.csg.coinblesk.model.PayOutRule();
+        por.setBalanceLimitBTC(BigDecimal.ONE);
+        por.setUserId(fromDB.getId());
+        por.setPayoutAddress("msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW");
 
-		payOutRuleService.checkBalanceLimitRules(fromDB);
+        ch.uzh.csg.coinblesk.model.PayOutRule por2 = new ch.uzh.csg.coinblesk.model.PayOutRule();
+        por2.setDay(5);
+        por2.setHour(13);
+        por2.setUserId(fromDB.getId());
+        por2.setPayoutAddress("msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW");
 
-		fromDB = userAccountService.getByUsername(test51.getUsername());
+        PayOutRulesTransferObject porto = new PayOutRulesTransferObject();
+        ArrayList<ch.uzh.csg.coinblesk.model.PayOutRule> list = new ArrayList<ch.uzh.csg.coinblesk.model.PayOutRule>();
+        list.add(por);
+        list.add(por2);
+        porto.setPayOutRulesList(list);
 
-		assertTrue(fromDB.getBalance().compareTo(BigDecimal.ZERO)==0);
+        payOutRuleService.createRule(porto, test51.getUsername());
 
-		payOutRuleService.checkBalanceLimitRules(fromDB);
+        fromDB = userAccountService.getByUsername(test51.getUsername());
 
-	}
+        assertTrue(fromDB.getBalance().compareTo(new BigDecimal("2")) == 0);
 
-	@Test
-	public void checkAllRules() throws Exception{
-		PayOutRuleService.testingMode = true;
-		createAccountAndVerifyAndReload(test52,BigDecimal.ONE);
+        payOutRuleService.checkBalanceLimitRules(fromDB);
 
-		UserAccount fromDB = userAccountService.getByUsername(test52.getUsername());
-		ArrayList<ch.uzh.csg.coinblesk.model.PayOutRule> list = new ArrayList<ch.uzh.csg.coinblesk.model.PayOutRule>();
+        fromDB = userAccountService.getByUsername(test51.getUsername());
 
-		for(int i=1; i<8;i++){
-			for(int j=0; j<24; j++){
-				ch.uzh.csg.coinblesk.model.PayOutRule por2 = new ch.uzh.csg.coinblesk.model.PayOutRule();
-				por2.setDay(i);
-				por2.setHour(j);
-				por2.setUserId(fromDB.getId());
-				por2.setPayoutAddress("msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW");
-				list.add(por2);
-			}			
-		}
+        assertTrue(fromDB.getBalance().compareTo(BigDecimal.ZERO) == 0);
 
-		PayOutRulesTransferObject porto = new PayOutRulesTransferObject();
-		porto.setPayOutRulesList(list);
+        payOutRuleService.checkBalanceLimitRules(fromDB);
 
-		payOutRuleService.createRule(porto, test52.getUsername());
+    }
 
-		assertEquals(payOutRuleService.getRules(fromDB.getId()).size(), list.size());
+    @Test
+    public void checkAllRules() throws Exception {
+        PayOutRuleService.testingMode = true;
+        createAccountAndVerifyAndReload(test52, BigDecimal.ONE);
 
+        UserAccount fromDB = userAccountService.getByUsername(test52.getUsername());
+        ArrayList<ch.uzh.csg.coinblesk.model.PayOutRule> list = new ArrayList<ch.uzh.csg.coinblesk.model.PayOutRule>();
 
-		assertTrue(fromDB.getBalance().compareTo(BigDecimal.ONE)==0);
+        for (int i = 1; i < 8; i++) {
+            for (int j = 0; j < 24; j++) {
+                ch.uzh.csg.coinblesk.model.PayOutRule por2 = new ch.uzh.csg.coinblesk.model.PayOutRule();
+                por2.setDay(i);
+                por2.setHour(j);
+                por2.setUserId(fromDB.getId());
+                por2.setPayoutAddress("msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW");
+                list.add(por2);
+            }
+        }
 
-		payOutRuleService.checkAllRules();
+        PayOutRulesTransferObject porto = new PayOutRulesTransferObject();
+        porto.setPayOutRulesList(list);
 
-		fromDB = userAccountService.getByUsername(test52.getUsername());
+        payOutRuleService.createRule(porto, test52.getUsername());
 
-		assertTrue(fromDB.getBalance().compareTo(BigDecimal.ZERO)==0);
+        assertEquals(payOutRuleService.getRules(fromDB.getId()).size(), list.size());
 
-		payOutRuleService.checkAllRules();
+        assertTrue(fromDB.getBalance().compareTo(BigDecimal.ONE) == 0);
 
-		PayOutRuleService.testingMode = false;
-	}
-	
-	@Test
-	public void checkGetRules() throws Exception {
-		createAccountAndVerifyAndReload(test53,BigDecimal.ONE.add(BigDecimal.ONE));
-		UserAccount fromDB = userAccountService.getByUsername(test53.getUsername());
+        payOutRuleService.checkAllRules();
 
-		ch.uzh.csg.coinblesk.model.PayOutRule por1 = new ch.uzh.csg.coinblesk.model.PayOutRule();
-		por1.setDay(5);
-		por1.setHour(13);
-		por1.setUserId(fromDB.getId());
-		por1.setPayoutAddress("msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW");
+        fromDB = userAccountService.getByUsername(test52.getUsername());
 
+        assertTrue(fromDB.getBalance().compareTo(BigDecimal.ZERO) == 0);
 
-		ch.uzh.csg.coinblesk.model.PayOutRule por2 = new ch.uzh.csg.coinblesk.model.PayOutRule();
-		por2.setDay(5);
-		por2.setHour(13);
-		por2.setUserId(fromDB.getId());
-		por2.setPayoutAddress("msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW");
+        payOutRuleService.checkAllRules();
 
+        PayOutRuleService.testingMode = false;
+    }
 
-		PayOutRulesTransferObject porto = new PayOutRulesTransferObject();
-		ArrayList<ch.uzh.csg.coinblesk.model.PayOutRule> list = new ArrayList<ch.uzh.csg.coinblesk.model.PayOutRule>();
-		list.add(por1);
-		list.add(por2);
-		porto.setPayOutRulesList(list);
+    @Test
+    public void checkGetRules() throws Exception {
+        createAccountAndVerifyAndReload(test53, BigDecimal.ONE.add(BigDecimal.ONE));
+        UserAccount fromDB = userAccountService.getByUsername(test53.getUsername());
 
-		payOutRuleService.createRule(porto, test53.getUsername());
-		
-		List<PayOutRule> resultList = payOutRuleService.getRules(fromDB.getUsername());
-		assertEquals(resultList.size(), list.size());
-	}
-	
-	@Test
-	public void checkDeleteRules() throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, PayOutRulesAlreadyDefinedException, PayOutRuleNotFoundException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
-		createAccountAndVerifyAndReload(test54,BigDecimal.ONE.add(BigDecimal.ONE));
-		UserAccount fromDB = userAccountService.getByUsername(test54.getUsername());
+        ch.uzh.csg.coinblesk.model.PayOutRule por1 = new ch.uzh.csg.coinblesk.model.PayOutRule();
+        por1.setDay(5);
+        por1.setHour(13);
+        por1.setUserId(fromDB.getId());
+        por1.setPayoutAddress("msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW");
 
-		ch.uzh.csg.coinblesk.model.PayOutRule por1 = new ch.uzh.csg.coinblesk.model.PayOutRule();
-		por1.setDay(5);
-		por1.setHour(13);
-		por1.setUserId(fromDB.getId());
-		por1.setPayoutAddress("msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW");
+        ch.uzh.csg.coinblesk.model.PayOutRule por2 = new ch.uzh.csg.coinblesk.model.PayOutRule();
+        por2.setDay(5);
+        por2.setHour(13);
+        por2.setUserId(fromDB.getId());
+        por2.setPayoutAddress("msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW");
 
+        PayOutRulesTransferObject porto = new PayOutRulesTransferObject();
+        ArrayList<ch.uzh.csg.coinblesk.model.PayOutRule> list = new ArrayList<ch.uzh.csg.coinblesk.model.PayOutRule>();
+        list.add(por1);
+        list.add(por2);
+        porto.setPayOutRulesList(list);
 
-		ch.uzh.csg.coinblesk.model.PayOutRule por2 = new ch.uzh.csg.coinblesk.model.PayOutRule();
-		por2.setDay(5);
-		por2.setHour(13);
-		por2.setUserId(fromDB.getId());
-		por2.setPayoutAddress("msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW");
+        payOutRuleService.createRule(porto, test53.getUsername());
 
+        List<PayOutRule> resultList = payOutRuleService.getRules(fromDB.getUsername());
+        assertEquals(resultList.size(), list.size());
+    }
 
-		PayOutRulesTransferObject porto = new PayOutRulesTransferObject();
-		ArrayList<ch.uzh.csg.coinblesk.model.PayOutRule> list = new ArrayList<ch.uzh.csg.coinblesk.model.PayOutRule>();
-		list.add(por1);
-		list.add(por2);
-		porto.setPayOutRulesList(list);
+    @Test
+    public void checkDeleteRules() throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException,
+            PayOutRulesAlreadyDefinedException, PayOutRuleNotFoundException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
+        createAccountAndVerifyAndReload(test54, BigDecimal.ONE.add(BigDecimal.ONE));
+        UserAccount fromDB = userAccountService.getByUsername(test54.getUsername());
 
-		payOutRuleService.createRule(porto, test54.getUsername());
-		
-		List<PayOutRule> resultList = payOutRuleService.getRules(fromDB.getUsername());
-		assertEquals(resultList.size(), list.size());
-		
-		payOutRuleService.deleteRules(fromDB.getUsername());
-		
-		
-		exception.expect(PayOutRuleNotFoundException.class);
-		payOutRuleService.getRules(fromDB.getUsername());
+        ch.uzh.csg.coinblesk.model.PayOutRule por1 = new ch.uzh.csg.coinblesk.model.PayOutRule();
+        por1.setDay(5);
+        por1.setHour(13);
+        por1.setUserId(fromDB.getId());
+        por1.setPayoutAddress("msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW");
 
+        ch.uzh.csg.coinblesk.model.PayOutRule por2 = new ch.uzh.csg.coinblesk.model.PayOutRule();
+        por2.setDay(5);
+        por2.setHour(13);
+        por2.setUserId(fromDB.getId());
+        por2.setPayoutAddress("msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW");
 
-	}
+        PayOutRulesTransferObject porto = new PayOutRulesTransferObject();
+        ArrayList<ch.uzh.csg.coinblesk.model.PayOutRule> list = new ArrayList<ch.uzh.csg.coinblesk.model.PayOutRule>();
+        list.add(por1);
+        list.add(por2);
+        porto.setPayOutRulesList(list);
+
+        payOutRuleService.createRule(porto, test54.getUsername());
+
+        List<PayOutRule> resultList = payOutRuleService.getRules(fromDB.getUsername());
+        assertEquals(resultList.size(), list.size());
+
+        payOutRuleService.deleteRules(fromDB.getUsername());
+
+        exception.expect(PayOutRuleNotFoundException.class);
+        payOutRuleService.getRules(fromDB.getUsername());
+
+    }
 }

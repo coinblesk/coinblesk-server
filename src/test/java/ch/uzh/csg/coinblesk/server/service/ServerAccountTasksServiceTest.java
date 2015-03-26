@@ -9,6 +9,7 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,7 @@ import ch.uzh.csg.coinblesk.server.service.ServerAccountTasksService;
 import ch.uzh.csg.coinblesk.server.service.ServerAccountTasksService.ServerAccountTaskTypes;
 import ch.uzh.csg.coinblesk.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.utilTest.ReplacementDataSetLoader;
+import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseOperation;
@@ -56,16 +58,20 @@ public class ServerAccountTasksServiceTest {
 	public void tearDown(){
 		ServerAccountTasksService.disableTestingMode();
 	}
+	
+	@Test(expected=ServerAccountNotFoundException.class)
+    @DatabaseSetup(value="classpath:DbUnitFiles/Services/tasksServerAccountData.xml", type=DatabaseOperation.CLEAN_INSERT)
+    public void testServerAccountNotFound() throws ServerAccountNotFoundException{
+	    String url = "https://www.newAccount.ch";
+        serverAccountTasksService.getAccountTasksByUrl(url, ServerAccountTaskTypes.CREATE_ACCOUNT.getCode());
+	}
 	  
 	@Test
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/tasksServerAccountData.xml", type=DatabaseOperation.CLEAN_INSERT)
 	public void testPersistsNewCreatedAccount() throws ServerAccountNotFoundException{
-		String url = "https://www.newAccount.ch";
-		String email = "new@mail.ch";
-		String username = "hans@http://server.own.org";
-		ServerAccountTasks task = serverAccountTasksService.getAccountTasksByUrl(url, ServerAccountTaskTypes.CREATE_ACCOUNT.getCode());
-
-		assertTrue(task == null);
+	    String url = "https://www.newAccount.ch";
+        String email = "new@mail.ch";
+        String username = "hans@http://server.own.org";
 
 		List<ServerAccountTasks> before = serverAccountTasksService.processNewAccountTask(ServerAccountTaskTypes.CREATE_ACCOUNT.getCode());
 		assertEquals(5, before.size());
@@ -87,8 +93,6 @@ public class ServerAccountTasksServiceTest {
 		email = "new@mail.ch";
 		username = "martin@http://server.own.org";
 		String payout = "msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW";
-		task = serverAccountTasksService.getAccountTasksByUrl(url, ServerAccountTaskTypes.CREATE_ACCOUNT.getCode());
-		
 		serverAccountTasksService.persistsCreateNewAccountPayOutAddress(url, username, email, payout);
 		
 		ServerAccountTasks taskNew2 = serverAccountTasksService.getAccountTasksByUrl(url, ServerAccountTaskTypes.CREATE_ACCOUNT.getCode());

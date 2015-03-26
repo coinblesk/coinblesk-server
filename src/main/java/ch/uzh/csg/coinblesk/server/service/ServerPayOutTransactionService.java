@@ -123,10 +123,4 @@ public class ServerPayOutTransactionService implements IServerPayOutTransaction 
 		return serverPayOutTransactionDAO.getLast5Transactions();
 	}
 
-	@Override
-	@Transactional(readOnly=true)
-	public List<HistoryServerPayOutTransaction> getLast5ServerAccountTransactions(String url) throws ServerAccountNotFoundException {
-		serverAccountService.getByUrl(url);
-		return serverPayOutTransactionDAO.getLast5ServerAccountTransactions(url);
-	}
 }

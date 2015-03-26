@@ -104,13 +104,9 @@ public class UserAccountControllerTest {
 	private static UserAccount test33;
 	
 	   
-    @BeforeClass
+	@BeforeClass
     public static void setUpClass() throws Exception {
-        // mock JNDI
-        SimpleNamingContextBuilder contextBuilder = new SimpleNamingContextBuilder();
-        CredentialsBean credentials = new CredentialsBean();
-        contextBuilder.bind("java:comp/env/bean/CredentialsBean", credentials);
-        contextBuilder.activate();
+        TestUtil.mockJndi();
     }
 
 	@Before

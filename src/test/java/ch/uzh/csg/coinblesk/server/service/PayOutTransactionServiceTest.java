@@ -11,6 +11,7 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,7 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UsernameAlreadyExistsException;
+import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 

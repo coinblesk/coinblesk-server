@@ -25,6 +25,7 @@ import ch.uzh.csg.coinblesk.server.util.Emailer;
 import ch.uzh.csg.coinblesk.server.util.PasswordMatcher;
 import ch.uzh.csg.coinblesk.server.util.ServerProperties;
 import ch.uzh.csg.coinblesk.server.util.SplitNameHandler;
+import ch.uzh.csg.coinblesk.server.util.UserRoles;
 import ch.uzh.csg.coinblesk.server.util.UserRoles.Role;
 import ch.uzh.csg.coinblesk.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
@@ -139,10 +140,6 @@ public class UserAccountService implements IUserAccount {
 		
 		String token = java.util.UUID.randomUUID().toString();
 		
-		System.out.println(getAllUserAccounts());
-        System.out.println(userAccount.getEmail());
-        System.out.println(userAccount.getId());
-        System.out.println(userAccount.getUsername());
 		userAccountDAO.createAccount(userAccount, token);
 		sendEmailVerificationLink(token, userAccount.getEmail());
 		return true;
@@ -201,16 +198,13 @@ public class UserAccountService implements IUserAccount {
 	public boolean updateAccount(String username, UserAccount updatedAccount) throws UserAccountNotFoundException{
 		UserAccount userAccount = getByUsername(username);
 
-		if (updatedAccount.getEmail() != null && !updatedAccount.getEmail().isEmpty())
-			userAccount.setEmail(updatedAccount.getEmail());
+		if (updatedAccount.getEmail() != null && !updatedAccount.getEmail().isEmpty()) {
+		    userAccount.setEmail(updatedAccount.getEmail());
+		}
 
-		if (updatedAccount.getPassword() != null && !updatedAccount.getPassword().isEmpty())
-			userAccount.setPassword(CustomPasswordEncoder.getEncodedPassword(updatedAccount.getPassword()));
-		
-		//TODO: no logic behind....changes the role always to user 
-//		if (UserRoles.isValidRole(updatedAccount.getRoles()))
-//			userAccount.setRoles(updatedAccount.getRoles());
-
+		if (updatedAccount.getPassword() != null && !updatedAccount.getPassword().isEmpty()) {
+		    userAccount.setPassword(CustomPasswordEncoder.getEncodedPassword(updatedAccount.getPassword()));
+		}
 		
 		userAccountDAO.updateAccount(userAccount);
 		return true;

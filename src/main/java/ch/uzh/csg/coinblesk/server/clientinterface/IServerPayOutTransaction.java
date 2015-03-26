@@ -60,12 +60,4 @@ public interface IServerPayOutTransaction {
 	 */
 	public List<HistoryServerPayOutTransaction> getLast5Transactions();
 
-	/**
-	 * Returns five last {@link ServerPayOutTransaction}s for
-	 * {@link ServerAccount} specified by given url.
-	 * 
-	 * @return ArrayListy<HistoryServerPayOutTransaction>
-	 * @throws ServerAccountNotFoundException
-	 */
-	public List<HistoryServerPayOutTransaction> getLast5ServerAccountTransactions(String url) throws ServerAccountNotFoundException;
 }

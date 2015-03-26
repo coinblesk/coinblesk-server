@@ -12,6 +12,7 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,7 @@ import ch.uzh.csg.coinblesk.server.service.MessagesService;
 import ch.uzh.csg.coinblesk.server.util.Subjects;
 import ch.uzh.csg.coinblesk.server.util.exceptions.MessageNotFoundException;
 import ch.uzh.csg.coinblesk.server.utilTest.ReplacementDataSetLoader;
+import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseOperation;
@@ -46,6 +48,11 @@ public class MessagesServiceTests {
 
 	@Autowired
 	private IMessages messagesService;
+	
+	@BeforeClass
+    public static void setUpClass() throws Exception {
+        TestUtil.mockJndi();
+    }
 	
 	@Before
 	public void setUp() throws Exception {

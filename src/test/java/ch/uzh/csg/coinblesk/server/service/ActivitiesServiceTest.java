@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,7 @@ import ch.uzh.csg.coinblesk.server.domain.Activities;
 import ch.uzh.csg.coinblesk.server.service.ActivitiesService;
 import ch.uzh.csg.coinblesk.server.util.Subjects;
 import ch.uzh.csg.coinblesk.server.utilTest.ReplacementDataSetLoader;
+import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseOperation;

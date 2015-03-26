@@ -12,9 +12,11 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mock.jndi.SimpleNamingContextBuilder;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
@@ -27,8 +29,10 @@ import ch.uzh.csg.coinblesk.server.security.KeyHandler;
 import ch.uzh.csg.coinblesk.server.service.ServerAccountService;
 import ch.uzh.csg.coinblesk.server.util.Config;
 import ch.uzh.csg.coinblesk.server.util.Constants;
+import ch.uzh.csg.coinblesk.server.util.CredentialsBean;
 import ch.uzh.csg.coinblesk.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.utilTest.ReplacementDataSetLoader;
+import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
 import ch.uzh.csg.coinblesk.server.web.model.HistoryServerAccountTransaction;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
@@ -61,7 +65,7 @@ public class ServerTransactionServiceTest {
 			initialized = true;
 		}
 	}
-	
+
 	@After
 	public void teardown(){
 		ServerAccountService.disableTestingMode();

@@ -1,10 +1,7 @@
 package ch.uzh.csg.coinblesk.server.service;
 
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.security.KeyPair;
 import java.util.List;
@@ -26,8 +23,6 @@ import ch.uzh.csg.coinblesk.server.clientinterface.IServerAccount;
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerPayOutTransaction;
 import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
 import ch.uzh.csg.coinblesk.server.security.KeyHandler;
-import ch.uzh.csg.coinblesk.server.service.ServerAccountService;
-import ch.uzh.csg.coinblesk.server.service.ServerPayOutTransactionService;
 import ch.uzh.csg.coinblesk.server.util.Config;
 import ch.uzh.csg.coinblesk.server.util.Constants;
 import ch.uzh.csg.coinblesk.server.util.exceptions.ServerAccountNotFoundException;
@@ -82,7 +77,7 @@ public class ServerPayOutTransactionServiceTest {
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverPayOutTransactionData.xml", type = DatabaseOperation.CLEAN_INSERT)
 	public void testGetHistory(){
 		List <HistoryServerPayOutTransaction> history = serverPayOutTransactionService.getHistory(0);
-		assertTrue(history.size() == 19);
+		assertEquals(24, history.size());
 		assertFalse(history.size() == Config.PAY_OUTS_MAX_RESULTS);
 		
 		//assert that the list is in descending order
@@ -95,25 +90,6 @@ public class ServerPayOutTransactionServiceTest {
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverPayOutTransactionData.xml",type=DatabaseOperation.CLEAN_INSERT)
 	public void testGetLast5Transactions(){
 		List<HistoryServerPayOutTransaction> transaction = serverPayOutTransactionService.getLast5Transactions();
-		assertNotNull(transaction);
-		
-		assertThat(transaction.size(), is(5));
-		
-		//assert that all transactions are verified
-		for(int i= 0; i < transaction.size(); i++){
-			assertTrue(transaction.get(i).isVerified()==true);
-		}
-		
-		//assert that the list is in descending order page 1
-		for(int i= 0; i < transaction.size()-1; i++){
-			assertTrue(transaction.get(i).getTimestamp().compareTo(transaction.get(i+1).getTimestamp()) >= 0);
-		}
-	}
-	
-	@Test
-	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverPayOutTransactionData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	public void testGetLast5ServerAccountTransaction() throws ServerAccountNotFoundException{
-		List<HistoryServerPayOutTransaction> transaction = serverPayOutTransactionService.getLast5ServerAccountTransactions("https://www.my_url.ch");
 		assertNotNull(transaction);
 		
 		assertThat(transaction.size(), is(5));

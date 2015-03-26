@@ -10,6 +10,7 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -31,6 +32,7 @@ import ch.uzh.csg.coinblesk.server.security.KeyHandler;
 import ch.uzh.csg.coinblesk.server.service.ServerAccountService;
 import ch.uzh.csg.coinblesk.server.service.ServerPayOutRuleService;
 import ch.uzh.csg.coinblesk.server.service.ServerPayOutTransactionService;
+import ch.uzh.csg.coinblesk.server.util.BitcoindController;
 import ch.uzh.csg.coinblesk.server.util.Constants;
 import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidEmailException;
@@ -44,6 +46,7 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.ServerPayOutRulesAlreadyDefin
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UsernameAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.utilTest.ReplacementDataSetLoader;
+import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
 import ch.uzh.csg.coinblesk.server.web.response.ServerPayOutRulesTransferObject;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
@@ -79,6 +82,8 @@ public class ServerPayOutRuleServiceTest {
 		ServerPayOutRuleService.testingMode = true;
 		ServerPayOutTransactionService.testingMode = true;
 		ServerAccountService.enableTestingMode();
+		BitcoindController.TESTING = true;
+		
 		if (!initialized){		
 			KeyPair keypair = KeyHandler.generateKeyPair();
 			
@@ -136,13 +141,13 @@ public class ServerPayOutRuleServiceTest {
 	public void checkAllRules() throws Exception{
 		ServerAccount fromDB = serverAccountService.getByUrl("https://www.my_url.ch");
 		assertEquals(serverPayOutRuleService.getRulesById(fromDB.getId()).size(), 3);
-		assertTrue(fromDB.getActiveBalance().abs().compareTo(BigDecimal.ONE)==0);
+		assertEquals(0, fromDB.getActiveBalance().abs().compareTo(BigDecimal.ONE));
 
 		//match the day and hour in the coressponding db unit file
 		serverPayOutRuleService.checkAllRules();
 		
 		fromDB = serverAccountService.getByUrl("https://www.my_url.ch");
-		assertTrue(fromDB.getActiveBalance().abs().compareTo(BigDecimal.ONE)==0);
+		assertEquals(fromDB.getActiveBalance().abs().compareTo(BigDecimal.ONE), 0);
 		serverPayOutRuleService.checkAllRules();
 	}
 	

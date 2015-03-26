@@ -29,5 +29,5 @@
    	<server_pay_out_transaction id="40" server_account_id="10" timestamp="2014-06-12 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="30" />
    	<server_pay_out_transaction id="41" server_account_id="10" timestamp="2014-06-25 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="31" />
    	<server_pay_out_transaction id="42" server_account_id="10" timestamp="2014-07-12 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="32" />
-   	<server_pay_out_transaction id="43" server_account_id="10" timestamp="2014-08s-25 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="33" />
+   	<server_pay_out_transaction id="43" server_account_id="10" timestamp="2014-08-25 14:35:54.0" amount="0.2" payout_address="msgc3DFzszXQx6F5nHi8xdcB2EheKYW7xW" verified="TRUE" server_transaction_id="33" />
 </dataset>

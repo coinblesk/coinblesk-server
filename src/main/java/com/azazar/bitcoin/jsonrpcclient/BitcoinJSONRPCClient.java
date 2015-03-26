@@ -99,8 +99,10 @@ public class BitcoinJSONRPCClient implements Bitcoin {
 
         // get bitcoind credentials from server context
         CredentialsBean credentials = Credentials.getBean();
-        user = credentials.getBitcoindUsername();
-        password = credentials.getBitcoindPassword();
+        if(credentials != null) {
+            user = credentials.getBitcoindUsername();
+            password = credentials.getBitcoindPassword();
+        }
 
         try {
             File f;

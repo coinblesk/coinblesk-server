@@ -11,6 +11,7 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,7 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.ServerAccountNotFoundExceptio
 import ch.uzh.csg.coinblesk.server.util.exceptions.UrlAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.utilTest.ReplacementDataSetLoader;
+import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
 
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
@@ -102,6 +104,8 @@ public class ServerAccountServiceTest {
 		ServerPublicKey testKey = serverAccountService.getServerAccountPublicKey(12, (byte) 2);
 		assertNotNull(testKey);
 		assertEquals(publicKey, testKey.getPublicKey());
+		
+		System.out.println("done");
 	}
 
 
