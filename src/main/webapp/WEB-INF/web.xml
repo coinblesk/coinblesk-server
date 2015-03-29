@@ -18,8 +18,8 @@
 		<param-name>contextConfigLocation</param-name>
 		<param-value>
 		    /WEB-INF/security.xml
-		    /WEB-INF/context-local.xml
-		    /WEB-INF/database-local.xml
+		    /WEB-INF/context.xml
+		    /WEB-INF/database.xml
 		    /WEB-INF/cron.xml
 		</param-value>
 	</context-param>
@@ -69,7 +69,7 @@
     
 	<!--  Web Application Context  -->
 	<servlet>
-		<servlet-name>mbps</servlet-name>
+		<servlet-name>coinblesk</servlet-name>
 		<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
 		<init-param>
 			<param-name>contextConfigLocation</param-name>
@@ -79,7 +79,7 @@
 	</servlet>
 	
  	<servlet-mapping>
-		<servlet-name>mbps</servlet-name>
+		<servlet-name>coinblesk</servlet-name>
 		<url-pattern>/</url-pattern>
 	</servlet-mapping>
 

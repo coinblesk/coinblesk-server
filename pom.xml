@@ -351,9 +351,8 @@
 				<artifactId>tomcat7-maven-plugin</artifactId>
 				<version>2.2</version>
 				<configuration>
-					<url>${server}</url>
-					<server>${deployment}</server>
-					<path>${contextpath}</path>
+					<path>/coinblesk</path>
+					<update>true</update>
 				</configuration>
 			</plugin>
 

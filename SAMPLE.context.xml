@@ -22,7 +22,7 @@
 	<!-- <Valve className="org.apache.catalina.valves.CometConnectionManagerValve" 
 		/> -->
 
-	<Resource name="jdbc/UsersDB" type="javax.sql.DataSource"
+	<Resource name="jdbc/dbConfig" type="javax.sql.DataSource"
 		maxActive="100" maxIdle="30" maxWait="10000" driverClassName="org.postgresql.Driver"
 		url="jdbc:postgresql://localhost:5432/coinblesk" username="postgres"
 		password="" />

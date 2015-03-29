@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dataset>
     <server_account id="11" url="https://www.haus.ch" creation_date="2014-06-19 14:35:54.0" email="test2@mail.ch" payin_address="fake-address" payout_address="fake-address" trust_level="0" nof_keys="0" deleted="FALSE" active_balance="-0.15000000" balance_limit="0.80000000" user_balance_limit="0.40000000"/>
-    <db_transaction id="20" timestamp="2014-06-19 14:35:54.0" username_payer="hans@https://www.my.ch" server_payer="https://www.my.ch" username_payee="martin@https://www.haus.ch" server_payee="https://www.haus.ch" currency="BTC" amount="0.30000000" input_currency="CHF" input_currency_amount="45.0" timestamp_payer="123456" signature="abcdef" />
-    <db_transaction id="21" timestamp="2014-06-19 14:35:54.0" username_payer="martin@https://www.haus.ch" server_payer="https://www.haus.ch" username_payee="hans@https://www.my.ch" server_payee="https://www.my.ch" currency="BTC" amount="0.150000000" input_currency="CHF" input_currency_amount="20.0" timestamp_payer="123466" signature="defghijk" />
+    <db_transaction id="200" timestamp="2014-06-19 14:35:54.0" username_payer="hans@https://www.my.ch" server_payer="https://www.my.ch" username_payee="martin@https://www.haus.ch" server_payee="https://www.haus.ch" currency="BTC" amount="0.30000000" input_currency="CHF" input_currency_amount="45.0" timestamp_payer="123456" signature="abcdef" />
+    <db_transaction id="201" timestamp="2014-06-19 14:35:54.0" username_payer="martin@https://www.haus.ch" server_payer="https://www.haus.ch" username_payee="hans@https://www.my.ch" server_payee="https://www.my.ch" currency="BTC" amount="0.150000000" input_currency="CHF" input_currency_amount="20.0" timestamp_payer="123466" signature="defghijk" />
 </dataset>

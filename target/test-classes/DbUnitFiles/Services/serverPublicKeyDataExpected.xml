@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<dataset>
-	<server_public_key id="1" server_id="12" key_number="2" key_algorithm="1" public_key="155c0bdb6a32e8fca5eb2aefab63e5f2b58dc67c2bc8aa15" />    
-	<server_public_key id="20" server_id="10" key_number="1" key_algorithm="1" public_key="155c0bdb6a32e8fca5eb2aefab63e5f2b58dc67c2bc8aa12" />    
-	<server_public_key id="21" server_id="11" key_number="1" key_algorithm="1" public_key="155c0bdb6a32e8fca5eb2aefab63e5f2b58dc67c2bc8aa12" />    
-	<server_public_key id="22" server_id="12" key_number="1" key_algorithm="1" public_key="155c0bdb6a32e8fca5eb2aefab63e5f2b58dc67c2bc8aa12" />
-</dataset>
