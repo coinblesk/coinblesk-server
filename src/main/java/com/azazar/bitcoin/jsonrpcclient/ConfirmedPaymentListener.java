@@ -3,10 +3,11 @@
  */
 package com.azazar.bitcoin.jsonrpcclient;
 
-import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+
+import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
 
 /**
  *

@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
+import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
 
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerTransaction;
 import ch.uzh.csg.coinblesk.server.dao.ServerTransactionDAO;

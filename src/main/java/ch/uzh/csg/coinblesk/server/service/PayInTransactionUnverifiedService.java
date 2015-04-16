@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
+
 import ch.uzh.csg.coinblesk.model.HistoryPayInTransactionUnverified;
 import ch.uzh.csg.coinblesk.server.clientinterface.IPayInTransactionUnverified;
 import ch.uzh.csg.coinblesk.server.dao.PayInTransactionUnverifiedDAO;
@@ -13,8 +15,6 @@ import ch.uzh.csg.coinblesk.server.dao.UserAccountDAO;
 import ch.uzh.csg.coinblesk.server.domain.PayInTransactionUnverified;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
-
-import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 
 @Service
 public class PayInTransactionUnverifiedService implements  IPayInTransactionUnverified {

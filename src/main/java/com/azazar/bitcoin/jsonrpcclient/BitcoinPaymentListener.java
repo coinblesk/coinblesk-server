@@ -18,6 +18,7 @@
 
 package com.azazar.bitcoin.jsonrpcclient;
 
+
 /**
  *
  * @author Mikhail Yevchenko <m?@azazar.com>
@@ -25,6 +26,6 @@ package com.azazar.bitcoin.jsonrpcclient;
 public interface BitcoinPaymentListener {
 
     public void block(String blockHash);
-    public void transaction(Bitcoin.Transaction transaction);
+    public void transaction(IBitcoinRPC.Transaction transaction);
 
 }

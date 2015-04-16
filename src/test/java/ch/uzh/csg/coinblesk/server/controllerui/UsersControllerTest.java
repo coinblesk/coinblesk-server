@@ -32,7 +32,7 @@ import org.springframework.web.context.WebApplicationContext;
 import ch.uzh.csg.coinblesk.server.json.CustomObjectMapper;
 import ch.uzh.csg.coinblesk.server.service.ActivitiesService;
 import ch.uzh.csg.coinblesk.server.service.UserAccountService;
-import ch.uzh.csg.coinblesk.server.util.CredentialsBean;
+import ch.uzh.csg.coinblesk.server.util.Credentials;
 import ch.uzh.csg.coinblesk.server.utilTest.ReplacementDataSetLoader;
 import ch.uzh.csg.coinblesk.server.web.response.ActivitiesTransferObject;
 import ch.uzh.csg.coinblesk.server.web.response.UserAccountTransferObject;
@@ -65,7 +65,7 @@ public class UsersControllerTest {
     public static void setUpClass() throws Exception {
         // mock JNDI
         SimpleNamingContextBuilder contextBuilder = new SimpleNamingContextBuilder();
-        CredentialsBean credentials = new CredentialsBean();
+        Credentials credentials = new Credentials();
         contextBuilder.bind("java:comp/env/bean/CredentialsBean", credentials);
         contextBuilder.activate();
     }

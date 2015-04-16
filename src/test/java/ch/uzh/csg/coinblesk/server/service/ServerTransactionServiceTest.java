@@ -29,7 +29,7 @@ import ch.uzh.csg.coinblesk.server.security.KeyHandler;
 import ch.uzh.csg.coinblesk.server.service.ServerAccountService;
 import ch.uzh.csg.coinblesk.server.util.Config;
 import ch.uzh.csg.coinblesk.server.util.Constants;
-import ch.uzh.csg.coinblesk.server.util.CredentialsBean;
+import ch.uzh.csg.coinblesk.server.util.Credentials;
 import ch.uzh.csg.coinblesk.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.utilTest.ReplacementDataSetLoader;
 import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;

@@ -16,7 +16,7 @@ import javax.persistence.TemporalType;
 
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
-import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
+import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
 
 @Entity
 @Table(name = "SERVER_TRANSACTION", indexes = {

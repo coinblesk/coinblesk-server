@@ -16,18 +16,23 @@ import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 
 import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.service.UserAccountService;
 
 /**
- * Email Service for sending emails from MBPS to users.
+ * Email Service for sending emails from CoinBlesk to users.
  *
  */
+@Service
 public class Emailer {
-    private static Logger LOGGER = Logger.getLogger(Emailer.class);
-    private static String messageText;
-    private static String subject;
+    
+    private static final Logger LOGGER = Logger.getLogger(Emailer.class);
+    
+    @Autowired
+    private static Credentials credentials;
 
     /**
      * Sends initial Email Configuration Link to User via defined MailService
@@ -36,12 +41,12 @@ public class Emailer {
      * @param toEmail
      * @return Status if email has been sent to the user.
      */
-    public static void sendEmailConfirmationLink(String confirmationID, String toEmail) {
+    public void sendEmailConfirmationLink(String confirmationID, String toEmail) {
 
         String link = ServerProperties.getProperty("url.base") + ServerProperties.getProperty("url.server") + "/user/verify/" + confirmationID;
-        messageText = "Please verify your account by clicking on the following link: <a href = \"" + link + "\">" + link + "</a>";
-        subject = "MBPS Account Verification";
-        sendEmail(toEmail, null);
+        String message = "Please verify your account by clicking on the following link: <a href = \"" + link + "\">" + link + "</a>";
+        String subject = "MBPS Account Verification";
+        sendEmail(message, subject, toEmail, null);
     }
 
     /**
@@ -50,12 +55,12 @@ public class Emailer {
      * @param user
      * @param resetPWToken
      */
-    public static void sendResetPasswordLink(UserAccount user, String resetPWToken) {
+    public void sendResetPasswordLink(UserAccount user, String resetPWToken) {
 
         String link = ServerProperties.getProperty("url.base") + ServerProperties.getProperty("url.server") + "/user/resetPassword/" + resetPWToken;
-        messageText = "Dear " + user.getUsername() + ",<br><br>Please reset your account password by clicking on the following link: <a href = \"" + link + "\">" + link + "</a>";
-        subject = "MBPS Account Password Reset";
-        sendEmail(user.getEmail(), null);
+        String message = "Dear " + user.getUsername() + ",<br><br>Please reset your account password by clicking on the following link: <a href = \"" + link + "\">" + link + "</a>";
+        String subject = "MBPS Account Password Reset";
+        sendEmail(message, subject, user.getEmail(), null);
     }
 
     /**
@@ -65,10 +70,10 @@ public class Emailer {
      * @param email
      * @param file
      */
-    public static void sendHistoryCSV(String userName, String email, File file) {
-        messageText = "Dear " + userName + ",<br><br>Attached you can find the requested history list.";
-        subject = "MBPS history list";
-        sendEmail(email, file);
+    public void sendHistoryCSV(String userName, String email, File file) {
+        String message = "Dear " + userName + ",<br><br>Attached you can find the requested history list.";
+        String subject = "MBPS history list";
+        sendEmail(message, subject, email, file);
     }
 
     /**
@@ -77,33 +82,30 @@ public class Emailer {
      * 
      * @param toEmail
      */
-    private static void sendEmail(String toEmail, File attachment) {
+    private void sendEmail(String message, String subject, String toEmail, File attachment) {
         if (!UserAccountService.isTestingMode()) {
-            EmailSenderTask task = new EmailSenderTask(toEmail, attachment);
+            EmailSenderTask task = new EmailSenderTask(message, subject, toEmail, attachment);
             new Thread(task).start();
         }
     }
 
-    private static class EmailSenderTask implements Runnable {
+    private class EmailSenderTask implements Runnable {
+        private String message;
+        private String subject;
         private String toEmail;
         private File attachment;
 
-        protected EmailSenderTask(String toEmail, File attachment) {
+        protected EmailSenderTask(String message, String subject, String toEmail, File attachment) {
+            this.message = message;
+            this.subject = subject;
             this.toEmail = toEmail;
             this.attachment = attachment;
         }
 
         @Override
         public void run() {
-            Properties props = new Properties();
-            props.put("mail.smtp.auth", "true");
-            props.put("mail.smtp.starttls.enable", "true");
-            props.put("mail.smtp.host", "mail.nope.ch");
-            props.put("mail.smtp.port", "587");
-            props.put("mail.smtp.ssl.trust", "mail.nope.ch");
+            Properties props = ServerProperties.getProperties();
             
-            final CredentialsBean credentials = Credentials.getBean();
-
             Session session = Session.getInstance(props, new javax.mail.Authenticator() {
                 protected PasswordAuthentication getPasswordAuthentication() {
                     return new PasswordAuthentication(credentials.getEmailUsername(), credentials.getEmailPassword());
@@ -112,14 +114,14 @@ public class Emailer {
 
             try {
                 Message message = new MimeMessage(session);
-                message.setFrom(new InternetAddress(ServerProperties.getProperty("email.from")));
+                message.setFrom(new InternetAddress(ServerProperties.getProperty("mail.from")));
                 message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(toEmail));
                 message.setSubject(subject);
 
                 Multipart mp = new MimeMultipart();
 
                 MimeBodyPart htmlPart = new MimeBodyPart();
-                htmlPart.setContent(messageText, "text/html; charset=ISO-8859-1");
+                htmlPart.setContent(message, "text/html; charset=ISO-8859-1");
                 mp.addBodyPart(htmlPart);
 
                 if (attachment != null) {
@@ -152,16 +154,14 @@ public class Emailer {
      * @param subj
      * @param message
      */
-    public static void send(String toEmail, String subj, String message) {
-        messageText = message;
-        subject = subj;
-        sendEmail(toEmail, null);
+    public void send(String toEmail, String subj, String message) {
+        sendEmail(message, subj, toEmail, null);
     }
 
-    public static void sendPayInAddressAsEmail(String username, String email, String payInAddress) {
-        messageText = "Dear " + username + ",<br><br>Your pay in address is " + payInAddress + ".";
-        subject = "MBPS Pay In Address";
-        sendEmail(email, null);
+    public void sendPayInAddressAsEmail(String username, String email, String payInAddress) {
+        String message = "Dear " + username + ",<br><br>Your pay in address is " + payInAddress + ".";
+        String subject = "MBPS Pay In Address";
+        sendEmail(message, subject, email, null);
     }
 
     /**
@@ -171,12 +171,12 @@ public class Emailer {
      * @param user
      * @param resetPWToken
      */
-    public static void sendUpdateRoleBothLink(UserAccount user) {
+    public void sendUpdateRoleBothLink(UserAccount user) {
         String link = ServerProperties.getProperty("url.base") + ServerProperties.getProperty("url.server");
-        messageText = "Dear " + user.getUsername() + ",<br><br>Your account was updated! Now, you gained administration rights for the server at the following link:  <a href = \""
+        String message = "Dear " + user.getUsername() + ",<br><br>Your account was updated! Now, you gained administration rights for the server at the following link:  <a href = \""
                 + link + "\">" + link + "</a>";
-        subject = "MBPS Update Account";
-        sendEmail(user.getEmail(), null);
+        String subject = "MBPS Update Account";
+        sendEmail(message, subject, user.getEmail(), null);
     }
 
     /**
@@ -185,13 +185,13 @@ public class Emailer {
      * @param user
      * @param token
      */
-    public static void sendCreateRoleAdminLink(String email, String adminRoleToken) {
+    public void sendCreateRoleAdminLink(String email, String adminRoleToken) {
         String server = ServerProperties.getProperty("url.base") + ServerProperties.getProperty("url.server");
         String link = server + "/user/createAdmin/" + adminRoleToken;
-        messageText = "Dear user,<br><br>You are invited to adminsitred the following website: <a href = \"" + server + "\">" + server
+        String message = "Dear user,<br><br>You are invited to adminsitred the following website: <a href = \"" + server + "\">" + server
                 + "</a>. To create an account, please enter your credentials on the follwowing link: <a href = \"" + link + "\">" + link + "</a>";
-        subject = "MBPS Admin Account";
-        sendEmail(email, null);
+        String subject = "MBPS Admin Account";
+        sendEmail(message, subject, email, null);
     }
 
     // TODO: for mensa testrun only, delete afterwards
@@ -201,10 +201,10 @@ public class Emailer {
      *
      * @param file
      */
-    public static void sendMensaReport(File file) {
-        messageText = "Im Anhang finden Sie das Excel-Sheet mit den heutigen Transaktionen der Mensa.";
-        subject = "[CoinBlesk] Tagestransaktionen - Mensa Bitcoin Testlauf";
-        sendEmail("bitcoin@ifi.uzh.ch,binzmuehle@zfv.ch,debitoren@zfv.ch", file);
+    public void sendMensaReport(File file) {
+        String message = "Im Anhang finden Sie das Excel-Sheet mit den heutigen Transaktionen der Mensa.";
+        String subject = "[CoinBlesk] Tagestransaktionen - Mensa Bitcoin Testlauf";
+        sendEmail(message, subject, "bitcoin@ifi.uzh.ch,binzmuehle@zfv.ch,debitoren@zfv.ch", file);
     }
 
     /**
@@ -213,9 +213,9 @@ public class Emailer {
      * @param subjectToSend
      * @param messageToSend
      */
-    public static void sendMessageToAllUsers(String emailsToSend, String subjectToSend, String messageToSend) {
-        messageText = messageToSend;
-        subject = subjectToSend;
-        sendEmail(emailsToSend, null);
+    public void sendMessageToAllUsers(String emailsToSend, String subjectToSend, String messageToSend) {
+        String message = messageToSend;
+        String subject = subjectToSend;
+        sendEmail(message, subject, emailsToSend, null);
     }
 }

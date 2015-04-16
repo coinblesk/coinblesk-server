@@ -43,10 +43,10 @@ import ch.uzh.csg.coinblesk.server.controller.PayOutRulesController;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.json.CustomObjectMapper;
 import ch.uzh.csg.coinblesk.server.security.KeyHandler;
+import ch.uzh.csg.coinblesk.server.service.BitcoindService;
 import ch.uzh.csg.coinblesk.server.service.UserAccountService;
-import ch.uzh.csg.coinblesk.server.util.BitcoindController;
 import ch.uzh.csg.coinblesk.server.util.Constants;
-import ch.uzh.csg.coinblesk.server.util.CredentialsBean;
+import ch.uzh.csg.coinblesk.server.util.Credentials;
 import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidUrlException;
@@ -84,7 +84,7 @@ public class PayOutRulesControllerTest {
     public static void setUpClass() throws Exception {
         // mock JNDI
         SimpleNamingContextBuilder contextBuilder = new SimpleNamingContextBuilder();
-        CredentialsBean credentials = new CredentialsBean();
+        Credentials credentials = new Credentials();
         contextBuilder.bind("java:comp/env/bean/CredentialsBean", credentials);
         contextBuilder.activate();
     }
@@ -148,7 +148,7 @@ public class PayOutRulesControllerTest {
 	@Test
 	public void testCreateAndGetPayOutRule() throws Exception {
 		
-		BitcoindController.TESTING = true;
+		BitcoindService.TESTING = true;
 
 		createAccountAndVerifyAndReload(test42,BigDecimal.ONE);
 		String plainTextPw = test42.getPassword();
@@ -192,7 +192,7 @@ public class PayOutRulesControllerTest {
 	@Test
 	public void testResetPayOutRules() throws Exception {
 		
-		BitcoindController.TESTING = true;
+		BitcoindService.TESTING = true;
 
 		createAccountAndVerifyAndReload(test43,BigDecimal.ONE);
 		String plainTextPw = test43.getPassword();

@@ -27,6 +27,8 @@ public class MensaXLSExporter {
 
 	@Autowired
 	private ITransaction transactionService;
+	@Autowired
+    private Emailer emailer;
 	
 	public void doQuery(){
 		try{
@@ -74,11 +76,11 @@ public class MensaXLSExporter {
 			FileOutputStream fileOut = new FileOutputStream(f);
 			hwb.write(fileOut);
 			fileOut.close();
-			Emailer.sendMensaReport(f);
+			emailer.sendMensaReport(f);
 			LOGGER.info(" Mensa Excel-Report file has been generated to " + f.getAbsolutePath());
 		} catch ( Exception ex ) {
 			LOGGER.error("MensaXLSExporter: " + ex.getMessage());
-			Emailer.send("bitcoin@ifi.uzh.ch", "[MBPS] Error creating Mensa Export", ex.getMessage());
+			emailer.send("bitcoin@ifi.uzh.ch", "[MBPS] Error creating Mensa Export", ex.getMessage());
 		}
 	}
 	private static File createFile(String filename) throws Exception {

@@ -26,7 +26,7 @@ import java.util.Map;
  *
  * @author Mikhail Yevchenko
  */
-public interface Bitcoin {
+public interface IBitcoinRPC {
 
 	//addmultisigaddress
 

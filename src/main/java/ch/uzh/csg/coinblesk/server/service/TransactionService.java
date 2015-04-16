@@ -97,6 +97,8 @@ public class TransactionService implements ITransaction {
 	private IServerTransaction serverTransactionService;
 	@Autowired 
 	private ServerPublicKeyDAO serverPublicKeyDAO;
+	@Autowired
+    private Emailer emailer;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -680,7 +682,7 @@ public class TransactionService implements ITransaction {
 				} catch (ExchangeException | NotAvailableFromExchangeException
 						| NotYetImplementedForExchangeException | IOException| ParseException e) {
 					LOGGER.error("Bitstamp Transaction Error: failed to do buyBTC limit order (ID: " + transactionID + "): " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
-					Emailer.send("simon.kaeser@uzh.ch", "Bitstamp Transaction Error", "Bitstamp Transaction Error: failed to do buyBTC limit order: " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
+					emailer.send("simon.kaeser@uzh.ch", "Bitstamp Transaction Error", "Bitstamp Transaction Error: failed to do buyBTC limit order: " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
 					synchronized (openBuyOrders) {
 						openBuyOrders = openBuyOrders.add(amount);	                    
                     }
@@ -713,7 +715,7 @@ public class TransactionService implements ITransaction {
 				} catch (ExchangeException | NotAvailableFromExchangeException
 						| NotYetImplementedForExchangeException | IOException e) {
 					LOGGER.error("Bitstamp Transaction Error: failed to do sellBTC limit order (ID: " + transactionID + "): " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
-					Emailer.send("simon.kaeser@uzh.ch", "Bitstamp Transaction Error", "Bitstamp Transaction Error: failed to do sellBTC limit order: " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
+					emailer.send("simon.kaeser@uzh.ch", "Bitstamp Transaction Error", "Bitstamp Transaction Error: failed to do sellBTC limit order: " + e.getMessage() + " Transaction Details: " + dbTransaction.toString());
 					synchronized (openSellOrders) {
 						openSellOrders = openSellOrders.add(amount);
 					}

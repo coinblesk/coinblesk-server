@@ -9,8 +9,8 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.ServerAccountNotFoundExceptio
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.web.model.HistoryServerPayOutTransaction;
 
-import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
+import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
 
 public interface IServerPayOutTransaction {
 

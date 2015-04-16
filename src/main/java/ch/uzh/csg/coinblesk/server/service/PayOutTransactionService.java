@@ -10,18 +10,18 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.coinblesk.model.HistoryPayOutTransaction;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
+import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoind;
 import ch.uzh.csg.coinblesk.server.clientinterface.IPayOutTransaction;
 import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
 import ch.uzh.csg.coinblesk.server.dao.PayOutTransactionDAO;
 import ch.uzh.csg.coinblesk.server.domain.PayOutTransaction;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
-import ch.uzh.csg.coinblesk.server.util.BitcoindController;
 import ch.uzh.csg.coinblesk.server.util.Config;
 import ch.uzh.csg.coinblesk.server.util.exceptions.TransactionException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 
-import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
+import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
 
 /**
  * Service class for {@link PayOutTransaction}s
@@ -35,6 +35,8 @@ public class PayOutTransactionService implements IPayOutTransaction {
 	private PayOutTransactionDAO payOutTransactionDAO;
 	@Autowired
 	private IUserAccount userAccountService;
+	@Autowired
+	private IBitcoind bitcoindService;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -76,10 +78,10 @@ public class PayOutTransactionService implements IPayOutTransaction {
 		}
 		
 		if(userBalance.compareTo(pot.getAmount().add(Config.TRANSACTION_FEE)) >= 0){
-			if (BitcoindController.validateAddress(pot.getBtcAddress())) {
+			if (bitcoindService.validateAddress(pot.getBtcAddress())) {
 				pot.setTimestamp(new Date());
 				//do payOut in BitcoindController
-				String transactionID = BitcoindController.sendCoins(pot.getBtcAddress(), pot.getAmount());
+				String transactionID = bitcoindService.sendCoins(pot.getBtcAddress(), pot.getAmount());
 				pot.setTransactionID(transactionID);
 				
 				amount = pot.getAmount();

@@ -11,13 +11,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.coinblesk.responseobject.PayOutRulesTransferObject;
+import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoind;
 import ch.uzh.csg.coinblesk.server.clientinterface.IPayOutRule;
 import ch.uzh.csg.coinblesk.server.clientinterface.IPayOutTransaction;
 import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
 import ch.uzh.csg.coinblesk.server.dao.PayOutRuleDAO;
 import ch.uzh.csg.coinblesk.server.domain.PayOutRule;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
-import ch.uzh.csg.coinblesk.server.util.BitcoindController;
 import ch.uzh.csg.coinblesk.server.util.Config;
 import ch.uzh.csg.coinblesk.server.util.exceptions.PayOutRuleNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.PayOutRulesAlreadyDefinedException;
@@ -37,6 +37,8 @@ public class PayOutRuleService implements IPayOutRule{
 	private IPayOutTransaction payOutTransactionService;
 	@Autowired
 	private IUserAccount userAccountService;
+	@Autowired
+	private IBitcoind bitcoindService;
 	
 	public static Boolean testingMode = false;
 
@@ -56,7 +58,7 @@ public class PayOutRuleService implements IPayOutRule{
 			for(int i = 0;i<porto.getPayOutRulesList().size();i++) {
 				por = porto.getPayOutRulesList().get(i);
 				por.setUserId(userId);
-				if(!BitcoindController.validateAddress(por.getPayoutAddress())){
+				if(!bitcoindService.validateAddress(por.getPayoutAddress())){
 					throw new BitcoinException("Invalid Payout Address");
 				}
 			}

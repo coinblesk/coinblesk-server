@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
+
 import ch.uzh.csg.coinblesk.model.HistoryPayInTransaction;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
 import ch.uzh.csg.coinblesk.server.clientinterface.IPayInTransaction;
@@ -16,8 +18,6 @@ import ch.uzh.csg.coinblesk.server.domain.PayInTransaction;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.util.Emailer;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
-
-import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 
 /**
  * Service class for {@link PayInTransaction}.
@@ -31,6 +31,8 @@ public class PayInTransactionService implements IPayInTransaction{
 	private PayInTransactionUnverifiedDAO payInTransactionUnverifiedDAO;
 	@Autowired
 	private UserAccountDAO userAccountDAO;
+	@Autowired
+    private Emailer emailer;
 
 	@Override
 	@Transactional
@@ -66,7 +68,7 @@ public class PayInTransactionService implements IPayInTransaction{
 	//TODO: does this need to be here?
 	@Override
 	public TransferObject sendPayInAddressByEmail(String username, String email, String payInAddress) {	
-		Emailer.sendPayInAddressAsEmail(username, email, payInAddress);
+		emailer.sendPayInAddressAsEmail(username, email, payInAddress);
 		TransferObject transferObject = new TransferObject();
 		transferObject.setSuccessful(true);
 		transferObject.setMessage("Pay in address is send to your email address.");

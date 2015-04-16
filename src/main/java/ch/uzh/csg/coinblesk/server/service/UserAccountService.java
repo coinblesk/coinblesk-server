@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.coinblesk.customserialization.PKIAlgorithm;
+import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoind;
 import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
 import ch.uzh.csg.coinblesk.server.dao.UserAccountDAO;
 import ch.uzh.csg.coinblesk.server.dao.UserPublicKeyDAO;
@@ -18,14 +19,12 @@ import ch.uzh.csg.coinblesk.server.domain.ResetPassword;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.domain.UserPublicKey;
 import ch.uzh.csg.coinblesk.server.util.AdminObject;
-import ch.uzh.csg.coinblesk.server.util.BitcoindController;
 import ch.uzh.csg.coinblesk.server.util.Config;
 import ch.uzh.csg.coinblesk.server.util.CustomPasswordEncoder;
 import ch.uzh.csg.coinblesk.server.util.Emailer;
 import ch.uzh.csg.coinblesk.server.util.PasswordMatcher;
 import ch.uzh.csg.coinblesk.server.util.ServerProperties;
 import ch.uzh.csg.coinblesk.server.util.SplitNameHandler;
-import ch.uzh.csg.coinblesk.server.util.UserRoles;
 import ch.uzh.csg.coinblesk.server.util.UserRoles.Role;
 import ch.uzh.csg.coinblesk.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
@@ -47,9 +46,12 @@ public class UserAccountService implements IUserAccount {
 
 	@Autowired
 	private UserAccountDAO userAccountDAO;
-	
 	@Autowired
 	private UserPublicKeyDAO userPublicKeyDAO;
+	@Autowired
+	private IBitcoind bitcoindService;
+	@Autowired
+    private Emailer emailer;
 	
 	/**
 	 * Enables testing mode for JUnit Tests.
@@ -91,19 +93,9 @@ public class UserAccountService implements IUserAccount {
 
 		if (email == null)
 			throw new InvalidEmailException();
-
-		String userName = SplitNameHandler.getInstance().getUsername(username);
-		String userUrl = SplitNameHandler.getInstance().getServerUrl(username);
 		
-		if(!userName.matches(Config.USERNAME_REGEX))
+		if(!username.matches(Config.USERNAME_REGEX))
 			throw new InvalidUsernameException();
-		
-		if (!userUrl.matches(Config.URL_NAME_REGEX)){			
-			throw new InvalidUrlException();
-		}
-		
-//		if (!username.matches(Config.USERNAME_REGEX))
-//			throw new InvalidUsernameException();
 		
 		if (!email.matches(Config.EMAIL_REGEX))
 			throw new InvalidEmailException();
@@ -146,7 +138,7 @@ public class UserAccountService implements IUserAccount {
 	}
 	
 	private void sendEmailVerificationLink(String token, String email){
-		Emailer.sendEmailConfirmationLink(token, email);
+		emailer.sendEmailConfirmationLink(token, email);
 	}
 	
 	@Transactional
@@ -154,17 +146,17 @@ public class UserAccountService implements IUserAccount {
 		String token;
 		try {
 			token = userAccountDAO.getVerificationTokenByUserId(userAccount.getId());
-			Emailer.sendEmailConfirmationLink(token, userAccount.getEmail());
+			emailer.sendEmailConfirmationLink(token, userAccount.getEmail());
 		} catch (VerificationTokenNotFoundException e) {
 			token = java.util.UUID.randomUUID().toString();
 			
 			userAccountDAO.createEmailVerificationToken(userAccount.getId(), token);
-			Emailer.sendEmailConfirmationLink(token, userAccount.getEmail());
+			emailer.sendEmailConfirmationLink(token, userAccount.getEmail());
 		}
 	}
 
 	private String getNewPaymentAddress() throws BitcoinException {
-		return BitcoindController.getNewAddress();
+		return bitcoindService.getNewAddress();
 	}
 
 	@Override
@@ -235,7 +227,7 @@ public class UserAccountService implements IUserAccount {
 		String token = java.util.UUID.randomUUID().toString();
 		userAccountDAO.createPasswordResetToken(user, token);
 		
-		Emailer.sendResetPasswordLink(user, token);
+		emailer.sendResetPasswordLink(user, token);
 	}
 
 
@@ -397,7 +389,7 @@ public class UserAccountService implements IUserAccount {
 	public void changeRoleBoth(UserAccount admin) throws UserAccountNotFoundException {
 		admin.setRoles(Role.BOTH.getCode());
 		userAccountDAO.updateAccount(admin);
-		Emailer.sendUpdateRoleBothLink(admin);
+		emailer.sendUpdateRoleBothLink(admin);
 	}
 	
 	/**
@@ -459,7 +451,7 @@ public class UserAccountService implements IUserAccount {
 		String token = java.util.UUID.randomUUID().toString();
 		userAccountDAO.createAdminToken(emailAddress, token);
 		
-		Emailer.sendCreateRoleAdminLink(emailAddress, token);
+		emailer.sendCreateRoleAdminLink(emailAddress, token);
 	}
 
 	@Override
@@ -502,7 +494,7 @@ public class UserAccountService implements IUserAccount {
 		for (String email : emails) {
 			emailToSend += email + ",";
 		}
-		Emailer.sendMessageToAllUsers(emailToSend, subject, text);
+		emailer.sendMessageToAllUsers(emailToSend, subject, text);
 	}
 
 	@Override

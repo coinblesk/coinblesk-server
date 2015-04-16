@@ -1,33 +1,64 @@
 package ch.uzh.csg.coinblesk.server.util;
 
-import javax.naming.Context;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
-
-import org.apache.log4j.Logger;
-
 public class Credentials {
-
-    private static Logger LOGGER = Logger.getLogger(Credentials.class);
-
-    private Credentials() {
+    
+    private String bitcoindUsername;
+    private String bitcoindPassword;
+    private String bitcoindEncryptionKey;
+    private String emailUsername;
+    private String emailPassword;
+    private String bitstampUsername;
+    private String bitstampApiKey;
+    private String bitstampSecretKey;
+    
+    public String getEmailUsername() {
+        return emailUsername;
+    }
+    public void setEmailUsername(String emailUsername) {
+        this.emailUsername = emailUsername;
+    }
+    public String getEmailPassword() {
+        return emailPassword;
+    }
+    public void setEmailPassword(String emailPassword) {
+        this.emailPassword = emailPassword;
+    }
+    public String getBitstampApiKey() {
+        return bitstampApiKey;
+    }
+    public void setBitstampApiKey(String bitstampApiKey) {
+        this.bitstampApiKey = bitstampApiKey;
+    }
+    public String getBitstampSecretKey() {
+        return bitstampSecretKey;
+    }
+    public void setBitstampSecretKey(String bitstampSecretKey) {
+        this.bitstampSecretKey = bitstampSecretKey;
+    }
+    public String getBitcoindEncryptionKey() {
+        return bitcoindEncryptionKey;
+    }
+    public void setBitcoindEncryptionKey(String bitcoindEncryptionKey) {
+        this.bitcoindEncryptionKey = bitcoindEncryptionKey;
+    }
+    public String getBitstampUsername() {
+        return bitstampUsername;
+    }
+    public void setBitstampUsername(String bitstampUsername) {
+        this.bitstampUsername = bitstampUsername;
+    }
+    public String getBitcoindUsername() {
+        return bitcoindUsername;
+    }
+    public void setBitcoindUsername(String bitcoindUsername) {
+        this.bitcoindUsername = bitcoindUsername;
+    }
+    public String getBitcoindPassword() {
+        return bitcoindPassword;
+    }
+    public void setBitcoindPassword(String bitcoindPassword) {
+        this.bitcoindPassword = bitcoindPassword;
     }
 
-    public static CredentialsBean getBean() {
-
-        // get bitcoind credentials from server context
-        Context initCtx;
-        CredentialsBean credentials = null;
-        
-        try {
-            initCtx = new InitialContext();
-            Context envCtx = (Context) initCtx.lookup("java:comp/env");
-            credentials = (CredentialsBean) envCtx.lookup("bean/CredentialsBean");
-        } catch (NamingException e) {
-            LOGGER.error("Could not load credentials from server context");
-        }
-
-        return credentials;
-    }
-
+    
 }

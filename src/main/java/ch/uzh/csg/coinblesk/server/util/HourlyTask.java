@@ -9,6 +9,7 @@ import net.minidev.json.parser.ParseException;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoind;
 import ch.uzh.csg.coinblesk.server.clientinterface.IPayOutRule;
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerAccount;
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerAccountTasks;
@@ -43,6 +44,10 @@ public class HourlyTask {
 	ServerPublicKeyDAO serverPublicKeyDAO;
 	@Autowired
 	IServerAccount serverAccountService;
+	@Autowired
+	IBitcoind bitcoindService;
+	@Autowired
+    private Emailer emailer;
 
 	/**
 	 * Update is executed every 60minutes.
@@ -121,11 +126,11 @@ public class HourlyTask {
 	private void sanityCheck() {
 		try {
 			BigDecimal sumOfAccountBalances = userAccountService.getSumOfUserAccountBalances();
-			BigDecimal bitcoindAccountBalance = BitcoindController.getAccountBalance();
+			BigDecimal bitcoindAccountBalance = bitcoindService.getAccountBalance();
 			if(bitcoindAccountBalance.compareTo(sumOfAccountBalances) < 0)
-				Emailer.send("bitcoin@ifi.uzh.ch", "[CoinBlesk] Error: Sanity Check failed - Intervention required!", "Important: possible worst case scenario happened! There are more Bitcoins assigned to user accounts than are stored on Bitcoind! " + "SumOfAccountBalances:  " + sumOfAccountBalances.toPlainString() + " BitcoindSum: " + bitcoindAccountBalance.toPlainString());
+				emailer.send("bitcoin@ifi.uzh.ch", "[CoinBlesk] Error: Sanity Check failed - Intervention required!", "Important: possible worst case scenario happened! There are more Bitcoins assigned to user accounts than are stored on Bitcoind! " + "SumOfAccountBalances:  " + sumOfAccountBalances.toPlainString() + " BitcoindSum: " + bitcoindAccountBalance.toPlainString());
 		} catch (BitcoinException e) {
-			Emailer.send("bitcoin@ifi.uzh.ch", "[CoinBlesk] Warning: Problem creating sanity check", "Couldn't compare useraccount balances to bitcoind balances. Exception: " + e.getMessage());
+			emailer.send("bitcoin@ifi.uzh.ch", "[CoinBlesk] Warning: Problem creating sanity check", "Couldn't compare useraccount balances to bitcoind balances. Exception: " + e.getMessage());
 		}
 		
 	}

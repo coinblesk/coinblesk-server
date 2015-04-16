@@ -1,12 +1,8 @@
 package ch.uzh.csg.coinblesk.server.util;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
-
-import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.apache.log4j.Logger;
 import org.hibernate.PropertyNotFoundException;
@@ -43,6 +39,10 @@ public class ServerProperties {
             throw new PropertyNotFoundException("Property " + key + " was not found.");
         }
         return property;
+    }
+    
+    public static Properties getProperties() {
+        return properties;
     }
 
 }

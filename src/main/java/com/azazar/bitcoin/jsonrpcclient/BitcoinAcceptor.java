@@ -33,27 +33,27 @@ public class BitcoinAcceptor implements Runnable {
     
     private static final Logger logger = Logger.getLogger(BitcoinAcceptor.class.getCanonicalName());
 
-    public final Bitcoin bitcoin;
+    public final IBitcoinRPC bitcoin;
     private String lastBlock, monitorBlock = null;
     int monitorDepth;
     private final LinkedHashSet<BitcoinPaymentListener> listeners = new LinkedHashSet<BitcoinPaymentListener>();
 
-    public BitcoinAcceptor(Bitcoin bitcoin, String lastBlock, int monitorDepth) {
+    public BitcoinAcceptor(IBitcoinRPC bitcoin, String lastBlock, int monitorDepth) {
         this.bitcoin = bitcoin;
         this.lastBlock = lastBlock;
         this.monitorDepth = monitorDepth;
     }
     
-    public BitcoinAcceptor(Bitcoin bitcoin) {
+    public BitcoinAcceptor(IBitcoinRPC bitcoin) {
         this(bitcoin, null, 6);
     }
 
-    public BitcoinAcceptor(Bitcoin bitcoin, String lastBlock, int monitorDepth, BitcoinPaymentListener listener) {
+    public BitcoinAcceptor(IBitcoinRPC bitcoin, String lastBlock, int monitorDepth, BitcoinPaymentListener listener) {
         this(bitcoin, lastBlock, monitorDepth);
         listeners.add(listener);
     }
 
-    public BitcoinAcceptor(Bitcoin bitcoin, BitcoinPaymentListener listener, boolean outgoing) {
+    public BitcoinAcceptor(IBitcoinRPC bitcoin, BitcoinPaymentListener listener, boolean outgoing) {
         this(bitcoin, null, 12);
         listeners.add(listener);
         this.outgoing = outgoing;
@@ -94,14 +94,14 @@ public class BitcoinAcceptor implements Runnable {
     private void updateMonitorBlock() throws BitcoinException {
         monitorBlock = lastBlock;
         for(int i = 0; i < monitorDepth && monitorBlock != null; i++) {
-            Bitcoin.Block b = bitcoin.getBlock(monitorBlock);
+            IBitcoinRPC.Block b = bitcoin.getBlock(monitorBlock);
             monitorBlock = b == null ? null : b.previousHash();
         }
     }
 
     public synchronized void checkPayments() throws BitcoinException {
-        Bitcoin.TransactionsSinceBlock t = monitorBlock == null ? bitcoin.listSinceBlock() : bitcoin.listSinceBlock(monitorBlock);
-        for (Bitcoin.Transaction transaction : t.transactions()) {
+        IBitcoinRPC.TransactionsSinceBlock t = monitorBlock == null ? bitcoin.listSinceBlock() : bitcoin.listSinceBlock(monitorBlock);
+        for (IBitcoinRPC.Transaction transaction : t.transactions()) {
         	String category;
         	if (outgoing){
         		category = "send";

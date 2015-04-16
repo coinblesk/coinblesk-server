@@ -34,7 +34,7 @@ import ch.uzh.csg.coinblesk.responseobject.ServerAccountsRequestObject;
 import ch.uzh.csg.coinblesk.server.json.CustomObjectMapper;
 import ch.uzh.csg.coinblesk.server.service.ServerAccountService;
 import ch.uzh.csg.coinblesk.server.service.UserAccountService;
-import ch.uzh.csg.coinblesk.server.util.CredentialsBean;
+import ch.uzh.csg.coinblesk.server.util.Credentials;
 import ch.uzh.csg.coinblesk.server.utilTest.ReplacementDataSetLoader;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
@@ -71,7 +71,7 @@ public class ServerAccountsControllerTest {
     public static void setUpClass() throws Exception {
         // mock JNDI
         SimpleNamingContextBuilder contextBuilder = new SimpleNamingContextBuilder();
-        CredentialsBean credentials = new CredentialsBean();
+        Credentials credentials = new Credentials();
         contextBuilder.bind("java:comp/env/bean/CredentialsBean", credentials);
         contextBuilder.activate();
     }

@@ -15,21 +15,21 @@ import java.util.List;
  */
 public class BitcoinRawTxBuilder {
 
-    public final Bitcoin bitcoin;
+    public final IBitcoinRPC bitcoin;
 
-    public BitcoinRawTxBuilder(Bitcoin bitcoin) {
+    public BitcoinRawTxBuilder(IBitcoinRPC bitcoin) {
         this.bitcoin = bitcoin;
     }
-    public LinkedHashSet<Bitcoin.TxInput> inputs = new LinkedHashSet();
-    public List<Bitcoin.TxOutput> outputs = new ArrayList();
+    public LinkedHashSet<IBitcoinRPC.TxInput> inputs = new LinkedHashSet();
+    public List<IBitcoinRPC.TxOutput> outputs = new ArrayList();
 
-    private class Input extends Bitcoin.BasicTxInput {
+    private class Input extends IBitcoinRPC.BasicTxInput {
 
         public Input(String txid, int vout) {
             super(txid, vout);
         }
 
-        public Input(Bitcoin.TxInput copy) {
+        public Input(IBitcoinRPC.TxInput copy) {
             this(copy.txid(), copy.vout());
         }
 
@@ -42,27 +42,27 @@ public class BitcoinRawTxBuilder {
         public boolean equals(Object obj) {
             if (obj == null)
                 return false;
-            if (!(obj instanceof Bitcoin.TxInput))
+            if (!(obj instanceof IBitcoinRPC.TxInput))
                 return false;
-            Bitcoin.TxInput other = (Bitcoin.TxInput) obj;
+            IBitcoinRPC.TxInput other = (IBitcoinRPC.TxInput) obj;
             return vout == other.vout() && txid.equals(other.txid());
         }
 
     }
-    public BitcoinRawTxBuilder in(Bitcoin.TxInput in) {
+    public BitcoinRawTxBuilder in(IBitcoinRPC.TxInput in) {
         inputs.add(new Input(in.txid(), in.vout()));
         return this;
     }
 
     public BitcoinRawTxBuilder in(String txid, int vout) {
-        in(new Bitcoin.BasicTxInput(txid, vout));
+        in(new IBitcoinRPC.BasicTxInput(txid, vout));
         return this;
     }
 
     public BitcoinRawTxBuilder out(String address, double amount) {
         if (amount <= 0d)
             return this;
-        outputs.add(new Bitcoin.BasicTxOutput(address, amount));
+        outputs.add(new IBitcoinRPC.BasicTxOutput(address, amount));
         return this;
     }
 
@@ -71,9 +71,9 @@ public class BitcoinRawTxBuilder {
     }
 
     public BitcoinRawTxBuilder in(double value, int minConf) throws BitcoinException {
-        List<Bitcoin.Unspent> unspent = bitcoin.listUnspent(minConf);
+        List<IBitcoinRPC.Unspent> unspent = bitcoin.listUnspent(minConf);
         double v = value;
-        for (Bitcoin.Unspent o : unspent) {
+        for (IBitcoinRPC.Unspent o : unspent) {
             if (!inputs.contains(new Input(o))) {
                 in(o);
                 v = BitcoinUtil.normalizeAmount(v - o.amount());
@@ -86,10 +86,10 @@ public class BitcoinRawTxBuilder {
         return this;
     }
 
-    private HashMap<String, Bitcoin.RawTransaction> txCache = new HashMap<String, Bitcoin.RawTransaction>();
+    private HashMap<String, IBitcoinRPC.RawTransaction> txCache = new HashMap<String, IBitcoinRPC.RawTransaction>();
 
-    private Bitcoin.RawTransaction tx(String txId) throws BitcoinException {
-        Bitcoin.RawTransaction tx = txCache.get(txId);
+    private IBitcoinRPC.RawTransaction tx(String txId) throws BitcoinException {
+        IBitcoinRPC.RawTransaction tx = txCache.get(txId);
         if (tx != null)
             return tx;
         tx = bitcoin.getRawTransaction(txId);
@@ -103,10 +103,10 @@ public class BitcoinRawTxBuilder {
 
     public BitcoinRawTxBuilder outChange(String address, double fee) throws BitcoinException {
         double is = 0d;
-        for (Bitcoin.TxInput i : inputs)
+        for (IBitcoinRPC.TxInput i : inputs)
             is = BitcoinUtil.normalizeAmount(is + tx(i.txid()).vOut().get(i.vout()).value());
         double os = fee;
-        for (Bitcoin.TxOutput o : outputs)
+        for (IBitcoinRPC.TxOutput o : outputs)
             os = BitcoinUtil.normalizeAmount(os + o.amount());
         if (os < is)
             out(address, BitcoinUtil.normalizeAmount(is - os));
@@ -114,7 +114,7 @@ public class BitcoinRawTxBuilder {
     }
 
     public String create() throws BitcoinException {
-        return bitcoin.createRawTransaction(new ArrayList<Bitcoin.TxInput>(inputs), outputs);
+        return bitcoin.createRawTransaction(new ArrayList<IBitcoinRPC.TxInput>(inputs), outputs);
     }
     
     public String sign() throws BitcoinException {

@@ -5,7 +5,7 @@ import javax.naming.NamingException;
 import org.springframework.http.MediaType;
 import org.springframework.mock.jndi.SimpleNamingContextBuilder;
 
-import ch.uzh.csg.coinblesk.server.util.CredentialsBean;
+import ch.uzh.csg.coinblesk.server.util.Credentials;
 
 public class TestUtil {
 
@@ -13,7 +13,7 @@ public class TestUtil {
 			MediaType.APPLICATION_JSON.getType(),
 			MediaType.APPLICATION_JSON.getSubtype());
 	
-	public static void mockJndi(CredentialsBean credentials) {
+	public static void mockJndi(Credentials credentials) {
 	    // mock JNDI
         SimpleNamingContextBuilder contextBuilder = new SimpleNamingContextBuilder();
         contextBuilder.bind("java:comp/env/bean/CredentialsBean", credentials);
@@ -25,7 +25,7 @@ public class TestUtil {
 	}
 	
 	public static void mockJndi() {
-	    mockJndi(new CredentialsBean());
+	    mockJndi(new Credentials());
 	}
 
 }

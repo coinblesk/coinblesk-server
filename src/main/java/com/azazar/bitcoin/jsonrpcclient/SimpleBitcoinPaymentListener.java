@@ -3,7 +3,7 @@
  */
 package com.azazar.bitcoin.jsonrpcclient;
 
-import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
+import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
 
 /**
  *

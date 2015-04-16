@@ -2,13 +2,13 @@ package ch.uzh.csg.coinblesk.server.clientinterface;
 
 import java.util.List;
 
+import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
+
 import ch.uzh.csg.coinblesk.model.HistoryPayInTransaction;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
 import ch.uzh.csg.coinblesk.server.domain.PayInTransaction;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
-
-import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 
 public interface IPayInTransaction {
 

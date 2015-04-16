@@ -2,7 +2,7 @@ package ch.uzh.csg.coinblesk.server.clientinterface;
 
 import java.util.List;
 
-import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
+import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
 
 import ch.uzh.csg.coinblesk.server.domain.ServerTransaction;
 import ch.uzh.csg.coinblesk.server.util.exceptions.ServerAccountNotFoundException;

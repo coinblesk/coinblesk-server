@@ -3,8 +3,8 @@ package ch.uzh.csg.coinblesk.server.clientinterface;
 import java.math.BigDecimal;
 import java.util.List;
 
-import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
+import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
 
 import ch.uzh.csg.coinblesk.model.HistoryPayOutTransaction;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;

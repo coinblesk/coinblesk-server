@@ -10,13 +10,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoind;
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerAccount;
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerPayOutRule;
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerPayOutTransaction;
 import ch.uzh.csg.coinblesk.server.dao.ServerPayOutRuleDAO;
 import ch.uzh.csg.coinblesk.server.domain.ServerAccount;
 import ch.uzh.csg.coinblesk.server.domain.ServerPayOutRule;
-import ch.uzh.csg.coinblesk.server.util.BitcoindController;
 import ch.uzh.csg.coinblesk.server.util.Config;
 import ch.uzh.csg.coinblesk.server.util.exceptions.PayOutRuleNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.ServerAccountNotFoundException;
@@ -40,6 +40,8 @@ public class ServerPayOutRuleService implements IServerPayOutRule {
 	private IServerPayOutTransaction serverPayOutTransactionService;
 	@Autowired
 	private IServerAccount serverAccountService;
+	@Autowired
+	private IBitcoind bitcoindService;
 
 	public static Boolean testingMode = false;
 	
@@ -60,7 +62,7 @@ public class ServerPayOutRuleService implements IServerPayOutRule {
 			for (int i = 0; i < sporto.getServerPayOutRulesList().size(); i++) {
 				spor = sporto.getServerPayOutRulesList().get(i);
 				spor.setServerAccountId(serverAccountId);
-				if (!BitcoindController.validateAddress(spor.getPayoutAddress())) {
+				if (!bitcoindService.validateAddress(spor.getPayoutAddress())) {
 					throw new BitcoinException("Invalid Payout Address");
 				}
 			}

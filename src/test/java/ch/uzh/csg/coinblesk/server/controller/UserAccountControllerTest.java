@@ -31,7 +31,7 @@ import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.json.CustomObjectMapper;
 import ch.uzh.csg.coinblesk.server.security.KeyHandler;
 import ch.uzh.csg.coinblesk.server.service.UserAccountService;
-import ch.uzh.csg.coinblesk.server.util.CredentialsBean;
+import ch.uzh.csg.coinblesk.server.util.Credentials;
 import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidEmailException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidUrlException;

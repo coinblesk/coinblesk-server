@@ -2,10 +2,10 @@ package ch.uzh.csg.coinblesk.server.clientinterface;
 
 import java.util.List;
 
+import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
+
 import ch.uzh.csg.coinblesk.model.HistoryPayInTransactionUnverified;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
-
-import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 
 public interface IPayInTransactionUnverified {
 

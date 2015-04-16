@@ -26,7 +26,7 @@ import org.springframework.web.context.WebApplicationContext;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.service.ServerAccountService;
 import ch.uzh.csg.coinblesk.server.service.UserAccountService;
-import ch.uzh.csg.coinblesk.server.util.CredentialsBean;
+import ch.uzh.csg.coinblesk.server.util.Credentials;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseOperation;
@@ -58,7 +58,7 @@ public class HomeControllerTest {
     public static void setUpClass() throws Exception {
         // mock JNDI
         SimpleNamingContextBuilder contextBuilder = new SimpleNamingContextBuilder();
-        CredentialsBean credentials = new CredentialsBean();
+        Credentials credentials = new Credentials();
         contextBuilder.bind("java:comp/env/bean/CredentialsBean", credentials);
         contextBuilder.activate();
     }

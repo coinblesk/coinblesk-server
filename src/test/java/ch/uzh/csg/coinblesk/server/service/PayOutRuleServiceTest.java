@@ -29,7 +29,6 @@ import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.security.KeyHandler;
 import ch.uzh.csg.coinblesk.server.service.PayOutRuleService;
 import ch.uzh.csg.coinblesk.server.service.UserAccountService;
-import ch.uzh.csg.coinblesk.server.util.BitcoindController;
 import ch.uzh.csg.coinblesk.server.util.Constants;
 import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidEmailException;
@@ -64,7 +63,7 @@ public class PayOutRuleServiceTest {
 
     @Before
     public void setUp() throws Exception {
-        BitcoindController.TESTING = true;
+        BitcoindService.TESTING = true;
         UserAccountService.enableTestingMode();
 
         if (!initialized) {

@@ -196,10 +196,8 @@ public class DbTransaction implements Serializable {
 
 	@Override
 	public String toString() {
-		int indexPayer = getUsernamePayer().indexOf(Config.SPLIT_USERNAME);
-		String usernamePayer = getUsernamePayer().substring(0, indexPayer);
-		int indexPayee = getUsernamePayee().indexOf(Config.SPLIT_USERNAME);
-		String usernamePayee = getUsernamePayee().substring(0, indexPayee);
+		String usernamePayer = getUsernamePayer();
+		String usernamePayee = getUsernamePayee();
 		
 		StringBuilder sb = new StringBuilder();
 		sb.append("id: ");

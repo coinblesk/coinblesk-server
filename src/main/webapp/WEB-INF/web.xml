@@ -10,10 +10,6 @@
 		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
 	</listener>
 
-	<!-- Add to context.xml in /etc/tomcat the following line:
-		<Environment name="MBPS_EVN" value="" type="java.lang.String" override="false"/>
-		
-		if you plan to run it locall, add -DMBPS_ENV="local-" to your run configuration -->
 	<context-param>
 		<param-name>contextConfigLocation</param-name>
 		<param-value>
@@ -87,20 +83,5 @@
 	<welcome-file-list>
 		<welcome-file></welcome-file>
 	</welcome-file-list>
-
-	<!-- Definition of the credential bean. Values have to be set in your tomcat context.xml -->
-		
-
-	<resource-env-ref>
-	  <description>
-	    Object factory for Credentials instances.
-	  </description>
-	  <resource-env-ref-name>
-	    bean/CredentialsBean
-	  </resource-env-ref-name>
-	  <resource-env-ref-type>
-	    ch.uzh.csg.coinblesk.server.util.CredentialsBean
-	  </resource-env-ref-type>
-	</resource-env-ref>
 
 </web-app>

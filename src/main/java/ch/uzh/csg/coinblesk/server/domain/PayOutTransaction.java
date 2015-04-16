@@ -13,7 +13,7 @@ import javax.persistence.Index;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
-import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
+import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
 
 
 @Entity

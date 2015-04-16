@@ -39,6 +39,8 @@ public class HistoryEmailHandler {
 	private IPayInTransaction payInTransactionService;
 	@Autowired
 	private IPayOutTransaction payOutTransactionService;
+	@Autowired
+	private Emailer emailer;
 	
 	/**
 	 * Sends the transaction history to the registered email address belonging
@@ -84,7 +86,7 @@ public class HistoryEmailHandler {
 		}
 		
 		bufferedWriter.close();
-		Emailer.sendHistoryCSV(username, userAccountService.getByUsername(username).getEmail(), f);
+		emailer.sendHistoryCSV(username, userAccountService.getByUsername(username).getEmail(), f);
 	}
 
 	private File createFile(String username) throws Exception {

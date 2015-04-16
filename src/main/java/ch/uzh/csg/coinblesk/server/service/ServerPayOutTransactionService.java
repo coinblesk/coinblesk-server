@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.coinblesk.server.clientinterface.IActivities;
+import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoind;
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerAccount;
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerPayOutTransaction;
 import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
@@ -17,7 +18,6 @@ import ch.uzh.csg.coinblesk.server.domain.ServerAccount;
 import ch.uzh.csg.coinblesk.server.domain.ServerPayOutTransaction;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.util.AuthenticationInfo;
-import ch.uzh.csg.coinblesk.server.util.BitcoindController;
 import ch.uzh.csg.coinblesk.server.util.Config;
 import ch.uzh.csg.coinblesk.server.util.Subjects;
 import ch.uzh.csg.coinblesk.server.util.exceptions.ServerAccountNotFoundException;
@@ -25,8 +25,8 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.TransactionException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.web.model.HistoryServerPayOutTransaction;
 
-import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
+import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
 
 @Service
 public class ServerPayOutTransactionService implements IServerPayOutTransaction {
@@ -39,6 +39,8 @@ public class ServerPayOutTransactionService implements IServerPayOutTransaction 
 	private IActivities activitiesService;
 	@Autowired
 	private IUserAccount userAccountService;
+	@Autowired
+	private IBitcoind bitcoindService;
 	
 	public static Boolean testingMode = false;
 	
@@ -72,10 +74,10 @@ public class ServerPayOutTransactionService implements IServerPayOutTransaction 
 		}
 		
 		if(accountBalance.compareTo(spot.getAmount().add(Config.TRANSACTION_FEE)) >= 0){
-			if (BitcoindController.validateAddress(spot.getPayoutAddress())) {
+			if (bitcoindService.validateAddress(spot.getPayoutAddress())) {
 				spot.setTimestamp(new Date());
 				//do payOut in BitcoindController
-				String transactionID = BitcoindController.sendCoins(spot.getPayoutAddress(), spot.getAmount());
+				String transactionID = bitcoindService.sendCoins(spot.getPayoutAddress(), spot.getAmount());
 				spot.setTransactionID(transactionID);
 				
 				amount = spot.getAmount();

@@ -13,9 +13,9 @@ import javax.persistence.Index;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
-import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
+import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
 
-import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
+import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 
 @Entity
 @Table(name = "PAY_IN_TRANSACTION", indexes = {@Index(name = "USER_ID_INDEX_PAY_IN_TX",  columnList="USER_ID", unique = false),

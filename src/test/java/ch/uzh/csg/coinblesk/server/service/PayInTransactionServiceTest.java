@@ -28,7 +28,6 @@ import ch.uzh.csg.coinblesk.server.domain.PayInTransaction;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.security.KeyHandler;
 import ch.uzh.csg.coinblesk.server.service.UserAccountService;
-import ch.uzh.csg.coinblesk.server.util.BitcoindController;
 import ch.uzh.csg.coinblesk.server.util.Config;
 import ch.uzh.csg.coinblesk.server.util.Constants;
 import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
@@ -39,9 +38,9 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UsernameAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
 
-import com.azazar.bitcoin.jsonrpcclient.Bitcoin.RawTransaction;
-import com.azazar.bitcoin.jsonrpcclient.Bitcoin.Transaction;
 import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
+import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.RawTransaction;
+import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
@@ -61,7 +60,7 @@ public class PayInTransactionServiceTest {
 
 	@Before
 	public void setUp() throws Exception {
-		BitcoindController.TESTING = true;
+		BitcoindService.TESTING = true;
 		UserAccountService.enableTestingMode();
 
 		if (!initialized) {

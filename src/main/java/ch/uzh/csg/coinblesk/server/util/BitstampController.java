@@ -10,6 +10,7 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
 import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import net.minidev.json.parser.ParseException;
 
@@ -35,13 +36,13 @@ public class BitstampController {
     private static Logger LOGGER = Logger.getLogger(BitstampController.class);
 
 	private static Exchange bitstamp =  getExchange();
+	
+	@Autowired
+	private static Credentials credentials;
 
 	private static Exchange getExchange() {
 		ExchangeSpecification exSpec = new BitstampExchange()
 		.getDefaultExchangeSpecification();
-		
-		// load bitstamp credentials from server context
-        CredentialsBean credentials = Credentials.getBean();
 		
 		exSpec.setUserName(credentials.getBitstampUsername());
 		exSpec.setApiKey(credentials.getBitstampApiKey());

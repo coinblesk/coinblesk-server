@@ -32,7 +32,6 @@ import ch.uzh.csg.coinblesk.server.security.KeyHandler;
 import ch.uzh.csg.coinblesk.server.service.ServerAccountService;
 import ch.uzh.csg.coinblesk.server.service.ServerPayOutRuleService;
 import ch.uzh.csg.coinblesk.server.service.ServerPayOutTransactionService;
-import ch.uzh.csg.coinblesk.server.util.BitcoindController;
 import ch.uzh.csg.coinblesk.server.util.Constants;
 import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidEmailException;
@@ -82,7 +81,7 @@ public class ServerPayOutRuleServiceTest {
 		ServerPayOutRuleService.testingMode = true;
 		ServerPayOutTransactionService.testingMode = true;
 		ServerAccountService.enableTestingMode();
-		BitcoindController.TESTING = true;
+		BitcoindService.TESTING = true;
 		
 		if (!initialized){		
 			KeyPair keypair = KeyHandler.generateKeyPair();

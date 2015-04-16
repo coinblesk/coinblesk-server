@@ -4,7 +4,7 @@
 	<comment></comment>
 	<projects>
 		<project>custom-serialization</project>
-		<project>mbps-shared-ressources</project>
+		<project>coinblesk-shared-resources</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
