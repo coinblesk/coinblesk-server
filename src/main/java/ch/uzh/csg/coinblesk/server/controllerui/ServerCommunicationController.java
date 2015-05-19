@@ -57,8 +57,6 @@ import ch.uzh.csg.coinblesk.server.web.response.ServerAccountUpdatedObject;
 import ch.uzh.csg.coinblesk.server.web.response.TransferPOAObject;
 import ch.uzh.csg.coinblesk.server.web.response.TransferServerObject;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-
 @Controller
 @RequestMapping("/communication")
 public class ServerCommunicationController {
@@ -209,8 +207,6 @@ public class ServerCommunicationController {
 		} catch (UnknownPKIAlgorithmException e) {
 			//ignore
 		} catch (UrlAlreadyExistsException e) {
-			//ignore
-		} catch (BitcoinException e) {
 			//ignore
 		} catch (UserAccountNotFoundException | ServerAccountNotFoundException e) {
 			//ignore

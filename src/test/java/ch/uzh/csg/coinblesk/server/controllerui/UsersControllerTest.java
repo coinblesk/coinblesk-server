@@ -72,17 +72,11 @@ public class UsersControllerTest {
 
     @Before
     public void setUp() throws Exception {
-        UserAccountService.enableTestingMode();
         if (!initialized) {
             mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();
 
             initialized = true;
         }
-    }
-
-    @After
-    public void tearDown() {
-        UserAccountService.disableTestingMode();
     }
 
     private HttpSession loginAndGetSession(String username, String plainTextPassword) throws Exception {

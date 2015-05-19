@@ -11,7 +11,6 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +27,6 @@ import ch.uzh.csg.coinblesk.server.domain.DbTransaction;
 import ch.uzh.csg.coinblesk.server.domain.ServerAccount;
 import ch.uzh.csg.coinblesk.server.domain.ServerPublicKey;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
-import ch.uzh.csg.coinblesk.server.service.ServerAccountService;
 import ch.uzh.csg.coinblesk.server.util.ServerProperties;
 import ch.uzh.csg.coinblesk.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
@@ -39,9 +37,7 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.ServerAccountNotFoundExceptio
 import ch.uzh.csg.coinblesk.server.util.exceptions.UrlAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.utilTest.ReplacementDataSetLoader;
-import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseOperation;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
@@ -149,7 +145,7 @@ public class ServerAccountServiceTest {
 	@Test
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
 	@ExpectedDatabase(value="classpath:DbUnitFiles/Services/serverAccountExpectedCreateData.xml", table="server_account")
-	public void testPersistAccount() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, ServerAccountNotFoundException {
+	public void testPersistAccount() throws UrlAlreadyExistsException, InvalidUrlException, InvalidEmailException, ServerAccountNotFoundException {
 		int numberOfServerAccount = serverAccountService.getAll().size();
 		ServerAccount newServer = new ServerAccount("https://www.test-test.ch", "test6@mail.com");
 		assertTrue(serverAccountService.persistAccount(newServer));
@@ -161,19 +157,19 @@ public class ServerAccountServiceTest {
 	
 	@Test(expected=UrlAlreadyExistsException.class)
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
-	public void testPersistsAccount_FailUrlAlreadyExists() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException{
+	public void testPersistsAccount_FailUrlAlreadyExists() throws UrlAlreadyExistsException, InvalidUrlException, InvalidEmailException{
 		ServerAccount newServer = new ServerAccount("https://www.my_url.ch", "test@mail.ch");
 		serverAccountService.persistAccount(newServer);
 	}
 	
 	@Test(expected=InvalidUrlException.class)
-	public void testPersistsAccount_FailInvalidUrl() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException {
+	public void testPersistsAccount_FailInvalidUrl() throws UrlAlreadyExistsException, InvalidUrlException, InvalidEmailException {
 		ServerAccount serverAccount = new ServerAccount("abcd", "test@mail.ch");
 		serverAccountService.persistAccount(serverAccount);
 	}
 	
 	@Test(expected=InvalidEmailException.class)
-	public void testPersistsAccount_FailInvalidEmail() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException {
+	public void testPersistsAccount_FailInvalidEmail() throws UrlAlreadyExistsException, InvalidUrlException, InvalidEmailException {
 		ServerAccount serverAccount = new ServerAccount("http://www.url.ch", "mail.ch");
 		serverAccountService.persistAccount(serverAccount);
 	}
@@ -187,7 +183,7 @@ public class ServerAccountServiceTest {
 	@Test
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountData.xml",type=DatabaseOperation.CLEAN_INSERT)
 	@ExpectedDatabase(value="classpath:DbUnitFiles/Services/serverAccountExpectedManuallyData.xml", table="server_account", assertionMode = DatabaseAssertionMode.NON_STRICT)
-	public void testCreateAccount_EnterFieldsManually() throws BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, UrlAlreadyExistsException, InvalidUrlException, ServerAccountNotFoundException {
+	public void testCreateAccount_EnterFieldsManually() throws InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, UrlAlreadyExistsException, InvalidUrlException, ServerAccountNotFoundException {
 		ServerAccount newAccount = new ServerAccount("https://www.insert.com", "insert@mail.ch");
 		newAccount.setBalanceLimit(BigDecimal.ZERO);
 		Date date = new Date();
@@ -381,7 +377,7 @@ public class ServerAccountServiceTest {
 	@Test
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverAccountDataPersistsAmount.xml",type=DatabaseOperation.CLEAN_INSERT)
 	@ExpectedDatabase(value="classpath:DbUnitFiles/Services/serverAccountDataPersistsAmountExpected.xml", table="server_account")
-	public void testPersistTransactionAmount() throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException, ServerAccountNotFoundException {
+	public void testPersistTransactionAmount() throws UrlAlreadyExistsException, InvalidUrlException, InvalidEmailException, ServerAccountNotFoundException {
 
 		ServerAccount testAccount = serverAccountService.getById(11);
 		DbTransaction subtractTrans = new DbTransaction();

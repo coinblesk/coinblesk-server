@@ -17,8 +17,6 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.ServerAccountNotFoundExceptio
 import ch.uzh.csg.coinblesk.server.util.exceptions.UrlAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-
 public interface IServerAccount {
 	
 	/**
@@ -32,7 +30,7 @@ public interface IServerAccount {
 	 * @throws InvalidUrlException
 	 * @throws InvalidEmailException
 	 */
-	public boolean persistAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException;
+	public boolean persistAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, InvalidUrlException, InvalidEmailException;
 	
 	/**
 	 * 

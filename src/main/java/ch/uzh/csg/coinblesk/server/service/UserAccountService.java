@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.coinblesk.customserialization.PKIAlgorithm;
-import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoind;
+import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoinWallet;
 import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
 import ch.uzh.csg.coinblesk.server.dao.UserAccountDAO;
 import ch.uzh.csg.coinblesk.server.dao.UserPublicKeyDAO;
@@ -35,52 +35,24 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UsernameAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.VerificationTokenNotFoundException;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-
 /**
  * Service class for {@link UserAccount}.
  */
 @Service
 public class UserAccountService implements IUserAccount {
-	private static boolean TESTING_MODE = false;
 
 	@Autowired
 	private UserAccountDAO userAccountDAO;
 	@Autowired
 	private UserPublicKeyDAO userPublicKeyDAO;
 	@Autowired
-	private IBitcoind bitcoindService;
+	private IBitcoinWallet bitcoindService;
 	@Autowired
     private Emailer emailer;
 	
-	/**
-	 * Enables testing mode for JUnit Tests.
-	 */
-	public static void enableTestingMode() {
-		TESTING_MODE = true;
-	}
-	
-	public static boolean isTestingMode(){
-		return TESTING_MODE;
-	}
-
-	/**
-	 * Disables testing mode for JUnit Tests.
-	 */
-	public static void disableTestingMode() {
-		TESTING_MODE = false;
-	}
-
 	@Override
-	@Transactional
-	public boolean createAccount(UserAccount userAccount) throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
-		if (TESTING_MODE)
-			return createAccount(userAccount, "fake-address");
-		else
-			return createAccount(userAccount, getNewPaymentAddress());
-	}
-	
-	private boolean createAccount(UserAccount userAccount, String paymentAddress) throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
+    @Transactional
+	public boolean createAccount(UserAccount userAccount) throws UsernameAlreadyExistsException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		UserAccount fromDB = null;
 		
 		userAccount.setUsername(userAccount.getUsername().trim());
@@ -123,7 +95,6 @@ public class UserAccountService implements IUserAccount {
 		
 		String passwordHash = CustomPasswordEncoder.getEncodedPassword(userAccount.getPassword());
 		userAccount.setPassword(passwordHash);
-		userAccount.setPaymentAddress(paymentAddress);
 		
 		if (roles < 1 || roles > 3)
 			roles = Role.USER.getCode();
@@ -155,7 +126,7 @@ public class UserAccountService implements IUserAccount {
 		}
 	}
 
-	private String getNewPaymentAddress() throws BitcoinException {
+	private String getNewPaymentAddress() {
 		return bitcoindService.getNewAddress();
 	}
 

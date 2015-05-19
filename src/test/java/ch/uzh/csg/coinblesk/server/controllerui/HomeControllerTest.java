@@ -1,10 +1,7 @@
 package ch.uzh.csg.coinblesk.server.controllerui;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import javax.servlet.http.HttpSession;
 
 import org.junit.After;
 import org.junit.Before;
@@ -25,7 +22,6 @@ import org.springframework.web.context.WebApplicationContext;
 
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.service.ServerAccountService;
-import ch.uzh.csg.coinblesk.server.service.UserAccountService;
 import ch.uzh.csg.coinblesk.server.util.Credentials;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
@@ -52,8 +48,6 @@ public class HomeControllerTest {
 
     private final String PLAIN_TEXT_PASSWORD = "wwww";
     
-    private static UserAccount test70;
-
     @BeforeClass
     public static void setUpClass() throws Exception {
         // mock JNDI
@@ -65,20 +59,15 @@ public class HomeControllerTest {
 
     @Before
     public void setUp() throws Exception {
-        UserAccountService.enableTestingMode();
         ServerAccountService.enableTestingMode();
         if (!initialized) {
             mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();
-            
-            test70 = new UserAccount("test70@https://mbps.csg.uzh.ch", "test60@bitcoin.csg.uzh.ch", "asdf");
-
             initialized = true;
         }
     }
 
     @After
     public void tearDown() {
-        UserAccountService.disableTestingMode();
         ServerAccountService.disableTestingMode();
     }
 

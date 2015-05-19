@@ -10,7 +10,6 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -27,8 +26,6 @@ import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
 import ch.uzh.csg.coinblesk.server.domain.PayOutRule;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.security.KeyHandler;
-import ch.uzh.csg.coinblesk.server.service.PayOutRuleService;
-import ch.uzh.csg.coinblesk.server.service.UserAccountService;
 import ch.uzh.csg.coinblesk.server.util.Constants;
 import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidEmailException;
@@ -38,9 +35,6 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.PayOutRuleNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.PayOutRulesAlreadyDefinedException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UsernameAlreadyExistsException;
-import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
-
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = { "classpath:context.xml", "classpath:test-database.xml" })
@@ -63,8 +57,6 @@ public class PayOutRuleServiceTest {
 
     @Before
     public void setUp() throws Exception {
-        BitcoindService.TESTING = true;
-        UserAccountService.enableTestingMode();
 
         if (!initialized) {
             test51 = new UserAccount("test51@https://mbps.csg.uzh.ch", "chuck51@bitcoin.csg.uzh.ch", "asdf");
@@ -81,13 +73,8 @@ public class PayOutRuleServiceTest {
         }
     }
 
-    @After
-    public void tearDown() {
-        UserAccountService.disableTestingMode();
-    }
-
     private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException,
-            BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
+            InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
         assertTrue(userAccountService.createAccount(userAccount));
         userAccount = userAccountService.getByUsername(userAccount.getUsername());
         userAccount.setEmailVerified(true);
@@ -202,7 +189,7 @@ public class PayOutRuleServiceTest {
     }
 
     @Test
-    public void checkDeleteRules() throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException,
+    public void checkDeleteRules() throws UsernameAlreadyExistsException, UserAccountNotFoundException, InvalidUsernameException,
             PayOutRulesAlreadyDefinedException, PayOutRuleNotFoundException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
         createAccountAndVerifyAndReload(test54, BigDecimal.ONE.add(BigDecimal.ONE));
         UserAccount fromDB = userAccountService.getByUsername(test54.getUsername());

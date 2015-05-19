@@ -11,7 +11,6 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +22,6 @@ import ch.uzh.csg.coinblesk.server.clientinterface.IPayOutTransaction;
 import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
 import ch.uzh.csg.coinblesk.server.domain.PayOutTransaction;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
-import ch.uzh.csg.coinblesk.server.service.UserAccountService;
 import ch.uzh.csg.coinblesk.server.util.Config;
 import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidEmailException;
@@ -31,9 +29,6 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UsernameAlreadyExistsException;
-import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
-
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
@@ -52,16 +47,11 @@ public class PayOutTransactionServiceTest {
 
 	@Before
 	public void setUp() throws Exception {
-		UserAccountService.enableTestingMode();
 		test71 = new UserAccount("test71@https://mbps.csg.uzh.ch", "test71@bitcoin.csg.uzh.ch", "asdf");
 	}
 	
-	@After
-	public void tearDown(){
-		UserAccountService.disableTestingMode();
-	}
 
-	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
+	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		assertTrue(userAccountService.createAccount(userAccount));
 		userAccount = userAccountService.getByUsername(userAccount.getUsername());
 		userAccount.setEmailVerified(true);

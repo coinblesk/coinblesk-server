@@ -26,8 +26,6 @@ import ch.uzh.csg.coinblesk.server.web.model.UserModelObject;
 import ch.uzh.csg.coinblesk.server.web.response.UserAccountTransferObject;
 import ch.uzh.csg.coinblesk.server.web.response.WebRequestTransferObject;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-
 @Controller
 @RequestMapping("/users")
 public class UsersController {
@@ -60,7 +58,6 @@ public class UsersController {
 		o.setEmail(userAccount.getEmail());
 		o.setId(userAccount.getId());
 		o.setPassword(userAccount.getPassword());
-		o.setPaymentAddress(userAccount.getPaymentAddress());
 		o.setUsername(userAccount.getUsername());
 		o.setRole(userAccount.getRoles());
 		return o;
@@ -76,7 +73,7 @@ public class UsersController {
 	}
 	
 	@RequestMapping(value={"/inviteAdmin"}, method=RequestMethod.POST, consumes="application/json", produces="application/json")
-	@ResponseBody public TransferObject inviteAdmin(@RequestBody UserModelObject request) throws UserAccountNotFoundException, UsernameAlreadyExistsException, BitcoinException,
+	@ResponseBody public TransferObject inviteAdmin(@RequestBody UserModelObject request) throws UserAccountNotFoundException, UsernameAlreadyExistsException,
 			InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		
 		TransferObject response = new TransferObject();

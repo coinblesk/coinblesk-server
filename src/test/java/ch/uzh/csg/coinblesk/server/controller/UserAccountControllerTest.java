@@ -66,8 +66,6 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
 		"classpath:context.xml",
@@ -111,7 +109,6 @@ public class UserAccountControllerTest {
 
 	@Before
 	public void setUp() {
-		UserAccountService.enableTestingMode();
 
 		if (!initialized) {
 			mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();
@@ -134,10 +131,6 @@ public class UserAccountControllerTest {
 		}
 	}
 
-	@After
-	public void tearDown() {
-		UserAccountService.disableTestingMode();
-	}
 	
 	private UserAccountObject convert(UserAccount account) {
 		UserAccountObject u = new UserAccountObject();
@@ -181,7 +174,7 @@ public class UserAccountControllerTest {
 	}
 
 	@Test(expected = InvalidEmailException.class)  
-	public void testCreateUserAccount_EmptyFields() throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
+	public void testCreateUserAccount_EmptyFields() throws UsernameAlreadyExistsException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		userAccountService.createAccount(test27);
 	}
 
@@ -365,7 +358,7 @@ public class UserAccountControllerTest {
 		assertFalse(cro.isSuccessful());
 	}
 
-	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
+	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		assertTrue(userAccountService.createAccount(userAccount));
 		userAccount = userAccountService.getByUsername(userAccount.getUsername());
 		userAccount.setEmailVerified(true);

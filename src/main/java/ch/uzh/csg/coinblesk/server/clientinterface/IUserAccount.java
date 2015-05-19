@@ -3,8 +3,6 @@ package ch.uzh.csg.coinblesk.server.clientinterface;
 import java.math.BigDecimal;
 import java.util.List;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-
 import ch.uzh.csg.coinblesk.customserialization.PKIAlgorithm;
 import ch.uzh.csg.coinblesk.server.domain.ResetPassword;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
@@ -35,7 +33,7 @@ public interface IUserAccount {
 	 * @throws EmailAlreadyExistsException 
 	 * @throws InvalidUrlException 
 	 */
-	public boolean createAccount(UserAccount userAccount) throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException;
+	public boolean createAccount(UserAccount userAccount) throws UsernameAlreadyExistsException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException;
 
 	/**
 	 * Returns the UserAccount belonging to the given username.

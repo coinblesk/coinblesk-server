@@ -49,7 +49,7 @@ import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.json.CustomObjectMapper;
 import ch.uzh.csg.coinblesk.server.security.KeyHandler;
-import ch.uzh.csg.coinblesk.server.service.BitcoindService;
+import ch.uzh.csg.coinblesk.server.service.BitcoinWalletService;
 import ch.uzh.csg.coinblesk.server.service.TransactionService;
 import ch.uzh.csg.coinblesk.server.service.UserAccountService;
 import ch.uzh.csg.coinblesk.server.util.Constants;
@@ -61,8 +61,6 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UsernameAlreadyExistsException;
 import ch.uzh.csg.coinblesk.util.Converter;
-
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
@@ -115,7 +113,6 @@ public class TransactionControllerTest {
 	
 	@Before
 	public void setUp() throws Exception {
-		UserAccountService.enableTestingMode();
 		
 		if (!initialized) {
 			mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();
@@ -139,11 +136,6 @@ public class TransactionControllerTest {
 				
 			initialized = true;
 		}
-	}
-	
-	@After
-	public void tearDown() {
-		UserAccountService.disableTestingMode();
 	}
 	
 	@Test
@@ -507,7 +499,7 @@ public class TransactionControllerTest {
 		return session;
 	}
 	
-	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
+	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		assertTrue(userAccountService.createAccount(userAccount));
 		userAccount = userAccountService.getByUsername(userAccount.getUsername());
 		userAccount.setEmailVerified(true);
@@ -541,7 +533,6 @@ public class TransactionControllerTest {
 
 	@Test
 	public void testPayOut() throws Exception{
-		BitcoindService.TESTING = true;
 		createAccountAndVerifyAndReload(test8_1, BigDecimal.ONE);
 		String plainTextPw = test8_1.getPassword();
 		

@@ -2,11 +2,10 @@ package ch.uzh.csg.coinblesk.server.service;
 
 import java.util.List;
 
+import org.bitcoinj.core.Transaction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
 
 import ch.uzh.csg.coinblesk.model.HistoryPayInTransaction;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
@@ -25,6 +24,7 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
  */
 @Service
 public class PayInTransactionService implements IPayInTransaction{
+    
 	@Autowired
 	private PayInTransactionDAO payInTransactionDAO;
 	@Autowired
@@ -37,12 +37,16 @@ public class PayInTransactionService implements IPayInTransaction{
 	@Override
 	@Transactional
 	public void create(Transaction transaction) throws UserAccountNotFoundException {
-		long userID = userAccountDAO.getByBTCAddress(transaction.address()).getId();
-		PayInTransaction pit = new PayInTransaction(userID, transaction);
-		if (payInTransactionDAO.isNew(pit)) {
-			payInTransactionDAO.createPayInTransaction(pit);
-			payInTransactionUnverifiedDAO.remove(pit);
-		}
+	    
+	    //TODO: rewrite after changing to bitcoinj
+	    assert(false);
+	    
+//		long userID = userAccountDAO.getByBTCAddress(transaction.address()).getId();
+//		PayInTransaction pit = new PayInTransaction(userID, transaction);
+//		if (payInTransactionDAO.isNew(pit)) {
+//			payInTransactionDAO.createPayInTransaction(pit);
+//			payInTransactionUnverifiedDAO.remove(pit);
+//		}
 	}
 
 	@Override

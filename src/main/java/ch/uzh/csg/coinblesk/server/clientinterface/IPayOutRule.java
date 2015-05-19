@@ -9,8 +9,6 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.PayOutRuleNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.PayOutRulesAlreadyDefinedException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-
 public interface IPayOutRule {
 
 	/**
@@ -24,7 +22,7 @@ public interface IPayOutRule {
 	 * @throws PayOutRulesAlreadyDefinedException
 	 *             if already PayOutRules for this UserAccount are defined
 	 */
-	public void createRule(PayOutRulesTransferObject porto, String username) throws UserAccountNotFoundException, BitcoinException, PayOutRulesAlreadyDefinedException;
+	public void createRule(PayOutRulesTransferObject porto, String username) throws UserAccountNotFoundException, PayOutRulesAlreadyDefinedException;
 
 	/**
 	 * Returns ArrayList with all {@link PayOutRule}s for UserAccount with username.
@@ -55,7 +53,7 @@ public interface IPayOutRule {
 	 * @throws UserAccountNotFoundException
 	 * @throws BitcoinException
 	 */
-	public void checkBalanceLimitRules(UserAccount sellerAccount) throws PayOutRuleNotFoundException, UserAccountNotFoundException, BitcoinException;
+	public void checkBalanceLimitRules(UserAccount sellerAccount) throws PayOutRuleNotFoundException, UserAccountNotFoundException;
 
 	/**
 	 * Returns all {@link PayOutRule}s assigned to {@link UserAccount} with userId

@@ -2,7 +2,7 @@ package ch.uzh.csg.coinblesk.server.clientinterface;
 
 import java.util.List;
 
-import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
+import org.bitcoinj.core.Transaction;
 
 import ch.uzh.csg.coinblesk.model.HistoryPayInTransaction;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;

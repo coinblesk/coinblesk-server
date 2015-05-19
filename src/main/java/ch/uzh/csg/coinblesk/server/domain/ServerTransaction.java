@@ -15,8 +15,7 @@ import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-
-import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
+import org.bitcoinj.core.Transaction;
 
 @Entity
 @Table(name = "SERVER_TRANSACTION", indexes = {
@@ -58,13 +57,15 @@ public class ServerTransaction {
 	 *            != NULL
 	 */
 	public ServerTransaction(Transaction tx, String serverUrl, boolean received) {
-		this.timestamp = tx.time();
-		this.amount = new BigDecimal(tx.amount());
-		this.serverUrl = serverUrl;
-		this.btcAddress = tx.address();
-		this.verified = false;
-		this.transactionID = tx.txId();
-		this.received = received;
+	  //TODO: rewrite after change to bitcoinj
+        assert(false);
+//		this.timestamp = tx.time();
+//		this.amount = new BigDecimal(tx.amount());
+//		this.serverUrl = serverUrl;
+//		this.btcAddress = tx.address();
+//		this.verified = false;
+//		this.transactionID = tx.txId();
+//		this.received = received;
 	}
 
 	public long getId() {

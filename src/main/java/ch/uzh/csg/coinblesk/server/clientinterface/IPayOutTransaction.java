@@ -3,8 +3,7 @@ package ch.uzh.csg.coinblesk.server.clientinterface;
 import java.math.BigDecimal;
 import java.util.List;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
+import org.bitcoinj.core.Transaction;
 
 import ch.uzh.csg.coinblesk.model.HistoryPayOutTransaction;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
@@ -44,7 +43,7 @@ public interface IPayOutTransaction {
 	 * @throws BitcoinException
 	 * @throws UserAccountNotFoundException
 	 */
-	public TransferObject createPayOutTransaction(String username, BigDecimal amount, String address) throws BitcoinException, UserAccountNotFoundException;
+	public TransferObject createPayOutTransaction(String username, BigDecimal amount, String address) throws UserAccountNotFoundException;
 
 	/**
 	 * Checks if {@link PayOutTransaction} which has min-confirmations from the Bitcoin

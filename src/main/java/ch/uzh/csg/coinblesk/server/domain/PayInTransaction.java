@@ -13,7 +13,7 @@ import javax.persistence.Index;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
-import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
+import org.bitcoinj.core.Transaction;
 
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 
@@ -43,11 +43,7 @@ public class PayInTransaction implements Serializable {
 	}
 	
 	public PayInTransaction(long userID, Transaction transaction) throws UserAccountNotFoundException {
-		this.userID = userID;
-		this.timestamp = transaction.timeReceived();
-		this.amount = BigDecimal.valueOf(transaction.amount());
-		this.transactionID = transaction.txId();
-		this.btcAddress = transaction.address();
+	    //TODO
 	}
 
 	public long getId() {

@@ -19,6 +19,7 @@ import ch.uzh.csg.coinblesk.server.util.UserRoles;
  * database, etc.
  */
 public class CustomAuthenticationManager implements AuthenticationManager {
+    
 	@Autowired
 	private IUserAccount userAccountService;
 	private PasswordEncoder pwEncoder = new BCryptPasswordEncoder();

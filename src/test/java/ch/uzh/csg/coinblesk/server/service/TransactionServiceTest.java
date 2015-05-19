@@ -61,7 +61,6 @@ public class TransactionServiceTest {
 
     @Before
     public void setUp() throws Exception {
-        UserAccountService.enableTestingMode();
         if (!initialized) {
             KeyPair keypair = KeyHandler.generateKeyPair();
 
@@ -70,11 +69,6 @@ public class TransactionServiceTest {
 
             initialized = true;
         }
-    }
-
-    @After
-    public void tearDown() {
-        UserAccountService.disableTestingMode();
     }
 
     @Test

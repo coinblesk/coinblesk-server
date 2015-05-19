@@ -20,7 +20,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
-import ch.uzh.csg.coinblesk.server.service.UserAccountService;
 
 /**
  * Email Service for sending emails from CoinBlesk to users.
@@ -28,11 +27,11 @@ import ch.uzh.csg.coinblesk.server.service.UserAccountService;
  */
 @Service
 public class Emailer {
-    
+
     private static final Logger LOGGER = Logger.getLogger(Emailer.class);
-    
+
     @Autowired
-    private static Credentials credentials;
+    private Credentials credentials;
 
     /**
      * Sends initial Email Configuration Link to User via defined MailService
@@ -58,7 +57,8 @@ public class Emailer {
     public void sendResetPasswordLink(UserAccount user, String resetPWToken) {
 
         String link = ServerProperties.getProperty("url.base") + ServerProperties.getProperty("url.server") + "/user/resetPassword/" + resetPWToken;
-        String message = "Dear " + user.getUsername() + ",<br><br>Please reset your account password by clicking on the following link: <a href = \"" + link + "\">" + link + "</a>";
+        String message = "Dear " + user.getUsername() + ",<br><br>Please reset your account password by clicking on the following link: <a href = \"" + link + "\">" + link
+                + "</a>";
         String subject = "MBPS Account Password Reset";
         sendEmail(message, subject, user.getEmail(), null);
     }
@@ -83,10 +83,8 @@ public class Emailer {
      * @param toEmail
      */
     private void sendEmail(String message, String subject, String toEmail, File attachment) {
-        if (!UserAccountService.isTestingMode()) {
-            EmailSenderTask task = new EmailSenderTask(message, subject, toEmail, attachment);
-            new Thread(task).start();
-        }
+        EmailSenderTask task = new EmailSenderTask(message, subject, toEmail, attachment);
+        new Thread(task).start();
     }
 
     private class EmailSenderTask implements Runnable {
@@ -105,7 +103,7 @@ public class Emailer {
         @Override
         public void run() {
             Properties props = ServerProperties.getProperties();
-            
+
             Session session = Session.getInstance(props, new javax.mail.Authenticator() {
                 protected PasswordAuthentication getPasswordAuthentication() {
                     return new PasswordAuthentication(credentials.getEmailUsername(), credentials.getEmailPassword());
@@ -173,8 +171,8 @@ public class Emailer {
      */
     public void sendUpdateRoleBothLink(UserAccount user) {
         String link = ServerProperties.getProperty("url.base") + ServerProperties.getProperty("url.server");
-        String message = "Dear " + user.getUsername() + ",<br><br>Your account was updated! Now, you gained administration rights for the server at the following link:  <a href = \""
-                + link + "\">" + link + "</a>";
+        String message = "Dear " + user.getUsername()
+                + ",<br><br>Your account was updated! Now, you gained administration rights for the server at the following link:  <a href = \"" + link + "\">" + link + "</a>";
         String subject = "MBPS Update Account";
         sendEmail(message, subject, user.getEmail(), null);
     }

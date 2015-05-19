@@ -4,12 +4,13 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
+import org.bitcoinj.core.Transaction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.coinblesk.server.clientinterface.IActivities;
-import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoind;
+import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoinWallet;
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerAccount;
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerPayOutTransaction;
 import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
@@ -25,9 +26,6 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.TransactionException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.web.model.HistoryServerPayOutTransaction;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
-
 @Service
 public class ServerPayOutTransactionService implements IServerPayOutTransaction {
 
@@ -40,13 +38,13 @@ public class ServerPayOutTransactionService implements IServerPayOutTransaction 
 	@Autowired
 	private IUserAccount userAccountService;
 	@Autowired
-	private IBitcoind bitcoindService;
+	private IBitcoinWallet bitcoindService;
 	
 	public static Boolean testingMode = false;
 	
 	@Override
 	@Transactional
-	public void createPayOutTransaction(String url, BigDecimal amount, String address) throws BitcoinException, ServerAccountNotFoundException, UserAccountNotFoundException {
+	public void createPayOutTransaction(String url, BigDecimal amount, String address) throws ServerAccountNotFoundException, UserAccountNotFoundException {
 		ServerAccount serverAccount = serverAccountService.getByUrl(url);
 		ServerPayOutTransaction spot = new ServerPayOutTransaction();
 		spot.setAmount(amount);

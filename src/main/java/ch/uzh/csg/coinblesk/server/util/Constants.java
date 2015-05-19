@@ -15,7 +15,11 @@ public class Constants {
 	 * in order to force the user to update the app. This assures that
 	 * compatible versions are used. (see also server Constants.java)
 	 */
-	public static final int CLIENT_VERSION = 1;
+	public static final int CLIENT_VERSION = 2;
 	
+	
+	/*
+	 * Messages
+	 */
 	
 }

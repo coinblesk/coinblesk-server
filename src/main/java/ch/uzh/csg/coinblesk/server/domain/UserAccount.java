@@ -142,10 +142,6 @@ public class UserAccount implements Serializable {
 		this.emailVerified = emailVerified;
 	}
 	
-	public void setPaymentAddress(String paymentAddress) {
-		this.paymentAddress = paymentAddress;
-	}
-
 	public String getPaymentAddress() {
 		return this.paymentAddress;
 	}

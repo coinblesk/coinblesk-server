@@ -9,7 +9,7 @@ import net.minidev.json.parser.ParseException;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoind;
+import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoinWallet;
 import ch.uzh.csg.coinblesk.server.clientinterface.IPayOutRule;
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerAccount;
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerAccountTasks;
@@ -19,11 +19,10 @@ import ch.uzh.csg.coinblesk.server.domain.PayOutRule;
 import ch.uzh.csg.coinblesk.server.domain.ServerAccount;
 import ch.uzh.csg.coinblesk.server.domain.ServerAccountTasks;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
+import ch.uzh.csg.coinblesk.server.service.BitcoinWalletService;
 import ch.uzh.csg.coinblesk.server.service.ServerAccountTasksService.ServerAccountTaskTypes;
 import ch.uzh.csg.coinblesk.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
-
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
 /**
  * Task executed by cron job for checking all {@link PayOutRule}s.
@@ -45,7 +44,7 @@ public class HourlyTask {
 	@Autowired
 	IServerAccount serverAccountService;
 	@Autowired
-	IBitcoind bitcoindService;
+	IBitcoinWallet bitcoinWalletService;
 	@Autowired
     private Emailer emailer;
 
@@ -126,10 +125,10 @@ public class HourlyTask {
 	private void sanityCheck() {
 		try {
 			BigDecimal sumOfAccountBalances = userAccountService.getSumOfUserAccountBalances();
-			BigDecimal bitcoindAccountBalance = bitcoindService.getAccountBalance();
+			BigDecimal bitcoindAccountBalance = bitcoinWalletService.getAccountBalance();
 			if(bitcoindAccountBalance.compareTo(sumOfAccountBalances) < 0)
 				emailer.send("bitcoin@ifi.uzh.ch", "[CoinBlesk] Error: Sanity Check failed - Intervention required!", "Important: possible worst case scenario happened! There are more Bitcoins assigned to user accounts than are stored on Bitcoind! " + "SumOfAccountBalances:  " + sumOfAccountBalances.toPlainString() + " BitcoindSum: " + bitcoindAccountBalance.toPlainString());
-		} catch (BitcoinException e) {
+		} catch (Exception e) {
 			emailer.send("bitcoin@ifi.uzh.ch", "[CoinBlesk] Warning: Problem creating sanity check", "Couldn't compare useraccount balances to bitcoind balances. Exception: " + e.getMessage());
 		}
 		

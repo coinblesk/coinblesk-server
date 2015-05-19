@@ -30,8 +30,6 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.UrlAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.web.response.ServerAccountObject;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-
 @Controller
 @RequestMapping("/relation")
 public class RelationController {
@@ -155,7 +153,7 @@ public class RelationController {
 			response.setMessage(Config.SUCCESS);
 			response.setSuccessful(true);
 			return response;
-		} catch (UrlAlreadyExistsException | BitcoinException e) {
+		} catch (UrlAlreadyExistsException e) {
 			response.setMessage(Config.FAILED);
 			response.setSuccessful(false);
 			return response;

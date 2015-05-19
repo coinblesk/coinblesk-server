@@ -19,8 +19,6 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.PayOutRuleNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.PayOutRulesAlreadyDefinedException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-
 /**
  * Controller for client http requests regarding PayOutRules.
  * 
@@ -59,14 +57,16 @@ public class PayOutRulesController {
 			reply.setSuccessful(false);
 			reply.setMessage(ACCOUNT_NOT_FOUND);
 			return reply;
-		} catch (BitcoinException e) {
-			reply.setSuccessful(false);
-			reply.setMessage(INVALID_ADDRESS);
-			return reply;
 		} catch (PayOutRulesAlreadyDefinedException e) {
 			reply.setSuccessful(false);
 			reply.setMessage(RULES_ALREADY_DEFINED);
 			return reply;
+		} catch (Exception e) {
+		    //TODO: rewrite after change to bitcoinj
+		    assert(false);
+		    reply.setSuccessful(false);
+		    reply.setMessage(INVALID_ADDRESS);
+		    return reply;
 		}
 	}
 

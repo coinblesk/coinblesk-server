@@ -20,8 +20,6 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.web.response.ServerAccountObject;
 import ch.uzh.csg.coinblesk.server.web.response.ServerPayOutRulesTransferObject;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-
 /**
  * Controller for client http requests regarding ServerPayOutRules.
  * 
@@ -74,7 +72,9 @@ public class ServerPayOutRuleController {
 			response.setMessage(SERVER_ACCOUNT_NOT_FOUND);
 			response.setSuccessful(false);
 			return response;
-		} catch (BitcoinException e) {
+		} catch (Exception e) {
+		  //TODO: rewrite after change to bitcoinj
+	        assert(false);
 			response.setMessage(INVALID_ADDRESS);
 			response.setSuccessful(false);
 			return response;

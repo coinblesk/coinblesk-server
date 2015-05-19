@@ -4,13 +4,14 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
+import org.bitcoinj.core.Transaction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.coinblesk.model.HistoryPayOutTransaction;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
-import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoind;
+import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoinWallet;
 import ch.uzh.csg.coinblesk.server.clientinterface.IPayOutTransaction;
 import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
 import ch.uzh.csg.coinblesk.server.dao.PayOutTransactionDAO;
@@ -19,9 +20,6 @@ import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.util.Config;
 import ch.uzh.csg.coinblesk.server.util.exceptions.TransactionException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
-
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
 
 /**
  * Service class for {@link PayOutTransaction}s
@@ -36,7 +34,7 @@ public class PayOutTransactionService implements IPayOutTransaction {
 	@Autowired
 	private IUserAccount userAccountService;
 	@Autowired
-	private IBitcoind bitcoindService;
+	private IBitcoinWallet bitcoindService;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -54,7 +52,7 @@ public class PayOutTransactionService implements IPayOutTransaction {
 
 	@Override
 	@Transactional
-	public TransferObject createPayOutTransaction(String username, BigDecimal amount, String address) throws BitcoinException, UserAccountNotFoundException {
+	public TransferObject createPayOutTransaction(String username, BigDecimal amount, String address) throws UserAccountNotFoundException {
 		TransferObject transferObject = new TransferObject();
 		UserAccount user = userAccountService.getByUsername(username);
 		PayOutTransaction pot = new PayOutTransaction();

@@ -10,8 +10,6 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.ServerPayOutRulesAlreadyDefin
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.web.response.ServerPayOutRulesTransferObject;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-
 public interface IServerPayOutRule {
 
 	/**
@@ -24,7 +22,7 @@ public interface IServerPayOutRule {
 	 * @throws BitcoinException
 	 * @throws ServerPayOutRulesAlreadyDefinedException 
 	 */
-	public void createRule(ServerPayOutRulesTransferObject sporto, String url) throws ServerAccountNotFoundException, BitcoinException, ServerPayOutRulesAlreadyDefinedException;
+	public void createRule(ServerPayOutRulesTransferObject sporto, String url) throws ServerAccountNotFoundException, ServerPayOutRulesAlreadyDefinedException;
 
 	/**
 	 * Returns List with all {@link ServerPayOutRule}s for ServerAccount
@@ -66,7 +64,7 @@ public interface IServerPayOutRule {
 	 * @throws BitcoinException
 	 * @throws ServerPayOutRuleNotFoundException 
 	 */
-	public void checkBalanceLimitRules(ServerAccount serverAccount) throws ServerAccountNotFoundException, BitcoinException, ServerPayOutRuleNotFoundException, UserAccountNotFoundException;
+	public void checkBalanceLimitRules(ServerAccount serverAccount) throws ServerAccountNotFoundException, ServerPayOutRuleNotFoundException, UserAccountNotFoundException;
 
 	/**
 	 * Checks if Rules exist for the current hour and day. If yes these

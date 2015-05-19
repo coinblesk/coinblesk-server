@@ -39,7 +39,7 @@ import ch.uzh.csg.coinblesk.server.security.KeyHandler;
 public class Initializer {
 	private static Logger LOGGER = Logger.getLogger(Initializer.class);
 	
-	private static final String KEY_FILE_NAME = "ServerKeys.xml";
+	public static final String KEY_FILE_NAME = "ServerKeys.xml";
 
 	@PostConstruct
 	public void init() {

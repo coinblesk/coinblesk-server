@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.coinblesk.customserialization.PKIAlgorithm;
 import ch.uzh.csg.coinblesk.server.clientinterface.IActivities;
-import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoind;
+import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoinWallet;
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerAccount;
 import ch.uzh.csg.coinblesk.server.dao.ServerAccountDAO;
 import ch.uzh.csg.coinblesk.server.dao.ServerPublicKeyDAO;
@@ -34,8 +34,6 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.ServerAccountNotFoundExceptio
 import ch.uzh.csg.coinblesk.server.util.exceptions.UrlAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-
 /**
  * Service class for {@link ServerAccount}.
  *
@@ -54,7 +52,7 @@ public class ServerAccountService implements IServerAccount {
     @Autowired
     private IActivities activitiesService;
     @Autowired
-    private IBitcoind bitcoindService;
+    private IBitcoinWallet bitcoindService;
 
     /**
      * Enables testing mode for JUnit Tests.
@@ -108,7 +106,7 @@ public class ServerAccountService implements IServerAccount {
 
     @Override
     @Transactional
-    public boolean persistAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, BitcoinException, InvalidUrlException, InvalidEmailException {
+    public boolean persistAccount(ServerAccount serverAccount) throws UrlAlreadyExistsException, InvalidUrlException, InvalidEmailException {
         Date date = new Date();
         if (TESTING_MODE) {
             String strDate = "2014-06-19 14:35:54.0";
@@ -120,8 +118,12 @@ public class ServerAccountService implements IServerAccount {
                 return createAccount(serverAccount, "fake-address", date);
             }
         } else {
-            return createAccount(serverAccount, getNewPayinAddress(), date);
+          //TODO: rewrite after change to bitcoinj
+            assert(false);
+//            return createAccount(serverAccount, getNewPayinAddress(), date);
         }
+        
+        return false;
     }
 
     /**
@@ -181,7 +183,7 @@ public class ServerAccountService implements IServerAccount {
         return true;
     }
 
-    private String getNewPayinAddress() throws BitcoinException {
+    private String getNewPayinAddress() {
         return bitcoindService.getNewAddress();
     }
 

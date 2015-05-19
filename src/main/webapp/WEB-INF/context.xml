@@ -36,15 +36,5 @@
 		<property name="jndiName" value="java:comp/env/bean/credentials" />
 	</bean>
 
-	<!-- Here you can set to connect to your Bitcoind server -->
-	<bean id="bitcoindService" class="ch.uzh.csg.coinblesk.server.service.BitcoindService">
-		<property name="listenTransactions" value="true" />
-		<property name="credentials" ref="credentials" />
-	</bean>
-	
-	<bean id="bitcoinRpcService" class="com.azazar.bitcoin.jsonrpcclient.BitcoinRPCService">
-		<property name="credentials" ref="credentials" />
-	</bean>
-
 </beans>
 

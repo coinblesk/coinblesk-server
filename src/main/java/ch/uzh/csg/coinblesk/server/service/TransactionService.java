@@ -60,7 +60,6 @@ import ch.uzh.csg.coinblesk.server.web.customserialize.CustomServerPaymentRespon
 import ch.uzh.csg.coinblesk.server.web.response.TransferServerObject;
 import ch.uzh.csg.coinblesk.util.Converter;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 import com.xeiam.xchange.ExchangeException;
 import com.xeiam.xchange.NotAvailableFromExchangeException;
 import com.xeiam.xchange.NotYetImplementedForExchangeException;
@@ -404,7 +403,7 @@ public class TransactionService implements ITransaction {
 		} else {			
 			try {
 				payOutRuleService.checkBalanceLimitRules(payeeUserAccount);
-			} catch (PayOutRuleNotFoundException | BitcoinException e) {
+			} catch (PayOutRuleNotFoundException e) {
 				// do nothing as user requests actually a transaction and not a payout
 			}
 		}
@@ -603,7 +602,7 @@ public class TransactionService implements ITransaction {
 		if(fromServerUsername.equals(payerRequest.getUsernamePayee())){			
 			try {
 				payOutRuleService.checkBalanceLimitRules(payeeUserAccount);
-			} catch (PayOutRuleNotFoundException | BitcoinException e) {
+			} catch (PayOutRuleNotFoundException e) {
 				// do nothing as user requests actually a transaction and not a payout
 			}
 		}

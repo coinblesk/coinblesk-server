@@ -5,14 +5,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Date;
 
-import javax.naming.Context;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
+import net.minidev.json.parser.ParseException;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import net.minidev.json.parser.ParseException;
 
 import com.xeiam.xchange.Exchange;
 import com.xeiam.xchange.ExchangeException;

@@ -10,7 +10,6 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -29,9 +28,6 @@ import ch.uzh.csg.coinblesk.server.dao.ServerPayOutRuleDAO;
 import ch.uzh.csg.coinblesk.server.domain.ServerAccount;
 import ch.uzh.csg.coinblesk.server.domain.ServerPayOutRule;
 import ch.uzh.csg.coinblesk.server.security.KeyHandler;
-import ch.uzh.csg.coinblesk.server.service.ServerAccountService;
-import ch.uzh.csg.coinblesk.server.service.ServerPayOutRuleService;
-import ch.uzh.csg.coinblesk.server.service.ServerPayOutTransactionService;
 import ch.uzh.csg.coinblesk.server.util.Constants;
 import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidEmailException;
@@ -45,10 +41,8 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.ServerPayOutRulesAlreadyDefin
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UsernameAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.utilTest.ReplacementDataSetLoader;
-import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
 import ch.uzh.csg.coinblesk.server.web.response.ServerPayOutRulesTransferObject;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseOperation;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
@@ -81,7 +75,6 @@ public class ServerPayOutRuleServiceTest {
 		ServerPayOutRuleService.testingMode = true;
 		ServerPayOutTransactionService.testingMode = true;
 		ServerAccountService.enableTestingMode();
-		BitcoindService.TESTING = true;
 		
 		if (!initialized){		
 			KeyPair keypair = KeyHandler.generateKeyPair();
@@ -101,7 +94,7 @@ public class ServerPayOutRuleServiceTest {
 	@Test
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverPayOutRuleData.xml",type=DatabaseOperation.CLEAN_INSERT)
 	@ExpectedDatabase(value="classpath:DbUnitFiles/Services/serverPayOutRuleExpectedCreateRuleData.xml", table="server_payout_rules")
-	public void testCreateRule() throws ServerAccountNotFoundException, BitcoinException, ServerPayOutRulesAlreadyDefinedException, ServerPayOutRuleNotFoundException{
+	public void testCreateRule() throws ServerAccountNotFoundException, ServerPayOutRulesAlreadyDefinedException, ServerPayOutRuleNotFoundException{
 		ServerAccount account = serverAccountService.getById(15);
 		
 		ServerPayOutRule first = new ServerPayOutRule(account.getId(), 15, 2, account.getPayoutAddress());
@@ -162,7 +155,7 @@ public class ServerPayOutRuleServiceTest {
 	@Test
 	@DatabaseSetup(value="classpath:DbUnitFiles/Services/serverPayOutRuleData.xml",type=DatabaseOperation.CLEAN_INSERT)
 	@ExpectedDatabase(value="classpath:DbUnitFiles/Services/serverPayOutRuleExpectedDeletedData.xml", table="server_payout_rules")
-	public void checkDeleteRules() throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, PayOutRulesAlreadyDefinedException, PayOutRuleNotFoundException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException, ServerAccountNotFoundException, ServerPayOutRuleNotFoundException {
+	public void checkDeleteRules() throws UsernameAlreadyExistsException, UserAccountNotFoundException, InvalidUsernameException, PayOutRulesAlreadyDefinedException, PayOutRuleNotFoundException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException, ServerAccountNotFoundException, ServerPayOutRuleNotFoundException {
 		ServerAccount fromDB = serverAccountService.getByUrl("http://www.fake_address.org");
 		
 		List<ServerPayOutRule> resultList = serverPayOutRuleService.getRulesByUrl(fromDB.getUrl());

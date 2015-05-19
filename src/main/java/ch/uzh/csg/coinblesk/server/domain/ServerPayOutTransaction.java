@@ -13,7 +13,7 @@ import javax.persistence.Index;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
-import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
+import org.bitcoinj.core.Transaction;
 
 @Entity
 @Table(name = "SERVER_PAY_OUT_TRANSACTION", indexes = {
@@ -44,11 +44,13 @@ public class ServerPayOutTransaction implements Serializable{
 	}
 	
 	public ServerPayOutTransaction(Transaction tx) {
-		setTimestamp(tx.time());
-		setAmount(new BigDecimal(tx.amount()));
-		setPayoutAddress(tx.address());
-		setVerified(false);
-		setTransactionID(tx.txId());
+	  //TODO: rewrite after change to bitcoinj
+        assert(false);
+//		setTimestamp(tx.time());
+//		setAmount(new BigDecimal(tx.amount()));
+//		setPayoutAddress(tx.address());
+//		setVerified(false);
+//		setTransactionID(tx.txId());
 	}
 	
 	public long getId() {

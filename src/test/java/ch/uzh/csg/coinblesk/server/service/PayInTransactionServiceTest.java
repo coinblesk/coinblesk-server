@@ -3,6 +3,7 @@ package ch.uzh.csg.coinblesk.server.service;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.math.BigDecimal;
 import java.security.KeyPair;
@@ -10,9 +11,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +26,6 @@ import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
 import ch.uzh.csg.coinblesk.server.domain.PayInTransaction;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.security.KeyHandler;
-import ch.uzh.csg.coinblesk.server.service.UserAccountService;
 import ch.uzh.csg.coinblesk.server.util.Config;
 import ch.uzh.csg.coinblesk.server.util.Constants;
 import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
@@ -36,11 +34,6 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidUrlException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UsernameAlreadyExistsException;
-import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
-
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.RawTransaction;
-import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
@@ -60,8 +53,6 @@ public class PayInTransactionServiceTest {
 
 	@Before
 	public void setUp() throws Exception {
-		BitcoindService.TESTING = true;
-		UserAccountService.enableTestingMode();
 
 		if (!initialized) {
 			test61 = new UserAccount("test61@https://mbps.csg.uzh.ch", "test61@bitcoin.csg.uzh.chs", "asdf");
@@ -74,13 +65,8 @@ public class PayInTransactionServiceTest {
 			initialized = true;
 		}
 	}
-	
-	@After
-	public void tearDown(){
-		UserAccountService.disableTestingMode();
-	}
 
-	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
+	private void createAccountAndVerifyAndReload(UserAccount userAccount, BigDecimal balance) throws UsernameAlreadyExistsException, UserAccountNotFoundException, InvalidUsernameException, InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
 		assertTrue(userAccountService.createAccount(userAccount));
 		userAccount = userAccountService.getByUsername(userAccount.getUsername());
 		userAccount.setEmailVerified(true);
@@ -92,94 +78,16 @@ public class PayInTransactionServiceTest {
 	public void testCheck() throws Exception{
 		createAccountAndVerifyAndReload(test61,BigDecimal.ZERO);
 		UserAccount userAccount = userAccountService.getByUsername(test61.getUsername());
-		userAccount.setPaymentAddress("asdfjklqwertuiopyxcvb");
 		userAccountService.updateAccount(userAccount);
 		UserAccount fromDB = userAccountService.getByUsername(test61.getUsername());
 		final String paymentAddress = fromDB.getPaymentAddress();
-		Transaction transaction = new Transaction() {
-
-			@Override
-			public String txId() {
-				return "1";
-			}
-
-			@Override
-			public Date timeReceived() {
-				return new Date();
-			}
-
-			@Override
-			public Date time() {
-				return new Date();
-			}
-
-			@Override
-			public RawTransaction raw() {
-				return null;
-			}
-
-			@Override
-			public double fee() {
-				return 0;
-			}
-
-			@Override
-			public int confirmations() {
-				return 15;
-			}
-
-			@Override
-			public String commentTo() {
-				return null;
-			}
-
-			@Override
-			public String comment() {
-				return null;
-			}
-
-			@Override
-			public String category() {
-				return "receive";
-			}
-
-			@Override
-			public Date blockTime() {
-				return null;
-			}
-
-			@Override
-			public int blockIndex() {
-				return 0;
-			}
-
-			@Override
-			public String blockHash() {
-				return null;
-			}
-
-			@Override
-			public double amount() {
-				return 1;
-			}
-
-			@Override
-			public String address() {
-				return paymentAddress;
-			}
-
-			@Override
-			public String account() {
-				return null;
-			}
-		};
-
 		assertTrue(BigDecimal.ZERO.compareTo(fromDB.getBalance())==0);
 
-		payInTransactionService.create(transaction);
-		
 		fromDB = userAccountService.getByUsername(test61.getUsername());
 		assertTrue(BigDecimal.ONE.compareTo(fromDB.getBalance())==0);
+		
+		//TODO
+		fail("Test needs to be rewritten after changing to bitcoinJ");
 	}
 	
 	@Test

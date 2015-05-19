@@ -3,14 +3,13 @@ package ch.uzh.csg.coinblesk.server.clientinterface;
 import java.math.BigDecimal;
 import java.util.List;
 
+import org.bitcoinj.core.Transaction;
+
 import ch.uzh.csg.coinblesk.server.domain.ServerAccount;
 import ch.uzh.csg.coinblesk.server.domain.ServerPayOutTransaction;
 import ch.uzh.csg.coinblesk.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.web.model.HistoryServerPayOutTransaction;
-
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
-import com.azazar.bitcoin.jsonrpcclient.IBitcoinRPC.Transaction;
 
 public interface IServerPayOutTransaction {
 
@@ -23,7 +22,7 @@ public interface IServerPayOutTransaction {
 	 * @throws ServerAccountNotFoundException
 	 * @throws UserAccountNotFoundException 
 	 */
-	public void createPayOutTransaction(String url, BigDecimal amount, String address) throws BitcoinException, ServerAccountNotFoundException, UserAccountNotFoundException;
+	public void createPayOutTransaction(String url, BigDecimal amount, String address) throws ServerAccountNotFoundException, UserAccountNotFoundException;
 
 	/**
 	 * Returns history of {@link ServerPayOutTransaction}s. Only the

@@ -42,7 +42,6 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.UsernameAlreadyExistsExceptio
 import ch.uzh.csg.coinblesk.server.utilTest.ReplacementDataSetLoader;
 import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
 
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseOperation;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
@@ -63,18 +62,12 @@ public class UserAccountServiceTest {
 
     @Before
     public void setUp() throws InvalidEmailException, EmailAlreadyExistsException {
-        UserAccountService.enableTestingMode();
         testAccount = new UserAccount("testuser@http://testdomain.ch", "imaginaryperson@email.com", "password");
-    }
-
-    @After
-    public void tearDown() {
-        UserAccountService.disableTestingMode();
     }
 
     @Test
     @DatabaseSetup(value = "classpath:DbUnitFiles/Services/userAccountServiceTestData.xml", type = DatabaseOperation.CLEAN_INSERT)
-    public void testCreateAccount() throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException, InvalidEmailException,
+    public void testCreateAccount() throws UsernameAlreadyExistsException, UserAccountNotFoundException, InvalidUsernameException, InvalidEmailException,
             EmailAlreadyExistsException, InvalidUrlException {
         int nofUsers = userAccountService.getAllUserAccounts().size();
         UserAccount newUser = new UserAccount("hans80@https://mbps.csg.uzh.ch", "hans80@bitcoin.csg.uzh.ch", "my-password");
@@ -120,7 +113,7 @@ public class UserAccountServiceTest {
 
     @Test(expected = UsernameAlreadyExistsException.class)
     @DatabaseSetup(value = "classpath:DbUnitFiles/Services/userAccountServiceTestData.xml", type = DatabaseOperation.CLEAN_INSERT)
-    public void testCreateAccount_FailUsernameAlreadyExists() throws UsernameAlreadyExistsException, BitcoinException, InvalidUsernameException, InvalidEmailException,
+    public void testCreateAccount_FailUsernameAlreadyExists() throws UsernameAlreadyExistsException, InvalidUsernameException, InvalidEmailException,
             EmailAlreadyExistsException, InvalidUrlException {
         UserAccount existingUser = getRandomExistingUser();
         UserAccount newAccount = new UserAccount(existingUser.getUsername(), "test@email.com", "password");
@@ -129,7 +122,7 @@ public class UserAccountServiceTest {
 
     @Test
     @DatabaseSetup(value = "classpath:DbUnitFiles/Services/userAccountServiceTestData.xml", type = DatabaseOperation.CLEAN_INSERT)
-    public void testCreateAccount_EnterFieldsManually() throws UsernameAlreadyExistsException, UserAccountNotFoundException, BitcoinException, InvalidUsernameException,
+    public void testCreateAccount_EnterFieldsManually() throws UsernameAlreadyExistsException, UserAccountNotFoundException, InvalidUsernameException,
             InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
         String pw = "my-password";
         UserAccount newAccount = new UserAccount("hans81@https://mbps.csg.uzh.ch", "hans81@bitcoin.csg.uzh.ch", pw);
@@ -326,7 +319,7 @@ public class UserAccountServiceTest {
         account.setRoles(Role.ADMIN.getCode());
         try {
             userAccountService.createAccount(account);
-        } catch (UsernameAlreadyExistsException | BitcoinException | InvalidUsernameException | InvalidEmailException | EmailAlreadyExistsException | InvalidUrlException e) {
+        } catch (UsernameAlreadyExistsException | InvalidUsernameException | InvalidEmailException | EmailAlreadyExistsException | InvalidUrlException e) {
             // do nothing
         }
 
@@ -344,7 +337,7 @@ public class UserAccountServiceTest {
         account.setRoles(Role.ADMIN.getCode());
         try {
             userAccountService.createAccount(account);
-        } catch (UsernameAlreadyExistsException | BitcoinException | InvalidUsernameException | InvalidEmailException | EmailAlreadyExistsException | InvalidUrlException e) {
+        } catch (UsernameAlreadyExistsException | InvalidUsernameException | InvalidEmailException | EmailAlreadyExistsException | InvalidUrlException e) {
             // do nothing
         }
 

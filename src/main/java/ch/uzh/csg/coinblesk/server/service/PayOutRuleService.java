@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.coinblesk.responseobject.PayOutRulesTransferObject;
-import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoind;
+import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoinWallet;
 import ch.uzh.csg.coinblesk.server.clientinterface.IPayOutRule;
 import ch.uzh.csg.coinblesk.server.clientinterface.IPayOutTransaction;
 import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
@@ -22,8 +22,6 @@ import ch.uzh.csg.coinblesk.server.util.Config;
 import ch.uzh.csg.coinblesk.server.util.exceptions.PayOutRuleNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.PayOutRulesAlreadyDefinedException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
-
-import com.azazar.bitcoin.jsonrpcclient.BitcoinException;
 
 /**
  * Service class for {@link PayOutRule}s.
@@ -38,13 +36,13 @@ public class PayOutRuleService implements IPayOutRule{
 	@Autowired
 	private IUserAccount userAccountService;
 	@Autowired
-	private IBitcoind bitcoindService;
+	private IBitcoinWallet bitcoindService;
 	
 	public static Boolean testingMode = false;
 
 	@Override
 	@Transactional
-	public void createRule(PayOutRulesTransferObject porto, String username) throws UserAccountNotFoundException, BitcoinException, PayOutRulesAlreadyDefinedException {
+	public void createRule(PayOutRulesTransferObject porto, String username) throws UserAccountNotFoundException, PayOutRulesAlreadyDefinedException {
 		UserAccount user = userAccountService.getByUsername(username);
 		long userId = user.getId();
 		boolean noRulesDefined = true;
@@ -59,7 +57,9 @@ public class PayOutRuleService implements IPayOutRule{
 				por = porto.getPayOutRulesList().get(i);
 				por.setUserId(userId);
 				if(!bitcoindService.validateAddress(por.getPayoutAddress())){
-					throw new BitcoinException("Invalid Payout Address");
+				    //TODO: rewrite after change to bitcoinj
+			        assert(false);
+//					throw new Exception("Invalid Payout Address");
 				}
 			}
 		} else {
@@ -84,7 +84,7 @@ public class PayOutRuleService implements IPayOutRule{
 
 	@Override
 	@Transactional
-	public void checkBalanceLimitRules(UserAccount sellerAccount) throws PayOutRuleNotFoundException, UserAccountNotFoundException, BitcoinException {
+	public void checkBalanceLimitRules(UserAccount sellerAccount) throws PayOutRuleNotFoundException, UserAccountNotFoundException {
 		sellerAccount = userAccountService.getById(sellerAccount.getId());
 		List<PayOutRule> rules = payOutRuleDAO.getByUserId(sellerAccount.getId());
 
@@ -128,7 +128,7 @@ public class PayOutRuleService implements IPayOutRule{
 						String address = tempRule.getPayoutAddress();
 						payOutTransactionService.createPayOutTransaction(user.getUsername(), amount, address);
 					}
-				} catch (UserAccountNotFoundException | BitcoinException e) {
+				} catch (UserAccountNotFoundException  e) {
 				}
 			}
 		} catch (PayOutRuleNotFoundException e1) {
