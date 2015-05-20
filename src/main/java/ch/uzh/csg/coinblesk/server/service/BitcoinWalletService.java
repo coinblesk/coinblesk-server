@@ -1,7 +1,5 @@
 package ch.uzh.csg.coinblesk.server.service;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -10,6 +8,7 @@ import java.util.List;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import javax.xml.bind.DatatypeConverter;
 
 import org.apache.log4j.Logger;
 import org.bitcoinj.core.Coin;
@@ -279,6 +278,8 @@ public class BitcoinWalletService implements IBitcoinWallet {
         } catch (ProtocolException e) {
             throw new InvalidTransactionException("Transaction could not be parsed");
         }
+        
+        LOGGER.info("Signing inputs of transaction " + tx.toString());
 
         // let the magic happen: Add the missing signature to the inputs
         for (IndexAndDerivationPath indexAndPath : indexAndPaths) {
@@ -299,27 +300,33 @@ public class BitcoinWalletService implements IBitcoinWallet {
                 throw new InvalidTransactionException("No script sig found for input " + txIn.toString());
             }
             
+            // now we need to extract the redeem script from the complete input script. The redeem script is
+            // always the last script chunk of the input script
+            Script redeemScript = new Script(inputScript.getChunks().get(inputScript.getChunks().size() - 1).data);
+            
+            // now let's create the transaction signature
             ImmutableList<ChildNumber> keyPath = ImmutableList.copyOf(getChildNumbers(indexAndPath.getDerivationPath()));
             DeterministicKey key = serverAppKit.wallet().getActiveKeychain().getKeyByPath(keyPath, true);
-            Sha256Hash sighash = tx.hashForSignature(indexAndPath.getIndex(), txIn.getScriptBytes(), Transaction.SigHash.ALL, false);
+            Sha256Hash sighash = tx.hashForSignature(indexAndPath.getIndex(), redeemScript, Transaction.SigHash.ALL, false);
             ECDSASignature sig = key.sign(sighash);
             TransactionSignature txSig = new TransactionSignature(sig, Transaction.SigHash.ALL, false);
 
-            // The signature index doesn't matter for us because there's only
-            // one possible slot the signature can be inserted at (2-of-2
-            // transaction, and one signature is already present from the
-            // client)
-            int sigIndex = 0;
+            int sigIndex = inputScript.getSigInsertionIndex(sighash, key.dropPrivateBytes().dropParent());
 
             // I believe that is a bug in bitcoinj. Inserting a signature in a
             // partially signed input script is only possible if the
-            // getScriptSigWithSignature(...) mathod is called on a P2SH script
+            // getScriptSigWithSignature(...) method is called on a P2SH script
             Script dummyP2SHScript = P2SHScript.dummy();
-
+            
             inputScript = dummyP2SHScript.getScriptSigWithSignature(inputScript, txSig.encodeToBitcoin(), sigIndex);
 
             txIn.setScriptSig(inputScript);
         }
+        
+        LOGGER.info("Signed transaction: " + tx);
+        
+        String hex = DatatypeConverter.printHexBinary(tx.unsafeBitcoinSerialize());
+        LOGGER.debug("Hex encoded tx: " + hex);
 
         // transaction is fully signed now: let's broadcast it
         serverAppKit.peerGroup().broadcastTransaction(tx).broadcast().addListener(new Runnable() {
@@ -340,6 +347,11 @@ public class BitcoinWalletService implements IBitcoinWallet {
         }
 
         return childNumbers;
+    }
+
+    @Override
+    public BitcoinNet getBitcoinNet() {
+        return bitcoinNet;
     }
 
 }

@@ -172,6 +172,8 @@ public class UserAccountController {
 
             response.setMessage(pubList.isEmpty() ? null : Integer.toString(pubList.size()));
             response.setCustomPublicKey(c);
+            response.setServerWatchingKey(bitcoinWalletService.getSerializedServerWatchingKey());
+            response.setBitcoinNet(bitcoinWalletService.getBitcoinNet());
 
             UserAccountObject uao = transform1(userAccount);
 

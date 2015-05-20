@@ -345,7 +345,11 @@ public class TransactionController {
     @ResponseBody
     public TransferObject sign(@RequestBody ServerSignatureRequestTransferObject sigReq) {
         
+        LOGGER.info("Received transaction signature request");
+        
         TransferObject response = new TransferObject();
+        
+        System.out.println(sigReq.getPartialTx());
         
         boolean success = false;
         try {

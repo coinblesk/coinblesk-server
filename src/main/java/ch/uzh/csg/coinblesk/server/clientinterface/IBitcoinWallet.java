@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.bitcoinj.crypto.DeterministicKey;
 
+import ch.uzh.csg.coinblesk.bitcoin.BitcoinNet;
 import ch.uzh.csg.coinblesk.responseobject.IndexAndDerivationPath;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 
@@ -117,5 +118,10 @@ public interface IBitcoinWallet {
      * @throws BitcoinException
      */
     BigDecimal getAccountBalance();
+    
+    /**
+     * @return The {@link BitcoinNet} the server is currently running on
+     */
+    BitcoinNet getBitcoinNet();
 
 }
