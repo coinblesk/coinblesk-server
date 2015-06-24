@@ -28,7 +28,7 @@
 		password="" />
 	
 	<Resource name="bean/CredentialsFactory" auth="Container"
-		type="ch.uzh.csg.coinblesk.server.util.CredentialsBean" factory="org.apache.naming.factory.BeanFactory"
+		type="ch.uzh.csg.coinblesk.server.util.Credentials" factory="org.apache.naming.factory.BeanFactory"
 		bitcoindUsername="{BITCOIND_USERNAME}" 
 		bitcoindPassword="{BITCOIND_USERNAME}" 
 		emailUsername="{EMAIL_USERNAME}"

@@ -1,10 +1,12 @@
 package ch.uzh.csg.coinblesk.server.service;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Base64;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -32,6 +34,7 @@ import ch.uzh.csg.coinblesk.bitcoin.BitcoinNet;
 import ch.uzh.csg.coinblesk.responseobject.IndexAndDerivationPath;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.bitcoin.P2SHScript;
+import ch.uzh.csg.coinblesk.server.bitcoin.SpentOutputsCache;
 import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoinWallet;
 import ch.uzh.csg.coinblesk.server.util.ServerProperties;
 
@@ -55,7 +58,15 @@ public class BitcoinWalletService implements IBitcoinWallet {
 
     private BitcoinNet bitcoinNet;
 
+    private ReentrantLock lock;
+
     private WalletAppKit serverAppKit;
+    private SpentOutputsCache outputsCache;
+
+    public BitcoinWalletService() {
+        this.outputsCache = new SpentOutputsCache();
+        this.lock = new ReentrantLock();
+    }
 
     @PostConstruct
     private void init() {
@@ -68,6 +79,12 @@ public class BitcoinWalletService implements IBitcoinWallet {
      * @return a {@link com.google.common.util.concurrent.Service} object
      */
     public com.google.common.util.concurrent.Service start() {
+        
+        // check if wallet has already been started
+        if(serverAppKit != null && serverAppKit.isRunning()){
+            LOGGER.warn("Tried to initialize bitcoin wallet service even though it's already running.");
+            return serverAppKit;
+        }
 
         // set up the wallet
 
@@ -76,16 +93,6 @@ public class BitcoinWalletService implements IBitcoinWallet {
         }
 
         serverAppKit = getWalletAppKit();
-
-        // check if the app kit has already been started
-        try {
-            if (serverAppKit.isChainFileLocked()) {
-                return serverAppKit;
-            }
-        } catch (Throwable e) {
-            LOGGER.warn("bitcoin wallet service was initialized twice!");
-            return serverAppKit;
-        }
 
         // configure app kit
         if (bitcoinNet == BitcoinNet.REGTEST) {
@@ -139,12 +146,8 @@ public class BitcoinWalletService implements IBitcoinWallet {
             throw new RuntimeException("Bitcoin wallet directory must be set in server.properties");
         }
 
-        boolean newWallet = true;
-
         for (File f : walletDir.listFiles()) {
             if (f.getName().startsWith(getWalletPrefix(bitcoinNet))) {
-
-                newWallet = false;
 
                 // delete existing regtest wallet and blockstore files
                 if (bitcoinNet == BitcoinNet.REGTEST) {
@@ -152,10 +155,6 @@ public class BitcoinWalletService implements IBitcoinWallet {
                     LOGGER.debug("Deleted file " + f.getName());
                 }
             }
-        }
-
-        if (newWallet) {
-            setupAccounts();
         }
 
         return new WalletAppKit(getNetworkParams(bitcoinNet), walletDir, getWalletPrefix(bitcoinNet));
@@ -167,12 +166,20 @@ public class BitcoinWalletService implements IBitcoinWallet {
      * @param bitcoinNet
      * @return
      */
-    private String getWalletPrefix(BitcoinNet bitcoinNet) {
+    public static String getWalletPrefix(BitcoinNet bitcoinNet) {
         return bitcoinNet.toString().toLowerCase() + WALLET_PREFIX;
     }
-
-    private void setupAccounts() {
-        LOGGER.debug("New wallet, setting up accounts...");
+    
+    public static void clearWalletFiles(final BitcoinNet bitcoinNet) {
+        File[] walletFiles = new File(ServerProperties.getProperty("bitcoin.wallet.dir")).listFiles(new FilenameFilter() {
+            @Override
+            public boolean accept(File dir, String name) {
+                return name.startsWith(getWalletPrefix(bitcoinNet));
+            }
+        });
+        for(File f : walletFiles){
+            f.delete();
+        }
     }
 
     @PreDestroy
@@ -278,32 +285,47 @@ public class BitcoinWalletService implements IBitcoinWallet {
         } catch (ProtocolException e) {
             throw new InvalidTransactionException("Transaction could not be parsed");
         }
-        
+
         LOGGER.info("Signing inputs of transaction " + tx.toString());
+
+        // Check if the transaction is an attempted double spend. We need to
+        // lock here to prevent race conditions
+        try {
+            lock.lock();
+
+            if (outputsCache.isDoubleSpend(tx)) {
+                // Ha! E1337 HaxxOr detected :)
+                throw new InvalidTransactionException("These Outputs have already been signed. Possible double-spend attack!");
+            }
+
+            outputsCache.cacheOutputs(tx);
+
+        } finally {
+            lock.unlock();
+        }
 
         // let the magic happen: Add the missing signature to the inputs
         for (IndexAndDerivationPath indexAndPath : indexAndPaths) {
-
-            // TODO: Check if inputs were already signed!
 
             // Create the second signature for this input
             TransactionInput txIn = null;
             try {
                 txIn = tx.getInputs().get(indexAndPath.getIndex());
-            } catch(IndexOutOfBoundsException e) {
+            } catch (IndexOutOfBoundsException e) {
                 throw new InvalidTransactionException("Tried to access input at index " + indexAndPath.getIndex() + " but there are only " + tx.getInputs().size() + " inputs");
             }
-            
+
             Script inputScript = txIn.getScriptSig();
-            
-            if(inputScript == null) {
+
+            if (inputScript == null) {
                 throw new InvalidTransactionException("No script sig found for input " + txIn.toString());
             }
-            
-            // now we need to extract the redeem script from the complete input script. The redeem script is
+
+            // now we need to extract the redeem script from the complete input
+            // script. The redeem script is
             // always the last script chunk of the input script
             Script redeemScript = new Script(inputScript.getChunks().get(inputScript.getChunks().size() - 1).data);
-            
+
             // now let's create the transaction signature
             ImmutableList<ChildNumber> keyPath = ImmutableList.copyOf(getChildNumbers(indexAndPath.getDerivationPath()));
             DeterministicKey key = serverAppKit.wallet().getActiveKeychain().getKeyByPath(keyPath, true);
@@ -317,14 +339,14 @@ public class BitcoinWalletService implements IBitcoinWallet {
             // partially signed input script is only possible if the
             // getScriptSigWithSignature(...) method is called on a P2SH script
             Script dummyP2SHScript = P2SHScript.dummy();
-            
+
             inputScript = dummyP2SHScript.getScriptSigWithSignature(inputScript, txSig.encodeToBitcoin(), sigIndex);
 
             txIn.setScriptSig(inputScript);
         }
-        
+
         LOGGER.info("Signed transaction: " + tx);
-        
+
         String hex = DatatypeConverter.printHexBinary(tx.unsafeBitcoinSerialize());
         LOGGER.debug("Hex encoded tx: " + hex);
 

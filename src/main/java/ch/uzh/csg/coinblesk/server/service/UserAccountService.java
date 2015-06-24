@@ -24,7 +24,6 @@ import ch.uzh.csg.coinblesk.server.util.CustomPasswordEncoder;
 import ch.uzh.csg.coinblesk.server.util.Emailer;
 import ch.uzh.csg.coinblesk.server.util.PasswordMatcher;
 import ch.uzh.csg.coinblesk.server.util.ServerProperties;
-import ch.uzh.csg.coinblesk.server.util.SplitNameHandler;
 import ch.uzh.csg.coinblesk.server.util.UserRoles.Role;
 import ch.uzh.csg.coinblesk.server.util.exceptions.BalanceNotZeroException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
@@ -124,10 +123,6 @@ public class UserAccountService implements IUserAccount {
 			userAccountDAO.createEmailVerificationToken(userAccount.getId(), token);
 			emailer.sendEmailConfirmationLink(token, userAccount.getEmail());
 		}
-	}
-
-	private String getNewPaymentAddress() {
-		return bitcoindService.getNewAddress();
 	}
 
 	@Override

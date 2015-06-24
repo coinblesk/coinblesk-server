@@ -47,5 +47,10 @@
 	
 	<bean id="persistenceExceptionTranslationPostProcessor"
       class="org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor" />
+	
+	<bean id="credentials"
+      class="ch.uzh.csg.coinblesk.server.util.Credentials" />
+	
+	
     
 </beans>

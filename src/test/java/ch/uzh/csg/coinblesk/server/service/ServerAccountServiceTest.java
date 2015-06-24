@@ -19,9 +19,9 @@ import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
 
+import ch.uzh.csg.coinblesk.bitcoin.BitcoinNet;
 import ch.uzh.csg.coinblesk.customserialization.PKIAlgorithm;
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerAccount;
-import ch.uzh.csg.coinblesk.server.clientinterface.ITransaction;
 import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
 import ch.uzh.csg.coinblesk.server.domain.DbTransaction;
 import ch.uzh.csg.coinblesk.server.domain.ServerAccount;
@@ -63,11 +63,10 @@ public class ServerAccountServiceTest {
 	@Autowired
 	private IUserAccount userAccountService;
 	
-	@Autowired
-	private ITransaction transactionService;
-	
 	@Before
 	public void setUp() throws Exception {
+        BitcoinWalletService.clearWalletFiles(BitcoinNet.TESTNET);
+
 		ServerAccountService.enableTestingMode();
 		if (!initialized){		
 			initialized = true;
@@ -77,6 +76,8 @@ public class ServerAccountServiceTest {
 	@After
 	public void teardown(){
 		ServerAccountService.disableTestingMode();
+        BitcoinWalletService.clearWalletFiles(BitcoinNet.TESTNET);
+
 	}
 	
 	@Test

@@ -9,7 +9,6 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,11 +19,9 @@ import org.springframework.test.context.support.DependencyInjectionTestExecution
 
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerAccountTasks;
 import ch.uzh.csg.coinblesk.server.domain.ServerAccountTasks;
-import ch.uzh.csg.coinblesk.server.service.ServerAccountTasksService;
 import ch.uzh.csg.coinblesk.server.service.ServerAccountTasksService.ServerAccountTaskTypes;
 import ch.uzh.csg.coinblesk.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.utilTest.ReplacementDataSetLoader;
-import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseOperation;

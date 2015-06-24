@@ -9,7 +9,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import javax.servlet.http.HttpSession;
 
 import org.apache.http.HttpStatus;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -32,8 +31,6 @@ import org.springframework.web.context.WebApplicationContext;
 import ch.uzh.csg.coinblesk.responseobject.ServerAccountTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.ServerAccountsRequestObject;
 import ch.uzh.csg.coinblesk.server.json.CustomObjectMapper;
-import ch.uzh.csg.coinblesk.server.service.ServerAccountService;
-import ch.uzh.csg.coinblesk.server.service.UserAccountService;
 import ch.uzh.csg.coinblesk.server.util.Credentials;
 import ch.uzh.csg.coinblesk.server.utilTest.ReplacementDataSetLoader;
 
@@ -44,7 +41,7 @@ import com.github.springtestdbunit.annotation.DbUnitConfiguration;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
-		"classpath:context.xml",
+        "classpath:context.xml",
 		"classpath:test-database.xml",
 		"classpath:view.xml",
 		"classpath:security.xml"})
@@ -72,7 +69,7 @@ public class ServerAccountsControllerTest {
         // mock JNDI
         SimpleNamingContextBuilder contextBuilder = new SimpleNamingContextBuilder();
         Credentials credentials = new Credentials();
-        contextBuilder.bind("java:comp/env/bean/CredentialsBean", credentials);
+        contextBuilder.bind("java:comp/env/bean/Credentials", credentials);
         contextBuilder.activate();
     }
 	

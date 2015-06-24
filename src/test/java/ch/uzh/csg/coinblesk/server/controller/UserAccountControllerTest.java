@@ -10,36 +10,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
-import ch.uzh.csg.coinblesk.customserialization.Currency;
-import ch.uzh.csg.coinblesk.customserialization.DecoderFactory;
-import ch.uzh.csg.coinblesk.customserialization.PKIAlgorithm;
-import ch.uzh.csg.coinblesk.customserialization.PaymentRequest;
-import ch.uzh.csg.coinblesk.customserialization.ServerPaymentRequest;
-import ch.uzh.csg.coinblesk.customserialization.ServerPaymentResponse;
-import ch.uzh.csg.coinblesk.customserialization.ServerResponseStatus;
-import ch.uzh.csg.coinblesk.keys.CustomPublicKey;
-import ch.uzh.csg.coinblesk.responseobject.CustomPublicKeyObject;
-import ch.uzh.csg.coinblesk.responseobject.GetHistoryTransferObject;
-import ch.uzh.csg.coinblesk.responseobject.MainRequestObject;
-import ch.uzh.csg.coinblesk.responseobject.ReadRequestObject;
-import ch.uzh.csg.coinblesk.responseobject.TransactionObject;
-import ch.uzh.csg.coinblesk.responseobject.TransferObject;
-import ch.uzh.csg.coinblesk.responseobject.UserAccountObject;
-import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
-import ch.uzh.csg.coinblesk.server.domain.ResetPassword;
-import ch.uzh.csg.coinblesk.server.domain.UserAccount;
-import ch.uzh.csg.coinblesk.server.json.CustomObjectMapper;
-import ch.uzh.csg.coinblesk.server.security.KeyHandler;
-import ch.uzh.csg.coinblesk.server.service.UserAccountService;
-import ch.uzh.csg.coinblesk.server.util.Credentials;
-import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
-import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidEmailException;
-import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidUrlException;
-import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidUsernameException;
-import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
-import ch.uzh.csg.coinblesk.server.util.exceptions.UsernameAlreadyExistsException;
-import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
-import ch.uzh.csg.coinblesk.util.Converter;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -48,14 +18,12 @@ import java.util.List;
 
 import javax.servlet.http.HttpSession;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.mock.jndi.SimpleNamingContextBuilder;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.ContextConfiguration;
@@ -66,9 +34,37 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import ch.uzh.csg.coinblesk.customserialization.Currency;
+import ch.uzh.csg.coinblesk.customserialization.DecoderFactory;
+import ch.uzh.csg.coinblesk.customserialization.PKIAlgorithm;
+import ch.uzh.csg.coinblesk.customserialization.PaymentRequest;
+import ch.uzh.csg.coinblesk.customserialization.ServerPaymentRequest;
+import ch.uzh.csg.coinblesk.customserialization.ServerPaymentResponse;
+import ch.uzh.csg.coinblesk.customserialization.ServerResponseStatus;
+import ch.uzh.csg.coinblesk.keys.CustomPublicKey;
+import ch.uzh.csg.coinblesk.responseobject.CustomPublicKeyObject;
+import ch.uzh.csg.coinblesk.responseobject.MainRequestObject;
+import ch.uzh.csg.coinblesk.responseobject.ReadRequestObject;
+import ch.uzh.csg.coinblesk.responseobject.TransactionObject;
+import ch.uzh.csg.coinblesk.responseobject.TransferObject;
+import ch.uzh.csg.coinblesk.responseobject.UserAccountObject;
+import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
+import ch.uzh.csg.coinblesk.server.domain.ResetPassword;
+import ch.uzh.csg.coinblesk.server.domain.UserAccount;
+import ch.uzh.csg.coinblesk.server.json.CustomObjectMapper;
+import ch.uzh.csg.coinblesk.server.security.KeyHandler;
+import ch.uzh.csg.coinblesk.server.util.exceptions.EmailAlreadyExistsException;
+import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidEmailException;
+import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidUrlException;
+import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidUsernameException;
+import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
+import ch.uzh.csg.coinblesk.server.util.exceptions.UsernameAlreadyExistsException;
+import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
+import ch.uzh.csg.coinblesk.util.Converter;
+
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
-		"classpath:context.xml",
+        "classpath:context.xml",
 		"classpath:test-database.xml",
 		"classpath:view.xml",
 		"classpath:security.xml"})
@@ -113,19 +109,19 @@ public class UserAccountControllerTest {
 		if (!initialized) {
 			mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();
 			//
-			test22 = new UserAccount("test22@https://mbps.csg.uzh.ch", "chuck22@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test23 = new UserAccount("test23@https://mbps.csg.uzh.ch", "chuck23@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test23_2 = new UserAccount("test23@https://mbps.csg.uzh.ch", "chuck23@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test24 = new UserAccount("xtest24@https://mbps.csg.uzh.ch", "xchuck24@bitcoin.csg.uzh.ch", "xi-don't-need-one");
-			test25 = new UserAccount("test25@https://mbps.csg.uzh.ch", "chuck25@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test26 = new UserAccount("test26@https://mbps.csg.uzh.ch", "chuck26@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test26_1 = new UserAccount("test26_1@https://mbps.csg.uzh.ch", "chuck261@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test27 = new UserAccount("test27@https://mbps.csg.uzh.ch", null, "i-don't-need-one");
-			test29 = new UserAccount("test29@https://mbps.csg.uzh.ch", "chuck29@bitcoin.csg.uzh.ch", "i-don't-need-one");
-			test30 = new UserAccount("test30@https://mbps.csg.uzh.ch", "dandeliox@gmail.com", "i-don't-need-one");
-			test31 = new UserAccount("test31@https://mbps.csg.uzh.ch", "test31@gmail.com", "i-don't-need-one");
-			test32 = new UserAccount("test32@https://mbps.csg.uzh.ch", "test32@gmail.com", "i-don't-need-one");
-			test33 = new UserAccount("test33@https://mbps.csg.uzh.ch", "test33@gmail.com", "i-don't-need-one");
+			test22 = new UserAccount("test22", "chuck22@bitcoin.csg.uzh.ch", "i-don't-need-one");
+			test23 = new UserAccount("test23", "chuck23@bitcoin.csg.uzh.ch", "i-don't-need-one");
+			test23_2 = new UserAccount("test23", "chuck23@bitcoin.csg.uzh.ch", "i-don't-need-one");
+			test24 = new UserAccount("xtest24", "xchuck24@bitcoin.csg.uzh.ch", "xi-don't-need-one");
+			test25 = new UserAccount("test25", "chuck25@bitcoin.csg.uzh.ch", "i-don't-need-one");
+			test26 = new UserAccount("test26", "chuck26@bitcoin.csg.uzh.ch", "i-don't-need-one");
+			test26_1 = new UserAccount("test26_1", "chuck261@bitcoin.csg.uzh.ch", "i-don't-need-one");
+			test27 = new UserAccount("test27", null, "i-don't-need-one");
+			test29 = new UserAccount("test29", "chuck29@bitcoin.csg.uzh.ch", "i-don't-need-one");
+			test30 = new UserAccount("test30", "dandeliox@gmail.com", "i-don't-need-one");
+			test31 = new UserAccount("test31", "test31@gmail.com", "i-don't-need-one");
+			test32 = new UserAccount("test32", "test32@gmail.com", "i-don't-need-one");
+			test33 = new UserAccount("test33", "test33@gmail.com", "i-don't-need-one");
 
 			initialized = true;
 		}
@@ -536,12 +532,6 @@ public class UserAccountControllerTest {
 		assertTrue(exchangeRate.compareTo(BigDecimal.ZERO) >= 0);
 		
 		assertNotNull(cro2.getBalanceBTC());
-		
-		GetHistoryTransferObject ghto = cro2.getGetHistoryTransferObject();
-		assertNotNull(ghto);
-		assertEquals(5, ghto.getTransactionHistory().size());
-		assertEquals(0, ghto.getPayInTransactionHistory().size());
-		assertEquals(0, ghto.getPayOutTransactionHistory().size());
 		
 		logout(mvcResult);
 		

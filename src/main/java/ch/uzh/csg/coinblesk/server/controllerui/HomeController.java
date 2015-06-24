@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
 import ch.uzh.csg.coinblesk.server.clientinterface.IMessages;
-import ch.uzh.csg.coinblesk.server.clientinterface.IServerTransaction;
 import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
 import ch.uzh.csg.coinblesk.server.domain.Messages;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
@@ -31,8 +30,6 @@ public class HomeController {
 	
 	@Autowired
 	private IUserAccount userAccountService;
-	@Autowired
-	private IServerTransaction serverTransactionService;
 	@Autowired
 	private IMessages messagesService;
 	
@@ -54,7 +51,6 @@ public class HomeController {
 		response.setBalanceBTC(userAccountService.getSumOfUserAccountBalances());
 		//set Last Server Transactions
 		GetHistoryServerTransaction ghsto = new GetHistoryServerTransaction();
-		ghsto.setTransactionHistory(serverTransactionService.getLast5Transactions());
 		response.setGetHistoryTransferObject(ghsto);
 		MessagesTransferObject mto = new MessagesTransferObject();
 		List<Messages> messages = messagesService.getLast5Messages();

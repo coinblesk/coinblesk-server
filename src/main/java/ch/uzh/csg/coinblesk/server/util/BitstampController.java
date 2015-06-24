@@ -7,7 +7,6 @@ import java.util.Date;
 
 import net.minidev.json.parser.ParseException;
 
-import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.xeiam.xchange.Exchange;
@@ -28,8 +27,6 @@ import com.xeiam.xchange.service.polling.PollingMarketDataService;
 import com.xeiam.xchange.service.polling.PollingTradeService;
 
 public class BitstampController {
-
-    private static Logger LOGGER = Logger.getLogger(BitstampController.class);
 
 	private static Exchange bitstamp =  getExchange();
 	

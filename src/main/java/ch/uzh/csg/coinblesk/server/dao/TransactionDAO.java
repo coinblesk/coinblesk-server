@@ -2,10 +2,8 @@ package ch.uzh.csg.coinblesk.server.dao;
 
 import java.math.BigDecimal;
 import java.util.Calendar;
-import java.util.List;
 
 import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
@@ -16,10 +14,8 @@ import org.apache.log4j.Logger;
 import org.springframework.stereotype.Repository;
 
 import ch.uzh.csg.coinblesk.customserialization.Currency;
-import ch.uzh.csg.coinblesk.model.HistoryTransaction;
 import ch.uzh.csg.coinblesk.server.domain.DbTransaction;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
-import ch.uzh.csg.coinblesk.server.util.Config;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.util.Converter;
 
@@ -48,30 +44,30 @@ public class TransactionDAO {
 	 * @return ArrayList with requested amount of HistoryTransactions
 	 * @throws UserAccountNotFoundException
 	 */
-	public List<HistoryTransaction> getHistory(UserAccount userAccount, int page) throws UserAccountNotFoundException {
-		if (page < 0) {
-			return null;
-		}
-		
-		CriteriaBuilder cb = em.getCriteriaBuilder();
-		CriteriaQuery<HistoryTransaction> cq = cb.createQuery(HistoryTransaction.class);
-		Root<DbTransaction> root = cq.from(DbTransaction.class);
-		cq.select(cb.construct(HistoryTransaction.class,root.get("timestamp"), root.get("usernamePayer"),root.get("usernamePayee"), 
-				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount"), root.get("serverPayer"), root.get("serverPayee")));
-		
-		Predicate condition1 = cb.equal(root.get("usernamePayer"), userAccount.getUsername());
-		Predicate condition2 = cb.equal(root.get("usernamePayee"), userAccount.getUsername());
-		Predicate condition3 = cb.or(condition1, condition2);
-		cq.where(condition3);
-		
-		cq.orderBy(cb.desc(root.get("timestamp")));
-		List<HistoryTransaction> resultWithAliasedBean = em.createQuery(cq)
-				.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
-				.setMaxResults(Config.TRANSACTIONS_MAX_RESULTS)
-				.getResultList();
-		
-		return resultWithAliasedBean;
-	}
+//	public List<HistoryTransaction> getHistory(UserAccount userAccount, int page) throws UserAccountNotFoundException {
+//		if (page < 0) {
+//			return null;
+//		}
+//		
+//		CriteriaBuilder cb = em.getCriteriaBuilder();
+//		CriteriaQuery<HistoryTransaction> cq = cb.createQuery(HistoryTransaction.class);
+//		Root<DbTransaction> root = cq.from(DbTransaction.class);
+//		cq.select(cb.construct(HistoryTransaction.class,root.get("timestamp"), root.get("usernamePayer"),root.get("usernamePayee"), 
+//				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount"), root.get("serverPayer"), root.get("serverPayee")));
+//		
+//		Predicate condition1 = cb.equal(root.get("usernamePayer"), userAccount.getUsername());
+//		Predicate condition2 = cb.equal(root.get("usernamePayee"), userAccount.getUsername());
+//		Predicate condition3 = cb.or(condition1, condition2);
+//		cq.where(condition3);
+//		
+//		cq.orderBy(cb.desc(root.get("timestamp")));
+//		List<HistoryTransaction> resultWithAliasedBean = em.createQuery(cq)
+//				.setFirstResult(page * Config.TRANSACTIONS_MAX_RESULTS)
+//				.setMaxResults(Config.TRANSACTIONS_MAX_RESULTS)
+//				.getResultList();
+//		
+//		return resultWithAliasedBean;
+//	}
 
 	/**
 	 * Counts number of {@link DbTransaction}-entries for given username and
@@ -181,56 +177,56 @@ public class TransactionDAO {
 	 * @return ArrayList<HistoryTransaction>
 	 * @throws UserAccountNotFoundException
 	 */
-	public List<HistoryTransaction> getLast5Transactions(UserAccount userAccount) throws UserAccountNotFoundException {
-		CriteriaBuilder cb = em.getCriteriaBuilder();
-		CriteriaQuery<HistoryTransaction> cq = cb.createQuery(HistoryTransaction.class);
-		Root<DbTransaction> root = cq.from(DbTransaction.class);
-		cq.select(cb.construct(HistoryTransaction.class,root.get("timestamp"), root.get("usernamePayer"),root.get("usernamePayee"), 
-				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount"), root.get("serverPayer"), root.get("serverPayee")));
-		
-		Predicate condition1 = cb.equal(root.get("usernamePayer"), userAccount.getUsername());
-		Predicate condition2 = cb.equal(root.get("usernamePayee"), userAccount.getUsername());
-		Predicate condition3= cb.or(condition1, condition2);
-		cq.where(condition3);
-		
-		cq.orderBy(cb.desc(root.get("timestamp")));
-		List<HistoryTransaction> resultWithAliasedBean = em.createQuery(cq)
-				.setMaxResults(5)
-				.getResultList();
-		
-		return resultWithAliasedBean;	
-	}
-
-	public List<HistoryTransaction> getAll() {
-		CriteriaBuilder cb = em.getCriteriaBuilder();
-		CriteriaQuery<HistoryTransaction> cq = cb.createQuery(HistoryTransaction.class);
-		Root<DbTransaction> root = cq.from(DbTransaction.class);
-		cq.select(cb.construct(HistoryTransaction.class,root.get("timestamp"), root.get("usernamePayer"),root.get("usernamePayee"), 
-				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount"), root.get("serverPayer"), root.get("serverPayee")));
-		List<HistoryTransaction> resultWithAliasedBean = em.createQuery(cq)
-				.getResultList();
-		
-		return resultWithAliasedBean;
-    }
-
-	public List<HistoryTransaction> getAll(UserAccount userAccount) {
-		CriteriaBuilder cb = em.getCriteriaBuilder();
-		CriteriaQuery<HistoryTransaction> cq = cb.createQuery(HistoryTransaction.class);
-		Root<DbTransaction> root = cq.from(DbTransaction.class);
-		cq.select(cb.construct(HistoryTransaction.class,root.get("timestamp"), root.get("usernamePayer"),root.get("usernamePayee"), 
-				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount"), root.get("serverPayer"), root.get("serverPayee")));
-		
-		Predicate condition1 = cb.equal(root.get("usernamePayer"), userAccount.getUsername());
-		Predicate condition2 = cb.equal(root.get("usernamePayee"), userAccount.getUsername());
-		Predicate condition3= cb.and(condition1, condition2);
-		cq.where(condition3);
-		
-		cq.orderBy(cb.desc(root.get("timestamp")));
-		List<HistoryTransaction> resultWithAliasedBean = em.createQuery(cq)
-				.getResultList();
-		
-		return resultWithAliasedBean;
-    }
+//	public List<HistoryTransaction> getLast5Transactions(UserAccount userAccount) throws UserAccountNotFoundException {
+//		CriteriaBuilder cb = em.getCriteriaBuilder();
+//		CriteriaQuery<HistoryTransaction> cq = cb.createQuery(HistoryTransaction.class);
+//		Root<DbTransaction> root = cq.from(DbTransaction.class);
+//		cq.select(cb.construct(HistoryTransaction.class,root.get("timestamp"), root.get("usernamePayer"),root.get("usernamePayee"), 
+//				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount"), root.get("serverPayer"), root.get("serverPayee")));
+//		
+//		Predicate condition1 = cb.equal(root.get("usernamePayer"), userAccount.getUsername());
+//		Predicate condition2 = cb.equal(root.get("usernamePayee"), userAccount.getUsername());
+//		Predicate condition3= cb.or(condition1, condition2);
+//		cq.where(condition3);
+//		
+//		cq.orderBy(cb.desc(root.get("timestamp")));
+//		List<HistoryTransaction> resultWithAliasedBean = em.createQuery(cq)
+//				.setMaxResults(5)
+//				.getResultList();
+//		
+//		return resultWithAliasedBean;	
+//	}
+//
+//	public List<HistoryTransaction> getAll() {
+//		CriteriaBuilder cb = em.getCriteriaBuilder();
+//		CriteriaQuery<HistoryTransaction> cq = cb.createQuery(HistoryTransaction.class);
+//		Root<DbTransaction> root = cq.from(DbTransaction.class);
+//		cq.select(cb.construct(HistoryTransaction.class,root.get("timestamp"), root.get("usernamePayer"),root.get("usernamePayee"), 
+//				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount"), root.get("serverPayer"), root.get("serverPayee")));
+//		List<HistoryTransaction> resultWithAliasedBean = em.createQuery(cq)
+//				.getResultList();
+//		
+//		return resultWithAliasedBean;
+//    }
+//
+//	public List<HistoryTransaction> getAll(UserAccount userAccount) {
+//		CriteriaBuilder cb = em.getCriteriaBuilder();
+//		CriteriaQuery<HistoryTransaction> cq = cb.createQuery(HistoryTransaction.class);
+//		Root<DbTransaction> root = cq.from(DbTransaction.class);
+//		cq.select(cb.construct(HistoryTransaction.class,root.get("timestamp"), root.get("usernamePayer"),root.get("usernamePayee"), 
+//				root.get("amount"), root.get("inputCurrency"), root.get("inputCurrencyAmount"), root.get("serverPayer"), root.get("serverPayee")));
+//		
+//		Predicate condition1 = cb.equal(root.get("usernamePayer"), userAccount.getUsername());
+//		Predicate condition2 = cb.equal(root.get("usernamePayee"), userAccount.getUsername());
+//		Predicate condition3= cb.and(condition1, condition2);
+//		cq.where(condition3);
+//		
+//		cq.orderBy(cb.desc(root.get("timestamp")));
+//		List<HistoryTransaction> resultWithAliasedBean = em.createQuery(cq)
+//				.getResultList();
+//		
+//		return resultWithAliasedBean;
+//    }
 
 	public BigDecimal transactionSumByServerAsPayer(String url, String username) {
 		
@@ -276,7 +272,6 @@ public class TransactionDAO {
 					.setParameter("time", today.getTime())
 					.getSingleResult().toString());
 		} catch(Exception e) {
-			String s = e.getMessage();
 			amount = new BigDecimal("0.00000000");
 		}
 		return amount;
@@ -302,7 +297,6 @@ public class TransactionDAO {
 					.setParameter("time", today.getTime())
 					.getSingleResult().toString());
 		} catch(Exception e) {
-			String s = e.getMessage();
 			amount = new BigDecimal("0.00000000");			
 		}
 		return amount;

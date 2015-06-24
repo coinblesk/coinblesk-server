@@ -17,7 +17,6 @@ import ch.uzh.csg.coinblesk.responseobject.TransferObject;
 import ch.uzh.csg.coinblesk.server.clientinterface.IActivities;
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerAccount;
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerAccountTasks;
-import ch.uzh.csg.coinblesk.server.clientinterface.IServerTransaction;
 import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
 import ch.uzh.csg.coinblesk.server.domain.ServerAccount;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
@@ -44,8 +43,6 @@ public class ServerAccountController {
 	@Autowired
 	private IUserAccount userAccountService;
 	@Autowired
-	private IServerTransaction serverTransactionService;
-	@Autowired
 	private IServerAccountTasks serverAccountTasksServices;
 	@Autowired
 	private IActivities activitiesService;
@@ -61,7 +58,6 @@ public class ServerAccountController {
 		ServerAccount account = serverAccountService.getById(request.getId());
 		response.setServerAccountObject(transformServerObject(account));
 		GetHistoryServerTransaction ghsto = new GetHistoryServerTransaction();
-		ghsto.setTransactionHistory(serverTransactionService.getLast5ServerAccountTransaction(account.getUrl()));
 		response.setGetHistoryTransferObject(ghsto);
 		response.setMessage(Config.SUCCESS);
 		response.setSuccessful(true);

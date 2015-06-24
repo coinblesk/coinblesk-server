@@ -20,7 +20,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.service.ServerAccountService;
 import ch.uzh.csg.coinblesk.server.util.Credentials;
 
@@ -46,8 +45,6 @@ public class HomeControllerTest {
 
     private static boolean initialized = false;
 
-    private final String PLAIN_TEXT_PASSWORD = "wwww";
-    
     @BeforeClass
     public static void setUpClass() throws Exception {
         // mock JNDI

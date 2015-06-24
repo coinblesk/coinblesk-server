@@ -5,3 +5,5 @@ target/
 src/main/webapp/WEB-INF/database-prod.properties
 src/main/webapp/WEB-INF/database-test1.properties
 src/main/webapp/WEB-INF/database-test2.properties
+/target/
+/target/

@@ -1,7 +1,5 @@
 package ch.uzh.csg.coinblesk.server.dao;
 
-import java.util.List;
-
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.criteria.CriteriaBuilder;
@@ -13,12 +11,9 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import ch.uzh.csg.coinblesk.model.HistoryPayInTransactionUnverified;
 import ch.uzh.csg.coinblesk.server.domain.PayInTransaction;
 import ch.uzh.csg.coinblesk.server.domain.PayInTransactionUnverified;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
-import ch.uzh.csg.coinblesk.server.util.Config;
-import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 
 @Repository
 public class PayInTransactionUnverifiedDAO {
@@ -61,39 +56,28 @@ public class PayInTransactionUnverifiedDAO {
 		em.persist(tx);
     }
 
-	public List<HistoryPayInTransactionUnverified> getHistory(String username, int page) throws UserAccountNotFoundException {
-		if (page < 0) {
-			return null;
-		}
-		
-		UserAccount userAccount = userAccountDAO.getByUsername(username);
-		
-		CriteriaBuilder cb = em.getCriteriaBuilder();
-		CriteriaQuery<HistoryPayInTransactionUnverified> cq = cb.createQuery(HistoryPayInTransactionUnverified.class);
-		Root<PayInTransactionUnverified> root = cq.from(PayInTransactionUnverified.class);
-		cq.select(cb.construct(HistoryPayInTransactionUnverified.class, root.get("timestamp"),root.get("amount")));
-		
-		Predicate condition = cb.equal(root.get("userID"), userAccount.getId());
-		cq.where(condition);
-		cq.orderBy(cb.desc(root.get("timestamp")));
-		List<HistoryPayInTransactionUnverified> resultWithAliasedBean = em.createQuery(cq)
-				.setFirstResult(page* Config.PAY_INS_MAX_RESULTS)
-				.setMaxResults(Config.PAY_INS_MAX_RESULTS)
-				.getResultList();
-
-//		@SuppressWarnings("unchecked")
-//        List<HistoryPayInTransactionUnverified> resultWithAliasedBean = em.createQuery(""
-//				+ "SELECT NEW ch.uzh.csg.coinblesk.model.HistoryPayInTransactionUnverified(pit.timestamp,  pit.amount) "
-//				+ "FROM PayInTransactionUnverified pit "
-//				+ "WHERE pit.userID = :userid "
-//				+ "ORDER BY pit.timestamp DESC")
-//				.setFirstResult(page * Config.PAY_INS_MAX_RESULTS)
+//	public List<HistoryPayInTransactionUnverified> getHistory(String username, int page) throws UserAccountNotFoundException {
+//		if (page < 0) {
+//			return null;
+//		}
+//		
+//		UserAccount userAccount = userAccountDAO.getByUsername(username);
+//		
+//		CriteriaBuilder cb = em.getCriteriaBuilder();
+//		CriteriaQuery<HistoryPayInTransactionUnverified> cq = cb.createQuery(HistoryPayInTransactionUnverified.class);
+//		Root<PayInTransactionUnverified> root = cq.from(PayInTransactionUnverified.class);
+//		cq.select(cb.construct(HistoryPayInTransactionUnverified.class, root.get("timestamp"),root.get("amount")));
+//		
+//		Predicate condition = cb.equal(root.get("userID"), userAccount.getId());
+//		cq.where(condition);
+//		cq.orderBy(cb.desc(root.get("timestamp")));
+//		List<HistoryPayInTransactionUnverified> resultWithAliasedBean = em.createQuery(cq)
+//				.setFirstResult(page* Config.PAY_INS_MAX_RESULTS)
 //				.setMaxResults(Config.PAY_INS_MAX_RESULTS)
-//				.setParameter("userid", userAccount.getId())
 //				.getResultList();
-		
-		return resultWithAliasedBean;
-    }
+//		
+//		return resultWithAliasedBean;
+//    }
 
 	public long getHistoryCount(UserAccount userAccount) {
 		CriteriaBuilder cb = em.getCriteriaBuilder();
@@ -106,30 +90,20 @@ public class PayInTransactionUnverifiedDAO {
 		return em.createQuery(cq).getSingleResult();
     }
 
-	public List<HistoryPayInTransactionUnverified> getLast5Transactions(UserAccount userAccount) {
-		CriteriaBuilder cb = em.getCriteriaBuilder();
-		CriteriaQuery<HistoryPayInTransactionUnverified> cq = cb.createQuery(HistoryPayInTransactionUnverified.class);
-		Root<PayInTransactionUnverified> root = cq.from(PayInTransactionUnverified.class);
-		cq.select(cb.construct(HistoryPayInTransactionUnverified.class, root.get("timestamp"),root.get("amount")));
-		
-		Predicate condition = cb.equal(root.get("userID"), userAccount.getId());
-		cq.where(condition);
-		cq.orderBy(cb.desc(root.get("timestamp")));
-		List<HistoryPayInTransactionUnverified> resultWithAliasedBean = em.createQuery(cq)
-				.setMaxResults(5)
-				.getResultList();
-		
-//		@SuppressWarnings("unchecked")
-//        List<HistoryPayInTransactionUnverified> resultWithAliasedBean = em.createQuery(""
-//				+ "SELECT NEW ch.uzh.csg.coinblesk.model.HistoryPayInTransactionUnverified(pit.timestamp,  pit.amount) "
-//				+ "FROM PayInTransactionUnverified pit "
-//				+ "WHERE pit.userID = :userid "
-//				+ "ORDER BY pit.timestamp DESC")
+//	public List<HistoryPayInTransactionUnverified> getLast5Transactions(UserAccount userAccount) {
+//		CriteriaBuilder cb = em.getCriteriaBuilder();
+//		CriteriaQuery<HistoryPayInTransactionUnverified> cq = cb.createQuery(HistoryPayInTransactionUnverified.class);
+//		Root<PayInTransactionUnverified> root = cq.from(PayInTransactionUnverified.class);
+//		cq.select(cb.construct(HistoryPayInTransactionUnverified.class, root.get("timestamp"),root.get("amount")));
+//		
+//		Predicate condition = cb.equal(root.get("userID"), userAccount.getId());
+//		cq.where(condition);
+//		cq.orderBy(cb.desc(root.get("timestamp")));
+//		List<HistoryPayInTransactionUnverified> resultWithAliasedBean = em.createQuery(cq)
 //				.setMaxResults(5)
-//				.setParameter("userid", userAccount.getId())
 //				.getResultList();
-		
-		return resultWithAliasedBean;
-    }
+//		
+//		return resultWithAliasedBean;
+//    }
 
 }

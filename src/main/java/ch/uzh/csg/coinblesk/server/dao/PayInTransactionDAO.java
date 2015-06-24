@@ -1,7 +1,5 @@
 package ch.uzh.csg.coinblesk.server.dao;
 
-import java.util.List;
-
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.criteria.CriteriaBuilder;
@@ -13,10 +11,8 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import ch.uzh.csg.coinblesk.model.HistoryPayInTransaction;
 import ch.uzh.csg.coinblesk.server.domain.PayInTransaction;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
-import ch.uzh.csg.coinblesk.server.util.Config;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 
 /**
@@ -83,27 +79,27 @@ public class PayInTransactionDAO {
 	 * @return ArrayList<HistoryPayInTransaction>
 	 * @throws UserAccountNotFoundException
 	 */
-	public List<HistoryPayInTransaction> getHistory(String username, int page) throws UserAccountNotFoundException {
-		if (page < 0) {
-			return null;
-		}
-		UserAccount userAccount = userAccountDAO.getByUsername(username);
-		
-		CriteriaBuilder cb = em.getCriteriaBuilder();
-		CriteriaQuery<HistoryPayInTransaction> cq = cb.createQuery(HistoryPayInTransaction.class);
-		Root<PayInTransaction> root = cq.from(PayInTransaction.class);
-		cq.select(cb.construct(HistoryPayInTransaction.class, root.get("timestamp"),root.get("amount")));
-		
-		Predicate condition = cb.equal(root.get("userID"), userAccount.getId());
-		cq.where(condition);
-		cq.orderBy(cb.desc(root.get("timestamp")));
-		List<HistoryPayInTransaction> resultWithAliasedBean = em.createQuery(cq)
-				.setFirstResult(page* Config.PAY_INS_MAX_RESULTS)
-				.setMaxResults(Config.PAY_INS_MAX_RESULTS)
-				.getResultList();
-		
-		return resultWithAliasedBean;
-	}
+//	public List<HistoryPayInTransaction> getHistory(String username, int page) throws UserAccountNotFoundException {
+//		if (page < 0) {
+//			return null;
+//		}
+//		UserAccount userAccount = userAccountDAO.getByUsername(username);
+//		
+//		CriteriaBuilder cb = em.getCriteriaBuilder();
+//		CriteriaQuery<HistoryPayInTransaction> cq = cb.createQuery(HistoryPayInTransaction.class);
+//		Root<PayInTransaction> root = cq.from(PayInTransaction.class);
+//		cq.select(cb.construct(HistoryPayInTransaction.class, root.get("timestamp"),root.get("amount")));
+//		
+//		Predicate condition = cb.equal(root.get("userID"), userAccount.getId());
+//		cq.where(condition);
+//		cq.orderBy(cb.desc(root.get("timestamp")));
+//		List<HistoryPayInTransaction> resultWithAliasedBean = em.createQuery(cq)
+//				.setFirstResult(page* Config.PAY_INS_MAX_RESULTS)
+//				.setMaxResults(Config.PAY_INS_MAX_RESULTS)
+//				.getResultList();
+//		
+//		return resultWithAliasedBean;
+//	}
 	
 	/**
 	 * Counts number of {@link PayInTransaction}-entries for given username and returns
@@ -132,19 +128,19 @@ public class PayInTransactionDAO {
 	 * @return ArrayList<HistoryPayInTransaction>
 	 * @throws UserAccountNotFoundException
 	 */
-	public List<HistoryPayInTransaction> getLast5Transactions(UserAccount userAccount) throws UserAccountNotFoundException {
-		CriteriaBuilder cb = em.getCriteriaBuilder();
-		CriteriaQuery<HistoryPayInTransaction> cq = cb.createQuery(HistoryPayInTransaction.class);
-		Root<PayInTransaction> root = cq.from(PayInTransaction.class);
-		cq.select(cb.construct(HistoryPayInTransaction.class, root.get("timestamp"),root.get("amount")));
-		
-		Predicate condition = cb.equal(root.get("userID"), userAccount.getId());
-		cq.where(condition);
-		cq.orderBy(cb.desc(root.get("timestamp")));
-		List<HistoryPayInTransaction> resultWithAliasedBean = em.createQuery(cq)
-				.setMaxResults(Config.PAY_INS_MAX_RESULTS)
-				.getResultList();		
-				
-		return resultWithAliasedBean;
-	}
+//	public List<HistoryPayInTransaction> getLast5Transactions(UserAccount userAccount) throws UserAccountNotFoundException {
+//		CriteriaBuilder cb = em.getCriteriaBuilder();
+//		CriteriaQuery<HistoryPayInTransaction> cq = cb.createQuery(HistoryPayInTransaction.class);
+//		Root<PayInTransaction> root = cq.from(PayInTransaction.class);
+//		cq.select(cb.construct(HistoryPayInTransaction.class, root.get("timestamp"),root.get("amount")));
+//		
+//		Predicate condition = cb.equal(root.get("userID"), userAccount.getId());
+//		cq.where(condition);
+//		cq.orderBy(cb.desc(root.get("timestamp")));
+//		List<HistoryPayInTransaction> resultWithAliasedBean = em.createQuery(cq)
+//				.setMaxResults(Config.PAY_INS_MAX_RESULTS)
+//				.getResultList();		
+//				
+//		return resultWithAliasedBean;
+//	}
 }

@@ -22,17 +22,12 @@ import ch.uzh.csg.coinblesk.customserialization.PKIAlgorithm;
 import ch.uzh.csg.coinblesk.customserialization.exceptions.UnknownPKIAlgorithmException;
 import ch.uzh.csg.coinblesk.keys.CustomPublicKey;
 import ch.uzh.csg.coinblesk.responseobject.CustomPublicKeyObject;
-import ch.uzh.csg.coinblesk.responseobject.GetHistoryTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.MainRequestObject;
 import ch.uzh.csg.coinblesk.responseobject.ReadRequestObject;
 import ch.uzh.csg.coinblesk.responseobject.ServerWatchingKeyTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
 import ch.uzh.csg.coinblesk.responseobject.UserAccountObject;
 import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoinWallet;
-import ch.uzh.csg.coinblesk.server.clientinterface.IPayInTransaction;
-import ch.uzh.csg.coinblesk.server.clientinterface.IPayInTransactionUnverified;
-import ch.uzh.csg.coinblesk.server.clientinterface.IPayOutTransaction;
-import ch.uzh.csg.coinblesk.server.clientinterface.ITransaction;
 import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.domain.UserPublicKey;
@@ -74,18 +69,6 @@ public class UserAccountController {
     private static final String PASSWORD_RESET_LINK_SENT = "A link to reset your password has been sent to your email address.";
     private static final String INVALID_EMAIL = "Invalid emailaddress. Please enter a proper emailaddress.";
     private static final String EMAIL_ALREADY_EXISTS = "An account with this email address already exists.";
-
-    @Autowired
-    private IPayInTransactionUnverified payInTransactionUnverifiedService;
-
-    @Autowired
-    private IPayInTransaction payInTransactionService;
-
-    @Autowired
-    private IPayOutTransaction payOutTransactionService;
-
-    @Autowired
-    private ITransaction transactionService;
 
     @Autowired
     private IUserAccount userAccountService;
@@ -215,11 +198,11 @@ public class UserAccountController {
 
     private UserAccountObject transform1(UserAccount userAccount) {
         UserAccountObject o = new UserAccountObject();
-        o.setBalanceBTC(userAccount.getBalance());
         o.setEmail(userAccount.getEmail());
         o.setId(userAccount.getId());
         o.setPassword(userAccount.getPassword());
         o.setUsername(userAccount.getUsername());
+        o.setCreationDate(userAccount.getCreationDate().getTime());
         return o;
     }
 
@@ -403,12 +386,6 @@ public class UserAccountController {
             response.setExchangeRate(ExchangeRates.getExchangeRate(), "CHF");
             response.setBalanceBTC(userAccount.getBalance());
             // set History
-            GetHistoryTransferObject ghto = new GetHistoryTransferObject();
-            ghto.setTransactionHistory(transactionService.getLast5Transactions(username));
-            ghto.setPayInTransactionHistory(payInTransactionService.getLast5Transactions(username));
-            ghto.setPayInTransactionUnverifiedHistory(payInTransactionUnverifiedService.getLast5Transactions(username));
-            ghto.setPayOutTransactionHistory(payOutTransactionService.getLast5Transactions(username));
-            response.setGetHistoryTransferObject(ghto);
             UserAccountObject uao = transform1(userAccount);
             response.setUserAccount(uao);
             // set Balance

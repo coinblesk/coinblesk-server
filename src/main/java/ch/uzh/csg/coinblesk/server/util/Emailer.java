@@ -88,13 +88,11 @@ public class Emailer {
     }
 
     private class EmailSenderTask implements Runnable {
-        private String message;
         private String subject;
         private String toEmail;
         private File attachment;
 
         protected EmailSenderTask(String message, String subject, String toEmail, File attachment) {
-            this.message = message;
             this.subject = subject;
             this.toEmail = toEmail;
             this.attachment = attachment;

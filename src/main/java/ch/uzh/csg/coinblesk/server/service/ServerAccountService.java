@@ -183,10 +183,6 @@ public class ServerAccountService implements IServerAccount {
         return true;
     }
 
-    private String getNewPayinAddress() {
-        return bitcoindService.getNewAddress();
-    }
-
     @Override
     @Transactional(readOnly = true)
     public ServerAccount getByUrl(String url) throws ServerAccountNotFoundException {

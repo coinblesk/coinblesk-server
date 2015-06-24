@@ -11,13 +11,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.Random;
 
-import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.config.authentication.UserServiceBeanDefinitionParser;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
@@ -28,7 +25,6 @@ import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
 import ch.uzh.csg.coinblesk.server.domain.UserPublicKey;
 import ch.uzh.csg.coinblesk.server.security.KeyHandler;
-import ch.uzh.csg.coinblesk.server.service.UserAccountService;
 import ch.uzh.csg.coinblesk.server.util.Config;
 import ch.uzh.csg.coinblesk.server.util.CustomPasswordEncoder;
 import ch.uzh.csg.coinblesk.server.util.UserRoles.Role;
@@ -40,13 +36,11 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UsernameAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.utilTest.ReplacementDataSetLoader;
-import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseOperation;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DbUnitConfiguration;
-import com.github.springtestdbunit.annotation.ExpectedDatabase;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = { "classpath:context.xml", "classpath:test-database.xml" })
@@ -70,7 +64,7 @@ public class UserAccountServiceTest {
     public void testCreateAccount() throws UsernameAlreadyExistsException, UserAccountNotFoundException, InvalidUsernameException, InvalidEmailException,
             EmailAlreadyExistsException, InvalidUrlException {
         int nofUsers = userAccountService.getAllUserAccounts().size();
-        UserAccount newUser = new UserAccount("hans80@https://mbps.csg.uzh.ch", "hans80@bitcoin.csg.uzh.ch", "my-password");
+        UserAccount newUser = new UserAccount("hans80", "hans80@bitcoin.csg.uzh.ch", "my-password");
         assertTrue(userAccountService.createAccount(newUser));
 
         newUser = userAccountService.getByUsername(newUser.getUsername());
@@ -125,7 +119,7 @@ public class UserAccountServiceTest {
     public void testCreateAccount_EnterFieldsManually() throws UsernameAlreadyExistsException, UserAccountNotFoundException, InvalidUsernameException,
             InvalidEmailException, EmailAlreadyExistsException, InvalidUrlException {
         String pw = "my-password";
-        UserAccount newAccount = new UserAccount("hans81@https://mbps.csg.uzh.ch", "hans81@bitcoin.csg.uzh.ch", pw);
+        UserAccount newAccount = new UserAccount("hans81", "hans81@bitcoin.csg.uzh.ch", pw);
         newAccount.setBalance(new BigDecimal(1000));
         Date date = new Date();
         newAccount.setCreationDate(date);
@@ -136,7 +130,7 @@ public class UserAccountServiceTest {
 
         assertTrue(userAccountService.createAccount(newAccount));
 
-        UserAccount fromDB = userAccountService.getByUsername("hans81@https://mbps.csg.uzh.ch");
+        UserAccount fromDB = userAccountService.getByUsername("hans81");
 
         assertEquals(newAccount.getUsername(), fromDB.getUsername());
         assertEquals(newAccount.getEmail(), fromDB.getEmail());
@@ -315,7 +309,7 @@ public class UserAccountServiceTest {
         // only users with role users exists
         assertTrue(allUsers.size() == users.size());
 
-        UserAccount account = new UserAccount("marcus@https://mbps.csg.uzh.ch", "marcus@bitcoin.csg.uzh.ch", "some password");
+        UserAccount account = new UserAccount("marcus", "marcus@bitcoin.csg.uzh.ch", "some password");
         account.setRoles(Role.ADMIN.getCode());
         try {
             userAccountService.createAccount(account);
@@ -333,7 +327,7 @@ public class UserAccountServiceTest {
     @Test
     @DatabaseSetup(value = "classpath:DbUnitFiles/Services/userAccountServiceTestData.xml", type = DatabaseOperation.CLEAN_INSERT)
     public void testGetAdminEmail() throws Exception {
-        UserAccount account = new UserAccount("felix@https://mbps.csg.uzh.ch", "felix@bitcoin.csg.uzh.ch", "some password");
+        UserAccount account = new UserAccount("felix", "felix@bitcoin.csg.uzh.ch", "some password");
         account.setRoles(Role.ADMIN.getCode());
         try {
             userAccountService.createAccount(account);

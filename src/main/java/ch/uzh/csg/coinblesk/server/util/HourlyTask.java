@@ -1,7 +1,6 @@
 package ch.uzh.csg.coinblesk.server.util;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.util.List;
 
 import net.minidev.json.parser.ParseException;
@@ -10,16 +9,13 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoinWallet;
-import ch.uzh.csg.coinblesk.server.clientinterface.IPayOutRule;
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerAccount;
 import ch.uzh.csg.coinblesk.server.clientinterface.IServerAccountTasks;
 import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
 import ch.uzh.csg.coinblesk.server.dao.ServerPublicKeyDAO;
-import ch.uzh.csg.coinblesk.server.domain.PayOutRule;
 import ch.uzh.csg.coinblesk.server.domain.ServerAccount;
 import ch.uzh.csg.coinblesk.server.domain.ServerAccountTasks;
 import ch.uzh.csg.coinblesk.server.domain.UserAccount;
-import ch.uzh.csg.coinblesk.server.service.BitcoinWalletService;
 import ch.uzh.csg.coinblesk.server.service.ServerAccountTasksService.ServerAccountTaskTypes;
 import ch.uzh.csg.coinblesk.server.util.exceptions.ServerAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
@@ -36,8 +32,6 @@ public class HourlyTask {
 	@Autowired
 	private MensaXLSExporter mensaXLSExporter;
 	@Autowired
-	private IPayOutRule payOutRuleService;
-	@Autowired
 	IServerAccountTasks serverAccountTasksService;
 	@Autowired
 	ServerPublicKeyDAO serverPublicKeyDAO;
@@ -52,9 +46,6 @@ public class HourlyTask {
 	 * Update is executed every 60minutes.
 	 */
 	public void update() {
-		//check payout rules
-		payOutRuleService.checkAllRules();
-		LOGGER.info("Cronjob is executing PayOutRules-Task.");
 
 		// update USD/CHF-ExchangeRate
 		updateUsdChf();
@@ -116,22 +107,6 @@ public class HourlyTask {
 		}
 		//TODO: mehmet include server payout rules hourly task
 
-	}
-
-	/**
-	 * Checkes if the sum of all useraccount balances is smaller or equal than
-	 * the amount fo Bitcoins available on the server's Bitcoin wallet
-	 */
-	private void sanityCheck() {
-		try {
-			BigDecimal sumOfAccountBalances = userAccountService.getSumOfUserAccountBalances();
-			BigDecimal bitcoindAccountBalance = bitcoinWalletService.getAccountBalance();
-			if(bitcoindAccountBalance.compareTo(sumOfAccountBalances) < 0)
-				emailer.send("bitcoin@ifi.uzh.ch", "[CoinBlesk] Error: Sanity Check failed - Intervention required!", "Important: possible worst case scenario happened! There are more Bitcoins assigned to user accounts than are stored on Bitcoind! " + "SumOfAccountBalances:  " + sumOfAccountBalances.toPlainString() + " BitcoindSum: " + bitcoindAccountBalance.toPlainString());
-		} catch (Exception e) {
-			emailer.send("bitcoin@ifi.uzh.ch", "[CoinBlesk] Warning: Problem creating sanity check", "Couldn't compare useraccount balances to bitcoind balances. Exception: " + e.getMessage());
-		}
-		
 	}
 
 	/**

@@ -54,7 +54,6 @@ public class UsersController {
 	
 	private UserAccountObject transform1(UserAccount userAccount) {
 		UserAccountObject o = new UserAccountObject();
-		o.setBalanceBTC(userAccount.getBalance());
 		o.setEmail(userAccount.getEmail());
 		o.setId(userAccount.getId());
 		o.setPassword(userAccount.getPassword());

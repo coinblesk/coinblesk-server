@@ -30,9 +30,8 @@
 
 	<!-- Settings for the server bitcoin wallet -->
 	<bean id="bitcoinWalletService" class="ch.uzh.csg.coinblesk.server.service.BitcoinWalletService">
-		<property name="bitcoinNet" value="regtest" />
+		<property name="bitcoinNet" value="testnet" />
 	</bean>
 
 
 </beans>
-

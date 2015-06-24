@@ -8,8 +8,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import javax.servlet.http.HttpSession;
 
-import org.apache.http.HttpStatus;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -30,11 +28,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import ch.uzh.csg.coinblesk.server.json.CustomObjectMapper;
-import ch.uzh.csg.coinblesk.server.service.ActivitiesService;
-import ch.uzh.csg.coinblesk.server.service.UserAccountService;
 import ch.uzh.csg.coinblesk.server.util.Credentials;
 import ch.uzh.csg.coinblesk.server.utilTest.ReplacementDataSetLoader;
-import ch.uzh.csg.coinblesk.server.web.response.ActivitiesTransferObject;
 import ch.uzh.csg.coinblesk.server.web.response.UserAccountTransferObject;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
@@ -96,11 +91,7 @@ public class UsersControllerTest {
         MvcResult mvcResult = mockMvc.perform(post("/users/all").secure(false).session((MockHttpSession) session).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk()).andReturn();
 
-        String contentAsString = mvcResult.getResponse().getContentAsString();
         UserAccountTransferObject response = mapper.readValue(mvcResult.getResponse().getContentAsString(), UserAccountTransferObject.class);
-
-        // UserAccountTransferObject response = new UserAccountTransferObject();
-        // response.decode(contentAsString);
 
         assertNotNull(response);
         assertTrue(response.isSuccessful());
