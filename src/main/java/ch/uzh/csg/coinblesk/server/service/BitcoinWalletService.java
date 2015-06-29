@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 
 import ch.uzh.csg.coinblesk.bitcoin.BitcoinNet;
 import ch.uzh.csg.coinblesk.responseobject.IndexAndDerivationPath;
+import ch.uzh.csg.coinblesk.server.bitcoin.DoubleSpendException;
 import ch.uzh.csg.coinblesk.server.bitcoin.DummyPeerDiscovery;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.bitcoin.P2SHScript;
@@ -219,7 +220,6 @@ public class BitcoinWalletService implements IBitcoinWallet {
         }
     }
 
-
     @Override
     public String getSerializedServerWatchingKey() {
         return serverAppKit.wallet().getWatchingKey().serializePubB58(getNetworkParams(bitcoinNet));
@@ -232,7 +232,8 @@ public class BitcoinWalletService implements IBitcoinWallet {
         Transaction tx = null;
         try {
             tx = new Transaction(getNetworkParams(bitcoinNet), Base64.getDecoder().decode(partialTx));
-        } catch (ProtocolException e) {
+        } catch (ProtocolException | IllegalArgumentException e) {
+            LOGGER.error("Signing transaction failed", e);
             throw new InvalidTransactionException("Transaction could not be parsed");
         }
 
@@ -245,7 +246,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
 
             if (outputsCache.isDoubleSpend(tx)) {
                 // Ha! E1337 HaxxOr detected :)
-                throw new InvalidTransactionException("These Outputs have already been signed. Possible double-spend attack!");
+                throw new DoubleSpendException("These Outputs have already been signed. Possible double-spend attack!");
             }
 
             outputsCache.cacheOutputs(tx);

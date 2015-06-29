@@ -63,5 +63,5 @@ public interface IBitcoinWallet {
      * @param cleanWallet if true the wallet is cleaned before startup
      */
     void setCleanWallet(boolean cleanWallet);
-
+    
 }
