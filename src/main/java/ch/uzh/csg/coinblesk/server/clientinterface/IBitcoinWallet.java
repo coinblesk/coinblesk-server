@@ -1,6 +1,5 @@
 package ch.uzh.csg.coinblesk.server.clientinterface;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 import org.bitcoinj.crypto.DeterministicKey;
@@ -39,89 +38,30 @@ public interface IBitcoinWallet {
      */
     boolean signTxAndBroadcast(String partialTx, List<IndexAndDerivationPath> indexAndPath) throws InvalidTransactionException;
 
-    /*
-     * ========================== LEGACY INTERFACE BELOW....
-     * ==========================
-     */
-
-    /**
-     * Send defined amount of Bitcoins to defined address.
-     * 
-     * @param address
-     * @param amount
-     * @return String with transaction-id.
-     * @throws BitcoinException
-     */
-    String sendCoins(String address, BigDecimal amount);
-
-    /**
-     * Checks if a BitcoinAddress is valid. Throws a BitcoinException if address
-     * is invalid.
-     * 
-     * @param address
-     * @return boolean if address is valid or not.
-     * @throws BitcoinException
-     */
-    boolean validateAddress(String address);
-
-    boolean offlineValidateAddress(String address);
-
-    /**
-     * Creates and returns new Bitcoinaddress for assigned account.
-     * 
-     * @return bitcoinaddress
-     * @throws BitcoinException
-     */
-    String getNewAddress();
-
-    /**
-     * Starts task which continually listens for new incoming
-     * Bitcoin-transactions which are smaller than defined threshold and have
-     * minconfirmations.
-     * 
-     * @throws BitcoinException
-     */
-    public void listenIncomingTransactions();
-
-    public void listenIncomingUnverifiedTransactions();
-
-    /**
-     * Starts task which continually listens for new incoming
-     * Bitcoin-transactions which are bigger than defined threshold and have
-     * minconfirmations.
-     * 
-     * @throws BitcoinException
-     */
-    public void listenIncomingBigTransactions();
-
-    /**
-     * Starts task which continually listens for outgoing Bitcoin-transactions
-     * with more than the defined confirmations.
-     * 
-     * @throws BitcoinException
-     */
-    public void listenOutgoingTransactions();
-
     /**
      * Backup Bitcoin Wallet to destination defined in config file.
      */
     void backupWallet();
 
-    boolean isListenTransactions();
-
-    void setListenTransactions(boolean listenTransactions);
-
-    /**
-     * Returns the balance of bitcoind (currently available Bitcoins).
-     * 
-     * @return accountBalance (Balance of Bitcoind)
-     * @throws BitcoinException
-     */
-    BigDecimal getAccountBalance();
-    
     /**
      * @return The {@link BitcoinNet} the server is currently running on
      */
     BitcoinNet getBitcoinNet();
+
+    /**
+     * Sets the bitcoin network this class
+     * 
+     * @param bitcoinNet
+     */
+    void setBitcoinNet(String bitcoinNet);
+
+    /**
+     * Cleans (deletes) previously existing wallet before starting up. Only the
+     * wallet of the selected {@link BitcoinNet} is cleaned, other wallets are
+     * left untouched.
+     * 
+     * @param cleanWallet if true the wallet is cleaned before startup
+     */
+    void setCleanWallet(boolean cleanWallet);
 
 }

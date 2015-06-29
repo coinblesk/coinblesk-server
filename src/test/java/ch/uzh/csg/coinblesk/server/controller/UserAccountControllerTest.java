@@ -34,18 +34,11 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import ch.uzh.csg.coinblesk.customserialization.Currency;
-import ch.uzh.csg.coinblesk.customserialization.DecoderFactory;
 import ch.uzh.csg.coinblesk.customserialization.PKIAlgorithm;
-import ch.uzh.csg.coinblesk.customserialization.PaymentRequest;
-import ch.uzh.csg.coinblesk.customserialization.ServerPaymentRequest;
-import ch.uzh.csg.coinblesk.customserialization.ServerPaymentResponse;
-import ch.uzh.csg.coinblesk.customserialization.ServerResponseStatus;
 import ch.uzh.csg.coinblesk.keys.CustomPublicKey;
 import ch.uzh.csg.coinblesk.responseobject.CustomPublicKeyObject;
 import ch.uzh.csg.coinblesk.responseobject.MainRequestObject;
 import ch.uzh.csg.coinblesk.responseobject.ReadRequestObject;
-import ch.uzh.csg.coinblesk.responseobject.TransactionObject;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
 import ch.uzh.csg.coinblesk.responseobject.UserAccountObject;
 import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
@@ -60,7 +53,6 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.InvalidUsernameException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UserAccountNotFoundException;
 import ch.uzh.csg.coinblesk.server.util.exceptions.UsernameAlreadyExistsException;
 import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
-import ch.uzh.csg.coinblesk.util.Converter;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = { "classpath:context.xml", "classpath:test-database.xml", "classpath:view.xml", "classpath:security.xml" })

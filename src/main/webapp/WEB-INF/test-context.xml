@@ -32,7 +32,7 @@
 	<bean id="bitcoinWalletService"
 		class="ch.uzh.csg.coinblesk.server.service.BitcoinWalletService">
 		<property name="bitcoinNet" value="unittest" />
-		<property name="clearWalletFiles" value="true" />
+		<property name="cleanWallet" value="true" />
 	</bean>
 
 

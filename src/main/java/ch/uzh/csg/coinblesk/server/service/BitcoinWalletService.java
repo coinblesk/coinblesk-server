@@ -3,11 +3,8 @@ package ch.uzh.csg.coinblesk.server.service;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.net.InetSocketAddress;
 import java.util.Base64;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import javax.annotation.PostConstruct;
@@ -15,7 +12,6 @@ import javax.annotation.PreDestroy;
 import javax.xml.bind.DatatypeConverter;
 
 import org.apache.log4j.Logger;
-import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey.ECDSASignature;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
@@ -26,9 +22,6 @@ import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.kits.WalletAppKit;
-import org.bitcoinj.net.discovery.DnsDiscovery;
-import org.bitcoinj.net.discovery.PeerDiscovery;
-import org.bitcoinj.net.discovery.PeerDiscoveryException;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
@@ -64,7 +57,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
     private static final String WALLET_PREFIX = "_bitcoinj";
 
     private BitcoinNet bitcoinNet;
-    private boolean clearWalletFiles = false;
+    private boolean cleanWallet = false;
 
     private ReentrantLock lock;
 
@@ -78,7 +71,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
 
     @PostConstruct
     private void init() {
-        if(clearWalletFiles) {
+        if(cleanWallet) {
             clearWalletFiles();
         }
         start().awaitRunning();
@@ -206,64 +199,15 @@ public class BitcoinWalletService implements IBitcoinWallet {
         serverAppKit.stopAsync().awaitTerminated();
     }
 
-    /**
-     * Sets the bitcoin network this class
-     * 
-     * @param bitcoinNet
-     */
+    
+    @Override
     public void setBitcoinNet(String bitcoinNet) {
         this.bitcoinNet = BitcoinNet.of(bitcoinNet);
     }
     
-    public void setClearWalletFiles(boolean clearWalletFiles) {
-        this.clearWalletFiles = clearWalletFiles;
-    }
-
     @Override
-    public String sendCoins(String address, BigDecimal amount) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public boolean validateAddress(String address) {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public boolean offlineValidateAddress(String address) {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public String getNewAddress() {
-        return serverAppKit.wallet().currentReceiveAddress().toString();
-    }
-
-    @Override
-    public void listenIncomingTransactions() {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void listenIncomingUnverifiedTransactions() {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void listenIncomingBigTransactions() {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void listenOutgoingTransactions() {
-        // TODO Auto-generated method stub
-
+    public void setCleanWallet(boolean cleanWallet) {
+        this.cleanWallet = cleanWallet;
     }
 
     @Override
@@ -275,22 +219,6 @@ public class BitcoinWalletService implements IBitcoinWallet {
         }
     }
 
-    @Override
-    public boolean isListenTransactions() {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public void setListenTransactions(boolean listenTransactions) {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public BigDecimal getAccountBalance() {
-        return BigDecimal.valueOf(serverAppKit.wallet().getBalance().getValue()).divide(BigDecimal.valueOf(Coin.SMALLEST_UNIT_EXPONENT));
-    }
 
     @Override
     public String getSerializedServerWatchingKey() {
