@@ -38,7 +38,12 @@ import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DbUnitConfiguration;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(locations = { "classpath:context.xml", "classpath:test-database.xml", "classpath:view.xml", "classpath:security.xml" })
+@ContextConfiguration(locations = { 
+        "classpath:context.xml", 
+        "classpath:test-context.xml",
+        "classpath:test-database.xml", 
+        "classpath:view.xml", 
+        "classpath:security.xml" })
 @DbUnitConfiguration(databaseConnection = "dataSource", dataSetLoader = ReplacementDataSetLoader.class)
 @TestExecutionListeners({ DependencyInjectionTestExecutionListener.class, DbUnitTestExecutionListener.class })
 @WebAppConfiguration

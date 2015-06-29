@@ -47,7 +47,8 @@ import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
-		"classpath:context.xml",
+        "classpath:context.xml",
+        "classpath:test-context.xml",
 		"classpath:test-database.xml"})
 
 @DbUnitConfiguration(databaseConnection="dataSource", dataSetLoader = ReplacementDataSetLoader.class)
@@ -65,8 +66,6 @@ public class ServerAccountServiceTest {
 	
 	@Before
 	public void setUp() throws Exception {
-        BitcoinWalletService.clearWalletFiles(BitcoinNet.TESTNET);
-
 		ServerAccountService.enableTestingMode();
 		if (!initialized){		
 			initialized = true;
@@ -76,8 +75,6 @@ public class ServerAccountServiceTest {
 	@After
 	public void teardown(){
 		ServerAccountService.disableTestingMode();
-        BitcoinWalletService.clearWalletFiles(BitcoinNet.TESTNET);
-
 	}
 	
 	@Test

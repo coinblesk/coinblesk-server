@@ -43,7 +43,10 @@ import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DbUnitConfiguration;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(locations = { "classpath:context.xml", "classpath:test-database.xml" })
+@ContextConfiguration(locations = { 
+        "classpath:context.xml", 
+        "classpath:test-context.xml", 
+        "classpath:test-database.xml" })
 @DbUnitConfiguration(databaseConnection = "dataSource", dataSetLoader = ReplacementDataSetLoader.class)
 @TestExecutionListeners({ DependencyInjectionTestExecutionListener.class, DbUnitTestExecutionListener.class })
 public class UserAccountServiceTest {
@@ -56,7 +59,7 @@ public class UserAccountServiceTest {
 
     @Before
     public void setUp() throws InvalidEmailException, EmailAlreadyExistsException {
-        testAccount = new UserAccount("testuser@http://testdomain.ch", "imaginaryperson@email.com", "password");
+        testAccount = new UserAccount("testuser", "imaginaryperson@email.com", "password");
     }
 
     @Test

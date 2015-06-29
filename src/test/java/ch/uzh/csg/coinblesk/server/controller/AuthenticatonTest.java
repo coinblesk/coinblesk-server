@@ -38,7 +38,8 @@ import ch.uzh.csg.coinblesk.server.util.exceptions.UsernameAlreadyExistsExceptio
 @RunWith(SpringJUnit4ClassRunner.class)
 
 @ContextConfiguration(locations = {
-		"classpath:context.xml",
+        "classpath:context.xml",
+        "classpath:test-context.xml",
 		"classpath:test-database.xml",
 		"classpath:view.xml",
 		"classpath:security.xml"})

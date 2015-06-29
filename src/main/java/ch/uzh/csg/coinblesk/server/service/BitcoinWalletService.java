@@ -4,8 +4,10 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.InetSocketAddress;
 import java.util.Base64;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import javax.annotation.PostConstruct;
@@ -24,14 +26,19 @@ import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.kits.WalletAppKit;
+import org.bitcoinj.net.discovery.DnsDiscovery;
+import org.bitcoinj.net.discovery.PeerDiscovery;
+import org.bitcoinj.net.discovery.PeerDiscoveryException;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
+import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.script.Script;
 import org.springframework.stereotype.Service;
 
 import ch.uzh.csg.coinblesk.bitcoin.BitcoinNet;
 import ch.uzh.csg.coinblesk.responseobject.IndexAndDerivationPath;
+import ch.uzh.csg.coinblesk.server.bitcoin.DummyPeerDiscovery;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.bitcoin.P2SHScript;
 import ch.uzh.csg.coinblesk.server.bitcoin.SpentOutputsCache;
@@ -57,6 +64,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
     private static final String WALLET_PREFIX = "_bitcoinj";
 
     private BitcoinNet bitcoinNet;
+    private boolean clearWalletFiles = false;
 
     private ReentrantLock lock;
 
@@ -70,7 +78,11 @@ public class BitcoinWalletService implements IBitcoinWallet {
 
     @PostConstruct
     private void init() {
+        if(clearWalletFiles) {
+            clearWalletFiles();
+        }
         start().awaitRunning();
+        System.out.println("started");
     }
 
     /**
@@ -79,9 +91,9 @@ public class BitcoinWalletService implements IBitcoinWallet {
      * @return a {@link com.google.common.util.concurrent.Service} object
      */
     public com.google.common.util.concurrent.Service start() {
-        
+
         // check if wallet has already been started
-        if(serverAppKit != null && serverAppKit.isRunning()){
+        if (serverAppKit != null && serverAppKit.isRunning()) {
             LOGGER.warn("Tried to initialize bitcoin wallet service even though it's already running.");
             return serverAppKit;
         }
@@ -93,11 +105,15 @@ public class BitcoinWalletService implements IBitcoinWallet {
         }
 
         serverAppKit = getWalletAppKit();
+        serverAppKit.setBlockingStartup(false);
 
         // configure app kit
         if (bitcoinNet == BitcoinNet.REGTEST) {
             // regtest only works with local bitcoind
             serverAppKit.connectToLocalHost();
+        } else if (bitcoinNet == BitcoinNet.UNITTEST) {
+            // set dummy discovery
+            serverAppKit.setDiscovery(new DummyPeerDiscovery());
         } else {
             // server wallet settings for production
             serverAppKit.setAutoSave(true);
@@ -117,6 +133,8 @@ public class BitcoinWalletService implements IBitcoinWallet {
      */
     private NetworkParameters getNetworkParams(BitcoinNet bitcoinNet) {
         switch (bitcoinNet) {
+        case UNITTEST:
+            return UnitTestParams.get();
         case REGTEST:
             return RegTestParams.get();
         case TESTNET:
@@ -124,7 +142,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
         case MAINNET:
             return MainNetParams.get();
         default:
-            throw new RuntimeException("Please set the server property bitcoin.net to (regtest|testnet|main)");
+            throw new RuntimeException("Please set the server property bitcoin.net to (unittest|regtest|testnet|main)");
         }
     }
 
@@ -169,15 +187,15 @@ public class BitcoinWalletService implements IBitcoinWallet {
     public static String getWalletPrefix(BitcoinNet bitcoinNet) {
         return bitcoinNet.toString().toLowerCase() + WALLET_PREFIX;
     }
-    
-    public static void clearWalletFiles(final BitcoinNet bitcoinNet) {
+
+    public void clearWalletFiles() {
         File[] walletFiles = new File(ServerProperties.getProperty("bitcoin.wallet.dir")).listFiles(new FilenameFilter() {
             @Override
             public boolean accept(File dir, String name) {
                 return name.startsWith(getWalletPrefix(bitcoinNet));
             }
         });
-        for(File f : walletFiles){
+        for (File f : walletFiles) {
             f.delete();
         }
     }
@@ -195,6 +213,10 @@ public class BitcoinWalletService implements IBitcoinWallet {
      */
     public void setBitcoinNet(String bitcoinNet) {
         this.bitcoinNet = BitcoinNet.of(bitcoinNet);
+    }
+    
+    public void setClearWalletFiles(boolean clearWalletFiles) {
+        this.clearWalletFiles = clearWalletFiles;
     }
 
     @Override
