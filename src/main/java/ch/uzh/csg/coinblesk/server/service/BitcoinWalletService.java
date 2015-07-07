@@ -4,7 +4,9 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
 import javax.annotation.PostConstruct;
@@ -31,7 +33,7 @@ import org.springframework.stereotype.Service;
 
 import ch.uzh.csg.coinblesk.bitcoin.BitcoinNet;
 import ch.uzh.csg.coinblesk.responseobject.IndexAndDerivationPath;
-import ch.uzh.csg.coinblesk.server.bitcoin.DoubleSpendException;
+import ch.uzh.csg.coinblesk.server.bitcoin.DoubleSignatureRequestedException;
 import ch.uzh.csg.coinblesk.server.bitcoin.DummyPeerDiscovery;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.bitcoin.P2SHScript;
@@ -65,14 +67,17 @@ public class BitcoinWalletService implements IBitcoinWallet {
     private WalletAppKit serverAppKit;
     private SpentOutputsCache outputsCache;
 
+    private Map<TransactionInput, Long> signedInputs;
+
     public BitcoinWalletService() {
         this.outputsCache = new SpentOutputsCache();
         this.lock = new ReentrantLock();
+        this.signedInputs = new HashMap<>();
     }
 
     @PostConstruct
     private void init() {
-        if(cleanWallet) {
+        if (cleanWallet) {
             clearWalletFiles();
         }
         start().awaitRunning();
@@ -200,12 +205,11 @@ public class BitcoinWalletService implements IBitcoinWallet {
         serverAppKit.stopAsync().awaitTerminated();
     }
 
-    
     @Override
     public void setBitcoinNet(String bitcoinNet) {
         this.bitcoinNet = BitcoinNet.of(bitcoinNet);
     }
-    
+
     @Override
     public void setCleanWallet(boolean cleanWallet) {
         this.cleanWallet = cleanWallet;
@@ -231,25 +235,105 @@ public class BitcoinWalletService implements IBitcoinWallet {
         // deserialize the transaction...
         Transaction tx = null;
         try {
-            tx = new Transaction(getNetworkParams(bitcoinNet), Base64.getDecoder().decode(partialTx));
+            tx = decodeTx(partialTx);
         } catch (ProtocolException | IllegalArgumentException e) {
             LOGGER.error("Signing transaction failed", e);
             throw new InvalidTransactionException("Transaction could not be parsed");
         }
+
+        Transaction signedTx = signTx(tx, indexAndPaths);
+
+        // transaction is fully signed now: let's broadcast it
+        serverAppKit.peerGroup().broadcastTransaction(signedTx).broadcast().addListener(new Runnable() {
+            @Override
+            public void run() {
+                LOGGER.info("Transaction was broadcasted");
+            }
+        }, MoreExecutors.sameThreadExecutor());
+
+        return true;
+    }
+
+    @Override
+    public BitcoinNet getBitcoinNet() {
+        return bitcoinNet;
+    }
+
+    @Override
+    public String signRefundTx(String partialTimeLockedTx, List<IndexAndDerivationPath> indexAndPath) throws InvalidTransactionException {
+
+        // deserialize the transaction...
+        Transaction tx = null;
+        try {
+            tx = decodeTx(partialTimeLockedTx);
+        } catch (ProtocolException | IllegalArgumentException e) {
+            LOGGER.error("Signing transaction failed", e);
+            throw new InvalidTransactionException("Transaction could not be parsed");
+        }
+
+        // preconditions
+        if (!tx.isTimeLocked()) {
+            String errorMsg = "Tried to create a refund transaction but transaction was not time locked";
+            LOGGER.warn(errorMsg);
+            throw new InvalidTransactionException("Tried to create a refund transaction but transaction was not time locked");
+        }
+
+        Transaction signedTx = signTx(tx, indexAndPath);
+
+        return encodeTx(signedTx);
+    }
+
+    private Transaction decodeTx(String base64encodedTx) throws ProtocolException, IllegalArgumentException {
+        return new Transaction(getNetworkParams(bitcoinNet), Base64.getDecoder().decode(base64encodedTx));
+    }
+
+    private String encodeTx(Transaction tx) {
+        return Base64.getEncoder().encodeToString(tx.unsafeBitcoinSerialize());
+    }
+
+    /**
+     * Signs a partially signed transaction
+     * 
+     * @param partialTx
+     * @param indexAndPath
+     * @return the fully signed transaction
+     * @throws InvalidTransactionException
+     */
+    private Transaction signTx(Transaction tx, List<IndexAndDerivationPath> indexAndPaths) throws InvalidTransactionException {
 
         LOGGER.info("Signing inputs of transaction " + tx.toString());
 
         // Check if the transaction is an attempted double spend. We need to
         // lock here to prevent race conditions
         try {
+
             lock.lock();
 
-            if (outputsCache.isDoubleSpend(tx)) {
-                // Ha! E1337 HaxxOr detected :)
-                throw new DoubleSpendException("These Outputs have already been signed. Possible double-spend attack!");
+            if (tx.isTimeLocked()) {
+                // refund transaction -> save the lock time of the inputs
+                long lockTime = tx.getLockTime();
+                for (TransactionInput input : tx.getInputs()) {
+                    signedInputs.putIfAbsent(input, lockTime);
+                }
             }
 
+            // check for attempted double-spend
+            if (outputsCache.isDoubleSpend(tx)) {
+                // Ha! E1337 HaxxOr detected :)
+                throw new DoubleSignatureRequestedException("These Outputs have already been signed. Possible double-spend attack!");
+            }
             outputsCache.cacheOutputs(tx);
+
+            // check i fwe already signed a refund transaction of at least one
+            // of the inputs that has become valid in the meantime
+            for (TransactionInput input : tx.getInputs()) {
+                long currentBlockHeight = serverAppKit.peerGroup().getMostCommonChainHeight();
+                if (currentBlockHeight > signedInputs.getOrDefault(input, Long.MAX_VALUE)) {
+                    // uh-oh. A previously signed refund transaction is already
+                    // valid -> refuse signing
+                    throw new DoubleSignatureRequestedException("A previously signed refund transaction has become valid.");
+                }
+            }
 
         } finally {
             lock.unlock();
@@ -297,19 +381,11 @@ public class BitcoinWalletService implements IBitcoinWallet {
         }
 
         LOGGER.info("Signed transaction: " + tx);
-
         String hex = DatatypeConverter.printHexBinary(tx.unsafeBitcoinSerialize());
         LOGGER.debug("Hex encoded tx: " + hex);
 
-        // transaction is fully signed now: let's broadcast it
-        serverAppKit.peerGroup().broadcastTransaction(tx).broadcast().addListener(new Runnable() {
-            @Override
-            public void run() {
-                LOGGER.info("Transaction was broadcasted");
-            }
-        }, MoreExecutors.sameThreadExecutor());
+        return tx;
 
-        return true;
     }
 
     private List<ChildNumber> getChildNumbers(int[] path) {
@@ -320,11 +396,6 @@ public class BitcoinWalletService implements IBitcoinWallet {
         }
 
         return childNumbers;
-    }
-
-    @Override
-    public BitcoinNet getBitcoinNet() {
-        return bitcoinNet;
     }
 
 }

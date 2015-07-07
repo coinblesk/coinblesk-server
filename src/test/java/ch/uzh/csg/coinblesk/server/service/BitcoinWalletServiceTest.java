@@ -35,7 +35,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
-import ch.uzh.csg.coinblesk.server.bitcoin.DoubleSpendException;
+import ch.uzh.csg.coinblesk.server.bitcoin.DoubleSignatureRequestedException;
 import ch.uzh.csg.coinblesk.server.bitcoin.DummyPeerDiscovery;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 
@@ -167,7 +167,7 @@ public class BitcoinWalletServiceTest {
         boolean invalidTxThrown = false;
         try {
             bitcoinWalletService.signTxAndBroadcast(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
-        } catch(DoubleSpendException e) {
+        } catch(DoubleSignatureRequestedException e) {
             invalidTxThrown = true;
         }
         Assert.assertTrue(invalidTxThrown);

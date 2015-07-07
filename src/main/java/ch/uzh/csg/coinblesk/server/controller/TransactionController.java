@@ -16,7 +16,6 @@ import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoinWallet;
-import ch.uzh.csg.coinblesk.server.clientinterface.IUserAccount;
 import ch.uzh.csg.coinblesk.server.util.ExchangeRates;
 
 /**
@@ -31,9 +30,6 @@ public class TransactionController {
     
     @Autowired
     private IBitcoinWallet bitcoinWalletService;
-
-    @Autowired
-    private IUserAccount userAccountService;
 
 
     /**
@@ -87,6 +83,32 @@ public class TransactionController {
         } else {
             response.setSuccessful(false);
             response.setMessage("Invalid transaction or ");
+        }
+        
+        return response;
+    }
+    
+    /**
+     * Signs a multi-sig transaction that was partially signed  by the client
+     * 
+     * @return {@link CustomResponseObject} with information about whether the transaction was successful or not
+     */
+    @RequestMapping(value = "/signRefundTx", method = RequestMethod.POST, produces = "application/json")
+    @ResponseBody
+    public TransferObject createRefundTx(@RequestBody ServerSignatureRequestTransferObject sigReq) {
+        
+        LOGGER.info("Received transaction refund transaction request");
+        
+        TransferObject response = new TransferObject();
+        
+        System.out.println(sigReq.getPartialTx());
+        
+        String refundTx = null;
+        try {
+            refundTx = bitcoinWalletService.signRefundTx(sigReq.getPartialTx(), sigReq.getIndexAndDerivationPaths());
+        } catch (InvalidTransactionException e) {
+            response.setSuccessful(false);
+            response.setMessage("Invalid transaction: " + e.getMessage());
         }
         
         return response;

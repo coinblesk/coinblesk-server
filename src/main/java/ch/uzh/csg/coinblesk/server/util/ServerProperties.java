@@ -9,7 +9,7 @@ import org.hibernate.PropertyNotFoundException;
 
 public class ServerProperties {
 
-    private static Logger LOGGER = Logger.getLogger(Emailer.class);
+    private static Logger LOGGER = Logger.getLogger(ServerProperties.class);
     
     private static final String FILENAME = "server.properties";
     private static Properties properties;
