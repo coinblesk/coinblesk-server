@@ -4,9 +4,7 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
 import javax.annotation.PostConstruct;
@@ -14,12 +12,15 @@ import javax.annotation.PreDestroy;
 import javax.xml.bind.DatatypeConverter;
 
 import org.apache.log4j.Logger;
+import org.bitcoinj.core.AbstractBlockChainListener;
 import org.bitcoinj.core.ECKey.ECDSASignature;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
+import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.TransactionSignature;
@@ -29,6 +30,8 @@ import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.script.Script.ScriptType;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import ch.uzh.csg.coinblesk.bitcoin.BitcoinNet;
@@ -38,7 +41,9 @@ import ch.uzh.csg.coinblesk.server.bitcoin.DummyPeerDiscovery;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.bitcoin.P2SHScript;
 import ch.uzh.csg.coinblesk.server.bitcoin.SpentOutputsCache;
+import ch.uzh.csg.coinblesk.server.bitcoin.ValidRefundTransactionException;
 import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoinWallet;
+import ch.uzh.csg.coinblesk.server.dao.SignedInputDAO;
 import ch.uzh.csg.coinblesk.server.util.ServerProperties;
 
 import com.google.common.collect.ImmutableList;
@@ -66,13 +71,14 @@ public class BitcoinWalletService implements IBitcoinWallet {
 
     private WalletAppKit serverAppKit;
     private SpentOutputsCache outputsCache;
+    private long currentBlockHeight;
 
-    private Map<TransactionInput, Long> signedInputs;
+    @Autowired
+    private SignedInputDAO signedInputDao;
 
     public BitcoinWalletService() {
         this.outputsCache = new SpentOutputsCache();
         this.lock = new ReentrantLock();
-        this.signedInputs = new HashMap<>();
     }
 
     @PostConstruct
@@ -81,6 +87,9 @@ public class BitcoinWalletService implements IBitcoinWallet {
             clearWalletFiles();
         }
         start().awaitRunning();
+
+        initBlockListener();
+
         System.out.println("started");
     }
 
@@ -278,7 +287,19 @@ public class BitcoinWalletService implements IBitcoinWallet {
             throw new InvalidTransactionException("Tried to create a refund transaction but transaction was not time locked");
         }
 
-        Transaction signedTx = signTx(tx, indexAndPath);
+        Transaction signedTx = null;
+        try {
+            for (TransactionInput input : tx.getInputs()) {
+                byte[] txHash = input.getOutpoint().getHash().getBytes();
+                long oupointIndex = input.getOutpoint().getIndex();
+                signedInputDao.addSignedInput(txHash, oupointIndex, tx.getLockTime());
+            }
+            signedTx = signTx(tx, indexAndPath);
+        } catch (Exception e) {
+            // TODO: roll back
+            // rethrow
+            throw e;
+        }
 
         return encodeTx(signedTx);
     }
@@ -309,29 +330,29 @@ public class BitcoinWalletService implements IBitcoinWallet {
 
             lock.lock();
 
-            if (tx.isTimeLocked()) {
-                // refund transaction -> save the lock time of the inputs
-                long lockTime = tx.getLockTime();
-                for (TransactionInput input : tx.getInputs()) {
-                    signedInputs.putIfAbsent(input, lockTime);
+            if (!tx.isTimeLocked()) {
+                // check for attempted double-spend
+                if (outputsCache.isDoubleSpend(tx)) {
+                    // Ha! E1337 HaxxOr detected :)
+                    throw new DoubleSignatureRequestedException("These Outputs have already been signed. Possible double-spend attack!");
                 }
+                outputsCache.cacheOutputs(tx);
+            } else {
+
             }
 
-            // check for attempted double-spend
-            if (outputsCache.isDoubleSpend(tx)) {
-                // Ha! E1337 HaxxOr detected :)
-                throw new DoubleSignatureRequestedException("These Outputs have already been signed. Possible double-spend attack!");
-            }
-            outputsCache.cacheOutputs(tx);
-
-            // check i fwe already signed a refund transaction of at least one
+            // check if we already signed a refund transaction where at least
+            // one
             // of the inputs that has become valid in the meantime
             for (TransactionInput input : tx.getInputs()) {
-                long currentBlockHeight = serverAppKit.peerGroup().getMostCommonChainHeight();
-                if (currentBlockHeight > signedInputs.getOrDefault(input, Long.MAX_VALUE)) {
-                    // uh-oh. A previously signed refund transaction is already
+
+                long refundTxValidBlock = signedInputDao.getLockTime(input.getOutpoint().getHash().getBytes(), input.getOutpoint().getIndex());
+
+                if (currentBlockHeight >= (refundTxValidBlock - 10)) {
+                    // uh-oh. A previously signed refund transaction is (or
+                    // almost)
                     // valid -> refuse signing
-                    throw new DoubleSignatureRequestedException("A previously signed refund transaction has become valid.");
+                    throw new ValidRefundTransactionException("A previously signed refund transaction has become valid.");
                 }
             }
 
@@ -378,6 +399,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
             inputScript = dummyP2SHScript.getScriptSigWithSignature(inputScript, txSig.encodeToBitcoin(), sigIndex);
 
             txIn.setScriptSig(inputScript);
+            // txIn.disconnect();
         }
 
         LOGGER.info("Signed transaction: " + tx);
@@ -396,6 +418,30 @@ public class BitcoinWalletService implements IBitcoinWallet {
         }
 
         return childNumbers;
+    }
+
+    private void initBlockListener() {
+
+        // initial block height
+        setCurrentBlockHeight(serverAppKit.peerGroup().getMostCommonChainHeight());
+
+        // blockchain height updates
+        serverAppKit.chain().addListener(new AbstractBlockChainListener() {
+            @Override
+            public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
+                setCurrentBlockHeight(block.getHeight());
+            }
+        });
+    }
+
+    /**
+     * Sets the current block height. This method noramlly shouldn't be used,
+     * the current blockchain is automatically adjusted.
+     * 
+     * @param blockHeigh
+     */
+    public void setCurrentBlockHeight(long blockHeigh) {
+        this.currentBlockHeight = blockHeigh;
     }
 
 }
