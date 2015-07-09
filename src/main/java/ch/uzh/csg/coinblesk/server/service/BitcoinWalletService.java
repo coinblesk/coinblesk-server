@@ -3,16 +3,24 @@ package ch.uzh.csg.coinblesk.server.service;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.xml.bind.DatatypeConverter;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.bitcoinj.core.AbstractBlockChainListener;
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey.ECDSASignature;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
@@ -20,6 +28,8 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
+import org.bitcoinj.core.TransactionOutPoint;
+import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
@@ -30,7 +40,12 @@ import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.script.Script.ScriptType;
+import org.bitcoinj.wallet.CoinSelection;
+import org.bitcoinj.wallet.CoinSelector;
+import org.bitcoinj.wallet.DeterministicKeyChain;
+import org.bitcoinj.wallet.DeterministicSeed;
+import org.bitcoinj.wallet.KeyChainGroup;
+import org.bitcoinj.wallet.MarriedKeyChain;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -39,6 +54,7 @@ import ch.uzh.csg.coinblesk.responseobject.IndexAndDerivationPath;
 import ch.uzh.csg.coinblesk.server.bitcoin.DoubleSignatureRequestedException;
 import ch.uzh.csg.coinblesk.server.bitcoin.DummyPeerDiscovery;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
+import ch.uzh.csg.coinblesk.server.bitcoin.NotEnoughUnspentsException;
 import ch.uzh.csg.coinblesk.server.bitcoin.P2SHScript;
 import ch.uzh.csg.coinblesk.server.bitcoin.SpentOutputsCache;
 import ch.uzh.csg.coinblesk.server.bitcoin.ValidRefundTransactionException;
@@ -70,6 +86,8 @@ public class BitcoinWalletService implements IBitcoinWallet {
     private ReentrantLock lock;
 
     private WalletAppKit serverAppKit;
+    private DeterministicKeyChain privateKeyChain;
+
     private SpentOutputsCache outputsCache;
     private long currentBlockHeight;
 
@@ -82,15 +100,51 @@ public class BitcoinWalletService implements IBitcoinWallet {
     }
 
     @PostConstruct
-    private void init() {
+    public void init() {
+        
+        if(serverAppKit != null && serverAppKit.isRunning()) {
+            return;
+        }
+        
         if (cleanWallet) {
             clearWalletFiles();
         }
+        
         start().awaitRunning();
 
         initBlockListener();
+        initPrivateKeyChain();
 
         System.out.println("started");
+    }
+
+    private void initPrivateKeyChain() {
+        String filename = getWalletPrefix(bitcoinNet) + ".mnemonic";
+        String absFilename = getWalletDir().getAbsolutePath() + System.getProperty("file.separator") + filename;
+        File keyFile = new File(absFilename);
+        
+        if(keyFile.exists()) {
+            // load existing key
+            String mnemonicAndCreationDate;
+            try {
+                mnemonicAndCreationDate = Files.readAllLines(keyFile.toPath()).get(0);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            
+            String mnemonic = mnemonicAndCreationDate.split(":")[0];
+            long creationDate = Long.parseLong(mnemonicAndCreationDate.split(":")[0]);
+            List<String> mnemonicWords = new ArrayList<String>(Arrays.asList(mnemonic.split(" ")));
+            
+            DeterministicSeed seed = new DeterministicSeed(mnemonicWords, null, "", creationDate);
+            privateKeyChain = new KeyChainGroup(getNetworkParams(bitcoinNet), seed).getActiveKeyChain();
+        } else {
+            privateKeyChain = serverAppKit.wallet().getActiveKeychain();
+            String mnemonic = StringUtils.join(privateKeyChain.getMnemonicCode(), " ");
+            mnemonic += ":" + privateKeyChain.getEarliestKeyCreationTime();
+            System.out.println(mnemonic);
+            
+        }
     }
 
     /**
@@ -154,15 +208,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
         }
     }
 
-    /**
-     * Sets up the wallet kit. If the chosen bitcoin network is
-     * {@link BitcoinNet#REGTEST}, all previously persisted regtest files will
-     * be removed.
-     * 
-     * @return
-     */
-    private WalletAppKit getWalletAppKit() {
-
+    private File getWalletDir() {
         File walletDir = null;
 
         try {
@@ -172,11 +218,25 @@ public class BitcoinWalletService implements IBitcoinWallet {
             throw new RuntimeException("Bitcoin wallet directory must be set in server.properties");
         }
 
+        return walletDir;
+    }
+
+    /**
+     * Sets up the wallet kit. If the chosen bitcoin network is
+     * {@link BitcoinNet#REGTEST}, all previously persisted regtest files will
+     * be removed.
+     * 
+     * @return
+     */
+    private WalletAppKit getWalletAppKit() {
+
+        File walletDir = getWalletDir();
+
         for (File f : walletDir.listFiles()) {
             if (f.getName().startsWith(getWalletPrefix(bitcoinNet))) {
 
                 // delete existing regtest wallet and blockstore files
-                if (bitcoinNet == BitcoinNet.REGTEST) {
+                if (bitcoinNet == BitcoinNet.REGTEST || bitcoinNet == BitcoinNet.UNITTEST) {
                     f.delete();
                     LOGGER.debug("Deleted file " + f.getName());
                 }
@@ -268,6 +328,32 @@ public class BitcoinWalletService implements IBitcoinWallet {
         return bitcoinNet;
     }
 
+    /**
+     * Adds a clients watching key to the server's watching wallet. This means
+     * that the server is always up to date about the funds available to the
+     * clients, and can therefore know whether the transaction to sign are in
+     * fact unspent.
+     * 
+     * @param base58encodedWatchingKey
+     *            the client's base58 encoded watching key
+     */
+    public void addWatchingKey(String base58encodedWatchingKey) {
+        DeterministicKey clientKey = DeterministicKey.deserializeB58(base58encodedWatchingKey, getNetworkParams(bitcoinNet));
+
+        // create married key chain with clients watching key
+        MarriedKeyChain marriedClientKeyChain = MarriedKeyChain.builder()
+                .seed(privateKeyChain.getSeed())
+                .followingKeys(clientKey)
+                .threshold(2)
+                .build();
+        
+        serverAppKit.wallet().addAndActivateHDChain(marriedClientKeyChain);
+        serverAppKit.wallet().getActiveKeychain().setLookaheadSize(50);
+        
+        // no idea why this is necessary, but it is...
+        serverAppKit.wallet().freshReceiveAddress();
+    }
+
     @Override
     public String signRefundTx(String partialTimeLockedTx, List<IndexAndDerivationPath> indexAndPath) throws InvalidTransactionException {
 
@@ -312,6 +398,42 @@ public class BitcoinWalletService implements IBitcoinWallet {
         return Base64.getEncoder().encodeToString(tx.unsafeBitcoinSerialize());
     }
 
+    private boolean inputsUnspent(final Transaction tx) {
+        Coin unspentsValue = serverAppKit.wallet().getBalance(new CoinSelector() {
+            @Override
+            public CoinSelection select(Coin target, List<TransactionOutput> candidates) {
+                Map<TransactionOutPoint, TransactionOutput> outPoint = new HashMap<>();
+
+                List<TransactionOutput> gathered = new LinkedList<>();
+                Coin valueGathered = Coin.ZERO;
+
+                for (TransactionOutput unspent : candidates) {
+                    outPoint.put(unspent.getOutPointFor(), unspent);
+                    System.out.println(unspent.getOutPointFor());
+                }
+
+                for (TransactionInput txIn : tx.getInputs()) {
+                    System.out.println(txIn.getOutpoint());
+                    if (outPoint.containsKey(txIn.getOutpoint())) {
+                        TransactionOutput unspentOutput = outPoint.get(txIn.getOutpoint());
+                        gathered.add(unspentOutput);
+                        System.out.println(unspentOutput.getValue());
+                        valueGathered = valueGathered.add(unspentOutput.getValue());
+                    }
+                }
+
+                return new CoinSelection(valueGathered, gathered);
+            }
+        });
+
+        Coin txValue = Coin.ZERO;
+        for (TransactionOutput txOut : tx.getOutputs()) {
+            txValue = txValue.add(txOut.getValue());
+        }
+
+        return unspentsValue.isGreaterThan(txValue) || unspentsValue.compareTo(txValue) == 0;
+    }
+
     /**
      * Signs a partially signed transaction
      * 
@@ -320,7 +442,11 @@ public class BitcoinWalletService implements IBitcoinWallet {
      * @return the fully signed transaction
      * @throws InvalidTransactionException
      */
-    private Transaction signTx(Transaction tx, List<IndexAndDerivationPath> indexAndPaths) throws InvalidTransactionException {
+    private Transaction signTx(final Transaction tx, List<IndexAndDerivationPath> indexAndPaths) throws InvalidTransactionException {
+
+        if (!inputsUnspent(tx)) {
+            throw new NotEnoughUnspentsException("Not enough unspent bitcoins for this transaction.");
+        }
 
         LOGGER.info("Signing inputs of transaction " + tx.toString());
 
@@ -384,7 +510,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
 
             // now let's create the transaction signature
             ImmutableList<ChildNumber> keyPath = ImmutableList.copyOf(getChildNumbers(indexAndPath.getDerivationPath()));
-            DeterministicKey key = serverAppKit.wallet().getActiveKeychain().getKeyByPath(keyPath, true);
+            DeterministicKey key = privateKeyChain.getKeyByPath(keyPath, true);
             Sha256Hash sighash = tx.hashForSignature(indexAndPath.getIndex(), redeemScript, Transaction.SigHash.ALL, false);
             ECDSASignature sig = key.sign(sighash);
             TransactionSignature txSig = new TransactionSignature(sig, Transaction.SigHash.ALL, false);
@@ -429,6 +555,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
         serverAppKit.chain().addListener(new AbstractBlockChainListener() {
             @Override
             public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
+                // set the new best height
                 setCurrentBlockHeight(block.getHeight());
             }
         });
@@ -442,6 +569,14 @@ public class BitcoinWalletService implements IBitcoinWallet {
      */
     public void setCurrentBlockHeight(long blockHeigh) {
         this.currentBlockHeight = blockHeigh;
+    }
+
+    public WalletAppKit getAppKit() {
+        return serverAppKit;
+    }
+    
+    public void stop() {
+        serverAppKit.stopAsync().awaitTerminated();
     }
 
 }

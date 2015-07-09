@@ -5,14 +5,17 @@ import java.io.FilenameFilter;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.List;
+import java.util.Random;
 
-import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Block;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.PrunedException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.Wallet.MissingSigsMode;
 import org.bitcoinj.core.Wallet.SendRequest;
 import org.bitcoinj.crypto.ChildNumber;
@@ -21,6 +24,7 @@ import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.signers.StatelessTransactionSigner;
+import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.testing.FakeTxBuilder;
 import org.bitcoinj.wallet.KeyBag;
 import org.bitcoinj.wallet.KeyChain.KeyPurpose;
@@ -33,16 +37,24 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
+import org.springframework.test.context.support.DirtiesContextTestExecutionListener;
+import org.springframework.test.context.transaction.TransactionalTestExecutionListener;
 
 import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
-import ch.uzh.csg.coinblesk.server.bitcoin.DoubleSignatureRequestedException;
 import ch.uzh.csg.coinblesk.server.bitcoin.DummyPeerDiscovery;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
+import ch.uzh.csg.coinblesk.server.bitcoin.NotEnoughUnspentsException;
 import ch.uzh.csg.coinblesk.server.bitcoin.ValidRefundTransactionException;
+
+import com.github.springtestdbunit.DbUnitTestExecutionListener;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = { "classpath:context.xml", "classpath:test-context.xml", "classpath:test-database.xml" })
+@TestExecutionListeners({ DependencyInjectionTestExecutionListener.class, DirtiesContextTestExecutionListener.class, TransactionalTestExecutionListener.class,
+        DbUnitTestExecutionListener.class })
 public class BitcoinWalletServiceTest {
 
     private class TestTransactionSigner extends StatelessTransactionSigner {
@@ -110,6 +122,7 @@ public class BitcoinWalletServiceTest {
 
     private final static File TEST_DIR = new File(".");
     private final static String TEST_WALLET_PREFIX = "testwallet";
+    private final static Random RND = new Random(42L);
 
     @Autowired
     private BitcoinWalletService bitcoinWalletService;
@@ -117,10 +130,12 @@ public class BitcoinWalletServiceTest {
     @Before
     public void setUp() {
         deleteTestWalletFiles();
+        bitcoinWalletService.init();
     }
 
     @After
     public void tearDown() {
+        bitcoinWalletService.stop();
         deleteTestWalletFiles();
     }
 
@@ -144,15 +159,63 @@ public class BitcoinWalletServiceTest {
     }
 
     @Test
+    public void testReceiveClienttransaction() throws Exception {
+
+        WalletAppKit clientAppKit = getClientAppKit();
+        WalletAppKit clientAppKit2 = getClientAppKit();
+
+        sendFakeCoins(Coin.FIFTY_COINS, clientAppKit.wallet().currentReceiveAddress(), clientAppKit, clientAppKit2, bitcoinWalletService.getAppKit());
+
+        Assert.assertTrue(clientAppKit.wallet().currentReceiveAddress().isP2SHAddress());
+
+        Assert.assertTrue(Coin.FIFTY_COINS.compareTo(clientAppKit.wallet().getBalance()) == 0);
+        Assert.assertTrue(Coin.FIFTY_COINS.compareTo(bitcoinWalletService.getAppKit().wallet().getBalance()) == 0);
+
+        sendFakeCoins(Coin.COIN, clientAppKit2.wallet().currentReceiveAddress(), clientAppKit, clientAppKit2, bitcoinWalletService.getAppKit());
+        
+        WalletAppKit[] clients = new WalletAppKit[1];
+        clients[0] = clientAppKit2;
+        printWallets(clients, bitcoinWalletService.getAppKit());
+        
+        Assert.assertTrue(Coin.COIN.compareTo(clientAppKit2.wallet().getBalance()) == 0);
+        Assert.assertTrue(Coin.FIFTY_COINS.add(Coin.COIN).compareTo(bitcoinWalletService.getAppKit().wallet().getBalance()) == 0);
+
+    }
+
+    @Test
+    public void testReceiveClienttransactionManyClients() throws Exception {
+
+        int numClient = 3;
+        int numTransactions = 9;
+
+        WalletAppKit[] clients = new WalletAppKit[numClient];
+
+        for (int i = 0; i < numClient; i++) {
+            clients[i] = getClientAppKit();
+        }
+
+        for (int i = 0; i < numTransactions; i++) {
+            sendFakeCoins(Coin.COIN, clients[RND.nextInt(numClient)].wallet().currentReceiveAddress(), bitcoinWalletService.getAppKit(), clients);
+        }
+
+        Assert.assertTrue(Coin.COIN.multiply(numTransactions).compareTo(bitcoinWalletService.getAppKit().wallet().getBalance()) == 0);
+
+    }
+
+    @Test
     public void testSignTxAndBroadcast() throws Exception {
 
-        WalletAppKit otherAppKit = createAppKit();
         WalletAppKit clientAppKit = getClientAppKit();
+        WalletAppKit otherAppKit = createAppKit();
 
-        ServerSignatureRequestTransferObject txSigRequest = getSigRequest(clientAppKit);
-        sendFakeCoins(clientAppKit, Coin.FIFTY_COINS);
+        sendFakeCoins(Coin.FIFTY_COINS, clientAppKit.wallet().currentReceiveAddress(), bitcoinWalletService.getAppKit(), clientAppKit);
+
+        Assert.assertTrue(Coin.FIFTY_COINS.compareTo(clientAppKit.wallet().getBalance()) == 0);
+        Assert.assertTrue(Coin.FIFTY_COINS.compareTo(bitcoinWalletService.getAppKit().wallet().getBalance()) == 0);
 
         // now the actual testing begins
+        ServerSignatureRequestTransferObject txSigRequest = getSigRequest(clientAppKit);
+
         Address receiveAddr = otherAppKit.wallet().currentAddress(KeyPurpose.RECEIVE_FUNDS);
         SendRequest req = SendRequest.to(receiveAddr, Coin.COIN);
         req.missingSigsMode = MissingSigsMode.USE_OP_ZERO;
@@ -166,10 +229,34 @@ public class BitcoinWalletServiceTest {
         boolean invalidTxThrown = false;
         try {
             bitcoinWalletService.signTxAndBroadcast(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
-        } catch (DoubleSignatureRequestedException e) {
+        } catch (InvalidTransactionException e) {
             invalidTxThrown = true;
         }
         Assert.assertTrue(invalidTxThrown);
+
+    }
+
+    @Test(expected = NotEnoughUnspentsException.class)
+    public void testSignTxAndBroadcast_notEnoughUnspents() throws Exception {
+
+        WalletAppKit clientAppKit = getUnregisteredClientAppKit();
+        WalletAppKit otherAppKit = createAppKit();
+
+        sendFakeCoins(Coin.FIFTY_COINS, clientAppKit.wallet().currentReceiveAddress(), bitcoinWalletService.getAppKit(), clientAppKit);
+
+        Assert.assertTrue(Coin.FIFTY_COINS.compareTo(clientAppKit.wallet().getBalance()) == 0);
+        Assert.assertFalse(Coin.FIFTY_COINS.compareTo(bitcoinWalletService.getAppKit().wallet().getBalance()) == 0);
+
+        // now the actual testing begins
+        ServerSignatureRequestTransferObject txSigRequest = getSigRequest(clientAppKit);
+
+        Address receiveAddr = otherAppKit.wallet().currentAddress(KeyPurpose.RECEIVE_FUNDS);
+        SendRequest req = SendRequest.to(receiveAddr, Coin.COIN);
+        req.missingSigsMode = MissingSigsMode.USE_OP_ZERO;
+        clientAppKit.wallet().completeTx(req);
+
+        // check if TX was successful
+        bitcoinWalletService.signTxAndBroadcast(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
 
     }
 
@@ -180,7 +267,7 @@ public class BitcoinWalletServiceTest {
 
         // add a custom transaction signer
         final ServerSignatureRequestTransferObject txSigRequest = getSigRequest(clientAppKit);
-        sendFakeCoins(clientAppKit, Coin.FIFTY_COINS);
+        sendFakeCoins(Coin.FIFTY_COINS, clientAppKit.wallet().currentReceiveAddress(), bitcoinWalletService.getAppKit(), clientAppKit);
 
         Address receiveAddr = otherAppKit.wallet().currentAddress(KeyPurpose.RECEIVE_FUNDS);
         SendRequest req = SendRequest.to(receiveAddr, Coin.COIN);
@@ -189,6 +276,8 @@ public class BitcoinWalletServiceTest {
         // test with a time locked tx
         SendRequest req2 = SendRequest.to(receiveAddr, Coin.COIN);
         req2.missingSigsMode = MissingSigsMode.USE_OP_ZERO;
+        System.out.println("lolrofl");
+        System.out.println(clientAppKit.wallet().getTransactionPool(Pool.UNSPENT));
         TransactionOutput output = clientAppKit.wallet().getTransactionPool(Pool.UNSPENT).values().iterator().next().getOutput(0);
         req2.tx.addInput(output);
         req2.tx.getInput(0).setSequenceNumber(0);
@@ -204,13 +293,15 @@ public class BitcoinWalletServiceTest {
     }
 
     @Test
+    // @DatabaseSetup("classpath:emptyDataSet.xml") //TODO: load empty database
+    // or else test will fail
     public void testSignRefundTx_NotYetValidRefundTx() throws Exception {
         WalletAppKit otherAppKit = createAppKit();
         WalletAppKit clientAppKit = getClientAppKit();
 
         // add a custom transaction signer
         final ServerSignatureRequestTransferObject txSigRequest = getSigRequest(clientAppKit);
-        sendFakeCoins(clientAppKit, Coin.FIFTY_COINS);
+        sendFakeCoins(Coin.FIFTY_COINS, clientAppKit.wallet().currentReceiveAddress(), clientAppKit, bitcoinWalletService.getAppKit());
 
         long refundTxLockTime = 50L;
 
@@ -247,7 +338,7 @@ public class BitcoinWalletServiceTest {
 
         // add a custom transaction signer
         final ServerSignatureRequestTransferObject txSigRequest = getSigRequest(clientAppKit);
-        sendFakeCoins(clientAppKit, Coin.FIFTY_COINS);
+        sendFakeCoins(Coin.FIFTY_COINS, clientAppKit.wallet().currentReceiveAddress(), clientAppKit, bitcoinWalletService.getAppKit());
 
         long refundTxLockTime = 50L;
 
@@ -275,8 +366,6 @@ public class BitcoinWalletServiceTest {
         req2.missingSigsMode = MissingSigsMode.USE_OP_ZERO;
         clientAppKit.wallet().completeTx(req2);
 
-        boolean invalidTxThrown = false;
-
         bitcoinWalletService.signTxAndBroadcast(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
 
     }
@@ -287,36 +376,57 @@ public class BitcoinWalletServiceTest {
         return txSigRequest;
     }
 
-    private void sendFakeCoins(WalletAppKit appKit, Coin amount) {
-        // "send" 50 BTC to the client
-        Transaction tx = FakeTxBuilder.createFakeTx(params, amount, appKit.wallet().currentAddress(KeyPurpose.RECEIVE_FUNDS));
-        FakeTxBuilder.BlockPair bp = FakeTxBuilder.createFakeBlock(appKit.store(), tx);
+    private void sendFakeCoins(Coin amount, Address receiveAddr, WalletAppKit... appKits) {
 
-        appKit.wallet().receiveFromBlock(tx, bp.storedBlock, AbstractBlockChain.NewBlockType.BEST_CHAIN, 0);
-        appKit.wallet().notifyNewBestBlock(bp.storedBlock);
-    }
+        try {
+            Transaction tx = FakeTxBuilder.createFakeTx(params, amount, receiveAddr);
+            Block block = FakeTxBuilder.makeSolvedTestBlock(appKits[1].store().getChainHead().getHeader(), tx);
 
-    private void createFakeBlocks(WalletAppKit appKit, int numBlocks) {
-        for (int i = 0; i < numBlocks; i++) {
-            FakeTxBuilder.BlockPair bp = FakeTxBuilder.createFakeBlock(appKit.store());
-            appKit.wallet().notifyNewBestBlock(bp.storedBlock);
+            for (WalletAppKit appKit : appKits) {
+                // "send" BTC to the client
+                appKit.chain().add(block);
+            }
+            Thread.sleep(100);
+        } catch (VerificationException | PrunedException | BlockStoreException | InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
+    private void sendFakeCoins(Coin amount, Address receiveAddr, WalletAppKit serverKit, WalletAppKit[] appKits) {
+        WalletAppKit[] appKits2 = new WalletAppKit[appKits.length + 1];
+        System.arraycopy(appKits, 0, appKits2, 0, appKits.length);
+        appKits2[appKits.length] = serverKit;
+        sendFakeCoins(amount, receiveAddr, appKits2);
+    }
+
     private WalletAppKit getClientAppKit() {
+        return getClientAppKit(true);
+    }
+
+    private WalletAppKit getUnregisteredClientAppKit() {
+        return getClientAppKit(false);
+    }
+
+    private WalletAppKit getClientAppKit(boolean registerWithServer) {
+
         // set up a client wallet
-        WalletAppKit clientAppKit = new WalletAppKit(params, TEST_DIR, TEST_WALLET_PREFIX + "_client");
+        WalletAppKit clientAppKit = new WalletAppKit(params, TEST_DIR, TEST_WALLET_PREFIX + "_client" + RND.nextInt());
         clientAppKit.setDiscovery(new DummyPeerDiscovery());
         clientAppKit.setBlockingStartup(false);
         clientAppKit.startAsync().awaitRunning();
         clientAppKit.wallet().allowSpendingUnconfirmedTransactions();
 
-        // marry the wallet to the server
+        // marry the server to the client
         String watchingKey = bitcoinWalletService.getSerializedServerWatchingKey();
         DeterministicKey key = DeterministicKey.deserializeB58(watchingKey, params);
         MarriedKeyChain marriedKeyChain = MarriedKeyChain.builder().random(new SecureRandom()).followingKeys(key).threshold(2).build();
-
         clientAppKit.wallet().addAndActivateHDChain(marriedKeyChain);
+
+        // marry the client to the server
+        if (registerWithServer) {
+            bitcoinWalletService.addWatchingKey(clientAppKit.wallet().getWatchingKey().serializePubB58(params));
+        }
+
         Address addr = clientAppKit.wallet().currentAddress(KeyPurpose.RECEIVE_FUNDS);
         Assert.assertTrue(addr.isP2SHAddress());
 
@@ -324,7 +434,7 @@ public class BitcoinWalletServiceTest {
     }
 
     private WalletAppKit createAppKit() {
-        WalletAppKit clientAppKit = new WalletAppKit(params, TEST_DIR, TEST_WALLET_PREFIX);
+        WalletAppKit clientAppKit = new WalletAppKit(params, TEST_DIR, TEST_WALLET_PREFIX + RND.nextInt());
         clientAppKit.setDiscovery(new DummyPeerDiscovery());
         clientAppKit.setBlockingStartup(false);
         clientAppKit.startAsync().awaitRunning();
@@ -345,6 +455,16 @@ public class BitcoinWalletServiceTest {
         for (File f : walletFiles) {
             f.delete();
         }
+    }
+
+    private void printWallets(WalletAppKit[] clients, WalletAppKit server) {
+
+        System.out.println("*****   CLIENTS    *****");
+        for (WalletAppKit client : clients) {
+            System.out.println(client.wallet());
+        }
+        System.out.println("*****   SERVER    *****");
+        System.out.println(bitcoinWalletService.getAppKit().wallet());
     }
 
 }
