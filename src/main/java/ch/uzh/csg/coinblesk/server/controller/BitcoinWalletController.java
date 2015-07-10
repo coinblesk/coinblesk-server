@@ -12,8 +12,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import ch.uzh.csg.coinblesk.responseobject.RefundTxTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
+import ch.uzh.csg.coinblesk.responseobject.SetupRequestObject;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
+import ch.uzh.csg.coinblesk.responseobject.WatchingKeyTransferObject;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoinWallet;
 import ch.uzh.csg.coinblesk.server.util.ExchangeRates;
@@ -24,9 +27,9 @@ import ch.uzh.csg.coinblesk.server.util.ExchangeRates;
  * 
  */
 @Controller
-@RequestMapping("/transaction")
-public class TransactionController {
-    private static Logger LOGGER = Logger.getLogger(TransactionController.class);
+@RequestMapping("/wallet")
+public class BitcoinWalletController {
+    private static Logger LOGGER = Logger.getLogger(BitcoinWalletController.class);
     
     @Autowired
     private IBitcoinWallet bitcoinWalletService;
@@ -99,7 +102,7 @@ public class TransactionController {
         
         LOGGER.info("Received transaction refund transaction request");
         
-        TransferObject response = new TransferObject();
+        RefundTxTransferObject response = new RefundTxTransferObject();
         
         System.out.println(sigReq.getPartialTx());
         
@@ -110,8 +113,48 @@ public class TransactionController {
             response.setSuccessful(false);
             response.setMessage("Invalid transaction: " + e.getMessage());
         }
+        response.setRefundTx(refundTx);
         
         return response;
     }
+    
+    /**
+     * Returns the data that is required by clients to set up a new wallet. 
+     * 
+     * @return SetupRequestObject containing the server watching key and the bitcoin net.
+     */
+    @RequestMapping(value = "/setupInfo", method = RequestMethod.GET, produces = "application/json")
+    @ResponseBody
+    public TransferObject getSetupInfo() {
+        SetupRequestObject transferObject = new SetupRequestObject();
+        try {
+            transferObject.setSuccessful(true);
+            transferObject.setBitcoinNet(bitcoinWalletService.getBitcoinNet());
+            transferObject.setServerWatchingKey(bitcoinWalletService.getSerializedServerWatchingKey());
+        } catch (Exception t) {
+            transferObject.setSuccessful(false);
+            transferObject.setMessage("Unexpected: " + t.getMessage());
+            LOGGER.fatal(t.getMessage());
+        }
+        return transferObject;
+    }
 
+    /**
+    * Returns the data that is required by clients to set up a new wallet. 
+    * 
+    * @return SetupRequestObject containing the server watching key and the bitcoin net.
+    */
+   @RequestMapping(value = "/saveWatchingkey", method = RequestMethod.POST, produces = "application/json")
+   @ResponseBody
+   public TransferObject saveWatchingKey(@RequestBody WatchingKeyTransferObject saveWatchingKeyReq) {
+       SetupRequestObject transferObject = new SetupRequestObject();
+       try {
+           bitcoinWalletService.addWatchingKey(saveWatchingKeyReq.getWatchingKey());
+       } catch (Exception e) {
+           transferObject.setSuccessful(false);
+           transferObject.setMessage("Unexpected: " + e.getMessage());
+           LOGGER.error(e);
+       }
+       return transferObject;
+   }
 }

@@ -80,4 +80,15 @@ public interface IBitcoinWallet {
      */
     void setCleanWallet(boolean cleanWallet);
 
+    /**
+     * Adds a clients watching key to the server's watching wallet. This means
+     * that the server is always up to date about the funds available to the
+     * clients, and can therefore know whether the transaction to sign are in
+     * fact unspent.
+     * 
+     * @param base58encodedWatchingKey
+     *            the client's base58 encoded watching key
+     */
+    void addWatchingKey(String base58encodedWatchingKey);
+
 }

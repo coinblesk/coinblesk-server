@@ -328,15 +328,8 @@ public class BitcoinWalletService implements IBitcoinWallet {
         return bitcoinNet;
     }
 
-    /**
-     * Adds a clients watching key to the server's watching wallet. This means
-     * that the server is always up to date about the funds available to the
-     * clients, and can therefore know whether the transaction to sign are in
-     * fact unspent.
-     * 
-     * @param base58encodedWatchingKey
-     *            the client's base58 encoded watching key
-     */
+    
+    @Override
     public void addWatchingKey(String base58encodedWatchingKey) {
         DeterministicKey clientKey = DeterministicKey.deserializeB58(base58encodedWatchingKey, getNetworkParams(bitcoinNet));
 
