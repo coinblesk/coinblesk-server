@@ -1,6 +1,8 @@
 package ch.uzh.csg.coinblesk.server.service;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -101,15 +103,15 @@ public class BitcoinWalletService implements IBitcoinWallet {
 
     @PostConstruct
     public void init() {
-        
-        if(serverAppKit != null && serverAppKit.isRunning()) {
+
+        if (serverAppKit != null && serverAppKit.isRunning()) {
             return;
         }
-        
+
         if (cleanWallet) {
             clearWalletFiles();
         }
-        
+
         start().awaitRunning();
 
         initBlockListener();
@@ -122,28 +124,36 @@ public class BitcoinWalletService implements IBitcoinWallet {
         String filename = getWalletPrefix(bitcoinNet) + ".mnemonic";
         String absFilename = getWalletDir().getAbsolutePath() + System.getProperty("file.separator") + filename;
         File keyFile = new File(absFilename);
-        
-        if(keyFile.exists()) {
-            // load existing key
-            String mnemonicAndCreationDate;
-            try {
+
+        try {
+            if (keyFile.exists()) {
+                LOGGER.info("Loading private seed from file");
+                // load existing key
+                String mnemonicAndCreationDate;
+
                 mnemonicAndCreationDate = Files.readAllLines(keyFile.toPath()).get(0);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+
+                String mnemonic = mnemonicAndCreationDate.split(":")[0];
+                long creationDate = Long.parseLong(mnemonicAndCreationDate.split(":")[1]);
+                List<String> mnemonicWords = new ArrayList<String>(Arrays.asList(mnemonic.split(" ")));
+
+                DeterministicSeed seed = new DeterministicSeed(mnemonicWords, null, "", creationDate);
+                privateKeyChain = new KeyChainGroup(getNetworkParams(bitcoinNet), seed).getActiveKeyChain();
+            } else {
+                LOGGER.info("Writing private seed to file");
+
+                // write the seed in the key file
+                privateKeyChain = serverAppKit.wallet().getActiveKeychain();
+                String mnemonic = StringUtils.join(privateKeyChain.getMnemonicCode(), " ");
+                mnemonic += ":" + privateKeyChain.getEarliestKeyCreationTime();
+                FileWriter fw = new FileWriter(keyFile);
+                BufferedWriter bw = new BufferedWriter(fw);
+                bw.write(mnemonic);
+                bw.close();
             }
-            
-            String mnemonic = mnemonicAndCreationDate.split(":")[0];
-            long creationDate = Long.parseLong(mnemonicAndCreationDate.split(":")[0]);
-            List<String> mnemonicWords = new ArrayList<String>(Arrays.asList(mnemonic.split(" ")));
-            
-            DeterministicSeed seed = new DeterministicSeed(mnemonicWords, null, "", creationDate);
-            privateKeyChain = new KeyChainGroup(getNetworkParams(bitcoinNet), seed).getActiveKeyChain();
-        } else {
-            privateKeyChain = serverAppKit.wallet().getActiveKeychain();
-            String mnemonic = StringUtils.join(privateKeyChain.getMnemonicCode(), " ");
-            mnemonic += ":" + privateKeyChain.getEarliestKeyCreationTime();
-            System.out.println(mnemonic);
-            
+        } catch (IOException e) {
+            LOGGER.fatal(e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 
@@ -301,6 +311,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
     @Override
     public boolean signTxAndBroadcast(String partialTx, List<IndexAndDerivationPath> indexAndPaths) throws InvalidTransactionException {
 
+        
         // deserialize the transaction...
         Transaction tx = null;
         try {
@@ -308,6 +319,13 @@ public class BitcoinWalletService implements IBitcoinWallet {
         } catch (ProtocolException | IllegalArgumentException e) {
             LOGGER.error("Signing transaction failed", e);
             throw new InvalidTransactionException("Transaction could not be parsed");
+        }
+
+        // preconditions
+        if (tx.isTimeLocked()) {
+            String errorMsg = "Tried to create a refund transaction but transaction was not time locked";
+            LOGGER.warn(errorMsg);
+            throw new InvalidTransactionException("Tried to broadcast a time-locked transaction");
         }
 
         Transaction signedTx = signTx(tx, indexAndPaths);
@@ -328,21 +346,16 @@ public class BitcoinWalletService implements IBitcoinWallet {
         return bitcoinNet;
     }
 
-    
     @Override
     public void addWatchingKey(String base58encodedWatchingKey) {
         DeterministicKey clientKey = DeterministicKey.deserializeB58(base58encodedWatchingKey, getNetworkParams(bitcoinNet));
 
         // create married key chain with clients watching key
-        MarriedKeyChain marriedClientKeyChain = MarriedKeyChain.builder()
-                .seed(privateKeyChain.getSeed())
-                .followingKeys(clientKey)
-                .threshold(2)
-                .build();
-        
+        MarriedKeyChain marriedClientKeyChain = MarriedKeyChain.builder().seed(privateKeyChain.getSeed()).followingKeys(clientKey).threshold(2).build();
+
         serverAppKit.wallet().addAndActivateHDChain(marriedClientKeyChain);
         serverAppKit.wallet().getActiveKeychain().setLookaheadSize(50);
-        
+
         // no idea why this is necessary, but it is...
         serverAppKit.wallet().freshReceiveAddress();
     }
@@ -567,7 +580,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
     public WalletAppKit getAppKit() {
         return serverAppKit;
     }
-    
+
     public void stop() {
         serverAppKit.stopAsync().awaitTerminated();
     }

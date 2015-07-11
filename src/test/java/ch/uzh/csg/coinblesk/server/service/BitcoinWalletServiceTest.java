@@ -352,8 +352,6 @@ public class BitcoinWalletServiceTest {
         req.tx.setLockTime(refundTxLockTime);
         clientAppKit.wallet().completeTx(req);
 
-        String partialTxBase64 = txSigRequest.getPartialTx();
-
         bitcoinWalletService.signRefundTx(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
 
         txSigRequest.clear();

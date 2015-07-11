@@ -2,15 +2,19 @@ package ch.uzh.csg.coinblesk.server.controller;
 
 import java.io.IOException;
 
+import javax.servlet.http.HttpServletResponse;
+
 import net.minidev.json.parser.ParseException;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 
 import ch.uzh.csg.coinblesk.responseobject.RefundTxTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
@@ -22,11 +26,11 @@ import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoinWallet;
 import ch.uzh.csg.coinblesk.server.util.ExchangeRates;
 
 /**
- * REST Controller for client http requests regarding Transactions between two
+ * Controller for client http requests regarding Transactions between two
  * UserAccounts.
  * 
  */
-@Controller
+@RestController
 @RequestMapping("/wallet")
 public class BitcoinWalletController {
     private static Logger LOGGER = Logger.getLogger(BitcoinWalletController.class);
@@ -63,32 +67,31 @@ public class BitcoinWalletController {
      * 
      * @return {@link CustomResponseObject} with information about whether the transaction was successful or not
      */
-    @RequestMapping(value = "/signAndBroadcastTx", method = RequestMethod.POST, produces = "application/json")
+    @RequestMapping(value = "/signAndBroadcastTx", method = RequestMethod.POST, produces = "application/json; charset=UTF-8")
     @ResponseBody
-    public TransferObject sign(@RequestBody ServerSignatureRequestTransferObject sigReq) {
+    public ResponseEntity<TransferObject> signAndBroadcastTx(@RequestBody ServerSignatureRequestTransferObject sigReq) {
         
         LOGGER.info("Received transaction signature request");
         
         TransferObject response = new TransferObject();
         
-        System.out.println(sigReq.getPartialTx());
-        
-        boolean success = false;
         try {
-            success = bitcoinWalletService.signTxAndBroadcast(sigReq.getPartialTx(), sigReq.getIndexAndDerivationPaths());
+            boolean success = bitcoinWalletService.signTxAndBroadcast(sigReq.getPartialTx(), sigReq.getIndexAndDerivationPaths());
+            
+            if(success) {
+                response.setSuccessful(true);
+            } else {
+                response.setSuccessful(false);
+                response.setMessage("Invalid transaction");
+            }
+            
         } catch (InvalidTransactionException e) {
             response.setSuccessful(false);
             response.setMessage("Invalid transaction: " + e.getMessage());
+
         }
         
-        if(success) {
-            response.setSuccessful(true);
-        } else {
-            response.setSuccessful(false);
-            response.setMessage("Invalid transaction or ");
-        }
-        
-        return response;
+        return createResponse(response);
     }
     
     /**
@@ -96,9 +99,8 @@ public class BitcoinWalletController {
      * 
      * @return {@link CustomResponseObject} with information about whether the transaction was successful or not
      */
-    @RequestMapping(value = "/signRefundTx", method = RequestMethod.POST, produces = "application/json")
-    @ResponseBody
-    public TransferObject createRefundTx(@RequestBody ServerSignatureRequestTransferObject sigReq) {
+    @RequestMapping(value = "/signRefundTx", method = RequestMethod.POST, produces = "application/json; charset=UTF-8")
+    @ResponseBody public ResponseEntity<RefundTxTransferObject> createRefundTx(@RequestBody ServerSignatureRequestTransferObject sigReq, HttpServletResponse res) {
         
         LOGGER.info("Received transaction refund transaction request");
         
@@ -109,13 +111,14 @@ public class BitcoinWalletController {
         String refundTx = null;
         try {
             refundTx = bitcoinWalletService.signRefundTx(sigReq.getPartialTx(), sigReq.getIndexAndDerivationPaths());
+            response.setRefundTx(refundTx);
+            response.setSuccessful(true);
         } catch (InvalidTransactionException e) {
             response.setSuccessful(false);
             response.setMessage("Invalid transaction: " + e.getMessage());
         }
-        response.setRefundTx(refundTx);
         
-        return response;
+        return createResponse(response);
     }
     
     /**
@@ -123,7 +126,7 @@ public class BitcoinWalletController {
      * 
      * @return SetupRequestObject containing the server watching key and the bitcoin net.
      */
-    @RequestMapping(value = "/setupInfo", method = RequestMethod.GET, produces = "application/json")
+    @RequestMapping(value = "/setupInfo", method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
     @ResponseBody
     public TransferObject getSetupInfo() {
         SetupRequestObject transferObject = new SetupRequestObject();
@@ -144,7 +147,7 @@ public class BitcoinWalletController {
     * 
     * @return SetupRequestObject containing the server watching key and the bitcoin net.
     */
-   @RequestMapping(value = "/saveWatchingkey", method = RequestMethod.POST, produces = "application/json")
+   @RequestMapping(value = "/saveWatchingkey", method = RequestMethod.POST, produces = "application/json; charset=UTF-8")
    @ResponseBody
    public TransferObject saveWatchingKey(@RequestBody WatchingKeyTransferObject saveWatchingKeyReq) {
        SetupRequestObject transferObject = new SetupRequestObject();
@@ -156,5 +159,10 @@ public class BitcoinWalletController {
            LOGGER.error(e);
        }
        return transferObject;
+   }
+   
+   private <T extends TransferObject> ResponseEntity<T> createResponse(T response) {
+       HttpStatus status = response.isSuccessful() ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
+       return new ResponseEntity<T>(response, status);
    }
 }
