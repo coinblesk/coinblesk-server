@@ -1,4 +1,4 @@
-package ch.uzh.csg.coinblesk.server.spring;
+package ch.uzh.csg.coinblesk.server.config;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;

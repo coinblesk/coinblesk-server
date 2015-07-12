@@ -2,32 +2,25 @@ package ch.uzh.csg.coinblesk.server.domain;
 
 import java.io.Serializable;
 
-import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.Table;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 @Entity
-@Table(name="SIGNED_INPUTS")
 public class SignedInput implements Serializable {
 
     private static final long serialVersionUID = -7496348013847426914L;
     
-    @Column(name = "signed_input_id", nullable = false) @Id @GeneratedValue(strategy = GenerationType.AUTO)
+    @Id
+    @GeneratedValue(strategy=GenerationType.AUTO)
     private long id;
-    
-    @Column(name = "lock_time", nullable = false)
-    private long lockTime;
-    
-    @Column(name = "tx_hash", columnDefinition="binary(32)", nullable = false)
+    //@Column(name = "tx_hash", columnDefinition="binary(32)", nullable = false)
     private byte[] txHash;
-    
-    @Column(name = "output_index", nullable = false)
+    private long lockTime;
     private long outputIndex;
     
     

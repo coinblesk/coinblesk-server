@@ -41,9 +41,6 @@ import ch.uzh.csg.coinblesk.server.Application;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.service.BitcoinWalletService;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringApplicationConfiguration(classes = Application.class)
 @WebAppConfiguration
@@ -64,7 +61,6 @@ public class BitcoinWalletControllerTest {
     private MediaType contentType = new MediaType(MediaType.APPLICATION_JSON.getType(), MediaType.APPLICATION_JSON.getSubtype(), Charset.forName("utf8"));
 
     private MockMvc mockMvc;
-    private Gson gson;
 
     @Autowired
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
@@ -74,7 +70,6 @@ public class BitcoinWalletControllerTest {
     @Before
     public void setup() throws Exception {
         this.mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
-        this.gson = new GsonBuilder().create();
         MockitoAnnotations.initMocks(this);
     }
 

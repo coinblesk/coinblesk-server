@@ -54,11 +54,6 @@ public interface IBitcoinWallet {
     String signRefundTx(String partialTimeLockedTx, List<IndexAndDerivationPath> indexAndPath) throws InvalidTransactionException;
 
     /**
-     * Backup Bitcoin Wallet to destination defined in config file.
-     */
-    void backupWallet();
-
-    /**
      * @return The {@link BitcoinNet} the server is currently running on
      */
     BitcoinNet getBitcoinNet();

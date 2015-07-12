@@ -49,6 +49,8 @@ import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.MarriedKeyChain;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
 import ch.uzh.csg.coinblesk.bitcoin.BitcoinNet;
@@ -62,8 +64,8 @@ import ch.uzh.csg.coinblesk.server.bitcoin.SpentOutputsCache;
 import ch.uzh.csg.coinblesk.server.bitcoin.ValidRefundTransactionException;
 import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoinWallet;
 import ch.uzh.csg.coinblesk.server.dao.SignedInputDAO;
-import ch.uzh.csg.coinblesk.server.util.ServerProperties;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -82,7 +84,14 @@ public class BitcoinWalletService implements IBitcoinWallet {
      */
     private static final String WALLET_PREFIX = "_bitcoinj";
 
+    @Value("${bitcoin.net}")
+    private String bitcoinNetProp;
+    
+    @Value("${bitcoin.wallet.dir}")
+    Resource walletDir;
+    
     private BitcoinNet bitcoinNet;
+    
     private boolean cleanWallet = false;
 
     private ReentrantLock lock;
@@ -163,19 +172,16 @@ public class BitcoinWalletService implements IBitcoinWallet {
      * @return a {@link com.google.common.util.concurrent.Service} object
      */
     public com.google.common.util.concurrent.Service start() {
-
+        
         // check if wallet has already been started
         if (serverAppKit != null && serverAppKit.isRunning()) {
             LOGGER.warn("Tried to initialize bitcoin wallet service even though it's already running.");
             return serverAppKit;
         }
+        
+        bitcoinNet = BitcoinNet.of(bitcoinNetProp);
 
         // set up the wallet
-
-        if (bitcoinNet == null) {
-            bitcoinNet = BitcoinNet.of(ServerProperties.getProperty("bitcoin.net"));
-        }
-
         serverAppKit = getWalletAppKit();
         serverAppKit.setBlockingStartup(false);
 
@@ -219,16 +225,12 @@ public class BitcoinWalletService implements IBitcoinWallet {
     }
 
     private File getWalletDir() {
-        File walletDir = null;
-
+        Preconditions.checkNotNull(walletDir, "Bitcoin wallet directory must be set in the properties file");
         try {
-            walletDir = new File(ServerProperties.getProperty("bitcoin.wallet.dir"));
-        } catch (Exception e) {
-            LOGGER.fatal("Bitcoin wallet directory must be set in server.properties", e);
-            throw new RuntimeException("Bitcoin wallet directory must be set in server.properties");
+            return walletDir.getFile();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-
-        return walletDir;
     }
 
     /**
@@ -267,7 +269,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
     }
 
     public void clearWalletFiles() {
-        File[] walletFiles = new File(ServerProperties.getProperty("bitcoin.wallet.dir")).listFiles(new FilenameFilter() {
+        File[] walletFiles = getWalletDir().listFiles(new FilenameFilter() {
             @Override
             public boolean accept(File dir, String name) {
                 return name.startsWith(getWalletPrefix(bitcoinNet));
@@ -292,15 +294,6 @@ public class BitcoinWalletService implements IBitcoinWallet {
     @Override
     public void setCleanWallet(boolean cleanWallet) {
         this.cleanWallet = cleanWallet;
-    }
-
-    @Override
-    public void backupWallet() {
-        try {
-            serverAppKit.wallet().saveToFile(new File(ServerProperties.getProperty("bitcoin.backup.dir")));
-        } catch (IOException e) {
-            LOGGER.error("Failed to create wallet backup", e);
-        }
     }
 
     @Override
