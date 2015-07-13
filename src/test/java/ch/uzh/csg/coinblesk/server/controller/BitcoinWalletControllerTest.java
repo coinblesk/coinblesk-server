@@ -8,11 +8,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Random;
 
 import org.apache.tomcat.util.codec.binary.Base64;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -26,6 +28,7 @@ import org.springframework.boot.test.SpringApplicationConfiguration;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.GsonHttpMessageConverter;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
@@ -35,6 +38,8 @@ import org.springframework.web.context.WebApplicationContext;
 
 import ch.uzh.csg.coinblesk.JsonConverter;
 import ch.uzh.csg.coinblesk.bitcoin.BitcoinNet;
+import ch.uzh.csg.coinblesk.customserialization.Currency;
+import ch.uzh.csg.coinblesk.responseobject.ExchangeRateTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
 import ch.uzh.csg.coinblesk.server.Application;
@@ -44,6 +49,7 @@ import ch.uzh.csg.coinblesk.server.service.BitcoinWalletService;
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringApplicationConfiguration(classes = Application.class)
 @WebAppConfiguration
+@TestPropertySource("classpath:application-test.properties")
 public class BitcoinWalletControllerTest {
     
     private final static Random RND = new Random(42L);
@@ -74,8 +80,22 @@ public class BitcoinWalletControllerTest {
     }
 
     @Test
-    public void testSetupInfo() throws Exception {
-        mockMvc.perform(get("/wallet/setupInfo/")).andExpect(status().isOk());
+    public void testGetExchangeRate() throws Exception {
+        
+        MvcResult res = mockMvc.perform(get("/wallet/exchangeRate/"))
+                        .andExpect(status().isOk())
+                        .andExpect(content().contentType(contentType))
+                        .andExpect(jsonPath("$.status", is(TransferObject.Status.REPLY_SUCCESS.toString())))
+                        .andReturn();
+        
+        // check the response
+        ExchangeRateTransferObject exchangeRateObj = JsonConverter.fromJson(res.getResponse().getContentAsString(), ExchangeRateTransferObject.class);
+        Assert.assertTrue(exchangeRateObj.getExchangeRates().containsKey(Currency.CHF));
+        Assert.assertNotNull(exchangeRateObj.getExchangeRate(Currency.CHF));
+        BigDecimal rate = new BigDecimal(exchangeRateObj.getExchangeRate(Currency.CHF));
+        Assert.assertTrue(rate.signum() == 1); // positive exchange rate
+        
+        printResponse(res);
     }
 
     @Test

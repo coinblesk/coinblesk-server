@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import ch.uzh.csg.coinblesk.customserialization.Currency;
+import ch.uzh.csg.coinblesk.responseobject.ExchangeRateTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.RefundTxTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.SetupRequestObject;
@@ -44,22 +46,22 @@ public class BitcoinWalletController {
      * 
      * @return CustomResponseObject with exchangeRate BTC/CHF as a String
      */
-    @RequestMapping(value = "/exchange-rate", method = RequestMethod.GET, produces = "application/json")
+    @RequestMapping(value = "/exchangeRate", method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
     @ResponseBody
-    public TransferObject getExchangeRate() {
-        TransferObject transferObject = new TransferObject();
+    public ResponseEntity<ExchangeRateTransferObject> getExchangeRate() {
+        ExchangeRateTransferObject transferObject = new ExchangeRateTransferObject();
         try {
             transferObject.setSuccessful(true);
-            transferObject.setMessage(ExchangeRates.getExchangeRate().toString());
+            transferObject.setExchangeRate(Currency.CHF, ExchangeRates.getExchangeRate().toString());
         } catch (ParseException | IOException e) {
             LOGGER.error("Couldn't get exchange rate. Response: " + e.getMessage());
             transferObject.setSuccessful(false);
             transferObject.setMessage(e.getMessage());
-        } catch (Throwable t) {
+        } catch (Exception t) {
             transferObject.setSuccessful(false);
             transferObject.setMessage("Unexpected: " + t.getMessage());
         }
-        return transferObject;
+        return createResponse(transferObject);
     }
 
     /**

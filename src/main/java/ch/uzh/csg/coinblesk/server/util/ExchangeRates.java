@@ -14,25 +14,18 @@ import net.minidev.json.parser.ParseException;
 
 /**
  * Class for returning exchange rates from Bitcoin exchange platforms.
- *
+ *  TODO: Make a service out of this..
  */
 public class ExchangeRates {
 	private final static String USER_AGENT = "Mozilla/5.0";
 	private final static String MTGOX_URL = "http://data.mtgox.com/api/2/BTCCHF/money/ticker_fast";
 	private final static String BITSTAMP_URL = "https://www.bitstamp.net/api/ticker/";
 	private final static String USD_CHF_URL = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.xchange%20where%20pair%20in%20%28%22USDCHF%22%29&format=json&diagnostics=true&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys&";
-	private static BigDecimal exchangeRate = BigDecimal.ZERO;
-	private static Date exchangeRateTimestamp = new Date(0);
-	private static BigDecimal exchangeRateUsdChf = BigDecimal.ZERO;
 	
-	/**
-	 * Constructor for exchangerates. Initializes exchangeRate, exchangeRateUsdChf and exchangerateTimestamp.
-	 */
-	public ExchangeRates() {
-		exchangeRateTimestamp = new Date();
-		exchangeRate = BigDecimal.ZERO;
-		exchangeRateUsdChf = new BigDecimal("0.9");
-	}
+	private static BigDecimal exchangeRate = null;
+	private static Date exchangeRateTimestamp = null;
+	private static BigDecimal exchangeRateUsdChf = null;
+	
 	
 	/**
 	 * Returns the exchange rate for BTC/CHF based on
@@ -47,13 +40,15 @@ public class ExchangeRates {
 	 */
 	public static BigDecimal getExchangeRate() throws ParseException, IOException{
 		Date currentDate = new Date();
-		long currentDateTimeCacheLimit = currentDate.getTime()- Config.EXCHANGE_RATE_CACHE_TIME;
-		long exchangeRateTimestampTime = exchangeRateTimestamp.getTime();
 		
-		if (exchangeRate.equals(BigDecimal.ZERO)){
-			exchangeRate =  getCurrentExchangeRate();
-			exchangeRateTimestamp = currentDate;
-			return exchangeRate;
+		long currentDateTimeCacheLimit = currentDate.getTime() - Config.EXCHANGE_RATE_CACHE_TIME;
+		long exchangeRateTimestampTime = exchangeRateTimestamp == null ? currentDate.getTime() : exchangeRateTimestamp.getTime();
+		
+		if(exchangeRate == null) {
+		    updateExchangeRateUsdChf();
+		    exchangeRate =  getCurrentExchangeRate();
+		    exchangeRateTimestamp = currentDate;
+		    return exchangeRate;
 		}
 		
 		if (exchangeRateTimestampTime >= currentDateTimeCacheLimit) {
@@ -91,22 +86,7 @@ public class ExchangeRates {
 	 * @throws IOException
 	 */
 	private static BigDecimal getCurrentExchangeRate() throws ParseException, IOException {
-		switch (Config.EXCHANGE_RATE_PROVIDER) {
-		case 1:
-			try {
-				return getExchangeRateMtGox();
-			} catch (ParseException | IOException e) {
-				return getExchangeRateBitstamp();
-			}
-		case 2:
-			try {
-				return getExchangeRateBitstamp();
-			} catch (ParseException | IOException e) {
-				return getExchangeRateMtGox();
-			}
-		default:
-			return getExchangeRateMtGox();
-		}
+	    return getExchangeRateBitstamp();
 	}
 	
 	/**
@@ -143,29 +123,6 @@ public class ExchangeRates {
 	 */
 	private static BigDecimal convertBtcChf(BigDecimal btcUsd) throws IOException, ParseException{
 		return btcUsd.multiply(exchangeRateUsdChf);
-	}
-
-	/**
-	 * Returns up to date exchangeRate from MtGox.com int BTC/CHF
-	 * 
-	 * @return double exchangeRate BTC/CHF
-	 * @throws ParseException 
-	 * @throws IOException 
-	 */
-	private static BigDecimal getExchangeRateMtGox() throws ParseException, IOException {
-		StringBuffer response = doHttpRequest(MTGOX_URL);
-		//JSONParser.MODE_JSON_SIMPLE
-		@SuppressWarnings("deprecation")
-		JSONParser parser = new JSONParser();
-		BigDecimal exchangeRate = BigDecimal.ZERO;
-		JSONObject httpAnswerJson;
-		httpAnswerJson = (JSONObject) (parser.parse(response.toString()));
-		JSONObject dataJson = (JSONObject) httpAnswerJson.get("data");
-		JSONObject lastJson = (JSONObject) dataJson.get("last");
-		String last_String = (String) lastJson.get("value");
-		exchangeRate = new BigDecimal(last_String);
-
-		return exchangeRate;
 	}
 
 	/**

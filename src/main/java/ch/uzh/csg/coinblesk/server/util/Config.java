@@ -44,9 +44,6 @@ public class Config {
 //	public static final String URL_NAME_REGEX = "/^(https?:\\/\\/)?[a-zA-Z_0-9\\-]+(\\.\\w[a-zA-Z_0-9\\-]+)+(/[#&\\n\\-=?\\+\\%/\\.\\w]+)?$";
 	//	public static final String URL_REGEX = "/^(https?:\\/\\/)?([\\da-z\\.-]+)\\.([a-z\\.]{2,6})([\\/\\w \\.-]*)*\\/?$";
 //	public static final String IP_REGEX ="/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/";
-	// Exchange Rate Provicer Settings
-	// 1 for MtGox, 2 for Bitstamp
-	public static final int EXCHANGE_RATE_PROVIDER = 1;
 	public static final int EXCHANGE_RATE_CACHE_TIME = 10000; //time for which exchange rate is cached in ms
 	public static final int EXCHANGE_RATE_UPDATE_TIME = 5; //update time in s
 	
