@@ -1,22 +1,20 @@
 package ch.uzh.csg.coinblesk.server.controller;
 
-import java.io.IOException;
+import java.math.BigDecimal;
 
 import javax.servlet.http.HttpServletResponse;
-
-import net.minidev.json.parser.ParseException;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import ch.uzh.csg.coinblesk.customserialization.Currency;
 import ch.uzh.csg.coinblesk.responseobject.ExchangeRateTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.RefundTxTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
@@ -25,7 +23,7 @@ import ch.uzh.csg.coinblesk.responseobject.TransferObject;
 import ch.uzh.csg.coinblesk.responseobject.WatchingKeyTransferObject;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoinWallet;
-import ch.uzh.csg.coinblesk.server.util.ExchangeRates;
+import ch.uzh.csg.coinblesk.server.service.ForexExchangeRateService;
 
 /**
  * Controller for client http requests regarding Transactions between two
@@ -39,6 +37,9 @@ public class BitcoinWalletController {
     
     @Autowired
     private IBitcoinWallet bitcoinWalletService;
+    
+    @Autowired
+    private ForexExchangeRateService forexExchangeRateService;
 
 
     /**
@@ -46,20 +47,17 @@ public class BitcoinWalletController {
      * 
      * @return CustomResponseObject with exchangeRate BTC/CHF as a String
      */
-    @RequestMapping(value = "/exchangeRate", method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
+    @RequestMapping(value = "/exchangeRate/{symbol}", method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
     @ResponseBody
-    public ResponseEntity<ExchangeRateTransferObject> getExchangeRate() {
+    public ResponseEntity<ExchangeRateTransferObject> getExchangeRate(@PathVariable(value="symbol") String symbol) {
         ExchangeRateTransferObject transferObject = new ExchangeRateTransferObject();
         try {
+            BigDecimal exchangeRate = forexExchangeRateService.getExchangeRate(symbol);
+            transferObject.setExchangeRate(forexExchangeRateService.getCurrency(), exchangeRate.toString());
             transferObject.setSuccessful(true);
-            transferObject.setExchangeRate(Currency.CHF, ExchangeRates.getExchangeRate().toString());
-        } catch (ParseException | IOException e) {
-            LOGGER.error("Couldn't get exchange rate. Response: " + e.getMessage());
+        } catch (Exception e) {
             transferObject.setSuccessful(false);
             transferObject.setMessage(e.getMessage());
-        } catch (Exception t) {
-            transferObject.setSuccessful(false);
-            transferObject.setMessage("Unexpected: " + t.getMessage());
         }
         return createResponse(transferObject);
     }
@@ -130,7 +128,7 @@ public class BitcoinWalletController {
      */
     @RequestMapping(value = "/setupInfo", method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
     @ResponseBody
-    public TransferObject getSetupInfo() {
+    public ResponseEntity<TransferObject> getSetupInfo() {
         SetupRequestObject transferObject = new SetupRequestObject();
         try {
             transferObject.setSuccessful(true);
@@ -141,7 +139,7 @@ public class BitcoinWalletController {
             transferObject.setMessage("Unexpected: " + t.getMessage());
             LOGGER.fatal(t.getMessage());
         }
-        return transferObject;
+        return createResponse(transferObject);
     }
 
     /**
@@ -149,18 +147,19 @@ public class BitcoinWalletController {
     * 
     * @return SetupRequestObject containing the server watching key and the bitcoin net.
     */
-   @RequestMapping(value = "/saveWatchingkey", method = RequestMethod.POST, produces = "application/json; charset=UTF-8")
+   @RequestMapping(value = "/saveWatchingKey", method = RequestMethod.POST, produces = "application/json; charset=UTF-8")
    @ResponseBody
-   public TransferObject saveWatchingKey(@RequestBody WatchingKeyTransferObject saveWatchingKeyReq) {
-       SetupRequestObject transferObject = new SetupRequestObject();
+   public ResponseEntity<TransferObject> saveWatchingKey(@RequestBody WatchingKeyTransferObject saveWatchingKeyReq) {
+       TransferObject transferObject = new SetupRequestObject();
        try {
            bitcoinWalletService.addWatchingKey(saveWatchingKeyReq.getWatchingKey());
+           transferObject.setSuccessful(true);
        } catch (Exception e) {
            transferObject.setSuccessful(false);
            transferObject.setMessage("Unexpected: " + e.getMessage());
            LOGGER.error(e);
        }
-       return transferObject;
+       return createResponse(transferObject);
    }
    
    private <T extends TransferObject> ResponseEntity<T> createResponse(T response) {

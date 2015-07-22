@@ -198,16 +198,11 @@
 			<artifactId>mockito-core</artifactId>
 		</dependency>
 
-		<!-- Bitstamp API Connection -->
+		<!-- Forex Exchange Rates -->
 		<dependency>
 			<groupId>com.xeiam.xchange</groupId>
-			<artifactId>xchange-core</artifactId>
-			<version>2.0.0</version>
-		</dependency>
-		<dependency>
-			<groupId>com.xeiam.xchange</groupId>
-			<artifactId>xchange-bitstamp</artifactId>
-			<version>2.0.0</version>
+			<artifactId>xchange-openexchangerates</artifactId>
+			<version>3.0.0</version>
 		</dependency>
 
 		<!-- CoinBlesk shared resources -->

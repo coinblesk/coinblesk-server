@@ -42,9 +42,11 @@ import ch.uzh.csg.coinblesk.customserialization.Currency;
 import ch.uzh.csg.coinblesk.responseobject.ExchangeRateTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
+import ch.uzh.csg.coinblesk.responseobject.WatchingKeyTransferObject;
 import ch.uzh.csg.coinblesk.server.Application;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.service.BitcoinWalletService;
+import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringApplicationConfiguration(classes = Application.class)
@@ -82,7 +84,7 @@ public class BitcoinWalletControllerTest {
     @Test
     public void testGetExchangeRate() throws Exception {
         
-        MvcResult res = mockMvc.perform(get("/wallet/exchangeRate/"))
+        MvcResult res = mockMvc.perform(get("/wallet/exchangeRate/USD"))
                         .andExpect(status().isOk())
                         .andExpect(content().contentType(contentType))
                         .andExpect(jsonPath("$.status", is(TransferObject.Status.REPLY_SUCCESS.toString())))
@@ -231,6 +233,23 @@ public class BitcoinWalletControllerTest {
         printResponse(res);
         
         Mockito.verify(bitcoinWalletService, Mockito.times(1)).signTxAndBroadcast(Matchers.anyString(), Matchers.anyList());
+    }
+    
+
+    @Test
+    public void testSaveWatchingKey() throws Exception {
+        WatchingKeyTransferObject watchingKeyTransferObject = new WatchingKeyTransferObject();
+        watchingKeyTransferObject.setBitcoinNet(BitcoinNet.TESTNET);
+        watchingKeyTransferObject.setWatchingKey("watchingKey12345");
+        
+        MvcResult res = mockMvc.perform(post("/wallet/saveWatchingKey")
+                        .content(this.json(watchingKeyTransferObject))
+                        .contentType(contentType))
+                        .andExpect(status().isOk())
+                        .andExpect(content().contentType(contentType))
+                        .andExpect(jsonPath("$.status", is(TransferObject.Status.REPLY_SUCCESS.toString())))
+                        .andReturn();
+        printResponse(res);
     }
 
     private String json(Object o)  {
