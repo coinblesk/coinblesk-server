@@ -156,7 +156,7 @@ public class BitcoinWalletController {
            transferObject.setSuccessful(true);
        } catch (Exception e) {
            transferObject.setSuccessful(false);
-           transferObject.setMessage("Unexpected: " + e.getMessage());
+           transferObject.setMessage("Error: " + e.getMessage());
            LOGGER.error(e);
        }
        return createResponse(transferObject);
