@@ -171,7 +171,7 @@ public class BitcoinWalletControllerTest {
 
         ServerSignatureRequestTransferObject sigReq = getMockSigRequestObject();
 
-        Mockito.doReturn(true).when(bitcoinWalletService).signTxAndBroadcast(Mockito.any(String.class), Mockito.any(List.class));
+        Mockito.doReturn(true).when(bitcoinWalletService).signAndBroadcastTx(Mockito.any(String.class), Mockito.any(List.class));
         
         printRequest(sigReq);
         
@@ -185,7 +185,7 @@ public class BitcoinWalletControllerTest {
 
         printResponse(res);
 
-        Mockito.verify(bitcoinWalletService, Mockito.times(1)).signTxAndBroadcast(Matchers.eq(sigReq.getPartialTx()), Matchers.anyList());
+        Mockito.verify(bitcoinWalletService, Mockito.times(1)).signAndBroadcastTx(Matchers.eq(sigReq.getPartialTx()), Matchers.anyList());
     }
 
     @SuppressWarnings("unchecked")
@@ -194,7 +194,7 @@ public class BitcoinWalletControllerTest {
 
         ServerSignatureRequestTransferObject sigReq = new ServerSignatureRequestTransferObject();
 
-        Mockito.doReturn(false).when(bitcoinWalletService).signTxAndBroadcast(Mockito.any(String.class), Mockito.any(List.class));
+        Mockito.doReturn(false).when(bitcoinWalletService).signAndBroadcastTx(Mockito.any(String.class), Mockito.any(List.class));
         
         printRequest(sigReq);
 
@@ -209,7 +209,7 @@ public class BitcoinWalletControllerTest {
         printResponse(res);
 
         //Assert.assertFalse(response.isSuccessful());
-        Mockito.verify(bitcoinWalletService, Mockito.times(1)).signTxAndBroadcast(Matchers.anyString(), Matchers.anyList());
+        Mockito.verify(bitcoinWalletService, Mockito.times(1)).signAndBroadcastTx(Matchers.anyString(), Matchers.anyList());
     }
 
     @SuppressWarnings("unchecked")
@@ -218,7 +218,7 @@ public class BitcoinWalletControllerTest {
 
         ServerSignatureRequestTransferObject sigReq = new ServerSignatureRequestTransferObject();
 
-        Mockito.doThrow(new InvalidTransactionException()).when(bitcoinWalletService).signTxAndBroadcast(Mockito.any(String.class), Mockito.any(List.class));
+        Mockito.doThrow(new InvalidTransactionException()).when(bitcoinWalletService).signAndBroadcastTx(Mockito.any(String.class), Mockito.any(List.class));
         
         printRequest(sigReq);
 
@@ -232,7 +232,7 @@ public class BitcoinWalletControllerTest {
 
         printResponse(res);
         
-        Mockito.verify(bitcoinWalletService, Mockito.times(1)).signTxAndBroadcast(Matchers.anyString(), Matchers.anyList());
+        Mockito.verify(bitcoinWalletService, Mockito.times(1)).signAndBroadcastTx(Matchers.anyString(), Matchers.anyList());
     }
     
 

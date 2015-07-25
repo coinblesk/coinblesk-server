@@ -48,6 +48,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
 import org.springframework.test.context.support.DirtiesContextTestExecutionListener;
 import org.springframework.test.context.transaction.TransactionalTestExecutionListener;
+import org.springframework.test.context.web.WebAppConfiguration;
 
 import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
 import ch.uzh.csg.coinblesk.server.Application;
@@ -167,8 +168,7 @@ public class BitcoinWalletServiceTest {
     public void testSignTxAndBroadcast_invalidRequest() throws Exception {
         ServerSignatureRequestTransferObject txSigReq = new ServerSignatureRequestTransferObject();
         txSigReq.setPartialTx("corrupted-partial-tx");
-        boolean success = bitcoinWalletService.signTxAndBroadcast(txSigReq.getPartialTx(), txSigReq.getIndexAndDerivationPaths());
-        Assert.assertFalse(success);
+        bitcoinWalletService.signAndBroadcastTx(txSigReq.getPartialTx(), txSigReq.getIndexAndDerivationPaths());
     }
 
     @Test
@@ -235,13 +235,16 @@ public class BitcoinWalletServiceTest {
         clientAppKit.wallet().completeTx(req);
 
         // check if TX was successful
-        boolean success = bitcoinWalletService.signTxAndBroadcast(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
-        Assert.assertTrue(success);
+        String base64encodedSignedTx = bitcoinWalletService.signAndBroadcastTx(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
+        
+        // check if transaction can be deserialized
+        Transaction tx = new Transaction(params, Base64.getDecoder().decode(base64encodedSignedTx));
+        Assert.assertNotNull(tx);
 
         // Try to sign the same transaction again
         boolean invalidTxThrown = false;
         try {
-            bitcoinWalletService.signTxAndBroadcast(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
+            bitcoinWalletService.signAndBroadcastTx(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
         } catch (InvalidTransactionException e) {
             invalidTxThrown = true;
         }
@@ -269,7 +272,7 @@ public class BitcoinWalletServiceTest {
         clientAppKit.wallet().completeTx(req);
 
         // check if TX was successful
-        bitcoinWalletService.signTxAndBroadcast(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
+        bitcoinWalletService.signAndBroadcastTx(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
 
     }
 
@@ -339,8 +342,7 @@ public class BitcoinWalletServiceTest {
         // refund transaction is not valid yet, so this should be allowed
         clientAppKit.wallet().completeTx(req2);
         Assert.assertNotEquals(partialTxBase64, txSigRequest.getPartialTx());
-        boolean success = bitcoinWalletService.signTxAndBroadcast(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
-        Assert.assertTrue(success);
+        bitcoinWalletService.signAndBroadcastTx(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
 
     }
 
@@ -377,7 +379,7 @@ public class BitcoinWalletServiceTest {
         req2.missingSigsMode = MissingSigsMode.USE_OP_ZERO;
         clientAppKit.wallet().completeTx(req2);
 
-        bitcoinWalletService.signTxAndBroadcast(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
+        bitcoinWalletService.signAndBroadcastTx(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
 
     }
 

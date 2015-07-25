@@ -33,10 +33,13 @@ public class DatabaseConfig {
     @Value("${db.dialect:org.hibernate.dialect.PostgreSQLDialect}")
     private String dialect;
     
+    @Value("${db.driver.class.name:org.postgresql.Driver}")
+    private String driverClassName;
+    
     @Bean
     public DriverManagerDataSource dataSource() {
         DriverManagerDataSource dataSource = new DriverManagerDataSource(databaseUrl, databaseUsername, databasePassword);
-        dataSource.setDriverClassName("org.hsqldb.jdbcDriver");
+        dataSource.setDriverClassName(driverClassName);
         return dataSource;
     }
     

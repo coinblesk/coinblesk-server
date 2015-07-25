@@ -6,6 +6,7 @@ import org.bitcoinj.crypto.DeterministicKey;
 
 import ch.uzh.csg.coinblesk.bitcoin.BitcoinNet;
 import ch.uzh.csg.coinblesk.responseobject.IndexAndDerivationPath;
+import ch.uzh.csg.coinblesk.server.bitcoin.DoubleSignatureRequestedException;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 
 public interface IBitcoinWallet {
@@ -23,25 +24,29 @@ public interface IBitcoinWallet {
     /**
      * This method is responsible for signing partially signed Bitcoin
      * transactions and broadcast them to the Bitcoin network. If the inputs of
-     * the transaction were already signed previously, this method will return
-     * false, and the transaction will not be signed/broadcastet.
+     * the transaction were already signed previously, a
+     * {@link DoubleSignatureRequestedException} will be thrown, and the
+     * transaction is not broadcasted.
      * 
      * @param partialTx
      *            the Base64 encoded partially signed transaction
      * @param indexAndPath
      *            the indices and key derivation paths of the partially signed
      *            transaction
-     * @return true if the transaction is valid and was broadcastet to the
-     *         Bitcoin network
+     * @return The fully signed bitcoin transaction, Base64 encoded.
      * @throws InvalidTransactionException
      *             if the partial transaction is not valid
      */
-    boolean signTxAndBroadcast(String partialTx, List<IndexAndDerivationPath> indexAndPath) throws InvalidTransactionException;
+    String signAndBroadcastTx(String partialTx, List<IndexAndDerivationPath> indexAndPath) throws InvalidTransactionException;
 
     /**
      * This method is responsible for signing a partially signed, time locked
      * refund transaction. The signed transaction is not broadcasted but sent to
      * the client.
+     * 
+     * This method only accepts time locked transactions. If a non-time-locked
+     * transaction is passed, {@link InvalidTransactionException} will be
+     * thrown.
      * 
      * @param partialTimeLockedTx
      *            the partially signed, time locked transaction

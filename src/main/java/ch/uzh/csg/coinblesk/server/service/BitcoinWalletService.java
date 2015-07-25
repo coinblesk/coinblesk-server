@@ -126,7 +126,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
         initBlockListener();
         initPrivateKeyChain();
 
-        System.out.println("started");
+        LOGGER.info("bitcoin wallet service is ready");
     }
 
     private void initPrivateKeyChain() {
@@ -302,7 +302,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
     }
 
     @Override
-    public boolean signTxAndBroadcast(String partialTx, List<IndexAndDerivationPath> indexAndPaths) throws InvalidTransactionException {
+    public String signAndBroadcastTx(String partialTx, List<IndexAndDerivationPath> indexAndPaths) throws InvalidTransactionException {
 
         
         // deserialize the transaction...
@@ -316,12 +316,12 @@ public class BitcoinWalletService implements IBitcoinWallet {
 
         // preconditions
         if (tx.isTimeLocked()) {
-            String errorMsg = "Tried to create a refund transaction but transaction was not time locked";
+            String errorMsg = "Tried to sign and broadcast a time-locked transaction.";
             LOGGER.warn(errorMsg);
-            throw new InvalidTransactionException("Tried to broadcast a time-locked transaction");
+            throw new InvalidTransactionException(errorMsg);
         }
 
-        Transaction signedTx = signTx(tx, indexAndPaths);
+        Transaction signedTx = completeTx(tx, indexAndPaths);
 
         // transaction is fully signed now: let's broadcast it
         serverAppKit.peerGroup().broadcastTransaction(signedTx).broadcast().addListener(new Runnable() {
@@ -331,7 +331,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
             }
         }, MoreExecutors.sameThreadExecutor());
 
-        return true;
+        return Base64.getEncoder().encodeToString(signedTx.unsafeBitcoinSerialize());
     }
 
     @Override
@@ -352,10 +352,11 @@ public class BitcoinWalletService implements IBitcoinWallet {
         // no idea why this is necessary, but it is...
         serverAppKit.wallet().freshReceiveAddress();
     }
-
+    
+  
     @Override
     public String signRefundTx(String partialTimeLockedTx, List<IndexAndDerivationPath> indexAndPath) throws InvalidTransactionException {
-
+        
         // deserialize the transaction...
         Transaction tx = null;
         try {
@@ -379,7 +380,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
                 long oupointIndex = input.getOutpoint().getIndex();
                 signedInputDao.addSignedInput(txHash, oupointIndex, tx.getLockTime());
             }
-            signedTx = signTx(tx, indexAndPath);
+            signedTx = completeTx(tx, indexAndPath);
         } catch (Exception e) {
             // TODO: roll back
             // rethrow
@@ -441,7 +442,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
      * @return the fully signed transaction
      * @throws InvalidTransactionException
      */
-    private Transaction signTx(final Transaction tx, List<IndexAndDerivationPath> indexAndPaths) throws InvalidTransactionException {
+    private Transaction completeTx(final Transaction tx, List<IndexAndDerivationPath> indexAndPaths) throws InvalidTransactionException {
 
         if (!inputsUnspent(tx)) {
             throw new NotEnoughUnspentsException("Not enough unspent bitcoins for this transaction.");

@@ -19,6 +19,7 @@ import ch.uzh.csg.coinblesk.responseobject.ExchangeRateTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.RefundTxTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.SetupRequestObject;
+import ch.uzh.csg.coinblesk.responseobject.SignedTxTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
 import ch.uzh.csg.coinblesk.responseobject.WatchingKeyTransferObject;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
@@ -69,26 +70,18 @@ public class BitcoinWalletController {
      */
     @RequestMapping(value = "/signAndBroadcastTx", method = RequestMethod.POST, produces = "application/json; charset=UTF-8")
     @ResponseBody
-    public ResponseEntity<TransferObject> signAndBroadcastTx(@RequestBody ServerSignatureRequestTransferObject sigReq) {
+    public ResponseEntity<SignedTxTransferObject> signAndBroadcastTx(@RequestBody ServerSignatureRequestTransferObject sigReq) {
         
         LOGGER.info("Received transaction signature request");
         
-        TransferObject response = new TransferObject();
+        SignedTxTransferObject response = new SignedTxTransferObject();
         
         try {
-            boolean success = bitcoinWalletService.signTxAndBroadcast(sigReq.getPartialTx(), sigReq.getIndexAndDerivationPaths());
-            
-            if(success) {
-                response.setSuccessful(true);
-            } else {
-                response.setSuccessful(false);
-                response.setMessage("Invalid transaction");
-            }
-            
+            String signedTx = bitcoinWalletService.signAndBroadcastTx(sigReq.getPartialTx(), sigReq.getIndexAndDerivationPaths());
+            response.setSignedTx(signedTx);
         } catch (InvalidTransactionException e) {
             response.setSuccessful(false);
             response.setMessage("Invalid transaction: " + e.getMessage());
-
         }
         
         return createResponse(response);
