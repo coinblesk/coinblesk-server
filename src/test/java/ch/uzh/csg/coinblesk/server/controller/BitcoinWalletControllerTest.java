@@ -171,7 +171,8 @@ public class BitcoinWalletControllerTest {
 
         ServerSignatureRequestTransferObject sigReq = getMockSigRequestObject();
 
-        Mockito.doReturn(true).when(bitcoinWalletService).signAndBroadcastTx(Mockito.any(String.class), Mockito.any(List.class));
+        String signedTx = "fullySignedBase64EncodedTx";
+        Mockito.doReturn(signedTx).when(bitcoinWalletService).signAndBroadcastTx(Mockito.any(String.class), Mockito.any(List.class));
         
         printRequest(sigReq);
         
@@ -181,6 +182,7 @@ public class BitcoinWalletControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(contentType))
                 .andExpect(jsonPath("$.status", is(TransferObject.Status.REPLY_SUCCESS.toString())))
+                .andExpect(jsonPath("$.signedTx", is(signedTx)))
                 .andReturn();
 
         printResponse(res);

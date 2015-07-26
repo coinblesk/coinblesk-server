@@ -79,6 +79,7 @@ public class BitcoinWalletController {
         try {
             String signedTx = bitcoinWalletService.signAndBroadcastTx(sigReq.getPartialTx(), sigReq.getIndexAndDerivationPaths());
             response.setSignedTx(signedTx);
+            response.setSuccessful(true);
         } catch (InvalidTransactionException e) {
             response.setSuccessful(false);
             response.setMessage("Invalid transaction: " + e.getMessage());
