@@ -20,7 +20,6 @@ import javax.annotation.PreDestroy;
 import javax.xml.bind.DatatypeConverter;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
 import org.bitcoinj.core.AbstractBlockChainListener;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey.ECDSASignature;
@@ -48,8 +47,11 @@ import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.MarriedKeyChain;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
@@ -76,7 +78,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 @Service
 public class BitcoinWalletService implements IBitcoinWallet {
 
-    private static final Logger LOGGER = Logger.getLogger(BitcoinWalletService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(BitcoinWalletService.class);
 
     /**
      * Prefix for wallet and blockstore files. This prefix will be prefixed with
@@ -88,7 +90,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
     private String bitcoinNetProp;
     
     @Value("${bitcoin.wallet.dir}")
-    Resource walletDir;
+    FileSystemResource walletDir;
     
     private BitcoinNet bitcoinNet;
     
@@ -127,6 +129,8 @@ public class BitcoinWalletService implements IBitcoinWallet {
         initPrivateKeyChain();
 
         LOGGER.info("bitcoin wallet service is ready");
+        
+        LOGGER.info("Total number of bitcoins in the CoinBlesk system: {}", serverAppKit.wallet().getBalance().toFriendlyString());
     }
 
     private void initPrivateKeyChain() {
@@ -161,7 +165,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
                 bw.close();
             }
         } catch (IOException e) {
-            LOGGER.fatal(e.getMessage());
+            LOGGER.error(e.getMessage());
             throw new RuntimeException(e);
         }
     }
@@ -226,11 +230,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
 
     private File getWalletDir() {
         Preconditions.checkNotNull(walletDir, "Bitcoin wallet directory must be set in the properties file");
-        try {
-            return walletDir.getFile();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return walletDir.getFile();
     }
 
     /**
@@ -409,15 +409,12 @@ public class BitcoinWalletService implements IBitcoinWallet {
 
                 for (TransactionOutput unspent : candidates) {
                     outPoint.put(unspent.getOutPointFor(), unspent);
-                    System.out.println(unspent.getOutPointFor());
                 }
 
                 for (TransactionInput txIn : tx.getInputs()) {
-                    System.out.println(txIn.getOutpoint());
                     if (outPoint.containsKey(txIn.getOutpoint())) {
                         TransactionOutput unspentOutput = outPoint.get(txIn.getOutpoint());
                         gathered.add(unspentOutput);
-                        System.out.println(unspentOutput.getValue());
                         valueGathered = valueGathered.add(unspentOutput.getValue());
                     }
                 }
@@ -429,6 +426,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
         Coin txValue = Coin.ZERO;
         for (TransactionOutput txOut : tx.getOutputs()) {
             txValue = txValue.add(txOut.getValue());
+            LOGGER.debug("Total output value of transaction is {}, total unspent value of inputs is {}", txValue.toFriendlyString(), unspentsValue.toFriendlyString());
         }
 
         return unspentsValue.isGreaterThan(txValue) || unspentsValue.compareTo(txValue) == 0;
