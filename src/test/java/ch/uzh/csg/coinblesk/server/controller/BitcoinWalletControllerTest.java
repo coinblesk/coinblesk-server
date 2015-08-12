@@ -10,10 +10,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.nio.charset.Charset;
+import java.util.Base64;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.tomcat.util.codec.binary.Base64;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,7 +24,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.SpringApplicationConfiguration;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.GsonHttpMessageConverter;
@@ -43,13 +42,11 @@ import ch.uzh.csg.coinblesk.responseobject.ExchangeRateTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
 import ch.uzh.csg.coinblesk.responseobject.WatchingKeyTransferObject;
-import ch.uzh.csg.coinblesk.server.Application;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.service.BitcoinWalletService;
 import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@SpringApplicationConfiguration(classes = Application.class)
 @WebAppConfiguration
 @TestPropertySource("classpath:application-test.properties")
 public class BitcoinWalletControllerTest {
@@ -278,7 +275,7 @@ public class BitcoinWalletControllerTest {
         RND.nextBytes(tx);
         int index = 7;
         int[] path = {1,2,3,4,5};
-        String refundTx = Base64.encodeBase64String(tx);
+        String refundTx = Base64.getEncoder().encodeToString(tx);
 
         ServerSignatureRequestTransferObject sigReq = new ServerSignatureRequestTransferObject();
         sigReq.setPartialTx(refundTx);

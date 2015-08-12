@@ -4,11 +4,13 @@ import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class CredentialsOld {
 
-    private static Logger LOGGER = Logger.getLogger(Credentials.class);
+    private static Logger LOGGER = LoggerFactory.getLogger(Credentials.class);
 
     private CredentialsOld() {
     }

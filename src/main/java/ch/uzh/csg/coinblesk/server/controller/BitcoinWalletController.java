@@ -4,7 +4,8 @@ import java.math.BigDecimal;
 
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,7 +35,7 @@ import ch.uzh.csg.coinblesk.server.service.ForexExchangeRateService;
 @RestController
 @RequestMapping("/wallet")
 public class BitcoinWalletController {
-    private static Logger LOGGER = Logger.getLogger(BitcoinWalletController.class);
+    private static Logger LOGGER = LoggerFactory.getLogger(BitcoinWalletController.class);
     
     @Autowired
     private IBitcoinWallet bitcoinWalletService;
@@ -131,7 +132,7 @@ public class BitcoinWalletController {
         } catch (Exception t) {
             transferObject.setSuccessful(false);
             transferObject.setMessage("Unexpected: " + t.getMessage());
-            LOGGER.fatal(t.getMessage());
+            LOGGER.error("tranfer not successful", t);
         }
         return createResponse(transferObject);
     }
@@ -151,7 +152,7 @@ public class BitcoinWalletController {
        } catch (Exception e) {
            transferObject.setSuccessful(false);
            transferObject.setMessage("Error: " + e.getMessage());
-           LOGGER.error(e);
+           LOGGER.error("watching key not added", e);
        }
        return createResponse(transferObject);
    }

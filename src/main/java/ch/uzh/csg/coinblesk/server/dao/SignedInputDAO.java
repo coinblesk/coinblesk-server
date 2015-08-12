@@ -9,7 +9,8 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +23,7 @@ import ch.uzh.csg.coinblesk.server.domain.SignedInput;
  */
 @Repository
 public class SignedInputDAO {
-    private static Logger LOGGER = Logger.getLogger(SignedInputDAO.class);
+    private static Logger LOGGER = LoggerFactory.getLogger(SignedInputDAO.class);
 
     @PersistenceContext()
     private EntityManager em;
