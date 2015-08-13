@@ -13,8 +13,10 @@
   
    <logger name="ch.uzh.csg" level="DEBUG"/>
    <logger name="org.springframework" level="DEBUG"/>
+   <logger name="org.bitcoinj.core" level="WARN"/>
+   
 
-  <root level="debug">
+  <root level="ALL">
     <appender-ref ref="STDOUT" />
   </root>
 </configuration>

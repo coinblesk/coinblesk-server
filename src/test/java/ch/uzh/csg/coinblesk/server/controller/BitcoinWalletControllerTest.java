@@ -44,7 +44,6 @@ import ch.uzh.csg.coinblesk.responseobject.TransferObject;
 import ch.uzh.csg.coinblesk.responseobject.WatchingKeyTransferObject;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.service.BitcoinWalletService;
-import ch.uzh.csg.coinblesk.server.utilTest.TestUtil;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @WebAppConfiguration

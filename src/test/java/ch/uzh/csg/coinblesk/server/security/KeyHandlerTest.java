@@ -21,7 +21,7 @@ import org.junit.Test;
 
 import ch.uzh.csg.coinblesk.customserialization.PKIAlgorithm;
 import ch.uzh.csg.coinblesk.customserialization.exceptions.UnknownPKIAlgorithmException;
-import ch.uzh.csg.coinblesk.server.security.KeyHandler;
+import ch.uzh.csg.coinblesk.server.service.KeyService;
 
 public class KeyHandlerTest {
 
@@ -39,9 +39,9 @@ public class KeyHandlerTest {
 
 	@Test
 	public void testGenerateKeys() throws NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException, UnknownPKIAlgorithmException {
-		KeyPair keyPair = KeyHandler.generateKeyPair();
+		KeyPair keyPair = KeyService.generateKeyPair();
 		assertNotNull(keyPair);
-		keyPair = KeyHandler.generateKeyPair(PKIAlgorithm.DEFAULT);
+		keyPair = KeyService.generateKeyPair(PKIAlgorithm.DEFAULT);
 		assertNotNull(keyPair);
 	}
 	
@@ -51,17 +51,17 @@ public class KeyHandlerTest {
 	
 	@Test
 	public void testEncodeDecode() throws Exception {
-		KeyPair keyPair = KeyHandler.generateKeyPair();
-		String encodePublicKey = KeyHandler.encodePublicKey(keyPair.getPublic());
-		PublicKey decodePublicKey = KeyHandler.decodePublicKey(encodePublicKey);
-		String encodePublicKey2 = KeyHandler.encodePublicKey(decodePublicKey);
+		KeyPair keyPair = KeyService.generateKeyPair();
+		String encodePublicKey = KeyService.encodePublicKey(keyPair.getPublic());
+		PublicKey decodePublicKey = KeyService.decodePublicKey(encodePublicKey);
+		String encodePublicKey2 = KeyService.encodePublicKey(decodePublicKey);
 		
 		assertTrue(Arrays.equals(keyPair.getPublic().getEncoded(), decodePublicKey.getEncoded()));
 		assertEquals(encodePublicKey, encodePublicKey2);
 		
-		String encodePrivateKey = KeyHandler.encodePrivateKey(keyPair.getPrivate());
-		PrivateKey decodePrivateKey = KeyHandler.decodePrivateKey(encodePrivateKey);
-		String encodePrivateKey2 = KeyHandler.encodePrivateKey(decodePrivateKey);
+		String encodePrivateKey = KeyService.encodePrivateKey(keyPair.getPrivate());
+		PrivateKey decodePrivateKey = KeyService.decodePrivateKey(encodePrivateKey);
+		String encodePrivateKey2 = KeyService.encodePrivateKey(decodePrivateKey);
 		
 		assertTrue(Arrays.equals(keyPair.getPrivate().getEncoded(), decodePrivateKey.getEncoded()));
 		assertEquals(encodePrivateKey, encodePrivateKey2);

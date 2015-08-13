@@ -8,16 +8,16 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.concurrent.TimeUnit;
 
-import net.minidev.json.JSONObject;
-import net.minidev.json.parser.JSONParser;
-
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-
-import ch.uzh.csg.coinblesk.customserialization.Currency;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.gson.Gson;
+
+import ch.uzh.csg.coinblesk.customserialization.Currency;
+import ch.uzh.csg.coinblesk.server.config.AppConfig;
 
 /**
  * 
@@ -25,94 +25,127 @@ import com.google.common.cache.CacheBuilder;
  * caches exchange rates.
  * 
  * @author rvoellmy
+ * @author Thomas Bocek
  *
  */
+
 @Service
-public class ForexExchangeRateService {
+final public class ForexExchangeRateService {
 
-    @Value("${exchangerates.cachingtime:900}")
-    long cachingTime;
+	@Autowired
+	private AppConfig appConfig;
+	
+	//15min
+	private final static int cachingTimeMillis = 900 * 1000; 
 
-    @Value("${exchangerates.currency:CHF}")
-    private Currency currency;
+	private final static String USER_AGENT = "Mozilla/5.0";
+	private final static String PLACEHOLDER = "{{PLACEHOLDER}}";
+	private final static String YAHOO_API = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.xchange%20where%20pair%20in%20(\""
+			+ PLACEHOLDER + "\")&format=json&env=store://datatables.org/alltableswithkeys";
 
-    private final static String USER_AGENT = "Mozilla/5.0";
-    private final static String PLACEHOLDER = "{{PLACEHOLDER}}";
-    private final static String YAHOO_API = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.xchange%20where%20pair%20in%20(\"" + PLACEHOLDER + "\")&format=json&env=store://datatables.org/alltableswithkeys";
-    
-    private Cache<String, BigDecimal> exchangeRatesCache;
-    
+	private final Cache<String, BigDecimal> exchangeRatesCache = CacheBuilder.newBuilder().
+			expireAfterWrite(cachingTimeMillis, TimeUnit.MILLISECONDS).build();
 
-    public ForexExchangeRateService() {
-         exchangeRatesCache = CacheBuilder.newBuilder().expireAfterWrite(cachingTime, TimeUnit.SECONDS).build();
-    }
+	/**
+	 * Returns the exchange rate of 1 USD against the specified currency (by
+	 * default CHF)
+	 * 
+	 * @return the forex exchange rate
+	 * @throws Exception
+	 */
+	public BigDecimal getExchangeRate(final String symbol) throws Exception {
+		final String pair = symbol + appConfig.getCurrency().toString();
+		return getExchangeRatePair(pair);
+	}
+	private BigDecimal getExchangeRatePair(final String pair) throws Exception {
 
-    /**
-     * Returns the exchange rate of 1 USD against the specified currency (by
-     * default CHF)
-     * 
-     * @return the forex exchange rate
-     * @throws Exception
-     */
-    public BigDecimal getExchangeRate(String symbol) throws Exception {
-        
-        String pair = symbol + currency.toString();
-        
-        BigDecimal exchangeRate = exchangeRatesCache.getIfPresent(pair);
-        
-        if(exchangeRate == null) {
-            String url = YAHOO_API.replace(PLACEHOLDER, pair);
-            StringBuffer response = doHttpRequest(url);
-            // gets actual exchange rate out of Json Object and saves it to last.
-            //JSONParser.MODE_JSON_SIMPLE
-            @SuppressWarnings("deprecation")
-            JSONParser parser = new JSONParser();
+		BigDecimal exchangeRate = exchangeRatesCache.getIfPresent(pair);
 
-            JSONObject httpAnswerJson;
-            httpAnswerJson = (JSONObject) (parser.parse(response.toString()));
-            JSONObject query = (JSONObject) httpAnswerJson.get("query");
-            JSONObject results = (JSONObject) query.get("results");
-            JSONObject rate = (JSONObject) results.get("rate");
-            String rateString = (String) rate.get("Rate");
-            exchangeRate = new BigDecimal(rateString);
-            
-            exchangeRatesCache.put(pair, exchangeRate);
-        }
+		if (exchangeRate == null) {
+			final String url = YAHOO_API.replace(PLACEHOLDER, pair);
+			final StringBuffer response = doHttpRequest(url);
+			// gets actual exchange rate out of Json Object and saves it to
+			// last.
 
-        return exchangeRate;
-    }
+			final Gson gson = new Gson();
+			final Query query = gson.fromJson(response.toString(), Query.class);
+			exchangeRate = new BigDecimal(query.results.rate.Rate);
+			exchangeRatesCache.put(pair, exchangeRate);
+		}
 
-   
-    public Currency getCurrency() {
-        return currency;
-    }
-    
-    /**
-     * Executes JSON HTTP Request and returns result.
-     * 
-     * @param url
-     * @return response of defined by url request
-     * @throws IOException
-     */
-    private static StringBuffer doHttpRequest(String url) throws IOException{
-        URL obj = new URL(url);
-        HttpURLConnection con = (HttpURLConnection) obj.openConnection();
-        
-        // optional default is GET
-        con.setRequestMethod("GET");
-        
-        // add request header
-        con.setRequestProperty("User-Agent", USER_AGENT);
-        
-        BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-        String inputLine;
-        StringBuffer response = new StringBuffer();
-        
-        while ((inputLine = in.readLine()) != null) {
-            response.append(inputLine);
-        }
-        in.close();
-        return response;
-    }
+		return exchangeRate;
+	}
+	
+	@Scheduled(fixedRate=cachingTimeMillis/2)
+	public void refreshExchangeRates() throws Exception {
+		for(String pair:exchangeRatesCache.asMap().keySet()) {
+			getExchangeRatePair(pair);
+		}
+	
+	}
 
+	public Currency getCurrency() {
+		return appConfig.getCurrency();
+	}
+
+	/**
+	 * Executes JSON HTTP Request and returns result.
+	 * 
+	 * @param url
+	 * @return response of defined by url request
+	 * @throws IOException
+	 */
+	private static StringBuffer doHttpRequest(String url) throws IOException {
+		final URL requestURL = new URL(url);
+		final HttpURLConnection con = (HttpURLConnection) requestURL.openConnection();
+
+		// optional default is GET
+		con.setRequestMethod("GET");
+
+		// add request header
+		con.setRequestProperty("User-Agent", USER_AGENT);
+
+		final StringBuffer response = new StringBuffer();
+		try (final BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
+			String inputLine = null;
+			while ((inputLine = in.readLine()) != null) {
+				response.append(inputLine);
+			}
+		}
+		return response;
+	}
+
+	/*-
+	 * minimized JSON representation. Query result looks like:
+	 *	{
+	 *	   "query":{
+	 *        "count":1,
+	 *	      "created":"2015-08-13T10:10:05Z",
+	 *	      "lang":"en-US",
+	 *	      "results":{
+	 *	         "rate":{
+	 *	            "id":"CHFUSD",
+	 *	            "Name":"CHF/USD",
+	 *	            "Rate":"1.0222",
+	 *	            "Date":"8/13/2015",
+	 *	            "Time":"11:10am",
+	 *	            "Ask":"1.0224",
+	 *	            "Bid":"1.0221"
+	 *	         }
+	 *	      }
+	 *	   }
+	 *	}
+	 *	</code> 
+	 */
+	private static class Query {
+		private Results results;
+
+		private static class Results {
+			private Rate rate;
+
+			private static class Rate {
+				private String Rate;
+			}
+		}
+	}
 }

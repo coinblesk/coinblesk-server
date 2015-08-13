@@ -73,6 +73,14 @@ public class DatabaseConfig {
        Properties properties = new Properties();
        properties.setProperty("hibernate.hbm2ddl.auto", hbm2ddlAuto);
        properties.setProperty("hibernate.dialect", dialect);
+       //connection pool
+       
+       properties.setProperty("hibernate.c3p0.min_size", "5");
+       properties.setProperty("hibernate.c3p0.max_size", "20");
+       properties.setProperty("hibernate.c3p0.timeout", "300");
+       properties.setProperty("hibernate.c3p0.max_statements", "50");
+       properties.setProperty("hibernate.c3p0.idle_test_period", "3000");
+       
        return properties;
     }
 

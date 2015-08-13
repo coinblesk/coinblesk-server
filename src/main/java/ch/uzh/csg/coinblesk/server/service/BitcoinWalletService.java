@@ -50,10 +50,12 @@ import org.bitcoinj.wallet.MarriedKeyChain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
+
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.MoreExecutors;
 
 import ch.uzh.csg.coinblesk.bitcoin.BitcoinNet;
 import ch.uzh.csg.coinblesk.responseobject.IndexAndDerivationPath;
@@ -65,18 +67,17 @@ import ch.uzh.csg.coinblesk.server.bitcoin.P2SHScript;
 import ch.uzh.csg.coinblesk.server.bitcoin.SpentOutputsCache;
 import ch.uzh.csg.coinblesk.server.bitcoin.ValidRefundTransactionException;
 import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoinWallet;
+import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import ch.uzh.csg.coinblesk.server.dao.SignedInputDAO;
-
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * Abstraction of bitcoinJ
  */
 @Service
 public class BitcoinWalletService implements IBitcoinWallet {
+	
+	@Autowired 
+	private AppConfig appConfig;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BitcoinWalletService.class);
 
@@ -85,12 +86,6 @@ public class BitcoinWalletService implements IBitcoinWallet {
      * the name of the network, eg testnet + WALLET_PREFIX
      */
     private static final String WALLET_PREFIX = "_bitcoinj";
-
-    @Value("${bitcoin.net}")
-    private String bitcoinNetProp;
-    
-    @Value("${bitcoin.wallet.dir}")
-    FileSystemResource walletDir;
     
     private BitcoinNet bitcoinNet;
     
@@ -183,7 +178,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
             return serverAppKit;
         }
         
-        bitcoinNet = BitcoinNet.of(bitcoinNetProp);
+        bitcoinNet = BitcoinNet.of(appConfig.getBitcoinNet());
 
         // set up the wallet
         serverAppKit = getWalletAppKit();
@@ -229,8 +224,8 @@ public class BitcoinWalletService implements IBitcoinWallet {
     }
 
     private File getWalletDir() {
-        Preconditions.checkNotNull(walletDir, "Bitcoin wallet directory must be set in the properties file");
-        return walletDir.getFile();
+        Preconditions.checkNotNull(appConfig.getConfigDir(), "Bitcoin wallet directory must be set in the properties file");
+        return appConfig.getConfigDir().getFile();
     }
 
     /**

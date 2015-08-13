@@ -50,6 +50,12 @@
 		
 		<dependency>
 			<groupId>org.springframework</groupId>
+			<artifactId>spring-web</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.springframework</groupId>
 			<artifactId>spring-webmvc</artifactId>
 			<version>${spring.version}</version>
 		</dependency>
@@ -60,47 +66,6 @@
 			<version>0.13.1</version>
 		</dependency>
 
-		<dependency>
-			<groupId>javax.mail</groupId>
-			<artifactId>mail</artifactId>
-			<version>1.5.0-b01</version>
-		</dependency>
- 		
-<!-- 		<dependency> -->
-<!-- 			<groupId>org.springframework.boot</groupId> -->
-<!-- 			<artifactId>spring-boot-starter-web</artifactId> -->
-<!-- 			<exclusions> -->
-<!-- 				<exclusion> -->
-<!-- 					<artifactId>jackson-databind</artifactId> -->
-<!-- 					<groupId>com.fasterxml.jackson.core</groupId> -->
-<!-- 				</exclusion> -->
-<!-- 			</exclusions> -->
-<!-- 		</dependency> -->
-<!-- 		<dependency> -->
-<!-- 			<groupId>org.springframework.boot</groupId> -->
-<!-- 			<artifactId>spring-boot-starter-tomcat</artifactId> -->
-<!-- 			<scope>provided</scope> -->
-<!-- 		</dependency> -->
-<!-- 		<dependency> -->
-<!-- 			<groupId>org.springframework</groupId> -->
-<!-- 			<artifactId>spring-jdbc</artifactId> -->
-<!-- 		</dependency> -->
-<!-- 		<dependency> -->
-<!-- 			<groupId>org.springframework.boot</groupId> -->
-<!-- 			<artifactId>spring-boot-starter-data-jpa</artifactId> -->
-<!-- 		</dependency> -->
-<!-- 		<dependency> -->
-<!-- 			<groupId>com.jayway.jsonpath</groupId> -->
-<!-- 			<artifactId>json-path</artifactId> -->
-<!-- 			<scope>test</scope> -->
-<!-- 		</dependency> -->
-
-		<!-- JSON processor -->
-		<dependency>
-			<groupId>net.minidev</groupId>
-			<artifactId>json-smart</artifactId>
-			<version>1.2</version>
-		</dependency>
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
@@ -140,14 +105,6 @@
 			<artifactId>commons-lang3</artifactId>
 			<version>3.1</version>
 		</dependency>
-		
-		
-		<!-- Forex Exchange Rates -->
-		<dependency>
-			<groupId>com.xeiam.xchange</groupId>
-			<artifactId>xchange-openexchangerates</artifactId>
-			<version>3.0.0</version>
-		</dependency>
 
 		<!-- CoinBlesk shared resources -->
 		<dependency>
@@ -186,6 +143,11 @@
 			<artifactId>logback-classic</artifactId>
 			<version>1.1.3</version>
 		</dependency>
+		<dependency>
+    		<groupId>org.slf4j</groupId>
+    		<artifactId>slf4j-api</artifactId>
+    		<version>1.7.12</version>
+		</dependency>
 		<dependency>                                    
 			<groupId>org.slf4j</groupId>                
 			<artifactId>jcl-over-slf4j</artifactId>     
@@ -200,6 +162,12 @@
 			<artifactId>junit</artifactId>
 			<version>4.12</version>
 			<scope>test</scope>
+			<exclusions>
+        		<exclusion>
+            		<groupId>org.hamcrest</groupId>
+            		<artifactId>hamcrest-core</artifactId>
+        		</exclusion>
+    		</exclusions>
 		</dependency>
 		
 		<dependency>
@@ -216,12 +184,7 @@
 			<version>${spring.version}</version>
 			<scope>test</scope>
 		</dependency>
-		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-web</artifactId>
-			<version>${spring.version}</version>
-			<scope>test</scope>
-		</dependency>
+		
 		<!-- dbUnit and hsql database-->
 		<dependency>
 			<groupId>com.github.springtestdbunit</groupId>
@@ -299,12 +262,6 @@
       		</plugin>
 		</plugins>
 		
-		<resources>
-			<resource>
-				<directory>${project.basedir}/src/main/resources</directory>
-				<filtering>true</filtering>
-			</resource>
-		</resources>
 		<testResources>
 			<testResource>
 				<directory>${project.basedir}/src/main/resources</directory>
