@@ -18,22 +18,22 @@ import org.springframework.transaction.PlatformTransactionManager;
 @Configuration
 public class DatabaseConfig {
     
-    @Value("${db.url}")
+    @Value("${db.url:jdbc:hsqldb:mem:paging}")
     private String databaseUrl;
     
-    @Value("${db.username}")
+    @Value("${db.username:sa}")
     private String databaseUsername;
     
-    @Value("${db.password}")
+    @Value("${db.password:}")
     private String databasePassword;
     
-    @Value("${db.hbm2ddl.auto:verify}")
+    @Value("${db.hbm2ddl.auto:create-drop}")
     private String hbm2ddlAuto;
     
-    @Value("${db.dialect:org.hibernate.dialect.PostgreSQLDialect}")
+    @Value("${db.dialect:org.hibernate.dialect.HSQLDialect}")
     private String dialect;
     
-    @Value("${db.driver.class.name:org.postgresql.Driver}")
+    @Value("${db.driver.class.name:org.hsqldb.jdbcDriver}")
     private String driverClassName;
     
     @Bean

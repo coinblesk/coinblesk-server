@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import ch.uzh.csg.coinblesk.server.domain.SignedInput;
+import ch.uzh.csg.coinblesk.server.entity.SignedInput;
 
 /**
  * DatabaseAccessObject for storing bitcoin transaction inputs of time-locked

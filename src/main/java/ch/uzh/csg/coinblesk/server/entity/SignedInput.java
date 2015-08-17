@@ -1,15 +1,19 @@
-package ch.uzh.csg.coinblesk.server.domain;
+package ch.uzh.csg.coinblesk.server.entity;
 
 import java.io.Serializable;
+import java.util.Arrays;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
+import javax.persistence.Table;
 
-import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
+@Table(indexes = {	@Index(name = "txHashIndex", columnList ="txHash"), 
+					@Index(name = "outputIndexIndex", columnList ="outputIndex")})
 @Entity
 public class SignedInput implements Serializable {
 
@@ -18,7 +22,6 @@ public class SignedInput implements Serializable {
     @Id
     @GeneratedValue(strategy=GenerationType.AUTO)
     private long id;
-    //@Column(name = "tx_hash", columnDefinition="binary(32)", nullable = false)
     private byte[] txHash;
     private long lockTime;
     private long outputIndex;
@@ -60,15 +63,16 @@ public class SignedInput implements Serializable {
 
     @Override
     public boolean equals(final Object otherObj) {
+    	if(otherObj == this) {
+    		return true;
+    	}
         if ((otherObj == null) || !(otherObj instanceof SignedInput)) {
             return false;
         }
         final SignedInput other = (SignedInput) otherObj;
-        return new EqualsBuilder()
-                .append(getLockTime(), other.getLockTime())
-                .append(getTxHash(), other.getTxHash())
-                .append(getIndex(), other.getIndex())
-                .isEquals();
+        return lockTime == other.lockTime 
+        		&& outputIndex == other.outputIndex
+        		&& Arrays.equals(txHash, other.txHash);
     }
 
 }

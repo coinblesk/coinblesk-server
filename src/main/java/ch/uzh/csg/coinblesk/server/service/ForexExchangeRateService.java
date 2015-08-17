@@ -36,7 +36,7 @@ final public class ForexExchangeRateService {
 	private AppConfig appConfig;
 	
 	//15min
-	private final static int cachingTimeMillis = 900 * 1000; 
+	public final static int cachingTimeMillis = 900 * 1000; 
 
 	private final static String USER_AGENT = "Mozilla/5.0";
 	private final static String PLACEHOLDER = "{{PLACEHOLDER}}";
@@ -73,14 +73,6 @@ final public class ForexExchangeRateService {
 		}
 
 		return exchangeRate;
-	}
-	
-	@Scheduled(fixedRate=cachingTimeMillis/2)
-	public void refreshExchangeRates() throws Exception {
-		for(String pair:exchangeRatesCache.asMap().keySet()) {
-			getExchangeRatePair(pair);
-		}
-	
 	}
 
 	public Currency getCurrency() {
@@ -146,6 +138,20 @@ final public class ForexExchangeRateService {
 					private String Rate;
 				}
 			}
+		}
+	}
+	
+	final static public class ForexTask {
+		
+		@Autowired
+		private ForexExchangeRateService service;
+		
+		@Scheduled(fixedRate=ForexExchangeRateService.cachingTimeMillis/2)
+		public void doTask() throws Exception {
+			for(String pair:service.exchangeRatesCache.asMap().keySet()) {
+				service.getExchangeRatePair(pair);
+			}
+		
 		}
 	}
 }
