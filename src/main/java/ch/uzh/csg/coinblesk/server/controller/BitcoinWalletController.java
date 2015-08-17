@@ -24,7 +24,7 @@ import ch.uzh.csg.coinblesk.responseobject.SignedTxTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
 import ch.uzh.csg.coinblesk.responseobject.WatchingKeyTransferObject;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
-import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoinWallet;
+import ch.uzh.csg.coinblesk.server.service.BitcoinWalletService;
 import ch.uzh.csg.coinblesk.server.service.ForexExchangeRateService;
 
 /**
@@ -38,7 +38,7 @@ public class BitcoinWalletController {
     private static Logger LOGGER = LoggerFactory.getLogger(BitcoinWalletController.class);
     
     @Autowired
-    private IBitcoinWallet bitcoinWalletService;
+    private BitcoinWalletService bitcoinWalletService;
     
     @Autowired
     private ForexExchangeRateService forexExchangeRateService;

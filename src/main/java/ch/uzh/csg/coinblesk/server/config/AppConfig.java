@@ -12,7 +12,7 @@ public class AppConfig {
 	@Value("${coinblesk.config.dir:/var/lib/coinblesk}")
     private FileSystemResource configDir;
 	
-	@Value("${bitcoin.net:testnet}")
+	@Value("${bitcoin.net:unittest}")
     private String bitcoinNet;
 
     @Value("${exchangerates.currency:CHF}")

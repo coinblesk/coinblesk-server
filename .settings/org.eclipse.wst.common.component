@@ -6,9 +6,6 @@
         <dependent-module archiveName="coinblesk-shared-resources-1.3.4.jar" deploy-path="/WEB-INF/lib" handle="module:/resource/coinblesk-shared-resources/coinblesk-shared-resources">
             <dependency-type>uses</dependency-type>
         </dependent-module>
-        <dependent-module archiveName="custom-serialization-0.1.5.jar" deploy-path="/WEB-INF/lib" handle="module:/resource/custom-serialization/custom-serialization">
-            <dependency-type>uses</dependency-type>
-        </dependent-module>
         <property name="java-output-path" value="/coinblesk-server/target/classes"/>
         <property name="context-root" value="coinblesk-server"/>
     </wb-module>

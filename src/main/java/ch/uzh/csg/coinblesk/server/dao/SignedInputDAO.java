@@ -42,6 +42,7 @@ public class SignedInputDAO {
      * @return Long.MAX_VALUE if the input wasn't found, or the lock time if
      *         this input has been signed earlier.
      */
+    @Transactional(readOnly=true)
     public long getLockTime(byte[] txHash, long outputIndex) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<SignedInput> qb = cb.createQuery(SignedInput.class);

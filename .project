@@ -3,7 +3,6 @@
 	<name>coinblesk-server</name>
 	<comment></comment>
 	<projects>
-		<project>custom-serialization</project>
 		<project>coinblesk-shared-resources</project>
 	</projects>
 	<buildSpec>

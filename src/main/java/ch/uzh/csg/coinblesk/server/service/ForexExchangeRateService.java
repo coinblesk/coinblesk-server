@@ -30,7 +30,7 @@ import ch.uzh.csg.coinblesk.server.config.AppConfig;
  */
 
 @Service
-final public class ForexExchangeRateService {
+final public class ForexExchangeRateService  {
 
 	@Autowired
 	private AppConfig appConfig;
@@ -45,6 +45,7 @@ final public class ForexExchangeRateService {
 
 	private final Cache<String, BigDecimal> exchangeRatesCache = CacheBuilder.newBuilder().
 			expireAfterWrite(cachingTimeMillis, TimeUnit.MILLISECONDS).build();
+
 
 	/**
 	 * Returns the exchange rate of 1 USD against the specified currency (by

@@ -2,11 +2,12 @@ package ch.uzh.csg.coinblesk.server.service;
 
 import java.io.File;
 import java.io.FilenameFilter;
-import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
@@ -22,6 +23,8 @@ import org.bitcoinj.core.Wallet.SendRequest;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.kits.WalletAppKit;
+import org.bitcoinj.net.discovery.PeerDiscovery;
+import org.bitcoinj.net.discovery.PeerDiscoveryException;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.signers.StatelessTransactionSigner;
@@ -37,28 +40,28 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationContext;
-import org.springframework.core.io.Resource;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestExecutionListeners;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
 import org.springframework.test.context.support.DirtiesContextTestExecutionListener;
 import org.springframework.test.context.transaction.TransactionalTestExecutionListener;
+import org.springframework.test.context.web.WebAppConfiguration;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 
 import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
-import ch.uzh.csg.coinblesk.server.bitcoin.DummyPeerDiscovery;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.bitcoin.NotEnoughUnspentsException;
 import ch.uzh.csg.coinblesk.server.bitcoin.ValidRefundTransactionException;
+import ch.uzh.csg.coinblesk.server.config.AppConfig;
+import ch.uzh.csg.coinblesk.server.config.DispatcherConfig;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @TestExecutionListeners({ DependencyInjectionTestExecutionListener.class, DirtiesContextTestExecutionListener.class, TransactionalTestExecutionListener.class,
         DbUnitTestExecutionListener.class })
-@TestPropertySource("classpath:application-test.properties")
+@WebAppConfiguration
+@ContextConfiguration(classes={DispatcherConfig.class})
 public class BitcoinWalletServiceTest {
 
     private class TestTransactionSigner extends StatelessTransactionSigner {
@@ -129,9 +132,9 @@ public class BitcoinWalletServiceTest {
 
     @Autowired
     private BitcoinWalletService bitcoinWalletService;
-
-    @Value("${bitcoin.wallet.dir}")
-    Resource walletDir;
+    
+    @Autowired
+	private AppConfig appConfig;
 
     @Before
     public void setUp() {
@@ -144,9 +147,6 @@ public class BitcoinWalletServiceTest {
         bitcoinWalletService.stop();
         deleteTestWalletFiles();
     }
-    
-    @Autowired
-    private ApplicationContext appContext;
 
     @Test
     public void testGetSerializedServerWatchingKey() {
@@ -418,8 +418,14 @@ public class BitcoinWalletServiceTest {
     private WalletAppKit getClientAppKit(boolean registerWithServer) throws Exception {
 
         // set up a client wallet
-        WalletAppKit clientAppKit = new WalletAppKit(params, walletDir.getFile(), TEST_WALLET_PREFIX + "_client" + RND.nextInt());
-        clientAppKit.setDiscovery(new DummyPeerDiscovery());
+        WalletAppKit clientAppKit = new WalletAppKit(params, appConfig.getConfigDir().getFile(), TEST_WALLET_PREFIX + "_client" + RND.nextInt());
+        // set dummy discovery, should be fixed in latest bitcoinj
+        clientAppKit.setDiscovery(new PeerDiscovery() {
+			@Override
+			public void shutdown() {}
+			@Override
+			public InetSocketAddress[] getPeers(long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {return new InetSocketAddress[0];}
+		});
         clientAppKit.setBlockingStartup(false);
         clientAppKit.startAsync().awaitRunning();
         clientAppKit.wallet().allowSpendingUnconfirmedTransactions();
@@ -441,40 +447,45 @@ public class BitcoinWalletServiceTest {
         return clientAppKit;
     }
 
-    private WalletAppKit createAppKit() {
-        
-        WalletAppKit clientAppKit = null;
-        try {
-            clientAppKit = new WalletAppKit(params, walletDir.getFile(), TEST_WALLET_PREFIX + RND.nextInt());
-            clientAppKit.setDiscovery(new DummyPeerDiscovery());
-            clientAppKit.setBlockingStartup(false);
-            clientAppKit.startAsync().awaitRunning();
-        } catch (IOException e) {
-            new RuntimeException(e);
-        }
+	private WalletAppKit createAppKit() {
 
-        return clientAppKit;
-    }
+		WalletAppKit clientAppKit = null;
+
+		clientAppKit = new WalletAppKit(params, appConfig.getConfigDir().getFile(), TEST_WALLET_PREFIX + RND.nextInt());
+
+		// set dummy discovery, should be fixed in latest bitcoinj
+		clientAppKit.setDiscovery(new PeerDiscovery() {
+			@Override
+			public void shutdown() {
+			}
+
+			@Override
+			public InetSocketAddress[] getPeers(long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {
+				return new InetSocketAddress[0];
+			}
+		});
+		clientAppKit.setBlockingStartup(false);
+		clientAppKit.startAsync().awaitRunning();
+
+		return clientAppKit;
+	}
 
     /**
      * Deletes files of wallets that were created for testing
      */
-    private void deleteTestWalletFiles() {
-        try {
-            File[] walletFiles;
-            walletFiles = walletDir.getFile().listFiles(new FilenameFilter() {
-                @Override
-                public boolean accept(File dir, String name) {
-                    return name.startsWith(TEST_WALLET_PREFIX);
-                }
-            });
-            for (File f : walletFiles) {
-                f.delete();
-            }
-        } catch (IOException e) {
-            new RuntimeException(e);
-        }
-    }
+	private void deleteTestWalletFiles() {
+		File[] walletFiles;
+		walletFiles = appConfig.getConfigDir().getFile().listFiles(new FilenameFilter() {
+			@Override
+			public boolean accept(File dir, String name) {
+				return name.startsWith(TEST_WALLET_PREFIX);
+			}
+		});
+		for (File f : walletFiles) {
+			f.delete();
+		}
+
+	}
 
     private void printWallets(WalletAppKit[] clients, WalletAppKit server) {
 

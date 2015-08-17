@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -13,6 +14,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import javax.annotation.PostConstruct;
@@ -36,11 +38,14 @@ import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.kits.WalletAppKit;
+import org.bitcoinj.net.discovery.PeerDiscovery;
+import org.bitcoinj.net.discovery.PeerDiscoveryException;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.wallet.CoinSelection;
 import org.bitcoinj.wallet.CoinSelector;
 import org.bitcoinj.wallet.DeterministicKeyChain;
@@ -60,13 +65,10 @@ import com.google.common.util.concurrent.MoreExecutors;
 import ch.uzh.csg.coinblesk.bitcoin.BitcoinNet;
 import ch.uzh.csg.coinblesk.responseobject.IndexAndDerivationPath;
 import ch.uzh.csg.coinblesk.server.bitcoin.DoubleSignatureRequestedException;
-import ch.uzh.csg.coinblesk.server.bitcoin.DummyPeerDiscovery;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.bitcoin.NotEnoughUnspentsException;
-import ch.uzh.csg.coinblesk.server.bitcoin.P2SHScript;
 import ch.uzh.csg.coinblesk.server.bitcoin.SpentOutputsCache;
 import ch.uzh.csg.coinblesk.server.bitcoin.ValidRefundTransactionException;
-import ch.uzh.csg.coinblesk.server.clientinterface.IBitcoinWallet;
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import ch.uzh.csg.coinblesk.server.dao.SignedInputDAO;
 
@@ -74,12 +76,16 @@ import ch.uzh.csg.coinblesk.server.dao.SignedInputDAO;
  * Abstraction of bitcoinJ
  */
 @Service
-public class BitcoinWalletService implements IBitcoinWallet {
+public class BitcoinWalletService {
+	
+	private static final Logger LOGGER = LoggerFactory.getLogger(BitcoinWalletService.class);
 	
 	@Autowired 
 	private AppConfig appConfig;
+	
+	@Autowired
+    private SignedInputDAO signedInputDao;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(BitcoinWalletService.class);
 
     /**
      * Prefix for wallet and blockstore files. This prefix will be prefixed with
@@ -99,8 +105,7 @@ public class BitcoinWalletService implements IBitcoinWallet {
     private SpentOutputsCache outputsCache;
     private long currentBlockHeight;
 
-    @Autowired
-    private SignedInputDAO signedInputDao;
+    
 
     public BitcoinWalletService() {
         this.outputsCache = new SpentOutputsCache();
@@ -189,8 +194,13 @@ public class BitcoinWalletService implements IBitcoinWallet {
             // regtest only works with local bitcoind
             serverAppKit.connectToLocalHost();
         } else if (bitcoinNet == BitcoinNet.UNITTEST) {
-            // set dummy discovery
-            serverAppKit.setDiscovery(new DummyPeerDiscovery());
+            // set dummy discovery, should be fixed in latest bitcoinj
+            serverAppKit.setDiscovery(new PeerDiscovery() {
+				@Override
+				public void shutdown() {}				
+				@Override
+				public InetSocketAddress[] getPeers(long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {return new InetSocketAddress[0];}
+			});
         } else {
             // server wallet settings for production
             serverAppKit.setAutoSave(true);
@@ -281,22 +291,62 @@ public class BitcoinWalletService implements IBitcoinWallet {
         serverAppKit.stopAsync().awaitTerminated();
     }
 
-    @Override
+    /**
+     * Sets the bitcoin network this class
+     * 
+     * @param bitcoinNet
+     */
     public void setBitcoinNet(String bitcoinNet) {
         this.bitcoinNet = BitcoinNet.of(bitcoinNet);
     }
+    
+    /**
+     * @return The {@link BitcoinNet} the server is currently running on
+     */
+    public BitcoinNet getBitcoinNet() {
+        return bitcoinNet;
+    }
 
-    @Override
+    /**
+     * Cleans (deletes) previously existing wallet before starting up. Only the
+     * wallet of the selected {@link BitcoinNet} is cleaned, other wallets are
+     * left untouched.
+     * 
+     * @param cleanWallet
+     *            if true the wallet is cleaned before startup
+     */
     public void setCleanWallet(boolean cleanWallet) {
         this.cleanWallet = cleanWallet;
     }
 
-    @Override
+    /**
+     * This method returns a serialized watching {@link DeterministicKey} of the
+     * server. It is a watch-only key, private keys of the server cannot be
+     * derived from it. It is therefore save to sahre this with anyone.
+     * 
+     * @return the Base64 serialized watching {@link DeterministicKey} of the
+     *         server.
+     */
     public String getSerializedServerWatchingKey() {
         return serverAppKit.wallet().getWatchingKey().serializePubB58(getNetworkParams(bitcoinNet));
     }
 
-    @Override
+    /**
+     * This method is responsible for signing partially signed Bitcoin
+     * transactions and broadcast them to the Bitcoin network. If the inputs of
+     * the transaction were already signed previously, a
+     * {@link DoubleSignatureRequestedException} will be thrown, and the
+     * transaction is not broadcasted.
+     * 
+     * @param partialTx
+     *            the Base64 encoded partially signed transaction
+     * @param indexAndPath
+     *            the indices and key derivation paths of the partially signed
+     *            transaction
+     * @return The fully signed bitcoin transaction, Base64 encoded.
+     * @throws InvalidTransactionException
+     *             if the partial transaction is not valid
+     */
     public String signAndBroadcastTx(String partialTx, List<IndexAndDerivationPath> indexAndPaths) throws InvalidTransactionException {
 
         
@@ -329,12 +379,17 @@ public class BitcoinWalletService implements IBitcoinWallet {
         return Base64.getEncoder().encodeToString(signedTx.unsafeBitcoinSerialize());
     }
 
-    @Override
-    public BitcoinNet getBitcoinNet() {
-        return bitcoinNet;
-    }
+    
 
-    @Override
+    /**
+     * Adds a clients watching key to the server's watching wallet. This means
+     * that the server is always up to date about the funds available to the
+     * clients, and can therefore know whether the transaction to sign are in
+     * fact unspent.
+     * 
+     * @param base58encodedWatchingKey
+     *            the client's base58 encoded watching key
+     */
     public void addWatchingKey(String base58encodedWatchingKey) {
         DeterministicKey clientKey = DeterministicKey.deserializeB58(base58encodedWatchingKey, getNetworkParams(bitcoinNet));
 
@@ -349,7 +404,23 @@ public class BitcoinWalletService implements IBitcoinWallet {
     }
     
   
-    @Override
+    /**
+     * This method is responsible for signing a partially signed, time locked
+     * refund transaction. The signed transaction is not broadcasted but sent to
+     * the client.
+     * 
+     * This method only accepts time locked transactions. If a non-time-locked
+     * transaction is passed, {@link InvalidTransactionException} will be
+     * thrown.
+     * 
+     * @param partialTimeLockedTx
+     *            the partially signed, time locked transaction
+     * @param indexAndPath
+     *            the indices and key derivation paths of the partially signed
+     *            transaction
+     * @return a base64 encoded, fully signed, time-locked refund transaction.
+     * @throws InvalidTransactionException
+     */
     public String signRefundTx(String partialTimeLockedTx, List<IndexAndDerivationPath> indexAndPath) throws InvalidTransactionException {
         
         // deserialize the transaction...
@@ -570,6 +641,24 @@ public class BitcoinWalletService implements IBitcoinWallet {
 
     public void stop() {
         serverAppKit.stopAsync().awaitTerminated();
+    }
+    
+    private static class P2SHScript extends Script {
+
+        public P2SHScript(byte[] programBytes) {
+            super(programBytes);
+        }
+        
+        @Override
+        public boolean isPayToScriptHash() {
+            return true;
+        }
+        
+        public static P2SHScript dummy() {
+            Script dummyScript = new ScriptBuilder().build();
+            return new P2SHScript(dummyScript.getProgram());
+        }
+
     }
 
 }
