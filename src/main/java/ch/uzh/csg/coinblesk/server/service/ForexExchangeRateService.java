@@ -66,10 +66,9 @@ final public class ForexExchangeRateService {
 			final StringBuffer response = doHttpRequest(url);
 			// gets actual exchange rate out of Json Object and saves it to
 			// last.
-
 			final Gson gson = new Gson();
-			final Query query = gson.fromJson(response.toString(), Query.class);
-			exchangeRate = new BigDecimal(query.results.rate.Rate);
+			final Root root = gson.fromJson(response.toString(), Root.class);
+			exchangeRate = new BigDecimal(root.query.results.rate.Rate);
 			exchangeRatesCache.put(pair, exchangeRate);
 		}
 
@@ -137,14 +136,15 @@ final public class ForexExchangeRateService {
 	 *	}
 	 *	</code> 
 	 */
-	private static class Query {
-		private Results results;
-
-		private static class Results {
-			private Rate rate;
-
-			private static class Rate {
-				private String Rate;
+	private static class Root {
+		private Query query;
+		private static class Query {
+			private Results results;
+			private static class Results {
+				private Rate rate;
+				private static class Rate {
+					private String Rate;
+				}
 			}
 		}
 	}
