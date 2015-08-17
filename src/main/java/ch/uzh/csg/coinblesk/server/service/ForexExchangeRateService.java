@@ -16,7 +16,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.gson.Gson;
 
-import ch.uzh.csg.coinblesk.customserialization.Currency;
+import ch.uzh.csg.coinblesk.Currency;
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
 
 /**

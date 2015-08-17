@@ -4,7 +4,11 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.net.InetSocketAddress;
 import java.security.SecureRandom;
+import java.text.DateFormat;
+import java.text.Format;
+import java.text.SimpleDateFormat;
 import java.util.Base64;
+import java.util.Date;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -49,6 +53,9 @@ import org.springframework.test.context.transaction.TransactionalTestExecutionLi
 import org.springframework.test.context.web.WebAppConfiguration;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
+import com.github.springtestdbunit.annotation.DatabaseSetup;
+import com.github.springtestdbunit.annotation.ExpectedDatabase;
+import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
 
 import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
@@ -495,6 +502,47 @@ public class BitcoinWalletServiceTest {
         }
         System.out.println("*****   SERVER    *****");
         System.out.println(bitcoinWalletService.getAppKit().wallet());
+    }
+    
+    @Test
+    @ExpectedDatabase(value = "classpath:DbUnitFiles/addedTransaction.xml", assertionMode = DatabaseAssertionMode.NON_STRICT)
+    public void testAddDoubleSpendSpentOutputs() throws Exception {
+    	WalletAppKit clientAppKit = getClientAppKit();
+    	Transaction tx = FakeTxBuilder.createFakeTx(params, Coin.FIFTY_COINS, clientAppKit.wallet().currentReceiveAddress());
+    	System.err.println(tx);
+    	bitcoinWalletService.getSpentOutputDao().addOutput(tx);
+    	
+    	Assert.assertTrue(bitcoinWalletService.getSpentOutputDao().isDoubleSpend(tx));
+    	Transaction tx2 = FakeTxBuilder.createFakeTx(params, Coin.FIFTY_COINS, clientAppKit.wallet().currentReceiveAddress(), new Address(params, new byte[20]))[1];
+    	System.err.println(tx2);
+    	Assert.assertFalse(bitcoinWalletService.getSpentOutputDao().isDoubleSpend(tx2));
+    }
+    
+    @Test
+    @ExpectedDatabase(value = "classpath:DbUnitFiles/emptyDataSet.xml")
+    @DatabaseSetup("classpath:DbUnitFiles/oneSpentOutput.xml")
+    public void testExpireSpentOutputs1() throws Exception {
+    	bitcoinWalletService.getSpentOutputDao().removeOldEntries(1);
+    }
+    
+    @Test
+    @ExpectedDatabase(value = "classpath:DbUnitFiles/oneSpentOutputResult.xml", assertionMode = DatabaseAssertionMode.NON_STRICT)
+    @DatabaseSetup("classpath:DbUnitFiles/twoSpentOutput.xml")
+    public void testExpireSpentOutputs2() throws Exception {
+    	bitcoinWalletService.getSpentOutputDao().removeOldEntries(1);
+    	DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    	Date date = formatter.parse("2040-05-31 22:15:52");
+    	bitcoinWalletService.getSpentOutputDao().removeOldEntries(date, 1);
+    }
+    
+    @Test
+    @ExpectedDatabase(value = "classpath:DbUnitFiles/emptyDataSet.xml", assertionMode = DatabaseAssertionMode.NON_STRICT)
+    @DatabaseSetup("classpath:DbUnitFiles/twoSpentOutput.xml")
+    public void testExpireSpentOutputs3() throws Exception {
+    	bitcoinWalletService.getSpentOutputDao().removeOldEntries(1);
+    	DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    	Date date = formatter.parse("2040-05-31 22:15:53");
+    	bitcoinWalletService.getSpentOutputDao().removeOldEntries(date, 1);
     }
 
 }

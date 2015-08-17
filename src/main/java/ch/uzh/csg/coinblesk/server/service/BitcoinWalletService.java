@@ -19,6 +19,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import javax.transaction.Transactional;
 import javax.xml.bind.DatatypeConverter;
 
 import org.apache.commons.lang3.StringUtils;
@@ -67,10 +68,11 @@ import ch.uzh.csg.coinblesk.responseobject.IndexAndDerivationPath;
 import ch.uzh.csg.coinblesk.server.bitcoin.DoubleSignatureRequestedException;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.bitcoin.NotEnoughUnspentsException;
-import ch.uzh.csg.coinblesk.server.bitcoin.SpentOutputsCache;
 import ch.uzh.csg.coinblesk.server.bitcoin.ValidRefundTransactionException;
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import ch.uzh.csg.coinblesk.server.dao.SignedInputDAO;
+import ch.uzh.csg.coinblesk.server.dao.SpentOutputDAO;
+import ch.uzh.csg.coinblesk.server.entity.SpentOutputs;
 
 /**
  * Abstraction of bitcoinJ
@@ -85,6 +87,9 @@ public class BitcoinWalletService {
 	
 	@Autowired
     private SignedInputDAO signedInputDao;
+	
+	@Autowired
+	private SpentOutputDAO spentOutputDao;
 
 
     /**
@@ -102,13 +107,13 @@ public class BitcoinWalletService {
     private WalletAppKit serverAppKit;
     private DeterministicKeyChain privateKeyChain;
 
-    private SpentOutputsCache outputsCache;
+
     private long currentBlockHeight;
 
     
 
     public BitcoinWalletService() {
-        this.outputsCache = new SpentOutputsCache();
+
         this.lock = new ReentrantLock();
     }
 
@@ -131,6 +136,11 @@ public class BitcoinWalletService {
         LOGGER.info("bitcoin wallet service is ready");
         
         LOGGER.info("Total number of bitcoins in the CoinBlesk system: {}", serverAppKit.wallet().getBalance().toFriendlyString());
+    }
+    
+    //used for testing
+    SpentOutputDAO getSpentOutputDao() {
+    	return spentOutputDao;
     }
 
     private void initPrivateKeyChain() {
@@ -421,6 +431,7 @@ public class BitcoinWalletService {
      * @return a base64 encoded, fully signed, time-locked refund transaction.
      * @throws InvalidTransactionException
      */
+    @Transactional
     public String signRefundTx(String partialTimeLockedTx, List<IndexAndDerivationPath> indexAndPath) throws InvalidTransactionException {
         
         // deserialize the transaction...
@@ -506,6 +517,7 @@ public class BitcoinWalletService {
      * @return the fully signed transaction
      * @throws InvalidTransactionException
      */
+    @Transactional
     private Transaction completeTx(final Transaction tx, List<IndexAndDerivationPath> indexAndPaths) throws InvalidTransactionException {
 
         if (!inputsUnspent(tx)) {
@@ -522,11 +534,11 @@ public class BitcoinWalletService {
 
             if (!tx.isTimeLocked()) {
                 // check for attempted double-spend
-                if (outputsCache.isDoubleSpend(tx)) {
+                if (spentOutputDao.isDoubleSpend(tx)) {
                     // Ha! E1337 HaxxOr detected :)
                     throw new DoubleSignatureRequestedException("These Outputs have already been signed. Possible double-spend attack!");
                 }
-                outputsCache.cacheOutputs(tx);
+                spentOutputDao.addOutput(tx);
             } else {
 
             }
