@@ -15,7 +15,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -72,7 +71,6 @@ import ch.uzh.csg.coinblesk.server.bitcoin.ValidRefundTransactionException;
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import ch.uzh.csg.coinblesk.server.dao.SignedInputDAO;
 import ch.uzh.csg.coinblesk.server.dao.SpentOutputDAO;
-import ch.uzh.csg.coinblesk.server.entity.SpentOutputs;
 
 /**
  * Abstraction of bitcoinJ
@@ -102,20 +100,12 @@ public class BitcoinWalletService {
     
     private boolean cleanWallet = false;
 
-    private ReentrantLock lock;
-
     private WalletAppKit serverAppKit;
     private DeterministicKeyChain privateKeyChain;
 
 
     private long currentBlockHeight;
 
-    
-
-    public BitcoinWalletService() {
-
-        this.lock = new ReentrantLock();
-    }
 
     @PostConstruct
     public void init() {
@@ -528,9 +518,7 @@ public class BitcoinWalletService {
 
         // Check if the transaction is an attempted double spend. We need to
         // lock here to prevent race conditions
-        try {
-
-            lock.lock();
+       
 
             if (!tx.isTimeLocked()) {
                 // check for attempted double-spend
@@ -558,9 +546,7 @@ public class BitcoinWalletService {
                 }
             }
 
-        } finally {
-            lock.unlock();
-        }
+        
 
         // let the magic happen: Add the missing signature to the inputs
         for (IndexAndDerivationPath indexAndPath : indexAndPaths) {

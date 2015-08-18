@@ -12,7 +12,6 @@ import javax.persistence.criteria.Root;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.coinblesk.server.entity.SignedInput;
 
@@ -22,8 +21,8 @@ import ch.uzh.csg.coinblesk.server.entity.SignedInput;
  * 
  */
 @Repository
-public class SignedInputDAO {
-    private static Logger LOGGER = LoggerFactory.getLogger(SignedInputDAO.class);
+final public class SignedInputDAO {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SignedInputDAO.class);
 
     @PersistenceContext()
     private EntityManager em;
@@ -42,21 +41,19 @@ public class SignedInputDAO {
      * @return Long.MAX_VALUE if the input wasn't found, or the lock time if
      *         this input has been signed earlier.
      */
-    @Transactional(readOnly=true)
-    public long getLockTime(byte[] txHash, long outputIndex) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<SignedInput> qb = cb.createQuery(SignedInput.class);
-        Root<SignedInput> root = qb.from(SignedInput.class);
+    public long getLockTime(final byte[] txHash, final long outputIndex) {
+    	final CriteriaBuilder cb = em.getCriteriaBuilder();
+    	final CriteriaQuery<SignedInput> qb = cb.createQuery(SignedInput.class);
+    	final Root<SignedInput> root = qb.from(SignedInput.class);
 
-        Predicate condition1 = cb.equal(root.get("txHash"), txHash);
-        Predicate condition2 = cb.equal(root.get("outputIndex"), outputIndex);
-        Predicate finalCondition = cb.and(condition1, condition2);
-
+    	final Predicate condition1 = cb.equal(root.get("txHash"), txHash);
+    	final Predicate condition2 = cb.equal(root.get("outputIndex"), outputIndex);
+    	final Predicate finalCondition = cb.and(condition1, condition2);
 
         qb.where(finalCondition);
 
-        SignedInput signedInput = getSingle(qb, em);
-
+        final SignedInput signedInput = getSingle(qb, em);
+        LOGGER.debug("lock time for {},{} is {}", txHash, outputIndex, signedInput);
         return signedInput == null ? Long.MAX_VALUE : signedInput.getLockTime();
     }
     
@@ -66,11 +63,10 @@ public class SignedInputDAO {
      * @param outputIndex
      * @param lockTime
      */
-    @Transactional
-    public void addSignedInput(byte[] txHash, long outputIndex, long lockTime) {
+    public void addSignedInput(final byte[] txHash, final long outputIndex, final long lockTime) {
         
         // check if signed input already exists
-        SignedInput savedInput = getSignedInput(txHash, outputIndex);
+    	final SignedInput savedInput = getSignedInput(txHash, outputIndex);
         
         if(savedInput != null) {
             if(savedInput.getLockTime() <= lockTime) {
@@ -82,18 +78,14 @@ public class SignedInputDAO {
                 em.refresh(savedInput);
             }
         } else {
-            // never seen this output before -> save it
-            SignedInput signedInput = new SignedInput(lockTime, txHash, outputIndex);
+        	LOGGER.debug("never seen this output before -> save it {},{}, locktime {}", txHash, outputIndex, lockTime);
+        	final SignedInput signedInput = new SignedInput(lockTime, txHash, outputIndex);
             em.persist(signedInput);
-            
         }
-        
         em.flush();
-        
     }
     
-    @Transactional
-    public void removeSignedInput(byte[] txHash, int outputIndex) {
+    void removeSignedInput(byte[] txHash, int outputIndex) {
         SignedInput savedInput = getSignedInput(txHash, outputIndex);
         em.remove(savedInput);
         em.flush();

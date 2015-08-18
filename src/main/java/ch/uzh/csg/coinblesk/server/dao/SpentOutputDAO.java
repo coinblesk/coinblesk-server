@@ -1,7 +1,6 @@
 package ch.uzh.csg.coinblesk.server.dao;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -21,7 +20,6 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.coinblesk.server.entity.SpentOutputs;
-import ch.uzh.csg.coinblesk.server.service.ForexExchangeRateService;
 
 @Repository
 public class SpentOutputDAO {
@@ -31,7 +29,6 @@ public class SpentOutputDAO {
 	@PersistenceContext()
     private EntityManager em;
 	
-	@Transactional
 	public void addOutput(Transaction tx) {
 		for (TransactionInput txIn : tx.getInputs()) {
 			SpentOutputs outputs = new SpentOutputs();
@@ -41,7 +38,6 @@ public class SpentOutputDAO {
 		em.flush();
 	}
 	
-	@Transactional(readOnly=true)
 	public boolean isDoubleSpend(Transaction tx) {
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<Long> cq = cb.createQuery(Long.class);
@@ -60,12 +56,10 @@ public class SpentOutputDAO {
         return result > 0;
 	}
 	
-	@Transactional
 	public void removeOldEntries(int nDays) {
 		removeOldEntries(new Date(), nDays);
 	}
 	
-	@Transactional
 	public void removeOldEntries(Date date, int nDays) {
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaDelete<SpentOutputs> cq = cb.createCriteriaDelete(SpentOutputs.class);
@@ -83,6 +77,7 @@ public class SpentOutputDAO {
 		private SpentOutputDAO spentOutputDAO;
 		
 		@Scheduled(fixedRate=ONE_DAY)
+		@Transactional
 		public void doTask() throws Exception {
 			spentOutputDAO.removeOldEntries(1);		
 		}
