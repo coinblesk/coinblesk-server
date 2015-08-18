@@ -123,7 +123,7 @@ public class BitcoinWalletController {
      */
     @RequestMapping(value = "/setupInfo", method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
     @ResponseBody
-    public ResponseEntity<TransferObject> getSetupInfo() {
+    public ResponseEntity<SetupRequestObject> getSetupInfo() {
         SetupRequestObject transferObject = new SetupRequestObject();
         try {
             transferObject.setSuccessful(true);
