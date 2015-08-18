@@ -11,9 +11,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.PostConstruct;
@@ -71,6 +73,7 @@ import ch.uzh.csg.coinblesk.server.bitcoin.ValidRefundTransactionException;
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import ch.uzh.csg.coinblesk.server.dao.ClientWatchingKeyDAO;
 import ch.uzh.csg.coinblesk.server.dao.SignedInputDAO;
+import ch.uzh.csg.coinblesk.server.dao.SignedTransactionDAO;
 import ch.uzh.csg.coinblesk.server.dao.SpentOutputDAO;
 
 /**
@@ -89,9 +92,12 @@ public class BitcoinWalletService {
 
     @Autowired
     private SpentOutputDAO spentOutputDao;
-    
+
     @Autowired
     private ClientWatchingKeyDAO clientWatchingKeyDAO;
+
+    @Autowired
+    private SignedTransactionDAO signedTransactionDao;
 
     /**
      * Prefix for wallet and blockstore files. This prefix will be prefixed with
@@ -352,6 +358,7 @@ public class BitcoinWalletService {
      * @throws InvalidTransactionException
      *             if the partial transaction is not valid
      */
+    @Transactional
     public String signAndBroadcastTx(String partialTx, List<IndexAndDerivationPath> indexAndPaths) throws InvalidTransactionException {
 
         // deserialize the transaction...
@@ -395,8 +402,8 @@ public class BitcoinWalletService {
      */
     @Transactional
     public void addWatchingKey(String base58encodedWatchingKey) {
-        
-        if(clientWatchingKeyDAO.exists(base58encodedWatchingKey)) {
+
+        if (clientWatchingKeyDAO.exists(base58encodedWatchingKey)) {
             return;
         }
 
@@ -410,7 +417,7 @@ public class BitcoinWalletService {
 
         // no idea why this is necessary, but it is...
         serverAppKit.wallet().freshReceiveAddress();
-        
+
         clientWatchingKeyDAO.addClientWatchingKey(base58encodedWatchingKey);
     }
 
@@ -476,6 +483,23 @@ public class BitcoinWalletService {
     }
 
     private boolean inputsUnspent(final Transaction tx) {
+
+        // if this transaction is time-locked, we don't really care if the
+        // inputs are unspent.
+        if (tx.isTimeLocked()) {
+            return true;
+        }
+
+        // if the inputs are instant transactions that were signed by the
+        // server,
+        // we know for sure that the inputs are unspent
+        if (signedTransactionDao.allInputsServerSigned(tx)) {
+            return true;
+        }
+
+        // at this point we need to check if the inputs are unspent and have
+        // enough confirmations
+        
         Coin unspentsValue = serverAppKit.wallet().getBalance(new CoinSelector() {
             @Override
             public CoinSelection select(Coin target, List<TransactionOutput> candidates) {
@@ -485,7 +509,10 @@ public class BitcoinWalletService {
                 Coin valueGathered = Coin.ZERO;
 
                 for (TransactionOutput unspent : candidates) {
-                    outPoint.put(unspent.getOutPointFor(), unspent);
+                    // only add outputs that have enough confirmations
+                    if(unspent.getParentTransaction().getConfidence().getDepthInBlocks() > appConfig.getMinConf()) {
+                        outPoint.put(unspent.getOutPointFor(), unspent);
+                    }
                 }
 
                 for (TransactionInput txIn : tx.getInputs()) {
@@ -503,7 +530,7 @@ public class BitcoinWalletService {
         Coin txValue = Coin.ZERO;
         for (TransactionOutput txOut : tx.getOutputs()) {
             txValue = txValue.add(txOut.getValue());
-            LOGGER.debug("Total output value of transaction is {}, total unspent value of inputs is {}", txValue.toFriendlyString(), unspentsValue.toFriendlyString());
+            LOGGER.debug("Total output value of transaction is {}, total confirmed unspent value of inputs is {}", txValue.toFriendlyString(), unspentsValue.toFriendlyString());
         }
 
         return unspentsValue.isGreaterThan(txValue) || unspentsValue.compareTo(txValue) == 0;
@@ -517,7 +544,7 @@ public class BitcoinWalletService {
      * @return the fully signed transaction
      * @throws InvalidTransactionException
      */
-    @Transactional
+
     private Transaction completeTx(final Transaction tx, List<IndexAndDerivationPath> indexAndPaths) throws InvalidTransactionException {
 
         if (!inputsUnspent(tx)) {
