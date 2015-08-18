@@ -30,7 +30,7 @@ public class SignedInput implements Serializable {
     public SignedInput() {      
     }
     
-    public SignedInput(long lockTime, byte[] txHash, long index) {
+    public SignedInput(final long lockTime, final byte[] txHash, final long index) {
         this.lockTime = lockTime;
         this.txHash = txHash;
         this.outputIndex = index;
@@ -40,7 +40,7 @@ public class SignedInput implements Serializable {
         return lockTime;
     }
     
-    public void setLockTime(long lockTime) {
+    public void setLockTime(final long lockTime) {
         this.lockTime = lockTime;
     }
 

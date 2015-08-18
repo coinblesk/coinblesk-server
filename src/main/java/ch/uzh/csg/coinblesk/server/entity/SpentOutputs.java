@@ -1,5 +1,6 @@
 package ch.uzh.csg.coinblesk.server.entity;
 
+import java.io.Serializable;
 import java.util.Date;
 
 import javax.persistence.Entity;
@@ -11,7 +12,9 @@ import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
 @Entity
-public class SpentOutputs {
+public class SpentOutputs  implements Serializable {
+	
+	private static final long serialVersionUID = -90416753586662201L;
 	
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
@@ -29,11 +32,11 @@ public class SpentOutputs {
 		timestamp = new Date();
 	}
 
-	public void setTxOutPoint(byte[] txOutPoint) {
+	public void setTxOutPoint(final byte[] txOutPoint) {
 		this.txOutPoint = txOutPoint;
 	}
 
-	public void setTimestamp(Date timestamp) {
+	public void setTimestamp(final Date timestamp) {
 		this.timestamp = timestamp;
 	}
 }

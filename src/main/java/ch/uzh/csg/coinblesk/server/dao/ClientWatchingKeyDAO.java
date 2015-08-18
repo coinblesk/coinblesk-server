@@ -1,7 +1,5 @@
 package ch.uzh.csg.coinblesk.server.dao;
 
-import java.util.List;
-
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.criteria.CriteriaBuilder;
@@ -9,8 +7,9 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 import ch.uzh.csg.coinblesk.server.entity.ClientWatchingKey;
 
@@ -22,6 +21,8 @@ import ch.uzh.csg.coinblesk.server.entity.ClientWatchingKey;
  */
 @Repository
 public class ClientWatchingKeyDAO {
+	
+	private static final Logger LOGGER = LoggerFactory.getLogger(ClientWatchingKeyDAO.class);
 
     @PersistenceContext()
     private EntityManager em;
@@ -33,33 +34,26 @@ public class ClientWatchingKeyDAO {
      *            the base64 encoded watching key of the client
      * @return true if the watching key already exists
      */
-    public boolean exists(String clientWatchingKey) {
-
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<ClientWatchingKey> qb = cb.createQuery(ClientWatchingKey.class);
-        Root<ClientWatchingKey> root = qb.from(ClientWatchingKey.class);
-
-        Predicate condition = cb.equal(root.get("clientWatchingKey"), clientWatchingKey);
+    public boolean exists(final String clientWatchingKey) {
+    	final CriteriaBuilder cb = em.getCriteriaBuilder();
+    	final CriteriaQuery<Long> cq = cb.createQuery(Long.class);
+    	final CriteriaQuery<Long> qb = cq.select(cb.count(cq.from(ClientWatchingKey.class)));
+    	final Root<ClientWatchingKey> root = qb.from(ClientWatchingKey.class);
+    	
+    	final Predicate condition = cb.equal(root.get("clientWatchingKey"), clientWatchingKey);
 
         qb.where(condition);
 
-        return getSingle(qb, em) != null;
+        long result = em.createQuery(cq).getSingleResult();
+        LOGGER.debug("fount {} entries for watching key {}", result, clientWatchingKey);
+        return result > 0;
     }
 
-    private <K> K getSingle(CriteriaQuery<K> cq, EntityManager em) {
-        List<K> list = em.createQuery(cq).getResultList();
-        if (list.size() == 0) {
-            return null;
-        }
-        return list.get(0);
-    }
+    public void addClientWatchingKey(final String base58EncodedWatchingKey) {
 
-    @Transactional
-    public void addClientWatchingKey(String base58EncodedWatchingKey) {
-
-        ClientWatchingKey watchingKey = new ClientWatchingKey(base58EncodedWatchingKey);
+    	final ClientWatchingKey watchingKey = new ClientWatchingKey(base58EncodedWatchingKey);
         em.persist(watchingKey);
         em.flush();
-
+        LOGGER.debug("added encoded watching key {}", base58EncodedWatchingKey);
     }
 }

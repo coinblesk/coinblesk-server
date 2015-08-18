@@ -14,6 +14,8 @@ import javax.persistence.criteria.Root;
 
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Repository;
@@ -24,51 +26,55 @@ import ch.uzh.csg.coinblesk.server.entity.SpentOutputs;
 @Repository
 public class SpentOutputDAO {
 	
+	private static final Logger LOGGER = LoggerFactory.getLogger(SpentOutputDAO.class);
+	
 	final private static int ONE_DAY =  1000 * 60 * 60 * 24;
 	
 	@PersistenceContext()
     private EntityManager em;
 	
-	public void addOutput(Transaction tx) {
-		for (TransactionInput txIn : tx.getInputs()) {
-			SpentOutputs outputs = new SpentOutputs();
+	public void addOutput(final Transaction tx) {
+		for (final TransactionInput txIn : tx.getInputs()) {
+			final SpentOutputs outputs = new SpentOutputs();
 			outputs.setTxOutPoint(txIn.getOutpoint().bitcoinSerialize());
 			em.persist(outputs);
 		}
 		em.flush();
+		LOGGER.debug("added transaciton {}",tx);
 	}
 	
-	public boolean isDoubleSpend(Transaction tx) {
-		CriteriaBuilder cb = em.getCriteriaBuilder();
-		CriteriaQuery<Long> cq = cb.createQuery(Long.class);
-		CriteriaQuery<Long> qb = cq.select(cb.count(cq.from(SpentOutputs.class)));
+	public boolean isDoubleSpend(final Transaction tx) {
+		final CriteriaBuilder cb = em.getCriteriaBuilder();
+		final CriteriaQuery<Long> cq = cb.createQuery(Long.class);
+		final CriteriaQuery<Long> qb = cq.select(cb.count(cq.from(SpentOutputs.class)));
 		
-        Root<SpentOutputs> root = qb.from(SpentOutputs.class);
+		final Root<SpentOutputs> root = qb.from(SpentOutputs.class);
 
-        List<Predicate> predicates = new ArrayList<Predicate>();
-        for (TransactionInput txIn : tx.getInputs()) {
-        	Predicate condition = cb.equal(root.get("txOutPoint"), txIn.getOutpoint().bitcoinSerialize());
+		final List<Predicate> predicates = new ArrayList<Predicate>();
+        for (final TransactionInput txIn : tx.getInputs()) {
+        	final Predicate condition = cb.equal(root.get("txOutPoint"), txIn.getOutpoint().bitcoinSerialize());
         	predicates.add(condition);
         }
-        Predicate finalCondition = cb.or(predicates.toArray(new Predicate[0]));
+        final Predicate finalCondition = cb.or(predicates.toArray(new Predicate[0]));
         qb.where(finalCondition);
-        long result = em.createQuery(cq).getSingleResult();
+        final long result = em.createQuery(cq).getSingleResult();
+        LOGGER.debug("is transaction {} a doubel spend:{}",tx, result > 0);
         return result > 0;
 	}
 	
-	public void removeOldEntries(int nDays) {
+	public void removeOldEntries(final int nDays) {
 		removeOldEntries(new Date(), nDays);
 	}
 	
-	public void removeOldEntries(Date date, int nDays) {
-		CriteriaBuilder cb = em.getCriteriaBuilder();
-		CriteriaDelete<SpentOutputs> cq = cb.createCriteriaDelete(SpentOutputs.class);
-		Root<SpentOutputs> root = cq.from(SpentOutputs.class);
-		Date dateBefore = new Date(date.getTime() - (long) (ONE_DAY * nDays) ); //Subtract n days 
-		Predicate condition = cb.lessThan(root.get("timestamp"), dateBefore);
+	public void removeOldEntries(final Date date, final int nDays) {
+		final CriteriaBuilder cb = em.getCriteriaBuilder();
+		final CriteriaDelete<SpentOutputs> cq = cb.createCriteriaDelete(SpentOutputs.class);
+		final Root<SpentOutputs> root = cq.from(SpentOutputs.class);
+		final Date dateBefore = new Date(date.getTime() - (long) (ONE_DAY * nDays) ); //Subtract n days 
+		final Predicate condition = cb.lessThan(root.get("timestamp"), dateBefore);
 		cq.where(condition);
-		int result = em.createQuery(cq).executeUpdate();
-		System.err.println("removed: "+result);
+		final int result = em.createQuery(cq).executeUpdate();
+		LOGGER.debug("old entries removed: {}", result);
 	}
 	
 	final static public class DBTask {

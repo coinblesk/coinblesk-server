@@ -21,7 +21,7 @@ import ch.uzh.csg.coinblesk.server.entity.SignedInput;
  * 
  */
 @Repository
-final public class SignedInputDAO {
+public class SignedInputDAO {
     private static final Logger LOGGER = LoggerFactory.getLogger(SignedInputDAO.class);
 
     @PersistenceContext()
@@ -70,10 +70,10 @@ final public class SignedInputDAO {
         
         if(savedInput != null) {
             if(savedInput.getLockTime() <= lockTime) {
-                // input was already signed and saved with a lower lockTime -> ignore
+            	LOGGER.debug("input was already signed and saved with a lower lockTime -> ignore {},{}, locktime {}", txHash, outputIndex, lockTime);
                 
             } else {
-                // update the lock time
+            	LOGGER.debug("update the lock time {},{}, locktime {}", txHash, outputIndex, lockTime);
                 savedInput.setLockTime(lockTime);
                 em.refresh(savedInput);
             }
@@ -85,29 +85,29 @@ final public class SignedInputDAO {
         em.flush();
     }
     
-    void removeSignedInput(byte[] txHash, int outputIndex) {
-        SignedInput savedInput = getSignedInput(txHash, outputIndex);
+    void removeSignedInput(final byte[] txHash, final int outputIndex) {
+        final SignedInput savedInput = getSignedInput(txHash, outputIndex);
         em.remove(savedInput);
         em.flush();
+        LOGGER.debug("removed sigend input {},{}", txHash, outputIndex);
     }
     
-    private SignedInput getSignedInput(byte[] txHash, long outputIndex) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<SignedInput> qb = cb.createQuery(SignedInput.class);
-        Root<SignedInput> root = qb.from(SignedInput.class);
+    private SignedInput getSignedInput(final byte[] txHash, final long outputIndex) {
+    	final CriteriaBuilder cb = em.getCriteriaBuilder();
+    	final CriteriaQuery<SignedInput> qb = cb.createQuery(SignedInput.class);
+    	final Root<SignedInput> root = qb.from(SignedInput.class);
 
-        Predicate condition1 = cb.equal(root.get("txHash"), txHash);
-        Predicate condition2 = cb.equal(root.get("outputIndex"), outputIndex);
-        Predicate finalCondition = cb.and(condition1, condition2);
-
+    	final Predicate condition1 = cb.equal(root.get("txHash"), txHash);
+    	final Predicate condition2 = cb.equal(root.get("outputIndex"), outputIndex);
+    	final Predicate finalCondition = cb.and(condition1, condition2);
 
         qb.where(finalCondition);
 
         return getSingle(qb, em);
     }
 
-    private <K> K getSingle(CriteriaQuery<K> cq, EntityManager em) {
-        List<K> list = em.createQuery(cq).getResultList();
+    private <K> K getSingle(final CriteriaQuery<K> cq, final EntityManager em) {
+    	final List<K> list = em.createQuery(cq).getResultList();
         if (list.size() == 0) {
             return null;
         }
