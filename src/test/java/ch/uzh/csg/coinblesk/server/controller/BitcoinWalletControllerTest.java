@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Random;
@@ -37,6 +38,7 @@ import ch.uzh.csg.coinblesk.Currency;
 import ch.uzh.csg.coinblesk.JsonConverter;
 import ch.uzh.csg.coinblesk.bitcoin.BitcoinNet;
 import ch.uzh.csg.coinblesk.responseobject.ExchangeRateTransferObject;
+import ch.uzh.csg.coinblesk.responseobject.IndexAndDerivationPath;
 import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
 import ch.uzh.csg.coinblesk.responseobject.WatchingKeyTransferObject;
@@ -158,7 +160,6 @@ public class BitcoinWalletControllerTest {
     @SuppressWarnings("unchecked")
     @Test
     public void testSignAndBroadcastTx() throws Exception {
-        String partialTx = "signed-tx";
 
         ServerSignatureRequestTransferObject sigReq = getMockSigRequestObject();
 
@@ -185,9 +186,13 @@ public class BitcoinWalletControllerTest {
     @Test
     public void testSignAndBroadcastTx_invalidTx() throws Exception {
 
+        String partialTx = "half-signed-tx";
+        List<IndexAndDerivationPath> paths = new ArrayList<>();
         ServerSignatureRequestTransferObject sigReq = new ServerSignatureRequestTransferObject();
+        sigReq.setIndexAndDerivationPaths(paths);
+        sigReq.setPartialTx(partialTx);
 
-        Mockito.doReturn(false).when(bitcoinWalletService).signAndBroadcastTx(Mockito.any(String.class), Mockito.any(List.class));
+        Mockito.doThrow(InvalidTransactionException.class).when(bitcoinWalletService).signAndBroadcastTx(Mockito.any(String.class), Mockito.any(List.class));
         
         printRequest(sigReq);
 
@@ -210,6 +215,8 @@ public class BitcoinWalletControllerTest {
     public void testSignAndBroadcastTx_invalidTxException() throws Exception {
 
         ServerSignatureRequestTransferObject sigReq = new ServerSignatureRequestTransferObject();
+        sigReq.setIndexAndDerivationPaths(new ArrayList<IndexAndDerivationPath>());
+        sigReq.setPartialTx("partial-tx");
 
         Mockito.doThrow(new InvalidTransactionException()).when(bitcoinWalletService).signAndBroadcastTx(Mockito.any(String.class), Mockito.any(List.class));
         
