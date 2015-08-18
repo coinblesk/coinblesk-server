@@ -69,6 +69,7 @@ import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.bitcoin.NotEnoughUnspentsException;
 import ch.uzh.csg.coinblesk.server.bitcoin.ValidRefundTransactionException;
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
+import ch.uzh.csg.coinblesk.server.dao.ClientWatchingKeyDAO;
 import ch.uzh.csg.coinblesk.server.dao.SignedInputDAO;
 import ch.uzh.csg.coinblesk.server.dao.SpentOutputDAO;
 
@@ -77,35 +78,35 @@ import ch.uzh.csg.coinblesk.server.dao.SpentOutputDAO;
  */
 @Service
 public class BitcoinWalletService {
-	
-	private static final Logger LOGGER = LoggerFactory.getLogger(BitcoinWalletService.class);
-	
-	@Autowired 
-	private AppConfig appConfig;
-	
-	@Autowired
-    private SignedInputDAO signedInputDao;
-	
-	@Autowired
-	private SpentOutputDAO spentOutputDao;
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(BitcoinWalletService.class);
+
+    @Autowired
+    private AppConfig appConfig;
+
+    @Autowired
+    private SignedInputDAO signedInputDao;
+
+    @Autowired
+    private SpentOutputDAO spentOutputDao;
+    
+    @Autowired
+    private ClientWatchingKeyDAO clientWatchingKeyDAO;
 
     /**
      * Prefix for wallet and blockstore files. This prefix will be prefixed with
      * the name of the network, eg testnet + WALLET_PREFIX
      */
     private static final String WALLET_PREFIX = "_bitcoinj";
-    
+
     private BitcoinNet bitcoinNet;
-    
+
     private boolean cleanWallet = false;
 
     private WalletAppKit serverAppKit;
     private DeterministicKeyChain privateKeyChain;
 
-
     private long currentBlockHeight;
-
 
     @PostConstruct
     public void init() {
@@ -124,13 +125,13 @@ public class BitcoinWalletService {
         initPrivateKeyChain();
 
         LOGGER.info("bitcoin wallet service is ready");
-        
+
         LOGGER.info("Total number of bitcoins in the CoinBlesk system: {}", serverAppKit.wallet().getBalance().toFriendlyString());
     }
-    
-    //used for testing
+
+    // used for testing
     SpentOutputDAO getSpentOutputDao() {
-    	return spentOutputDao;
+        return spentOutputDao;
     }
 
     private void initPrivateKeyChain() {
@@ -176,13 +177,13 @@ public class BitcoinWalletService {
      * @return a {@link com.google.common.util.concurrent.Service} object
      */
     public com.google.common.util.concurrent.Service start() {
-        
+
         // check if wallet has already been started
         if (serverAppKit != null && serverAppKit.isRunning()) {
             LOGGER.warn("Tried to initialize bitcoin wallet service even though it's already running.");
             return serverAppKit;
         }
-        
+
         bitcoinNet = BitcoinNet.of(appConfig.getBitcoinNet());
 
         // set up the wallet
@@ -196,11 +197,15 @@ public class BitcoinWalletService {
         } else if (bitcoinNet == BitcoinNet.UNITTEST) {
             // set dummy discovery, should be fixed in latest bitcoinj
             serverAppKit.setDiscovery(new PeerDiscovery() {
-				@Override
-				public void shutdown() {}				
-				@Override
-				public InetSocketAddress[] getPeers(long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {return new InetSocketAddress[0];}
-			});
+                @Override
+                public void shutdown() {
+                }
+
+                @Override
+                public InetSocketAddress[] getPeers(long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {
+                    return new InetSocketAddress[0];
+                }
+            });
         } else {
             // server wallet settings for production
             serverAppKit.setAutoSave(true);
@@ -299,7 +304,7 @@ public class BitcoinWalletService {
     public void setBitcoinNet(String bitcoinNet) {
         this.bitcoinNet = BitcoinNet.of(bitcoinNet);
     }
-    
+
     /**
      * @return The {@link BitcoinNet} the server is currently running on
      */
@@ -349,7 +354,6 @@ public class BitcoinWalletService {
      */
     public String signAndBroadcastTx(String partialTx, List<IndexAndDerivationPath> indexAndPaths) throws InvalidTransactionException {
 
-        
         // deserialize the transaction...
         Transaction tx = null;
         try {
@@ -379,31 +383,37 @@ public class BitcoinWalletService {
         return Base64.getEncoder().encodeToString(signedTx.unsafeBitcoinSerialize());
     }
 
-    
-
     /**
      * Adds a clients watching key to the server's watching wallet. This means
      * that the server is always up to date about the funds available to the
      * clients, and can therefore know whether the transaction to sign are in
-     * fact unspent.
+     * fact unspent. If the client's watching key was added to the server
+     * before, this method will do nothing.
      * 
      * @param base58encodedWatchingKey
      *            the client's base58 encoded watching key
      */
+    @Transactional
     public void addWatchingKey(String base58encodedWatchingKey) {
+        
+        if(clientWatchingKeyDAO.exists(base58encodedWatchingKey)) {
+            return;
+        }
+
         DeterministicKey clientKey = DeterministicKey.deserializeB58(base58encodedWatchingKey, getNetworkParams(bitcoinNet));
 
         // create married key chain with clients watching key
         MarriedKeyChain marriedClientKeyChain = MarriedKeyChain.builder().seed(privateKeyChain.getSeed()).followingKeys(clientKey).threshold(2).build();
 
         serverAppKit.wallet().addAndActivateHDChain(marriedClientKeyChain);
-        serverAppKit.wallet().getActiveKeychain().setLookaheadSize(50);
+        serverAppKit.wallet().getActiveKeychain().setLookaheadSize(100);
 
         // no idea why this is necessary, but it is...
         serverAppKit.wallet().freshReceiveAddress();
+        
+        clientWatchingKeyDAO.addClientWatchingKey(base58encodedWatchingKey);
     }
-    
-  
+
     /**
      * This method is responsible for signing a partially signed, time locked
      * refund transaction. The signed transaction is not broadcasted but sent to
@@ -423,7 +433,7 @@ public class BitcoinWalletService {
      */
     @Transactional
     public String signRefundTx(String partialTimeLockedTx, List<IndexAndDerivationPath> indexAndPath) throws InvalidTransactionException {
-        
+
         // deserialize the transaction...
         Transaction tx = null;
         try {
@@ -518,35 +528,32 @@ public class BitcoinWalletService {
 
         // Check if the transaction is an attempted double spend. We need to
         // lock here to prevent race conditions
-       
 
-            if (!tx.isTimeLocked()) {
-                // check for attempted double-spend
-                if (spentOutputDao.isDoubleSpend(tx)) {
-                    // Ha! E1337 HaxxOr detected :)
-                    throw new DoubleSignatureRequestedException("These Outputs have already been signed. Possible double-spend attack!");
-                }
-                spentOutputDao.addOutput(tx);
-            } else {
-
+        if (!tx.isTimeLocked()) {
+            // check for attempted double-spend
+            if (spentOutputDao.isDoubleSpend(tx)) {
+                // Ha! E1337 HaxxOr detected :)
+                throw new DoubleSignatureRequestedException("These Outputs have already been signed. Possible double-spend attack!");
             }
+            spentOutputDao.addOutput(tx);
+        } else {
 
-            // check if we already signed a refund transaction where at least
-            // one
-            // of the inputs that has become valid in the meantime
-            for (TransactionInput input : tx.getInputs()) {
+        }
 
-                long refundTxValidBlock = signedInputDao.getLockTime(input.getOutpoint().getHash().getBytes(), input.getOutpoint().getIndex());
+        // check if we already signed a refund transaction where at least
+        // one
+        // of the inputs that has become valid in the meantime
+        for (TransactionInput input : tx.getInputs()) {
 
-                if (currentBlockHeight >= (refundTxValidBlock - 10)) {
-                    // uh-oh. A previously signed refund transaction is (or
-                    // almost)
-                    // valid -> refuse signing
-                    throw new ValidRefundTransactionException("A previously signed refund transaction has become valid.");
-                }
+            long refundTxValidBlock = signedInputDao.getLockTime(input.getOutpoint().getHash().getBytes(), input.getOutpoint().getIndex());
+
+            if (currentBlockHeight >= (refundTxValidBlock - 10)) {
+                // uh-oh. A previously signed refund transaction is (or
+                // almost)
+                // valid -> refuse signing
+                throw new ValidRefundTransactionException("A previously signed refund transaction has become valid.");
             }
-
-        
+        }
 
         // let the magic happen: Add the missing signature to the inputs
         for (IndexAndDerivationPath indexAndPath : indexAndPaths) {
@@ -640,18 +647,18 @@ public class BitcoinWalletService {
     public void stop() {
         serverAppKit.stopAsync().awaitTerminated();
     }
-    
+
     private static class P2SHScript extends Script {
 
         public P2SHScript(byte[] programBytes) {
             super(programBytes);
         }
-        
+
         @Override
         public boolean isPayToScriptHash() {
             return true;
         }
-        
+
         public static P2SHScript dummy() {
             Script dummyScript = new ScriptBuilder().build();
             return new P2SHScript(dummyScript.getProgram());
