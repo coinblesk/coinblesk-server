@@ -7,6 +7,19 @@ import org.springframework.core.io.FileSystemResource;
 import ch.uzh.csg.coinblesk.Currency;
 
 
+/**
+ * This is the default configuration for testcases. If you want to change these
+ * settings e.g. when using tomcat, add these values to context.xml:
+ * 
+ * <pre>
+ *  ...
+ *  <Parameter name="bitcoin.net" value="testnet" />
+ *  ...
+ * </pre>
+ * 
+ * @author Raphael Voellmy
+ * @author Thomas Bocek
+ */
 @Configuration
 public class AppConfig {
 	
