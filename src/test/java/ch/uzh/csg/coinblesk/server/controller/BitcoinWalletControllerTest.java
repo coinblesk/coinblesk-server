@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.GsonHttpMessageConverter;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
@@ -43,11 +44,12 @@ import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
 import ch.uzh.csg.coinblesk.responseobject.WatchingKeyTransferObject;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
+import ch.uzh.csg.coinblesk.server.config.DispatcherConfig;
 import ch.uzh.csg.coinblesk.server.service.BitcoinWalletService;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @WebAppConfiguration
-@TestPropertySource("classpath:application-test.properties")
+@ContextConfiguration(classes={DispatcherConfig.class})
 public class BitcoinWalletControllerTest {
     
     private final static Random RND = new Random(42L);
@@ -66,10 +68,10 @@ public class BitcoinWalletControllerTest {
 
     private MockMvc mockMvc;
 
-    @Autowired
-    public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
-      converters.add(new GsonHttpMessageConverter());
-    }
+//    @Autowired
+//    public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
+//      converters.add(new GsonHttpMessageConverter());
+//    }
     
     @Before
     public void setup() throws Exception {
