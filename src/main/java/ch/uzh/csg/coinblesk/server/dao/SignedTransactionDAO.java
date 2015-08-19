@@ -37,7 +37,7 @@ public class SignedTransactionDAO {
         em.persist(signedTx);
         em.flush();
 
-        LOGGER.debug("added signed transaciton {}", tx);
+        LOGGER.debug("added signed transaciton {}", tx.getHashAsString());
     }
 
     /**
@@ -60,6 +60,28 @@ public class SignedTransactionDAO {
         }
         final Predicate finalCondition = cb.or(predicates.toArray(new Predicate[0]));
         qb.where(finalCondition);
+        final long result = em.createQuery(cq).getSingleResult();
+        return result > 0;
+    }
+
+    /**
+     * Checks if a transaction was an instant transaction signed by the server.
+     * 
+     * @param txHash
+     *            the hash of the transaction
+     * @return true if the transaction was signed by the server (instant
+     *         transaction)
+     */
+    public boolean isInstantTransaction(String txHash) {
+        Sha256Hash sha256Hash = Sha256Hash.wrap(txHash);
+        final CriteriaBuilder cb = em.getCriteriaBuilder();
+        final CriteriaQuery<Long> cq = cb.createQuery(Long.class);
+        final CriteriaQuery<Long> qb = cq.select(cb.count(cq.from(SignedTransactions.class)));
+
+        final Root<SignedTransactions> root = qb.from(SignedTransactions.class);
+
+        final Predicate predicate = cb.equal(root.get("txHash"), sha256Hash.getBytes());
+        qb.where(predicate);
         final long result = em.createQuery(cq).getSingleResult();
         return result > 0;
     }

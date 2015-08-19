@@ -40,6 +40,19 @@ public class SignedTransactionDAOTest {
         Assert.assertFalse(signedTransactionDao.allInputsServerSigned(txs[1]));
         signedTransactionDao.addSignedTransaction(txs[0]);
         Assert.assertTrue(signedTransactionDao.allInputsServerSigned(txs[1]));
+        System.out.println(txs[0]);
+        System.out.println(txs[1]);
     }
+    
+    @Test
+    public void testIsInstantTransaction() throws Exception {
+        Transaction[] txs = FakeTxBuilder.createFakeTx(PARAMS, Coin.COIN, new Address(PARAMS, "2NFCKjVtpzN65DW6d6zWy5HfejV8BGKw31x"), new Address(PARAMS, "mtqsG5SWFmrhfpW1MVH7V63Dwe3XWCwxpf"));
+        Assert.assertFalse(signedTransactionDao.isInstantTransaction(txs[1].getHashAsString()));
+        signedTransactionDao.addSignedTransaction(txs[1]);
+        Assert.assertTrue(signedTransactionDao.isInstantTransaction(txs[1].getHashAsString()));
+
+    }
+
+    
 
 }

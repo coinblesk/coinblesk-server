@@ -129,7 +129,7 @@ public class BitcoinWalletService {
 
         initBlockListener();
         initPrivateKeyChain();
-
+        
         LOGGER.info("bitcoin wallet service is ready");
 
         LOGGER.info("Total number of bitcoins in the CoinBlesk system: {}", serverAppKit.wallet().getBalance().toFriendlyString());
@@ -383,10 +383,14 @@ public class BitcoinWalletService {
         serverAppKit.peerGroup().broadcastTransaction(signedTx).broadcast().addListener(new Runnable() {
             @Override
             public void run() {
-                LOGGER.info("Transaction was broadcasted");
+                LOGGER.info("Transaction {} was broadcasted", signedTx.getHashAsString());
             }
         }, MoreExecutors.sameThreadExecutor());
 
+        signedTransactionDao.addSignedTransaction(signedTx);
+        serverAppKit.wallet().maybeCommitTx(signedTx);
+        LOGGER.debug("Saved transaction {} in database and commited to wallet", signedTx.getHashAsString());
+        
         return Base64.getEncoder().encodeToString(signedTx.unsafeBitcoinSerialize());
     }
 
@@ -494,6 +498,7 @@ public class BitcoinWalletService {
         // server,
         // we know for sure that the inputs are unspent
         if (signedTransactionDao.allInputsServerSigned(tx)) {
+            LOGGER.debug("All inputs are from instant transactions");
             return true;
         }
 
@@ -510,8 +515,12 @@ public class BitcoinWalletService {
 
                 for (TransactionOutput unspent : candidates) {
                     // only add outputs that have enough confirmations
-                    if(unspent.getParentTransaction().getConfidence().getDepthInBlocks() > appConfig.getMinConf()) {
+                    Transaction parentTx = unspent.getParentTransaction();
+                    if(parentTx.getConfidence().getDepthInBlocks() > appConfig.getMinConf()) {
+                        LOGGER.debug("Input transaction {} has {} confirmations and is unspent", parentTx.getHashAsString(), parentTx.getConfidence().getDepthInBlocks());
                         outPoint.put(unspent.getOutPointFor(), unspent);
+                    } else {
+                        LOGGER.debug("Transaction {} has not enough confirmations. Required: {}. Number of confirmations: {} ({})", parentTx.getHashAsString(), appConfig.getMinConf(), parentTx.getConfidence().getDepthInBlocks(), parentTx.getConfidence());
                     }
                 }
 
@@ -520,6 +529,9 @@ public class BitcoinWalletService {
                         TransactionOutput unspentOutput = outPoint.get(txIn.getOutpoint());
                         gathered.add(unspentOutput);
                         valueGathered = valueGathered.add(unspentOutput.getValue());
+                        LOGGER.debug("Client is spending output {}, which has enough confirmations and is unspent", txIn.getOutpoint());
+                    } else {
+                        LOGGER.debug("Client tried to spend output {} but it is not confirmed or unspent", txIn.getOutpoint());
                     }
                 }
 
