@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
  * 
  * <pre>
  *  ...
- *  <Parameter name="db.url" value="jdbc:postgresql://localhost/coinblesk" />
+ *  <Parameter name="db.url" value="jdbc:postgresql:coinblesk" />
  *  <Parameter name="db.username" value="coinblesk" /> 
  *  <Parameter name="db.password" value="****" />
  *  <Parameter name="db.hbm2ddl.auto" value="verify" />
