@@ -53,7 +53,7 @@ public class SignedInputDAO {
         qb.where(finalCondition);
 
         final SignedInput signedInput = getSingle(qb, em);
-        LOGGER.debug("lock time for {},{} is {}", txHash, outputIndex, signedInput);
+        LOGGER.debug("lock time for {},{} is {}", txHash.toString(), outputIndex, signedInput);
         return signedInput == null ? Long.MAX_VALUE : signedInput.getLockTime();
     }
     

@@ -5,7 +5,6 @@ import java.io.FilenameFilter;
 import java.net.InetSocketAddress;
 import java.security.SecureRandom;
 import java.text.DateFormat;
-import java.text.Format;
 import java.text.SimpleDateFormat;
 import java.util.Base64;
 import java.util.Date;
@@ -13,11 +12,14 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+import javax.transaction.Transactional;
+
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PrunedException;
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
@@ -26,14 +28,17 @@ import org.bitcoinj.core.Wallet.MissingSigsMode;
 import org.bitcoinj.core.Wallet.SendRequest;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
+import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscoveryException;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.signers.StatelessTransactionSigner;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.testing.FakeTxBuilder;
+import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.KeyBag;
 import org.bitcoinj.wallet.KeyChain.KeyPurpose;
 import org.bitcoinj.wallet.MarriedKeyChain;
@@ -58,11 +63,13 @@ import com.github.springtestdbunit.annotation.ExpectedDatabase;
 import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
 
 import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
+import ch.uzh.csg.coinblesk.server.bitcoin.InvalidClientSignatureException;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.bitcoin.NotEnoughUnspentsException;
 import ch.uzh.csg.coinblesk.server.bitcoin.ValidRefundTransactionException;
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import ch.uzh.csg.coinblesk.server.config.DispatcherConfig;
+import ch.uzh.csg.coinblesk.server.service.BitcoinWalletService.P2SHScript;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @TestExecutionListeners({ DependencyInjectionTestExecutionListener.class, DirtiesContextTestExecutionListener.class, TransactionalTestExecutionListener.class,
@@ -96,9 +103,6 @@ public class BitcoinWalletServiceTest {
                     continue;
                 }
                 Script scriptPubKey = txOut.getScriptPubKey();
-
-                System.out.println("in client");
-                System.out.println(txIn.getScriptSig());
 
                 try {
                     txIn.getScriptSig().correctlySpends(tx, i, txIn.getConnectedOutput().getScriptPubKey());
@@ -251,6 +255,42 @@ public class BitcoinWalletServiceTest {
             invalidTxThrown = true;
         }
         Assert.assertTrue(invalidTxThrown);
+
+    }
+    
+    @Test(expected = InvalidClientSignatureException.class)
+    public void testSignTxAndBroadcast_invalidClientSignature() throws Exception {
+
+        WalletAppKit clientAppKit = getClientAppKit();
+        WalletAppKit otherAppKit = createAppKit();
+
+        sendFakeCoins(Coin.FIFTY_COINS, clientAppKit.wallet().currentReceiveAddress(), bitcoinWalletService.getAppKit(), clientAppKit);
+
+        ServerSignatureRequestTransferObject txSigRequest = getSigRequest(clientAppKit);
+
+        Address receiveAddr = otherAppKit.wallet().currentAddress(KeyPurpose.RECEIVE_FUNDS);
+        SendRequest req = SendRequest.to(receiveAddr, Coin.COIN);
+        req.missingSigsMode = MissingSigsMode.USE_OP_ZERO;
+        clientAppKit.wallet().completeTx(req);
+        
+        String originalTx = txSigRequest.getPartialTx();
+        Transaction tx = new Transaction(params, Base64.getDecoder().decode(txSigRequest.getPartialTx()));
+        Script redeemScript = new Script(tx.getInput(0).getScriptSig().getChunks().get(tx.getInput(0).getScriptSig().getChunks().size() - 1).data);
+        
+        // create a valid signature but with a wrong key and replace the correct signature with this signature
+        DeterministicKey wrongKey = new DeterministicKeyChain(new SecureRandom()).getKey(KeyPurpose.RECEIVE_FUNDS);
+        Sha256Hash sighash = tx.hashForSignature(0, redeemScript, Transaction.SigHash.ALL, false);
+        TransactionSignature wrongSig = new TransactionSignature(wrongKey.sign(sighash), Transaction.SigHash.ALL, false);
+        Script dummyP2SHScript = P2SHScript.dummy();
+        Script inputScript = ScriptBuilder.createP2SHMultiSigInputScript(null, redeemScript);
+        inputScript = dummyP2SHScript.getScriptSigWithSignature(inputScript, wrongSig.encodeToBitcoin(), 0);
+        tx.getInput(0).setScriptSig(inputScript);
+
+        txSigRequest.setPartialTx(Base64.getEncoder().encodeToString(tx.bitcoinSerialize()));
+        
+        Assert.assertNotEquals(originalTx, txSigRequest.getPartialTx());
+
+        bitcoinWalletService.signAndBroadcastTx(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
 
     }
 
@@ -505,6 +545,7 @@ public class BitcoinWalletServiceTest {
     }
     
     @Test
+    @Transactional
     @ExpectedDatabase(value = "classpath:DbUnitFiles/addedTransaction.xml", assertionMode = DatabaseAssertionMode.NON_STRICT)
     public void testAddDoubleSpendSpentOutputs() throws Exception {
     	WalletAppKit clientAppKit = getClientAppKit();
@@ -519,6 +560,7 @@ public class BitcoinWalletServiceTest {
     }
     
     @Test
+    @Transactional
     @ExpectedDatabase(value = "classpath:DbUnitFiles/emptyDataSet.xml")
     @DatabaseSetup("classpath:DbUnitFiles/oneSpentOutput.xml")
     public void testExpireSpentOutputs1() throws Exception {
@@ -526,6 +568,7 @@ public class BitcoinWalletServiceTest {
     }
     
     @Test
+    @Transactional
     @ExpectedDatabase(value = "classpath:DbUnitFiles/oneSpentOutputResult.xml", assertionMode = DatabaseAssertionMode.NON_STRICT)
     @DatabaseSetup("classpath:DbUnitFiles/twoSpentOutput.xml")
     public void testExpireSpentOutputs2() throws Exception {
@@ -536,6 +579,7 @@ public class BitcoinWalletServiceTest {
     }
     
     @Test
+    @Transactional
     @ExpectedDatabase(value = "classpath:DbUnitFiles/emptyDataSet.xml", assertionMode = DatabaseAssertionMode.NON_STRICT)
     @DatabaseSetup("classpath:DbUnitFiles/twoSpentOutput.xml")
     public void testExpireSpentOutputs3() throws Exception {

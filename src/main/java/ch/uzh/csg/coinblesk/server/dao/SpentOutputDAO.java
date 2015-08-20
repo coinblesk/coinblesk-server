@@ -40,7 +40,7 @@ public class SpentOutputDAO {
 			em.persist(outputs);
 		}
 		em.flush();
-		LOGGER.debug("added transaciton {}",tx);
+		LOGGER.debug("added transaciton {}",tx.getHashAsString());
 	}
 	
 	public boolean isDoubleSpend(final Transaction tx) {
@@ -58,7 +58,7 @@ public class SpentOutputDAO {
         final Predicate finalCondition = cb.or(predicates.toArray(new Predicate[0]));
         qb.where(finalCondition);
         final long result = em.createQuery(cq).getSingleResult();
-        LOGGER.debug("is transaction {} a doubel spend:{}",tx, result > 0);
+        LOGGER.debug("is transaction {} a doubel spend: {}",tx.getHashAsString(), result > 0);
         return result > 0;
 	}
 	

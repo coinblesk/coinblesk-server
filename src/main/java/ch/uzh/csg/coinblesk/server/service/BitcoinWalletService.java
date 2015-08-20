@@ -29,10 +29,13 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey.ECDSASignature;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
+import org.bitcoinj.core.ScriptException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
+import org.bitcoinj.core.TransactionInput.ConnectMode;
+import org.bitcoinj.core.TransactionInput.ConnectionResult;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
@@ -67,6 +70,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import ch.uzh.csg.coinblesk.bitcoin.BitcoinNet;
 import ch.uzh.csg.coinblesk.responseobject.IndexAndDerivationPath;
 import ch.uzh.csg.coinblesk.server.bitcoin.DoubleSignatureRequestedException;
+import ch.uzh.csg.coinblesk.server.bitcoin.InvalidClientSignatureException;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.bitcoin.NotEnoughUnspentsException;
 import ch.uzh.csg.coinblesk.server.bitcoin.ValidRefundTransactionException;
@@ -129,7 +133,7 @@ public class BitcoinWalletService {
 
         initBlockListener();
         initPrivateKeyChain();
-        
+
         LOGGER.info("bitcoin wallet service is ready");
 
         LOGGER.info("Total number of bitcoins in the CoinBlesk system: {}", serverAppKit.wallet().getBalance().toFriendlyString());
@@ -390,7 +394,7 @@ public class BitcoinWalletService {
         signedTransactionDao.addSignedTransaction(signedTx);
         serverAppKit.wallet().maybeCommitTx(signedTx);
         LOGGER.debug("Saved transaction {} in database and commited to wallet", signedTx.getHashAsString());
-        
+
         return Base64.getEncoder().encodeToString(signedTx.unsafeBitcoinSerialize());
     }
 
@@ -495,57 +499,51 @@ public class BitcoinWalletService {
         }
 
         // if the inputs are instant transactions that were signed by the
-        // server,
-        // we know for sure that the inputs are unspent
+        // server, we know for sure that the inputs are unspent
         if (signedTransactionDao.allInputsServerSigned(tx)) {
             LOGGER.debug("All inputs are from instant transactions");
             return true;
+        } else {
+            // only for debugging
+            if (bitcoinNet != BitcoinNet.MAINNET) {
+                for (TransactionInput txIn : tx.getInputs()) {
+                    if (txIn.getConnectedOutput() != null && signedTransactionDao.isInstantTransaction(txIn.getConnectedOutput().getHash().toString())) {
+                        LOGGER.debug("Input transaction {} was signed by the server", txIn.getOutpoint().getHash().toString());
+                    } else {
+                        LOGGER.debug("Input transaction {} was NOT signed by the server", txIn.getOutpoint().getHash().toString());
+                    }
+                }
+            }
         }
 
         // at this point we need to check if the inputs are unspent and have
         // enough confirmations
-        
-        Coin unspentsValue = serverAppKit.wallet().getBalance(new CoinSelector() {
-            @Override
-            public CoinSelection select(Coin target, List<TransactionOutput> candidates) {
-                Map<TransactionOutPoint, TransactionOutput> outPoint = new HashMap<>();
-
-                List<TransactionOutput> gathered = new LinkedList<>();
-                Coin valueGathered = Coin.ZERO;
-
-                for (TransactionOutput unspent : candidates) {
-                    // only add outputs that have enough confirmations
-                    Transaction parentTx = unspent.getParentTransaction();
-                    if(parentTx.getConfidence().getDepthInBlocks() > appConfig.getMinConf()) {
-                        LOGGER.debug("Input transaction {} has {} confirmations and is unspent", parentTx.getHashAsString(), parentTx.getConfidence().getDepthInBlocks());
-                        outPoint.put(unspent.getOutPointFor(), unspent);
-                    } else {
-                        LOGGER.debug("Transaction {} has not enough confirmations. Required: {}. Number of confirmations: {} ({})", parentTx.getHashAsString(), appConfig.getMinConf(), parentTx.getConfidence().getDepthInBlocks(), parentTx.getConfidence());
-                    }
-                }
-
-                for (TransactionInput txIn : tx.getInputs()) {
-                    if (outPoint.containsKey(txIn.getOutpoint())) {
-                        TransactionOutput unspentOutput = outPoint.get(txIn.getOutpoint());
-                        gathered.add(unspentOutput);
-                        valueGathered = valueGathered.add(unspentOutput.getValue());
-                        LOGGER.debug("Client is spending output {}, which has enough confirmations and is unspent", txIn.getOutpoint());
-                    } else {
-                        LOGGER.debug("Client tried to spend output {} but it is not confirmed or unspent", txIn.getOutpoint());
-                    }
-                }
-
-                return new CoinSelection(valueGathered, gathered);
+        for (TransactionInput txIn : tx.getInputs()) {
+            Transaction inputTx = serverAppKit.wallet().getTransaction(txIn.getOutpoint().getHash());
+            
+            if(inputTx == null) {
+                LOGGER.warn("Client tried to spend the output {} we have never seen", txIn.getOutpoint());
+                return false;
             }
-        });
 
-        Coin txValue = Coin.ZERO;
-        for (TransactionOutput txOut : tx.getOutputs()) {
-            txValue = txValue.add(txOut.getValue());
-            LOGGER.debug("Total output value of transaction is {}, total confirmed unspent value of inputs is {}", txValue.toFriendlyString(), unspentsValue.toFriendlyString());
+            // check if transaction was already spent
+            if (txIn.connect(inputTx, ConnectMode.DISCONNECT_ON_CONFLICT) == ConnectionResult.ALREADY_SPENT) {
+                LOGGER.warn("Client tried to spend output {}, but the output is already spent!", txIn.getOutpoint());
+                return false;
+            }
+
+            // check if transaction has enough confirmations
+            if (inputTx.getConfidence().getDepthInBlocks() < appConfig.getMinConf()) {
+                LOGGER.debug("Transaction {} has not enough confirmations. Required: {}. Number of confirmations: {} ({})", inputTx.getHashAsString(), appConfig.getMinConf(),
+                        inputTx.getConfidence().getDepthInBlocks(), inputTx.getConfidence());
+                return false;
+            }
+
+            LOGGER.debug("Client is spending output {}, which has enough confirmations and is unspent", txIn.getOutpoint());
+
         }
 
-        return unspentsValue.isGreaterThan(txValue) || unspentsValue.compareTo(txValue) == 0;
+        return true;
     }
 
     /**
@@ -621,22 +619,32 @@ public class BitcoinWalletService {
             DeterministicKey key = privateKeyChain.getKeyByPath(keyPath, true);
             Sha256Hash sighash = tx.hashForSignature(indexAndPath.getIndex(), redeemScript, Transaction.SigHash.ALL, false);
             ECDSASignature sig = key.sign(sighash);
+
             TransactionSignature txSig = new TransactionSignature(sig, Transaction.SigHash.ALL, false);
 
-            int sigIndex = inputScript.getSigInsertionIndex(sighash, key.dropPrivateBytes().dropParent());
+            try {
+                int sigIndex = inputScript.getSigInsertionIndex(sighash, key.dropPrivateBytes().dropParent());
 
-            // I believe that is a bug in bitcoinj. Inserting a signature in a
-            // partially signed input script is only possible if the
-            // getScriptSigWithSignature(...) method is called on a P2SH script
-            Script dummyP2SHScript = P2SHScript.dummy();
+                // Inserting a signature in a partially signed input script is
+                // only
+                // possible if the getScriptSigWithSignature(...) method is
+                // called
+                // on a P2SH script
+                Script dummyP2SHScript = P2SHScript.dummy();
 
-            inputScript = dummyP2SHScript.getScriptSigWithSignature(inputScript, txSig.encodeToBitcoin(), sigIndex);
+                inputScript = dummyP2SHScript.getScriptSigWithSignature(inputScript, txSig.encodeToBitcoin(), sigIndex);
 
-            txIn.setScriptSig(inputScript);
-            // txIn.disconnect();
+                txIn.setScriptSig(inputScript);
+
+                TransactionOutput out = serverAppKit.wallet().getTransaction(txIn.getOutpoint().getHash()).getOutput(txIn.getOutpoint().getIndex());
+                txIn.getScriptSig().correctlySpends(txIn.getParentTransaction(), indexAndPath.getIndex(), out.getScriptPubKey());
+            } catch (Exception e) {
+                throw new InvalidClientSignatureException(e.getMessage());
+            }
+
         }
 
-        LOGGER.info("Signed transaction: " + tx);
+        LOGGER.info("Signed transaction " + tx.getHashAsString());
         String hex = DatatypeConverter.printHexBinary(tx.unsafeBitcoinSerialize());
         LOGGER.debug("Hex encoded tx: " + hex);
 
@@ -687,7 +695,7 @@ public class BitcoinWalletService {
         serverAppKit.stopAsync().awaitTerminated();
     }
 
-    private static class P2SHScript extends Script {
+    public static class P2SHScript extends Script {
 
         public P2SHScript(byte[] programBytes) {
             super(programBytes);

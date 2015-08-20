@@ -32,7 +32,7 @@ public class AppConfig {
     @Value("${exchangerates.currency:CHF}")
     private Currency currency;
     
-    @Value("${bitcoin.minconf:4}")
+    @Value("${bitcoin.minconf:0}")
     private int minConf;
     
     public FileSystemResource getConfigDir() {
