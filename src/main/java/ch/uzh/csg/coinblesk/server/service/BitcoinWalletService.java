@@ -10,12 +10,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.PostConstruct;
@@ -25,18 +20,15 @@ import javax.xml.bind.DatatypeConverter;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bitcoinj.core.AbstractBlockChainListener;
-import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey.ECDSASignature;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
-import org.bitcoinj.core.ScriptException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionInput.ConnectMode;
 import org.bitcoinj.core.TransactionInput.ConnectionResult;
-import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.ChildNumber;
@@ -51,8 +43,6 @@ import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.wallet.CoinSelection;
-import org.bitcoinj.wallet.CoinSelector;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.KeyChainGroup;
@@ -63,12 +53,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import ch.uzh.csg.coinblesk.bitcoin.BitcoinNet;
-import ch.uzh.csg.coinblesk.responseobject.IndexAndDerivationPath;
 import ch.uzh.csg.coinblesk.server.bitcoin.DoubleSignatureRequestedException;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidClientSignatureException;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
@@ -363,7 +351,7 @@ public class BitcoinWalletService {
      *             if the partial transaction is not valid
      */
     @Transactional
-    public String signAndBroadcastTx(String partialTx, List<IndexAndDerivationPath> indexAndPaths) throws InvalidTransactionException {
+    public String signAndBroadcastTx(String partialTx, List<Integer> childNumbers) throws InvalidTransactionException {
 
         // deserialize the transaction...
         Transaction tx = null;
@@ -381,7 +369,7 @@ public class BitcoinWalletService {
             throw new InvalidTransactionException(errorMsg);
         }
 
-        Transaction signedTx = completeTx(tx, indexAndPaths);
+        Transaction signedTx = completeTx(tx, childNumbers);
 
         // transaction is fully signed now: let's broadcast it
         serverAppKit.peerGroup().broadcastTransaction(signedTx).broadcast().addListener(new Runnable() {
@@ -440,14 +428,14 @@ public class BitcoinWalletService {
      * 
      * @param partialTimeLockedTx
      *            the partially signed, time locked transaction
-     * @param indexAndPath
+     * @param childNumbers
      *            the indices and key derivation paths of the partially signed
      *            transaction
      * @return a base64 encoded, fully signed, time-locked refund transaction.
      * @throws InvalidTransactionException
      */
     @Transactional
-    public String signRefundTx(String partialTimeLockedTx, List<IndexAndDerivationPath> indexAndPath) throws InvalidTransactionException {
+    public String signRefundTx(String partialTimeLockedTx, List<Integer> childNumbers) throws InvalidTransactionException {
 
         // deserialize the transaction...
         Transaction tx = null;
@@ -472,7 +460,7 @@ public class BitcoinWalletService {
                 long oupointIndex = input.getOutpoint().getIndex();
                 signedInputDao.addSignedInput(txHash, oupointIndex, tx.getLockTime());
             }
-            signedTx = completeTx(tx, indexAndPath);
+            signedTx = completeTx(tx, childNumbers);
         } catch (Exception e) {
             // TODO: roll back
             // rethrow
@@ -555,7 +543,7 @@ public class BitcoinWalletService {
      * @throws InvalidTransactionException
      */
 
-    private Transaction completeTx(final Transaction tx, List<IndexAndDerivationPath> indexAndPaths) throws InvalidTransactionException {
+    private Transaction completeTx(final Transaction tx, List<Integer> childNumbers) throws InvalidTransactionException {
 
         if (!inputsUnspent(tx)) {
             throw new NotEnoughUnspentsException("Not enough unspent bitcoins for this transaction.");
@@ -593,15 +581,10 @@ public class BitcoinWalletService {
         }
 
         // let the magic happen: Add the missing signature to the inputs
-        for (IndexAndDerivationPath indexAndPath : indexAndPaths) {
+        for (int i = 0; i < tx.getInputs().size(); i++) {
 
             // Create the second signature for this input
-            TransactionInput txIn = null;
-            try {
-                txIn = tx.getInputs().get(indexAndPath.getIndex());
-            } catch (IndexOutOfBoundsException e) {
-                throw new InvalidTransactionException("Tried to access input at index " + indexAndPath.getIndex() + " but there are only " + tx.getInputs().size() + " inputs");
-            }
+            TransactionInput txIn = tx.getInputs().get(i);;
 
             Script inputScript = txIn.getScriptSig();
 
@@ -615,9 +598,9 @@ public class BitcoinWalletService {
             Script redeemScript = new Script(inputScript.getChunks().get(inputScript.getChunks().size() - 1).data);
 
             // now let's create the transaction signature
-            ImmutableList<ChildNumber> keyPath = ImmutableList.copyOf(getChildNumbers(indexAndPath.getDerivationPath()));
+            List<ChildNumber> keyPath = childNumberToPath(childNumbers.get(i));
             DeterministicKey key = privateKeyChain.getKeyByPath(keyPath, true);
-            Sha256Hash sighash = tx.hashForSignature(indexAndPath.getIndex(), redeemScript, Transaction.SigHash.ALL, false);
+            Sha256Hash sighash = tx.hashForSignature(i, redeemScript, Transaction.SigHash.ALL, false);
             ECDSASignature sig = key.sign(sighash);
 
             TransactionSignature txSig = new TransactionSignature(sig, Transaction.SigHash.ALL, false);
@@ -637,7 +620,7 @@ public class BitcoinWalletService {
                 txIn.setScriptSig(inputScript);
 
                 TransactionOutput out = serverAppKit.wallet().getTransaction(txIn.getOutpoint().getHash()).getOutput(txIn.getOutpoint().getIndex());
-                txIn.getScriptSig().correctlySpends(txIn.getParentTransaction(), indexAndPath.getIndex(), out.getScriptPubKey());
+                txIn.getScriptSig().correctlySpends(txIn.getParentTransaction(), i, out.getScriptPubKey());
             } catch (Exception e) {
                 throw new InvalidClientSignatureException(e.getMessage());
             }
@@ -650,16 +633,6 @@ public class BitcoinWalletService {
 
         return tx;
 
-    }
-
-    private List<ChildNumber> getChildNumbers(int[] path) {
-
-        List<ChildNumber> childNumbers = Lists.newArrayListWithCapacity(path.length);
-        for (int i : path) {
-            childNumbers.add(new ChildNumber(i));
-        }
-
-        return childNumbers;
     }
 
     private void initBlockListener() {
@@ -711,6 +684,14 @@ public class BitcoinWalletService {
             return new P2SHScript(dummyScript.getProgram());
         }
 
+    }
+    
+    /**
+     * Converts a child number to a path
+     * @return
+     */
+    private List<ChildNumber> childNumberToPath(int i) {
+        return Lists.newArrayList(new ChildNumber(0, true), new ChildNumber(0), new ChildNumber(i));
     }
 
 }

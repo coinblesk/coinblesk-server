@@ -111,12 +111,8 @@ public class BitcoinWalletServiceTest {
                     // Expected.
                 }
 
-                List<ChildNumber> childNumbers = propTx.keyPaths.get(scriptPubKey);
-                int[] path = new int[childNumbers.size()];
-                for (int j = 0; j < childNumbers.size(); j++) {
-                    path[j] = childNumbers.get(j).getI();
-                }
-                txSigRequest.addIndexAndDerivationPath(i, path);
+                int childNumber = propTx.keyPaths.get(scriptPubKey).get(2).getI();
+                txSigRequest.addChildNumber(childNumber);
 
             }
 
@@ -174,7 +170,7 @@ public class BitcoinWalletServiceTest {
     public void testSignTxAndBroadcast_invalidRequest() throws Exception {
         ServerSignatureRequestTransferObject txSigReq = new ServerSignatureRequestTransferObject();
         txSigReq.setPartialTx("corrupted-partial-tx");
-        bitcoinWalletService.signAndBroadcastTx(txSigReq.getPartialTx(), txSigReq.getIndexAndDerivationPaths());
+        bitcoinWalletService.signAndBroadcastTx(txSigReq.getPartialTx(), txSigReq.getChildNumbers());
     }
 
     @Test
@@ -241,7 +237,7 @@ public class BitcoinWalletServiceTest {
         clientAppKit.wallet().completeTx(req);
 
         // check if TX was successful
-        String base64encodedSignedTx = bitcoinWalletService.signAndBroadcastTx(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
+        String base64encodedSignedTx = bitcoinWalletService.signAndBroadcastTx(txSigRequest.getPartialTx(), txSigRequest.getChildNumbers());
         
         // check if transaction can be deserialized
         Transaction tx = new Transaction(params, Base64.getDecoder().decode(base64encodedSignedTx));
@@ -250,7 +246,7 @@ public class BitcoinWalletServiceTest {
         // Try to sign the same transaction again
         boolean invalidTxThrown = false;
         try {
-            bitcoinWalletService.signAndBroadcastTx(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
+            bitcoinWalletService.signAndBroadcastTx(txSigRequest.getPartialTx(), txSigRequest.getChildNumbers());
         } catch (InvalidTransactionException e) {
             invalidTxThrown = true;
         }
@@ -290,7 +286,7 @@ public class BitcoinWalletServiceTest {
         
         Assert.assertNotEquals(originalTx, txSigRequest.getPartialTx());
 
-        bitcoinWalletService.signAndBroadcastTx(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
+        bitcoinWalletService.signAndBroadcastTx(txSigRequest.getPartialTx(), txSigRequest.getChildNumbers());
 
     }
 
@@ -314,7 +310,7 @@ public class BitcoinWalletServiceTest {
         clientAppKit.wallet().completeTx(req);
 
         // check if TX was successful
-        bitcoinWalletService.signAndBroadcastTx(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
+        bitcoinWalletService.signAndBroadcastTx(txSigRequest.getPartialTx(), txSigRequest.getChildNumbers());
 
     }
 
@@ -343,7 +339,7 @@ public class BitcoinWalletServiceTest {
         clientAppKit.wallet().completeTx(req2);
 
         // check if TX was successful
-        String refundTxBase64 = bitcoinWalletService.signRefundTx(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
+        String refundTxBase64 = bitcoinWalletService.signRefundTx(txSigRequest.getPartialTx(), txSigRequest.getChildNumbers());
         Assert.assertNotNull(refundTxBase64);
         Transaction refundTx = new Transaction(params, Base64.getDecoder().decode(refundTxBase64));
         Assert.assertTrue(refundTx.isTimeLocked());
@@ -375,7 +371,7 @@ public class BitcoinWalletServiceTest {
 
         String partialTxBase64 = txSigRequest.getPartialTx();
 
-        bitcoinWalletService.signRefundTx(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
+        bitcoinWalletService.signRefundTx(txSigRequest.getPartialTx(), txSigRequest.getChildNumbers());
 
         txSigRequest.clear();
         SendRequest req2 = SendRequest.to(receiveAddr, Coin.CENT);
@@ -384,7 +380,7 @@ public class BitcoinWalletServiceTest {
         // refund transaction is not valid yet, so this should be allowed
         clientAppKit.wallet().completeTx(req2);
         Assert.assertNotEquals(partialTxBase64, txSigRequest.getPartialTx());
-        bitcoinWalletService.signAndBroadcastTx(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
+        bitcoinWalletService.signAndBroadcastTx(txSigRequest.getPartialTx(), txSigRequest.getChildNumbers());
 
     }
 
@@ -409,7 +405,7 @@ public class BitcoinWalletServiceTest {
         req.tx.setLockTime(refundTxLockTime);
         clientAppKit.wallet().completeTx(req);
 
-        bitcoinWalletService.signRefundTx(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
+        bitcoinWalletService.signRefundTx(txSigRequest.getPartialTx(), txSigRequest.getChildNumbers());
 
         txSigRequest.clear();
 
@@ -421,7 +417,7 @@ public class BitcoinWalletServiceTest {
         req2.missingSigsMode = MissingSigsMode.USE_OP_ZERO;
         clientAppKit.wallet().completeTx(req2);
 
-        bitcoinWalletService.signAndBroadcastTx(txSigRequest.getPartialTx(), txSigRequest.getIndexAndDerivationPaths());
+        bitcoinWalletService.signAndBroadcastTx(txSigRequest.getPartialTx(), txSigRequest.getChildNumbers());
 
     }
 

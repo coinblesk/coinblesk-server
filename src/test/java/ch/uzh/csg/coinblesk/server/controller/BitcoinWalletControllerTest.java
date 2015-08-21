@@ -38,7 +38,6 @@ import ch.uzh.csg.coinblesk.Currency;
 import ch.uzh.csg.coinblesk.JsonConverter;
 import ch.uzh.csg.coinblesk.bitcoin.BitcoinNet;
 import ch.uzh.csg.coinblesk.responseobject.ExchangeRateTransferObject;
-import ch.uzh.csg.coinblesk.responseobject.IndexAndDerivationPath;
 import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
 import ch.uzh.csg.coinblesk.responseobject.TransferObject;
 import ch.uzh.csg.coinblesk.responseobject.WatchingKeyTransferObject;
@@ -187,9 +186,9 @@ public class BitcoinWalletControllerTest {
     public void testSignAndBroadcastTx_invalidTx() throws Exception {
 
         String partialTx = "half-signed-tx";
-        List<IndexAndDerivationPath> paths = new ArrayList<>();
+        List<Integer> paths = new ArrayList<>();
         ServerSignatureRequestTransferObject sigReq = new ServerSignatureRequestTransferObject();
-        sigReq.setIndexAndDerivationPaths(paths);
+        sigReq.setChildNumbers(paths);
         sigReq.setPartialTx(partialTx);
 
         Mockito.doThrow(InvalidTransactionException.class).when(bitcoinWalletService).signAndBroadcastTx(Mockito.any(String.class), Mockito.any(List.class));
@@ -215,7 +214,7 @@ public class BitcoinWalletControllerTest {
     public void testSignAndBroadcastTx_invalidTxException() throws Exception {
 
         ServerSignatureRequestTransferObject sigReq = new ServerSignatureRequestTransferObject();
-        sigReq.setIndexAndDerivationPaths(new ArrayList<IndexAndDerivationPath>());
+        sigReq.setChildNumbers(new ArrayList<Integer>());
         sigReq.setPartialTx("partial-tx");
 
         Mockito.doThrow(new InvalidTransactionException()).when(bitcoinWalletService).signAndBroadcastTx(Mockito.any(String.class), Mockito.any(List.class));
@@ -274,13 +273,12 @@ public class BitcoinWalletControllerTest {
     private ServerSignatureRequestTransferObject getMockSigRequestObject() {
         byte[] tx = new byte[1024];
         RND.nextBytes(tx);
-        int index = 7;
-        int[] path = {1,2,3,4,5};
+        int childNumber = 7;
         String refundTx = Base64.getEncoder().encodeToString(tx);
 
         ServerSignatureRequestTransferObject sigReq = new ServerSignatureRequestTransferObject();
         sigReq.setPartialTx(refundTx);
-        sigReq.addIndexAndDerivationPath(index, path);
+        sigReq.addChildNumber(childNumber);
         
         return sigReq;
     }
