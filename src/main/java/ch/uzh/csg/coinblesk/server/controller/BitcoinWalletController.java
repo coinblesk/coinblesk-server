@@ -73,7 +73,7 @@ public class BitcoinWalletController {
     @ResponseBody
     public ResponseEntity<SignedTxTransferObject> signAndBroadcastTx(@RequestBody ServerSignatureRequestTransferObject sigReq) {
         
-        LOGGER.info("Received transaction signature request");
+        LOGGER.info("Received transaction signature request: {}", sigReq.toJson());
         
         SignedTxTransferObject response = new SignedTxTransferObject();
         
@@ -97,7 +97,7 @@ public class BitcoinWalletController {
     @RequestMapping(value = "/signRefundTx", method = RequestMethod.POST, produces = "application/json; charset=UTF-8")
     @ResponseBody public ResponseEntity<RefundTxTransferObject> createRefundTx(@RequestBody ServerSignatureRequestTransferObject sigReq, HttpServletResponse res) {
         
-        LOGGER.info("Received transaction refund transaction request");
+        LOGGER.info("Received transaction refund transaction request: {}", sigReq.toJson());
         
         RefundTxTransferObject response = new RefundTxTransferObject();
         

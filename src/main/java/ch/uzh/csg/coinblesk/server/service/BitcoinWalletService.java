@@ -60,6 +60,7 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import ch.uzh.csg.coinblesk.bitcoin.BitcoinNet;
+import ch.uzh.csg.coinblesk.server.bitcoin.BitcoinUtils;
 import ch.uzh.csg.coinblesk.server.bitcoin.DoubleSignatureRequestedException;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidClientSignatureException;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
@@ -121,6 +122,10 @@ public class BitcoinWalletService {
         }
 
         start().awaitRunning();
+        
+        // we check for confirmations anyway, so it's save to
+        // accept any transaction. 
+        serverAppKit.wallet().setAcceptRiskyTransactions(true);
 
         initBlockListener();
         initPrivateKeyChain();
@@ -617,8 +622,17 @@ public class BitcoinWalletService {
 
                 txIn.setScriptSig(inputScript);
 
-                TransactionOutput out = serverAppKit.wallet().getTransaction(txIn.getOutpoint().getHash()).getOutput(txIn.getOutpoint().getIndex());
-                txIn.getScriptSig().correctlySpends(txIn.getParentTransaction(), i, out.getScriptPubKey());
+                // final check if the client signature is valid (not needed for refund tx)
+                if(!tx.isTimeLocked()) {
+                    Transaction parentTx = serverAppKit.wallet().getTransaction(txIn.getOutpoint().getHash());
+                    if(parentTx == null) {
+                        LOGGER.error("Could not find referenced transaction {} in the wallet", BitcoinUtils.getOutpointHash(txIn.getOutpoint()));
+                        throw new InvalidClientSignatureException("Could not find referenced transaction in the wallet.");
+                    }
+                    TransactionOutput out = parentTx.getOutput(txIn.getOutpoint().getIndex());
+                    txIn.getScriptSig().correctlySpends(txIn.getParentTransaction(), i, out.getScriptPubKey());
+                }
+                
             } catch (Exception e) {
                 LOGGER.error("Failed to sign transaction", e);
                 throw new InvalidClientSignatureException(e.getMessage());
