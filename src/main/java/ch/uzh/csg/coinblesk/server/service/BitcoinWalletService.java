@@ -29,6 +29,7 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionInput.ConnectMode;
 import org.bitcoinj.core.TransactionInput.ConnectionResult;
+import org.bitcoinj.core.Wallet.BalanceType;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.ChildNumber;
@@ -123,8 +124,12 @@ public class BitcoinWalletService {
         initPrivateKeyChain();
 
         LOGGER.info("bitcoin wallet service is ready");
+        LOGGER.info("Total number of bitcoins in the CoinBlesk system: {}", serverAppKit.wallet().getBalance(BalanceType.ESTIMATED).toFriendlyString());
 
-        LOGGER.info("Total number of bitcoins in the CoinBlesk system: {}", serverAppKit.wallet().getBalance().toFriendlyString());
+        if (bitcoinNet == BitcoinNet.MAINNET && appConfig.getMinConf() < 4) {
+            LOGGER.warn("Client transactions are confirmed with {} confirmations. It is adviced to change the minimum number of confirmations to at least 4",
+                    appConfig.getMinConf());
+        }
     }
 
     // used for testing
@@ -508,8 +513,8 @@ public class BitcoinWalletService {
         // enough confirmations
         for (TransactionInput txIn : tx.getInputs()) {
             Transaction inputTx = serverAppKit.wallet().getTransaction(txIn.getOutpoint().getHash());
-            
-            if(inputTx == null) {
+
+            if (inputTx == null) {
                 LOGGER.warn("Client tried to spend the output {} we have never seen", txIn.getOutpoint());
                 return false;
             }
@@ -544,37 +549,30 @@ public class BitcoinWalletService {
      */
 
     private Transaction completeTx(final Transaction tx, List<Integer> childNumbers) throws InvalidTransactionException {
+        
+        LOGGER.debug("Received request to sign transaction:\n{}", tx);
 
         if (!inputsUnspent(tx)) {
             throw new NotEnoughUnspentsException("Not enough unspent bitcoins for this transaction.");
         }
 
-        LOGGER.info("Signing inputs of transaction " + tx.toString());
+        LOGGER.info("Signing inputs of transaction {}", tx.getHashAsString());
 
-        // Check if the transaction is an attempted double spend. We need to
-        // lock here to prevent race conditions
-
-        if (!tx.isTimeLocked()) {
-            // check for attempted double-spend
-            if (spentOutputDao.isDoubleSpend(tx)) {
-                // Ha! E1337 HaxxOr detected :)
-                throw new DoubleSignatureRequestedException("These Outputs have already been signed. Possible double-spend attack!");
-            }
-            spentOutputDao.addOutput(tx);
-        } else {
-
+        // check for double spend
+        if (!tx.isTimeLocked() && spentOutputDao.isDoubleSpend(tx)) {
+            // Ha!
+            LOGGER.warn("Client tried to sign an input that has already been signed before");
+            throw new DoubleSignatureRequestedException("These Outputs have already been signed. Possible double-spend attack!");
         }
 
-        // check if we already signed a refund transaction where at least
-        // one
-        // of the inputs that has become valid in the meantime
+        // check if we already signed a refund transaction where at least one of
+        // the inputs that has become valid in the meantime
         for (TransactionInput input : tx.getInputs()) {
 
             long refundTxValidBlock = signedInputDao.getLockTime(input.getOutpoint().getHash().getBytes(), input.getOutpoint().getIndex());
 
             if (currentBlockHeight >= (refundTxValidBlock - 10)) {
-                // uh-oh. A previously signed refund transaction is (or
-                // almost)
+                // uh-oh. A previously signed refund transaction is (or almost)
                 // valid -> refuse signing
                 throw new ValidRefundTransactionException("A previously signed refund transaction has become valid.");
             }
@@ -584,7 +582,7 @@ public class BitcoinWalletService {
         for (int i = 0; i < tx.getInputs().size(); i++) {
 
             // Create the second signature for this input
-            TransactionInput txIn = tx.getInputs().get(i);;
+            TransactionInput txIn = tx.getInputs().get(i);
 
             Script inputScript = txIn.getScriptSig();
 
@@ -609,10 +607,8 @@ public class BitcoinWalletService {
                 int sigIndex = inputScript.getSigInsertionIndex(sighash, key.dropPrivateBytes().dropParent());
 
                 // Inserting a signature in a partially signed input script is
-                // only
-                // possible if the getScriptSigWithSignature(...) method is
-                // called
-                // on a P2SH script
+                // only possible if the getScriptSigWithSignature(...) method is
+                // called on a P2SH script
                 Script dummyP2SHScript = P2SHScript.dummy();
 
                 inputScript = dummyP2SHScript.getScriptSigWithSignature(inputScript, txSig.encodeToBitcoin(), sigIndex);
@@ -622,6 +618,7 @@ public class BitcoinWalletService {
                 TransactionOutput out = serverAppKit.wallet().getTransaction(txIn.getOutpoint().getHash()).getOutput(txIn.getOutpoint().getIndex());
                 txIn.getScriptSig().correctlySpends(txIn.getParentTransaction(), i, out.getScriptPubKey());
             } catch (Exception e) {
+                LOGGER.error("Failed to sign transaction", e);
                 throw new InvalidClientSignatureException(e.getMessage());
             }
 
@@ -630,6 +627,10 @@ public class BitcoinWalletService {
         LOGGER.info("Signed transaction " + tx.getHashAsString());
         String hex = DatatypeConverter.printHexBinary(tx.unsafeBitcoinSerialize());
         LOGGER.debug("Hex encoded tx: " + hex);
+
+        if (!tx.isTimeLocked()) {
+            spentOutputDao.addOutput(tx);
+        }
 
         return tx;
 
@@ -685,9 +686,10 @@ public class BitcoinWalletService {
         }
 
     }
-    
+
     /**
      * Converts a child number to a path
+     * 
      * @return
      */
     private List<ChildNumber> childNumberToPath(int i) {

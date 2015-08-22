@@ -45,7 +45,7 @@ public class ClientWatchingKeyDAO {
         qb.where(condition);
 
         long result = em.createQuery(cq).getSingleResult();
-        LOGGER.debug("fount {} entries for watching key {}", result, clientWatchingKey);
+        LOGGER.debug("found {} entries for watching key {}", result, clientWatchingKey);
         return result > 0;
     }
 

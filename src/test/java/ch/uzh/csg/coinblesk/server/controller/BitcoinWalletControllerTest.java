@@ -186,9 +186,11 @@ public class BitcoinWalletControllerTest {
     public void testSignAndBroadcastTx_invalidTx() throws Exception {
 
         String partialTx = "half-signed-tx";
-        List<Integer> paths = new ArrayList<>();
+        List<Byte> accountNumbers = new ArrayList<>();
+        List<Integer> childNumbers = new ArrayList<>();
         ServerSignatureRequestTransferObject sigReq = new ServerSignatureRequestTransferObject();
-        sigReq.setChildNumbers(paths);
+        sigReq.setAccountNumbers(accountNumbers);
+        sigReq.setChildNumbers(childNumbers);
         sigReq.setPartialTx(partialTx);
 
         Mockito.doThrow(InvalidTransactionException.class).when(bitcoinWalletService).signAndBroadcastTx(Mockito.any(String.class), Mockito.any(List.class));
@@ -214,6 +216,7 @@ public class BitcoinWalletControllerTest {
     public void testSignAndBroadcastTx_invalidTxException() throws Exception {
 
         ServerSignatureRequestTransferObject sigReq = new ServerSignatureRequestTransferObject();
+        sigReq.setAccountNumbers(new ArrayList<Byte>());
         sigReq.setChildNumbers(new ArrayList<Integer>());
         sigReq.setPartialTx("partial-tx");
 
@@ -274,11 +277,13 @@ public class BitcoinWalletControllerTest {
         byte[] tx = new byte[1024];
         RND.nextBytes(tx);
         int childNumber = 7;
+        byte accountNumber = 7;
         String refundTx = Base64.getEncoder().encodeToString(tx);
 
         ServerSignatureRequestTransferObject sigReq = new ServerSignatureRequestTransferObject();
         sigReq.setPartialTx(refundTx);
         sigReq.addChildNumber(childNumber);
+        sigReq.addAccountNumber(accountNumber);
         
         return sigReq;
     }

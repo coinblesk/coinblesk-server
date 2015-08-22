@@ -8,6 +8,7 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
+import javax.xml.bind.DatatypeConverter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +54,7 @@ public class SignedInputDAO {
         qb.where(finalCondition);
 
         final SignedInput signedInput = getSingle(qb, em);
-        LOGGER.debug("lock time for {},{} is {}", txHash.toString(), outputIndex, signedInput);
+        LOGGER.debug("lock time for {}:{} is {}", DatatypeConverter.printHexBinary(txHash), outputIndex, (signedInput != null ? signedInput.getLockTime() : "unknown"));
         return signedInput == null ? Long.MAX_VALUE : signedInput.getLockTime();
     }
     
@@ -70,7 +71,7 @@ public class SignedInputDAO {
         
         if(savedInput != null) {
             if(savedInput.getLockTime() <= lockTime) {
-            	LOGGER.debug("input was already signed and saved with a lower lockTime -> ignore {},{}, locktime {}", txHash, outputIndex, lockTime);
+            	LOGGER.debug("input was already signed and saved with a lower lockTime -> ignore {},{}, locktime {}", DatatypeConverter.printHexBinary(txHash), outputIndex, lockTime);
                 
             } else {
             	LOGGER.debug("update the lock time {},{}, locktime {}", txHash, outputIndex, lockTime);
@@ -78,7 +79,7 @@ public class SignedInputDAO {
                 em.refresh(savedInput);
             }
         } else {
-        	LOGGER.debug("never seen this output before -> save it {},{}, locktime {}", txHash, outputIndex, lockTime);
+        	LOGGER.debug("never seen this output before -> save it {}:{}, locktime {}", DatatypeConverter.printHexBinary(txHash), outputIndex, lockTime);
         	final SignedInput signedInput = new SignedInput(lockTime, txHash, outputIndex);
             em.persist(signedInput);
         }
@@ -89,7 +90,7 @@ public class SignedInputDAO {
         final SignedInput savedInput = getSignedInput(txHash, outputIndex);
         em.remove(savedInput);
         em.flush();
-        LOGGER.debug("removed sigend input {},{}", txHash, outputIndex);
+        LOGGER.debug("removed sigend input {},{}", DatatypeConverter.printHexBinary(txHash), outputIndex);
     }
     
     private SignedInput getSignedInput(final byte[] txHash, final long outputIndex) {

@@ -49,6 +49,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
@@ -76,6 +78,7 @@ import ch.uzh.csg.coinblesk.server.service.BitcoinWalletService.P2SHScript;
         DbUnitTestExecutionListener.class })
 @WebAppConfiguration
 @ContextConfiguration(classes={DispatcherConfig.class})
+@DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
 public class BitcoinWalletServiceTest {
 
     private class TestTransactionSigner extends StatelessTransactionSigner {
@@ -111,7 +114,9 @@ public class BitcoinWalletServiceTest {
                     // Expected.
                 }
 
+                byte accountNumber = (byte) propTx.keyPaths.get(scriptPubKey).get(1).getI();
                 int childNumber = propTx.keyPaths.get(scriptPubKey).get(2).getI();
+                txSigRequest.addAccountNumber(accountNumber);
                 txSigRequest.addChildNumber(childNumber);
 
             }

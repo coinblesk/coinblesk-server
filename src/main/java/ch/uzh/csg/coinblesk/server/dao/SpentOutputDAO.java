@@ -37,10 +37,11 @@ public class SpentOutputDAO {
 		for (final TransactionInput txIn : tx.getInputs()) {
 			final SpentOutputs outputs = new SpentOutputs();
 			outputs.setTxOutPoint(txIn.getOutpoint().bitcoinSerialize());
+		    LOGGER.debug("Saving outpoint {}",txIn.getOutpoint());
 			em.persist(outputs);
 		}
 		em.flush();
-		LOGGER.debug("added transaciton {}",tx.getHashAsString());
+		LOGGER.debug("added outpoints of transaction {}",tx.getHashAsString());
 	}
 	
 	public boolean isDoubleSpend(final Transaction tx) {
