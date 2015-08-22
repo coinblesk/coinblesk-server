@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import javax.security.auth.login.AccountNotFoundException;
 import javax.transaction.Transactional;
 import javax.xml.bind.DatatypeConverter;
 
@@ -34,6 +35,7 @@ import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
+import org.bitcoinj.crypto.HDUtils;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.net.discovery.PeerDiscovery;
@@ -356,7 +358,7 @@ public class BitcoinWalletService {
      *             if the partial transaction is not valid
      */
     @Transactional
-    public String signAndBroadcastTx(String partialTx, List<Integer> childNumbers) throws InvalidTransactionException {
+    public String signAndBroadcastTx(String partialTx, List<Byte> accountNumbers, List<Integer> childNumbers) throws InvalidTransactionException {
 
         // deserialize the transaction...
         Transaction tx = null;
@@ -374,7 +376,7 @@ public class BitcoinWalletService {
             throw new InvalidTransactionException(errorMsg);
         }
 
-        Transaction signedTx = completeTx(tx, childNumbers);
+        Transaction signedTx = completeTx(tx, accountNumbers, childNumbers);
 
         // transaction is fully signed now: let's broadcast it
         serverAppKit.peerGroup().broadcastTransaction(signedTx).broadcast().addListener(new Runnable() {
@@ -440,7 +442,7 @@ public class BitcoinWalletService {
      * @throws InvalidTransactionException
      */
     @Transactional
-    public String signRefundTx(String partialTimeLockedTx, List<Integer> childNumbers) throws InvalidTransactionException {
+    public String signRefundTx(String partialTimeLockedTx, List<Byte> accountNumbers, List<Integer> childNumbers) throws InvalidTransactionException {
 
         // deserialize the transaction...
         Transaction tx = null;
@@ -465,7 +467,7 @@ public class BitcoinWalletService {
                 long oupointIndex = input.getOutpoint().getIndex();
                 signedInputDao.addSignedInput(txHash, oupointIndex, tx.getLockTime());
             }
-            signedTx = completeTx(tx, childNumbers);
+            signedTx = completeTx(tx, accountNumbers, childNumbers);
         } catch (Exception e) {
             // TODO: roll back
             // rethrow
@@ -548,7 +550,7 @@ public class BitcoinWalletService {
      * @throws InvalidTransactionException
      */
 
-    private Transaction completeTx(final Transaction tx, List<Integer> childNumbers) throws InvalidTransactionException {
+    private Transaction completeTx(final Transaction tx, List<Byte> accountNumbers, List<Integer> childNumbers) throws InvalidTransactionException {
         
         LOGGER.debug("Received request to sign transaction:\n{}", tx);
 
@@ -596,7 +598,7 @@ public class BitcoinWalletService {
             Script redeemScript = new Script(inputScript.getChunks().get(inputScript.getChunks().size() - 1).data);
 
             // now let's create the transaction signature
-            List<ChildNumber> keyPath = childNumberToPath(childNumbers.get(i));
+            List<ChildNumber> keyPath = getPath(accountNumbers.get(i), childNumbers.get(i));
             DeterministicKey key = privateKeyChain.getKeyByPath(keyPath, true);
             Sha256Hash sighash = tx.hashForSignature(i, redeemScript, Transaction.SigHash.ALL, false);
             ECDSASignature sig = key.sign(sighash);
@@ -692,8 +694,8 @@ public class BitcoinWalletService {
      * 
      * @return
      */
-    private List<ChildNumber> childNumberToPath(int i) {
-        return Lists.newArrayList(new ChildNumber(0, true), new ChildNumber(0), new ChildNumber(i));
+    private List<ChildNumber> getPath(byte accountNumber, int childNumber) {
+        return Lists.newArrayList(new ChildNumber(0, true), new ChildNumber(accountNumber), new ChildNumber(childNumber));
     }
 
 }

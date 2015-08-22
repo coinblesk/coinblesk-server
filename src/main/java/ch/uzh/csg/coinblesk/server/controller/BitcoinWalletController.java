@@ -78,7 +78,7 @@ public class BitcoinWalletController {
         SignedTxTransferObject response = new SignedTxTransferObject();
         
         try {
-            String signedTx = bitcoinWalletService.signAndBroadcastTx(sigReq.getPartialTx(), sigReq.getChildNumbers());
+            String signedTx = bitcoinWalletService.signAndBroadcastTx(sigReq.getPartialTx(), sigReq.getAccountNumbers(), sigReq.getChildNumbers());
             response.setSignedTx(signedTx);
             response.setSuccessful(true);
         } catch (InvalidTransactionException e) {
@@ -105,7 +105,7 @@ public class BitcoinWalletController {
         
         String refundTx = null;
         try {
-            refundTx = bitcoinWalletService.signRefundTx(sigReq.getPartialTx(), sigReq.getChildNumbers());
+            refundTx = bitcoinWalletService.signRefundTx(sigReq.getPartialTx(), sigReq.getAccountNumbers(), sigReq.getChildNumbers());
             response.setRefundTx(refundTx);
             response.setSuccessful(true);
         } catch (InvalidTransactionException e) {
