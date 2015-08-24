@@ -21,6 +21,8 @@ import javax.xml.bind.DatatypeConverter;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bitcoinj.core.AbstractBlockChainListener;
+import org.bitcoinj.core.AbstractWalletEventListener;
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey.ECDSASignature;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
@@ -33,6 +35,7 @@ import org.bitcoinj.core.TransactionInput.ConnectionResult;
 import org.bitcoinj.core.Wallet.BalanceType;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.core.Wallet;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.HDUtils;
@@ -50,6 +53,7 @@ import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.MarriedKeyChain;
+import org.bitcoinj.wallet.WalletTransaction.Pool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -128,11 +132,12 @@ public class BitcoinWalletService {
         serverAppKit.wallet().setAcceptRiskyTransactions(true);
 
         initBlockListener();
+        initTxListener();
         initPrivateKeyChain();
 
         LOGGER.info("bitcoin wallet service is ready");
         LOGGER.info("Total number of bitcoins in the CoinBlesk system: {}", serverAppKit.wallet().getBalance(BalanceType.ESTIMATED).toFriendlyString());
-        LOGGER.info("Current block height is {}", serverAppKit.peerGroup().getMostCommonChainHeight());
+        LOGGER.info("Current block height is {}, our chain head is at {}", serverAppKit.peerGroup().getMostCommonChainHeight(), serverAppKit.chain().getBestChainHeight());
 
         if (bitcoinNet == BitcoinNet.MAINNET && appConfig.getMinConf() < 4) {
             LOGGER.warn("Client transactions are confirmed with {} confirmations. It is adviced to change the minimum number of confirmations to at least 4",
@@ -528,6 +533,7 @@ public class BitcoinWalletService {
 
             if (inputTx == null) {
                 LOGGER.warn("Client tried to spend the output {} we have never seen", txIn.getOutpoint());
+                LOGGER.debug("Current list of unspent transactions:\n{}", serverAppKit.wallet().getTransactionPool(Pool.UNSPENT));
                 return false;
             }
             
@@ -662,8 +668,19 @@ public class BitcoinWalletService {
         serverAppKit.chain().addListener(new AbstractBlockChainListener() {
             @Override
             public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
+                LOGGER.debug("New block received from the network, new height is {}", block.getHeight());
                 // set the new best height
                 setCurrentBlockHeight(block.getHeight());
+            }
+        });
+    }
+    
+    private void initTxListener() {
+        serverAppKit.wallet().addEventListener(new AbstractWalletEventListener() {
+            @Override
+            public void onCoinsReceived(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
+                LOGGER.info("Client top up:\n{}", tx);
+                LOGGER.info("New balance of CoinBlesk system is {}", newBalance.toFriendlyString());
             }
         });
     }

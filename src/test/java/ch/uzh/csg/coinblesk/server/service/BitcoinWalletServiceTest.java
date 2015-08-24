@@ -76,7 +76,6 @@ import ch.uzh.csg.coinblesk.server.config.DispatcherConfig;
         DbUnitTestExecutionListener.class })
 @WebAppConfiguration
 @ContextConfiguration(classes={DispatcherConfig.class})
-@DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
 public class BitcoinWalletServiceTest {
 
     private class TestTransactionSigner extends StatelessTransactionSigner {
