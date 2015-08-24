@@ -52,6 +52,7 @@ public class BitcoinWalletController {
     @RequestMapping(value = "/exchangeRate/{symbol}", method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
     @ResponseBody
     public ResponseEntity<ExchangeRateTransferObject> getExchangeRate(@PathVariable(value="symbol") String symbol) {
+        LOGGER.debug("Received exchange rate request for currency {}", symbol);
         ExchangeRateTransferObject transferObject = new ExchangeRateTransferObject();
         try {
             BigDecimal exchangeRate = forexExchangeRateService.getExchangeRate(symbol);

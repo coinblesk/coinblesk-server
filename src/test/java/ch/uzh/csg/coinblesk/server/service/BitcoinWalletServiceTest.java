@@ -8,7 +8,6 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Base64;
 import java.util.Date;
-import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -21,12 +20,12 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PrunedException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionConfidence.Source;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.Wallet.MissingSigsMode;
 import org.bitcoinj.core.Wallet.SendRequest;
-import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.kits.WalletAppKit;
@@ -71,7 +70,6 @@ import ch.uzh.csg.coinblesk.server.bitcoin.NotEnoughUnspentsException;
 import ch.uzh.csg.coinblesk.server.bitcoin.ValidRefundTransactionException;
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import ch.uzh.csg.coinblesk.server.config.DispatcherConfig;
-import ch.uzh.csg.coinblesk.server.service.BitcoinWalletService.P2SHScript;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @TestExecutionListeners({ DependencyInjectionTestExecutionListener.class, DirtiesContextTestExecutionListener.class, TransactionalTestExecutionListener.class,
@@ -222,6 +220,7 @@ public class BitcoinWalletServiceTest {
 
     }
 
+
     @Test
     public void testSignTxAndBroadcast() throws Exception {
 
@@ -282,7 +281,7 @@ public class BitcoinWalletServiceTest {
         DeterministicKey wrongKey = new DeterministicKeyChain(new SecureRandom()).getKey(KeyPurpose.RECEIVE_FUNDS);
         Sha256Hash sighash = tx.hashForSignature(0, redeemScript, Transaction.SigHash.ALL, false);
         TransactionSignature wrongSig = new TransactionSignature(wrongKey.sign(sighash), Transaction.SigHash.ALL, false);
-        Script dummyP2SHScript = P2SHScript.dummy();
+        Script dummyP2SHScript = ScriptBuilder.createP2SHOutputScript(new byte[20]);
         Script inputScript = ScriptBuilder.createP2SHMultiSigInputScript(null, redeemScript);
         inputScript = dummyP2SHScript.getScriptSigWithSignature(inputScript, wrongSig.encodeToBitcoin(), 0);
         tx.getInput(0).setScriptSig(inputScript);

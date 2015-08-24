@@ -122,9 +122,9 @@ public class BitcoinWalletService {
         }
 
         start().awaitRunning();
-        
+
         // we check for confirmations anyway, so it's save to
-        // accept any transaction. 
+        // accept any transaction.
         serverAppKit.wallet().setAcceptRiskyTransactions(true);
 
         initBlockListener();
@@ -132,6 +132,7 @@ public class BitcoinWalletService {
 
         LOGGER.info("bitcoin wallet service is ready");
         LOGGER.info("Total number of bitcoins in the CoinBlesk system: {}", serverAppKit.wallet().getBalance(BalanceType.ESTIMATED).toFriendlyString());
+        LOGGER.info("Current block height is {}", serverAppKit.peerGroup().getMostCommonChainHeight());
 
         if (bitcoinNet == BitcoinNet.MAINNET && appConfig.getMinConf() < 4) {
             LOGGER.warn("Client transactions are confirmed with {} confirmations. It is adviced to change the minimum number of confirmations to at least 4",
@@ -387,13 +388,16 @@ public class BitcoinWalletService {
         serverAppKit.peerGroup().broadcastTransaction(signedTx).broadcast().addListener(new Runnable() {
             @Override
             public void run() {
-                LOGGER.info("Transaction {} was broadcasted", signedTx.getHashAsString());
+                LOGGER.info("Transaction {} was broadcast", signedTx.getHashAsString());
             }
         }, MoreExecutors.sameThreadExecutor());
 
         signedTransactionDao.addSignedTransaction(signedTx);
-        serverAppKit.wallet().maybeCommitTx(signedTx);
-        LOGGER.debug("Saved transaction {} in database and commited to wallet", signedTx.getHashAsString());
+        LOGGER.debug("Saved transaction {} in database", signedTx.getHashAsString());
+        
+        if(serverAppKit.wallet().maybeCommitTx(signedTx)) {
+            LOGGER.debug("Transaction {} was committed to the wallet", signedTx.getHashAsString());
+        }
 
         return Base64.getEncoder().encodeToString(signedTx.unsafeBitcoinSerialize());
     }
@@ -519,16 +523,17 @@ public class BitcoinWalletService {
         // at this point we need to check if the inputs are unspent and have
         // enough confirmations
         for (TransactionInput txIn : tx.getInputs()) {
+            
             Transaction inputTx = serverAppKit.wallet().getTransaction(txIn.getOutpoint().getHash());
 
             if (inputTx == null) {
                 LOGGER.warn("Client tried to spend the output {} we have never seen", txIn.getOutpoint());
                 return false;
             }
-
-            // check if transaction was already spent
-            if (txIn.connect(inputTx, ConnectMode.DISCONNECT_ON_CONFLICT) == ConnectionResult.ALREADY_SPENT) {
-                LOGGER.warn("Client tried to spend output {}, but the output is already spent!", txIn.getOutpoint());
+            
+            
+            if(!inputTx.getOutput(txIn.getOutpoint().getIndex()).isAvailableForSpending()) {
+                LOGGER.warn("Transaction output {} is already spent!", txIn.getOutpoint());
                 return false;
             }
 
@@ -556,7 +561,7 @@ public class BitcoinWalletService {
      */
 
     private Transaction completeTx(final Transaction tx, List<Byte> accountNumbers, List<Integer> childNumbers) throws InvalidTransactionException {
-        
+
         LOGGER.debug("Received request to sign transaction:\n{}", tx);
 
         if (!inputsUnspent(tx)) {
@@ -613,26 +618,21 @@ public class BitcoinWalletService {
             try {
                 int sigIndex = inputScript.getSigInsertionIndex(sighash, key.dropPrivateBytes().dropParent());
 
-                // Inserting a signature in a partially signed input script is
-                // only possible if the getScriptSigWithSignature(...) method is
-                // called on a P2SH script
-                Script dummyP2SHScript = P2SHScript.dummy();
+                Transaction parentTx = serverAppKit.wallet().getTransaction(txIn.getOutpoint().getHash());
+                
+                if (parentTx == null) {
+                    LOGGER.error("Could not find referenced transaction {} in the wallet", BitcoinUtils.getOutpointHash(txIn.getOutpoint()));
+                    throw new InvalidClientSignatureException("Could not find referenced transaction in the wallet.");
+                }
 
-                inputScript = dummyP2SHScript.getScriptSigWithSignature(inputScript, txSig.encodeToBitcoin(), sigIndex);
+                TransactionOutput out = parentTx.getOutput(txIn.getOutpoint().getIndex());
+                inputScript = out.getScriptPubKey().getScriptSigWithSignature(inputScript, txSig.encodeToBitcoin(), sigIndex);
 
                 txIn.setScriptSig(inputScript);
 
-                // final check if the client signature is valid (not needed for refund tx)
-                if(!tx.isTimeLocked()) {
-                    Transaction parentTx = serverAppKit.wallet().getTransaction(txIn.getOutpoint().getHash());
-                    if(parentTx == null) {
-                        LOGGER.error("Could not find referenced transaction {} in the wallet", BitcoinUtils.getOutpointHash(txIn.getOutpoint()));
-                        throw new InvalidClientSignatureException("Could not find referenced transaction in the wallet.");
-                    }
-                    TransactionOutput out = parentTx.getOutput(txIn.getOutpoint().getIndex());
-                    txIn.getScriptSig().correctlySpends(txIn.getParentTransaction(), i, out.getScriptPubKey());
-                }
-                
+                // final check if the client signature is valid
+                txIn.verify(out);
+
             } catch (Exception e) {
                 LOGGER.error("Failed to sign transaction", e);
                 throw new InvalidClientSignatureException(e.getMessage());
@@ -640,7 +640,7 @@ public class BitcoinWalletService {
 
         }
 
-        LOGGER.info("Signed transaction " + tx.getHashAsString());
+        LOGGER.info("Signed transaction:\n " + tx);
         String hex = DatatypeConverter.printHexBinary(tx.unsafeBitcoinSerialize());
         LOGGER.debug("Hex encoded tx: " + hex);
 
@@ -651,6 +651,7 @@ public class BitcoinWalletService {
         return tx;
 
     }
+    
 
     private void initBlockListener() {
 
@@ -683,24 +684,6 @@ public class BitcoinWalletService {
 
     public void stop() {
         serverAppKit.stopAsync().awaitTerminated();
-    }
-
-    public static class P2SHScript extends Script {
-
-        public P2SHScript(byte[] programBytes) {
-            super(programBytes);
-        }
-
-        @Override
-        public boolean isPayToScriptHash() {
-            return true;
-        }
-
-        public static P2SHScript dummy() {
-            Script dummyScript = new ScriptBuilder().build();
-            return new P2SHScript(dummyScript.getProgram());
-        }
-
     }
 
     /**
