@@ -139,7 +139,7 @@
 		<dependency>
 			<groupId>javax.servlet</groupId>
 			<artifactId>javax.servlet-api</artifactId>
-			<version>3.1.0</version>
+			<version>3.0.1</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -264,6 +264,16 @@
 				<configuration>
 					<source>1.8</source>
 					<target>1.8</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.tomcat.maven</groupId>
+				<artifactId>tomcat7-maven-plugin</artifactId>
+				<version>2.2</version>
+				<configuration>
+					<url>${url}</url>
+					<path>${contextpath}</path>
+					<server>${server}</server>
 				</configuration>
 			</plugin>
 		</plugins>
