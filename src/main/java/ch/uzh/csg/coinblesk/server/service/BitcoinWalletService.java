@@ -400,9 +400,9 @@ public class BitcoinWalletService {
         signedTransactionDao.addSignedTransaction(signedTx);
         LOGGER.debug("Saved transaction {} in database", signedTx.getHashAsString());
         
-        if(serverAppKit.wallet().maybeCommitTx(signedTx)) {
-            LOGGER.debug("Transaction {} was committed to the wallet", signedTx.getHashAsString());
-        }
+        // add transaction to the wallet
+        serverAppKit.wallet().receivePending(signedTx, null);
+        LOGGER.debug("Transaction {} was committed to the wallet", signedTx.getHashAsString());
 
         return Base64.getEncoder().encodeToString(signedTx.unsafeBitcoinSerialize());
     }
