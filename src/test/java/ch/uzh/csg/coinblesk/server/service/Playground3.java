@@ -62,7 +62,7 @@ import com.github.springtestdbunit.annotation.ExpectedDatabase;
 import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
 import com.google.common.collect.Lists;
 
-import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
+import com.coinblesk.responseobject.ServerSignatureRequestTransferObject;
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import ch.uzh.csg.coinblesk.server.config.DispatcherConfig;
 

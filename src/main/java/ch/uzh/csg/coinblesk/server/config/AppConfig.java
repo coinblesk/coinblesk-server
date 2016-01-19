@@ -4,7 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 
-import ch.uzh.csg.coinblesk.Currency;
+import com.coinblesk.customserialization.Currency;
 
 
 /**

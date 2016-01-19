@@ -60,7 +60,7 @@ import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.ExpectedDatabase;
 import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
 
-import ch.uzh.csg.coinblesk.responseobject.ServerSignatureRequestTransferObject;
+import com.coinblesk.responseobject.ServerSignatureRequestTransferObject;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidClientSignatureException;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.bitcoin.NotEnoughUnspentsException;
@@ -69,7 +69,7 @@ import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import ch.uzh.csg.coinblesk.server.config.DispatcherConfig;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@TestExecutionListeners({ DependencyInjectionTestExecutionListener.class, DirtiesContextTestExecutionListener.class, TransactionalTestExecutionListener.class,
+@TestExecutionListeners({ DependencyInjectionTestExecutionListener.class, TransactionalTestExecutionListener.class,
         DbUnitTestExecutionListener.class })
 @WebAppConfiguration
 @ContextConfiguration(classes={DispatcherConfig.class})
@@ -251,6 +251,8 @@ public class BitcoinWalletServiceTest {
             invalidTxThrown = true;
         }
         Assert.assertTrue(invalidTxThrown);
+        
+        clientAppKit.stopAsync().awaitTerminated();
 
     }
     
@@ -542,7 +544,7 @@ public class BitcoinWalletServiceTest {
     
     @Test
     @Transactional
-    @ExpectedDatabase(value = "classpath:DbUnitFiles/addedTransaction.xml", assertionMode = DatabaseAssertionMode.NON_STRICT)
+    @ExpectedDatabase(value = "classpath:DbUnitFiles/addedTransaction.xml", assertionMode = DatabaseAssertionMode.NON_STRICT_UNORDERED)
     public void testAddDoubleSpendSpentOutputs() throws Exception {
     	WalletAppKit clientAppKit = getClientAppKit();
     	Transaction tx = FakeTxBuilder.createFakeTx(params, Coin.FIFTY_COINS, clientAppKit.wallet().currentReceiveAddress());
@@ -557,7 +559,7 @@ public class BitcoinWalletServiceTest {
     
     @Test
     @Transactional
-    @ExpectedDatabase(value = "classpath:DbUnitFiles/emptyDataSet.xml")
+    @ExpectedDatabase(value = "classpath:DbUnitFiles/emptyDataSet.xml", assertionMode = DatabaseAssertionMode.NON_STRICT_UNORDERED)
     @DatabaseSetup("classpath:DbUnitFiles/oneSpentOutput.xml")
     public void testExpireSpentOutputs1() throws Exception {
     	bitcoinWalletService.getSpentOutputDao().removeOldEntries(1);
@@ -565,7 +567,7 @@ public class BitcoinWalletServiceTest {
     
     @Test
     @Transactional
-    @ExpectedDatabase(value = "classpath:DbUnitFiles/oneSpentOutputResult.xml", assertionMode = DatabaseAssertionMode.NON_STRICT)
+    @ExpectedDatabase(value = "classpath:DbUnitFiles/oneSpentOutputResult.xml", assertionMode = DatabaseAssertionMode.NON_STRICT_UNORDERED)
     @DatabaseSetup("classpath:DbUnitFiles/twoSpentOutput.xml")
     public void testExpireSpentOutputs2() throws Exception {
     	bitcoinWalletService.getSpentOutputDao().removeOldEntries(1);
@@ -576,7 +578,7 @@ public class BitcoinWalletServiceTest {
     
     @Test
     @Transactional
-    @ExpectedDatabase(value = "classpath:DbUnitFiles/emptyDataSet.xml", assertionMode = DatabaseAssertionMode.NON_STRICT)
+    @ExpectedDatabase(value = "classpath:DbUnitFiles/emptyDataSet.xml", assertionMode = DatabaseAssertionMode.NON_STRICT_UNORDERED)
     @DatabaseSetup("classpath:DbUnitFiles/twoSpentOutput.xml")
     public void testExpireSpentOutputs3() throws Exception {
     	bitcoinWalletService.getSpentOutputDao().removeOldEntries(1);

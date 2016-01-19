@@ -58,7 +58,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 
-import ch.uzh.csg.coinblesk.bitcoin.BitcoinNet;
+import com.coinblesk.bitcoin.BitcoinNet;
 import ch.uzh.csg.coinblesk.server.bitcoin.BitcoinUtils;
 import ch.uzh.csg.coinblesk.server.bitcoin.DoubleSignatureRequestedException;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidClientSignatureException;
