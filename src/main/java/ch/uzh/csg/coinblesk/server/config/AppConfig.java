@@ -23,10 +23,10 @@ import com.coinblesk.customserialization.Currency;
 @Configuration
 public class AppConfig {
 	
-	@Value("${coinblesk.config.dir:/var/lib/coinblesk}")
+    @Value("${coinblesk.config.dir:/var/lib/coinblesk}")
     private FileSystemResource configDir;
 	
-	@Value("${bitcoin.net:unittest}")
+    @Value("${bitcoin.net:unittest}")
     private String bitcoinNet;
 
     @Value("${exchangerates.currency:CHF}")
@@ -36,12 +36,12 @@ public class AppConfig {
     private int minConf;
     
     public FileSystemResource getConfigDir() {
-		return configDir;
-	}
+	return configDir;
+    }
 
-	public String getBitcoinNet() {
-		return bitcoinNet;
-	}
+    public String getBitcoinNet() {
+	return bitcoinNet;
+    }
     
     public Currency getCurrency() {
     	return currency;
@@ -50,6 +50,5 @@ public class AppConfig {
     public int getMinConf() {
         return minConf;
     }
-    
     
 }

@@ -10,23 +10,18 @@ import org.springframework.web.servlet.DispatcherServlet;
 
 public class WebAppInitializer implements WebApplicationInitializer {
 	 
-	@Override
+    @Override
     public void onStartup(ServletContext container) {
-      // Create the 'root' Spring application context
-      AnnotationConfigWebApplicationContext rootContext = new AnnotationConfigWebApplicationContext();
-      
-      // Manage the lifecycle of the root application context
-      container.addListener(new ContextLoaderListener(rootContext));
+        // Create the 'root' Spring application context
+        AnnotationConfigWebApplicationContext rootContext = new AnnotationConfigWebApplicationContext();
+        rootContext.setConfigLocation("ch.uzh.csg.coinblesk.server.config");
+        
+        // Manage the lifecycle of the root application context
+        container.addListener(new ContextLoaderListener(rootContext));
 
-      // Create the dispatcher servlet's Spring application context
-      AnnotationConfigWebApplicationContext dispatcherContext = new AnnotationConfigWebApplicationContext();
-      dispatcherContext.register(DispatcherConfig.class);
-      dispatcherContext.setConfigLocation("ch.uzh.csg.coinblesk.server.config");
-
-      // Register and map the dispatcher servlet
-      ServletRegistration.Dynamic dispatcher = container.addServlet("dispatcher", new DispatcherServlet(dispatcherContext));
-      dispatcher.setLoadOnStartup(1);
-      dispatcher.addMapping("/");
+        // Register and map the dispatcher servlet
+        ServletRegistration.Dynamic dispatcher = container.addServlet("dispatcher", new DispatcherServlet(rootContext));
+        dispatcher.setLoadOnStartup(1);
+        dispatcher.addMapping("/");
     }
- 
  }
