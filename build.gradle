@@ -8,19 +8,29 @@ repositories {
     maven {url 'http://tomp2p.net/dev/mvn'}
 }
 
+task deployToTomcat(type: Copy) {
+    def tomcatHome='/opt/apache-tomcat-8.0.30'
+    from war.archivePath
+    into "${tomcatHome}/webapps"
+}
+
 dependencies {
     def springVersion = '4.2.4.RELEASE'
+    def springSecurityVersion = '4.0.3.RELEASE'
     def tomcatVersion = '8.0.30'
     def hibernateVersion = '5.0.7.Final'
     
     providedCompile 'javax.servlet:javax.servlet-api:3.1.0'
     compile 'javax.transaction:javax.transaction-api:1.2'
+    compile 'javax.servlet:jstl:1.2'
     
     compile "org.springframework:spring-context:${springVersion}"
     compile "org.springframework:spring-tx:${springVersion}"
     compile "org.springframework:spring-orm:${springVersion}"
     compile "org.springframework:spring-web:${springVersion}"
     compile "org.springframework:spring-webmvc:${springVersion}"
+    compile "org.springframework.security:spring-security-web:${springSecurityVersion}"
+    compile "org.springframework.security:spring-security-config:${springSecurityVersion}"
     
     compile "org.hibernate:hibernate-core:${hibernateVersion}"
     compile "org.hibernate:hibernate-entitymanager:${hibernateVersion}"
@@ -57,4 +67,8 @@ dependencies {
     testCompile 'org.dbunit:dbunit:2.5.1'
     testCompile 'org.hsqldb:hsqldb:2.3.3'
     testCompile 'com.jayway.jsonpath:json-path:2.1.0'
+    
+    if (!hasProperty("buildProfile")) ext.buildProfile = "local"
+    apply from: "profile-${buildProfile}.gradle"
+    
 }

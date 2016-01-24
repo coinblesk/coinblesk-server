@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 
 import com.coinblesk.customserialization.Currency;
+import org.springframework.context.annotation.ComponentScan;
 
 
 /**
@@ -36,6 +37,10 @@ public class AppConfig {
     private int minConf;
     
     public FileSystemResource getConfigDir() {
+        //improvement: this check needs to be done only at startup
+        if(configDir != null && !configDir.exists()) {
+            throw new RuntimeException("The directory "+configDir+" does not exist");
+        }
 	return configDir;
     }
 
@@ -50,5 +55,4 @@ public class AppConfig {
     public int getMinConf() {
         return minConf;
     }
-    
 }

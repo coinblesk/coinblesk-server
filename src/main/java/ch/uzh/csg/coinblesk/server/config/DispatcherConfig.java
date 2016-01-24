@@ -8,12 +8,14 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import ch.uzh.csg.coinblesk.server.service.ForexExchangeRateService;
+import org.springframework.context.annotation.Configuration;
 
+@Configuration
 @ComponentScan("ch.uzh.csg.coinblesk.server")
 @EnableScheduling
 public class DispatcherConfig
 {	
-	//used to resolve @Value
+    //used to resolve @Value
     @Bean
     public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
        return new PropertySourcesPlaceholderConfigurer();
