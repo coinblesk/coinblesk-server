@@ -1,0 +1,30 @@
+remotes {
+    test {
+        host = 'bitcoin2-test.csg.uzh.ch'
+        user = System.properties['user.name']
+        //ecdsa-sha2-nistp521 not working, probably old jsch version, using rsa
+        identity = file("${System.properties['user.home']}/.ssh/id_rsa")
+        knownHosts = allowAnyHosts
+    }
+    prod {
+        host = 'N/A'
+        user = System.properties['user.name']
+        //ecdsa-sha2-nistp521 not working, probably old jsch version, using rsa
+        identity = file("${System.properties['user.home']}/.ssh/id_rsa")
+        knownHosts = allowAnyHosts
+    }
+}
+
+task deploy(type: Copy) {
+    def tomcatHome='/opt/tomcat'
+    ssh.run {
+        session(remotes."${profile}") {
+            println "Uploading new war"
+            put from: war.archivePath, into: "${tomcatHome}/webapps/${war.archiveName}.new"
+            println "Removing old war"
+            execute("rm -f ${tomcatHome}/webapps/${war.archiveName}")
+            println "Activating new war"
+            execute("mv ${tomcatHome}/webapps/${war.archiveName}{.new,}")
+        }
+    }
+}

@@ -1,17 +1,19 @@
-apply plugin: 'war'
+plugins {
+  id 'war'
+  id 'org.hidetake.ssh' version '1.1.4'
+}
+if (!hasProperty("profile")) ext.profile = "local"
+apply from: "profile-remote.gradle"
 
 version = '2.1-SNAPSHOT'
+war {
+    archiveName = 'coinblesk-server.war'
+}
 
 repositories {
     mavenLocal()
     mavenCentral()
     maven {url 'http://tomp2p.net/dev/mvn'}
-}
-
-task deployToTomcat(type: Copy) {
-    def tomcatHome='/opt/apache-tomcat-8.0.30'
-    from war.archivePath
-    into "${tomcatHome}/webapps"
 }
 
 dependencies {
@@ -67,8 +69,4 @@ dependencies {
     testCompile 'org.dbunit:dbunit:2.5.1'
     testCompile 'org.hsqldb:hsqldb:2.3.3'
     testCompile 'com.jayway.jsonpath:json-path:2.1.0'
-    
-    if (!hasProperty("buildProfile")) ext.buildProfile = "local"
-    apply from: "profile-${buildProfile}.gradle"
-    
 }
