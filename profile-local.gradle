@@ -4,9 +4,5 @@ dependencies {
 task deploy(type: Copy) {
     def tomcatHome='/opt/tomcat'
     println "Copy new war"
-    from war.archivePath into "${tomcatHome}/webapps/${war.archiveName}.new"
-    println "Removing old war"
-    delete "${tomcatHome}/webapps/${war.archiveName}"
-    println "Activating new war"
-    file("${tomcatHome}/webapps/${war.archiveName}.new").renameTo(file("${tomcatHome}/webapps/${war.archiveName}"))
+    from war.archivePath into "${tomcatHome}/webapps/"
 }

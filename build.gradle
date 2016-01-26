@@ -2,12 +2,17 @@ plugins {
   id 'war'
   id 'org.hidetake.ssh' version '1.1.4'
 }
-if (!hasProperty("profile")) ext.profile = "local"
-apply from: "profile-remote.gradle"
 
 version = '2.1-SNAPSHOT'
 war {
     archiveName = 'coinblesk-server.war'
+}
+
+if (!hasProperty("profile")) {
+    ext.profile = "local"
+    apply from: "profile-local.gradle"
+} else {
+    apply from: "profile-remote.gradle"
 }
 
 repositories {
