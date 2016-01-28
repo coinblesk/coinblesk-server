@@ -3,16 +3,20 @@ plugins {
   id 'org.hidetake.ssh' version '1.1.4'
 }
 
-version = '2.1-SNAPSHOT'
-war {
-    archiveName = 'coinblesk-server.war'
-}
-
-if (!hasProperty("profile")) {
+if (!hasProperty("profile") || "${profile}" == 'local') {
     ext.profile = "local"
     apply from: "profile-local.gradle"
 } else {
     apply from: "profile-remote.gradle"
+}
+
+sourceSets.main.resources {
+    srcDirs = ["src/main/resources/${profile}"];
+}
+
+version = '2.1-SNAPSHOT'
+war {
+    archiveName = 'coinblesk-server.war'
 }
 
 repositories {
@@ -38,6 +42,7 @@ dependencies {
     compile "org.springframework:spring-webmvc:${springVersion}"
     compile "org.springframework.security:spring-security-web:${springSecurityVersion}"
     compile "org.springframework.security:spring-security-config:${springSecurityVersion}"
+    //compile "org.springframework.data:spring-data-jpa:1.9.2.RELEASE"
     
     compile "org.hibernate:hibernate-core:${hibernateVersion}"
     compile "org.hibernate:hibernate-entitymanager:${hibernateVersion}"

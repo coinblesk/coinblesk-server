@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @author draft
  */
 @RestController
-@RequestMapping(value={"/user", "/u"})
+@RequestMapping(value={"/v1/user", "/v1/u"})
 public class UserController {
     @RequestMapping(value = "/test", method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
     @ResponseBody

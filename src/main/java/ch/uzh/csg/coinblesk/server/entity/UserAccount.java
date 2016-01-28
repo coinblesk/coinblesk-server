@@ -23,189 +23,172 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 /**
  *
- * @author draft
+ * @author Thomas Bocek
  */
 @Entity(name = "USER_ACCOUNT")
-@Table(indexes = { @Index(name = "USERNAME_INDEX", columnList = "username") })
+@Table(indexes = {
+    @Index(name = "USERNAME_INDEX", columnList = "username")})
 public class UserAccount implements Serializable {
-	private static final long serialVersionUID = 1L;
-	
-	@Id
-	@SequenceGenerator(name="pk_sequence",sequenceName="useracccount_id_seq", allocationSize=1)
-	@GeneratedValue(strategy=GenerationType.SEQUENCE,generator="pk_sequence")
-	@Column(name = "ID", nullable = false)
-	private long id;
-	@Temporal(TemporalType.TIMESTAMP)
-	@Column(name = "CREATIONDATE", nullable = false)
-	private Date creationDate;
-	@Column(name = "USERNAME", unique = true, nullable = false)
-	private String username;
-	@Column(name = "EMAIL", unique = true, nullable = false)
-	private String email;
-	@Column(name = "PASSWORD", nullable = false)
-	private String password;
-	@Column(name = "DELETED", nullable = false)
-	private boolean deleted;
-	@Column(name = "BALANCE", nullable = false, precision = 25, scale = 8)
-	private BigDecimal balance;
-	@Column(name = "EMAIL_VERIFIED")
-	private boolean emailVerified;
-	@Column(name = "PAYMENT_ADDRESS")
-	private String paymentAddress;
-	@Column(name = "ROLRES")
-	private byte roles;
 
-	public UserAccount() {
-	}
+    private static final long serialVersionUID = 1L;
 
-	/**
-	 * Creates a new account with balance 0, actual timestamp and given
-	 * parameters.
-	 * 
-	 * @param username
-	 *            != NULL
-	 * @param email
-	 *            != NULL
-	 * @param password
-	 *            != NULL
-	 */
-	public UserAccount(String username, String email, String password) {
-		this.username = username;
-		this.email = email;
-		this.password = password;
-		this.deleted = false;
-		this.balance = new BigDecimal(0);
-		this.creationDate = new Date();
-		this.emailVerified = false;
-	}
+    @Id
+    @SequenceGenerator(name = "pk_sequence", sequenceName = "useracccount_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "pk_sequence")
+    @Column(name = "ID", nullable = false)
+    private long id;
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "CREATIONDATE", nullable = false)
+    private Date creationDate;
+    @Column(name = "USERNAME", nullable = false)
+    private String username;
+    @Column(name = "EMAIL", unique = true, nullable = false)
+    private String email;
+    @Column(name = "PASSWORD", nullable = false)
+    private String password;
+    @Column(name = "DELETED", nullable = false)
+    private boolean deleted;
+    @Column(name = "BALANCE", nullable = false, precision = 25, scale = 8)
+    private BigDecimal balance;
+    @Column(name = "EMAIL_VERIFIED", nullable = false)
+    private boolean emailVerified;
+    @Column(name = "VERSION", nullable = false)
+    private byte version;
 
-	public boolean isDeleted() {
-		return deleted;
-	}
+    public boolean isDeleted() {
+        return deleted;
+    }
 
-	public void setDeleted(boolean deleted) {
-		this.deleted = deleted;
-	}
+    public UserAccount setDeleted(boolean deleted) {
+        this.deleted = deleted;
+        return this;
+    }
 
-	public long getId() {
-		return id;
-	}
+    public long getId() {
+        return id;
+    }
 
-	public void setId(long id) {
-		this.id = id;
-	}
+    public UserAccount setId(long id) {
+        this.id = id;
+        return this;
+    }
 
-	public String getUsername() {
-		return username;
-	}
+    public String getUsername() {
+        return username;
+    }
 
-	public void setUsername(String username) {
-		this.username = username;
-	}
+    public UserAccount setUsername(String username) {
+        this.username = username;
+        return this;
+    }
 
-	public String getEmail() {
-		return email;
-	}
+    public String getEmail() {
+        return email;
+    }
 
-	public void setEmail(String email) {
-		this.email = email;
-	}
+    public UserAccount setEmail(String email) {
+        this.email = email;
+        return this;
+    }
 
-	public String getPassword() {
-		return password;
-	}
+    public String getPassword() {
+        return password;
+    }
 
-	public void setPassword(String password) {
-		this.password = password;
-	}
+    public UserAccount setPassword(String password) {
+        this.password = password;
+        return this;
+    }
 
-	public BigDecimal getBalance() {
-		return balance;
-	}
+    public BigDecimal getBalance() {
+        return balance;
+    }
 
-	public void setBalance(BigDecimal balance) {
-		this.balance = balance;
-	}
+    public UserAccount setBalance(BigDecimal balance) {
+        this.balance = balance;
+        return this;
+    }
 
-	public Date getCreationDate() {
-		return creationDate;
-	}
+    public Date getCreationDate() {
+        return creationDate;
+    }
 
-	public void setCreationDate(Date creationDate) {
-		this.creationDate = creationDate;
-	}
-	
-	public boolean isEmailVerified() {
-		return emailVerified;
-	}
-	
-	public void setEmailVerified(boolean emailVerified) {
-		this.emailVerified = emailVerified;
-	}
-	
-	public void setPaymentAddress(String paymentAddress) {
-		this.paymentAddress = paymentAddress;
-	}
+    public UserAccount setCreationDate(Date creationDate) {
+        this.creationDate = creationDate;
+        return this;
+    }
 
-	public String getPaymentAddress() {
-		return this.paymentAddress;
-	}
-	
-	public byte getRoles() {
-		return roles;
-	}
-	
-	public void setRoles(byte roles) {
-		this.roles = roles;
-	}
-	
-	@Override
-	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append("id: ");
-		sb.append(getId());
-		sb.append(", username: ");
-		sb.append(getUsername());
-		sb.append(", email: ");
-		sb.append(getEmail());
-		sb.append(", isDeleted: ");
-		sb.append(isDeleted());
-		sb.append(", creationDate: ");
-		sb.append(getCreationDate());
-		sb.append(", balance: ");
-		sb.append(getBalance());
-		sb.append(", emailVeryfied: ");
-		sb.append(isEmailVerified());
-		return sb.toString();
-	}
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
 
-	@Override
-	public boolean equals(Object o) {
-		if (o == null)
-			return false;
+    public UserAccount setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
+        return this;
+    }
 
-		if (o == this)
-			return true;
+    public byte getVersion() {
+        return version;
+    }
 
-		if (!(o instanceof UserAccount))
-			return false;
+    public UserAccount setVersion(byte version) {
+        this.version = version;
+        return this;
+    }
 
-		UserAccount other = (UserAccount) o;
-		return new EqualsBuilder().append(getId(), other.getId())
-				.append(getUsername(), other.getUsername())
-				.append(getEmail(), other.getEmail())
-				.append(isDeleted(), other.isDeleted())
-				.append(getCreationDate(), other.getCreationDate())
-				.append(getBalance(), other.getBalance())
-				.append(getRoles(), other.getRoles()).isEquals();
-	}
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("id: ");
+        sb.append(getId());
+        sb.append(", username: ");
+        sb.append(getUsername());
+        sb.append(", email: ");
+        sb.append(getEmail());
+        sb.append(", isDeleted: ");
+        sb.append(isDeleted());
+        sb.append(", creationDate: ");
+        sb.append(getCreationDate());
+        sb.append(", balance: ");
+        sb.append(getBalance());
+        sb.append(", emailVeryfied: ");
+        sb.append(isEmailVerified());
+        sb.append(", version: ");
+        sb.append(getVersion());
+        return sb.toString();
+    }
 
-	@Override
-	public int hashCode() {
-		return new HashCodeBuilder(31, 59).append(getId())
-				.append(getUsername()).append(getUsername()).append(getEmail())
-				.append(getCreationDate()).append(isDeleted())
-				.append(getBalance())
-				.append(getRoles()).toHashCode();	
+    @Override
+    public boolean equals(Object o) {
+        if (o == null) {
+            return false;
         }
+
+        if (o == this) {
+            return true;
+        }
+
+        if (!(o instanceof UserAccount)) {
+            return false;
+        }
+
+        UserAccount other = (UserAccount) o;
+        return new EqualsBuilder().append(getId(), other.getId())
+                .append(getUsername(), other.getUsername())
+                .append(getPassword(), other.getPassword())
+                .append(getEmail(), other.getEmail())
+                .append(isDeleted(), other.isDeleted())
+                .append(getCreationDate(), other.getCreationDate())
+                .append(getBalance(), other.getBalance())
+                .append(getVersion(), other.getVersion()).isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(31, 59).append(getId())
+                .append(getUsername()).append(getPassword())
+                .append(getEmail())
+                .append(getCreationDate()).append(isDeleted())
+                .append(getBalance()).append(getVersion()).toHashCode();
+    }
 }

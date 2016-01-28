@@ -38,7 +38,8 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableTransactionManagement
 public class DatabaseConfig {
 
-	@Value("${db.url:jdbc:hsqldb:mem:paging}")
+	//@Value("${db.url:jdbc:hsqldb:mem:paging}")
+        @Value("${db.url:jdbc:hsqldb:file:/tmp/db}")
 	private String databaseUrl;
 
 	@Value("${db.username:sa}")
@@ -47,7 +48,7 @@ public class DatabaseConfig {
 	@Value("${db.password:}")
 	private String databasePassword;
 
-	@Value("${db.hbm2ddl.auto:create-drop}")
+	@Value("${db.hbm2ddl.auto:create}")
 	private String hbm2ddlAuto;
 
 	@Value("${db.dialect:org.hibernate.dialect.HSQLDialect}")

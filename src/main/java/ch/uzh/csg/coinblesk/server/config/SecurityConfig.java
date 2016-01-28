@@ -5,12 +5,26 @@
  */
 package ch.uzh.csg.coinblesk.server.config;
 
+import ch.uzh.csg.coinblesk.server.entity.UserAccount;
+import ch.uzh.csg.coinblesk.server.service.UserAccountService;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationServiceException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 /**
  *
  * @author Thomas Bocek
@@ -19,15 +33,54 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
+    final private static List<GrantedAuthority> LIST = new ArrayList<GrantedAuthority>(1);
+               
+    static {
+         LIST.add(new UserRole());
+    }
+    
+    final private static class UserRole implements GrantedAuthority {
+        @Override
+        public String getAuthority() {
+            return "ROLE_USER";
+        }
+    }
+    //don't care about generating new salt as we use matcher here only, so make it static
+    final private static PasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder();
+    
+    @Autowired
+    UserAccountService userAccountService;
+
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.authorizeRequests().antMatchers("/user/**", "/u/**").hasRole("USER")
                 .and().formLogin().loginPage("/login");
     }
+
     @Autowired
     public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
         auth
-            .inMemoryAuthentication()
+                .inMemoryAuthentication()
                 .withUser("user").password("password").roles("USER");
+    }
+
+    @Override
+    protected AuthenticationManager authenticationManager() throws Exception {
+        return new AuthenticationManager() {
+            @Override
+            public Authentication authenticate(final Authentication authentication) throws AuthenticationException {
+                final String username = authentication.getPrincipal().toString();
+                final String password = authentication.getCredentials().toString();
+
+                final UserAccount userAccount = userAccountService.getByUsername(username);
+                if (!userAccount.isEmailVerified()) {
+                    throw new AuthenticationServiceException("Email is not verified yet");
+                }
+                if (!PASSWORD_ENCODER.matches(password, userAccount.getPassword())) {
+                    throw new BadCredentialsException("Wrong username/password");
+                }
+                return new UsernamePasswordAuthenticationToken(username, password, LIST);
+            }
+        };
     }
 }

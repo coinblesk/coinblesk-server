@@ -1,8 +1,12 @@
 dependencies {
     compile 'org.hsqldb:hsqldb:2.3.3'
 }
-task deploy(type: Copy) {
+task deploy << {
     def tomcatHome='/opt/tomcat'
     println "Copy new war"
-    from war.archivePath into "${tomcatHome}/webapps/"
+    //without up-to-date check
+    copy {
+        from war.archivePath
+        into "${tomcatHome}/webapps/"
+    }
 }

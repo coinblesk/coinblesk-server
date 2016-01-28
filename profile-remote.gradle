@@ -1,7 +1,6 @@
 remotes {
     test {
-        //host = 'bitcoin2-test.csg.uzh.ch'
-        host = 'bitcoin-clone1.csg.uzh.ch'
+        host = 'bitcoin2-test.csg.uzh.ch'
         user = System.properties['user.name']
         //ecdsa-sha2-nistp521 not working, probably old jsch version, using rsa
         identity = file("${System.properties['user.home']}/.ssh/id_rsa")
@@ -16,7 +15,7 @@ remotes {
     }
 }
 
-task deploy(type: Copy) {
+task deploy << {
     def tomcatHome='/opt/tomcat'
     ssh.run {
         session(remotes."${profile}") {
