@@ -66,13 +66,13 @@ import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
 import ch.uzh.csg.coinblesk.server.bitcoin.NotEnoughUnspentsException;
 import ch.uzh.csg.coinblesk.server.bitcoin.ValidRefundTransactionException;
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
-import ch.uzh.csg.coinblesk.server.config.DispatcherConfig;
+import ch.uzh.csg.coinblesk.server.config.BeanConfig;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @TestExecutionListeners({ DependencyInjectionTestExecutionListener.class, TransactionalTestExecutionListener.class,
         DbUnitTestExecutionListener.class })
 @WebAppConfiguration
-@ContextConfiguration(classes={DispatcherConfig.class})
+@ContextConfiguration(classes={BeanConfig.class})
 public class BitcoinWalletServiceTest {
 
     private class TestTransactionSigner extends StatelessTransactionSigner {

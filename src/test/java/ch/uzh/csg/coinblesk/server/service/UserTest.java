@@ -5,7 +5,7 @@
  */
 package ch.uzh.csg.coinblesk.server.service;
 
-import ch.uzh.csg.coinblesk.server.config.DispatcherConfig;
+import ch.uzh.csg.coinblesk.server.config.BeanConfig;
 import ch.uzh.csg.coinblesk.server.entity.UserAccount;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
@@ -33,7 +33,7 @@ import org.springframework.test.context.web.WebAppConfiguration;
 @TestExecutionListeners({DependencyInjectionTestExecutionListener.class, TransactionalTestExecutionListener.class,
     DbUnitTestExecutionListener.class})
 @WebAppConfiguration
-@ContextConfiguration(classes = {DispatcherConfig.class})
+@ContextConfiguration(classes = {BeanConfig.class})
 public class UserTest {
 
     @Autowired
@@ -47,7 +47,7 @@ public class UserTest {
                 .setCreationDate(new Date(1))
                 .setDeleted(false)
                 .setEmail("test@test.test")
-                .setEmailVerified(true)
+                .setEmailToken(null)
                 .setPassword("blub")
                 .setUsername("blib")
                 .setVersion((byte)2);

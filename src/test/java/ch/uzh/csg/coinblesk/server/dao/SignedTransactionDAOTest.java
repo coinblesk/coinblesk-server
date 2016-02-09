@@ -20,13 +20,13 @@ import org.springframework.test.context.web.WebAppConfiguration;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 
-import ch.uzh.csg.coinblesk.server.config.DispatcherConfig;
+import ch.uzh.csg.coinblesk.server.config.BeanConfig;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @TestExecutionListeners({ DependencyInjectionTestExecutionListener.class, DirtiesContextTestExecutionListener.class, TransactionalTestExecutionListener.class,
         DbUnitTestExecutionListener.class })
 @WebAppConfiguration
-@ContextConfiguration(classes={DispatcherConfig.class})
+@ContextConfiguration(classes={BeanConfig.class})
 public class SignedTransactionDAOTest {
     
     private final static NetworkParameters PARAMS = TestNet3Params.get();

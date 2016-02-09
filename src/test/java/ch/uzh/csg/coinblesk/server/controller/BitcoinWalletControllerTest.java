@@ -42,12 +42,12 @@ import com.coinblesk.responseobject.ServerSignatureRequestTransferObject;
 import com.coinblesk.responseobject.TransferObject;
 import com.coinblesk.responseobject.WatchingKeyTransferObject;
 import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
-import ch.uzh.csg.coinblesk.server.config.DispatcherConfig;
+import ch.uzh.csg.coinblesk.server.config.BeanConfig;
 import ch.uzh.csg.coinblesk.server.service.BitcoinWalletService;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @WebAppConfiguration
-@ContextConfiguration(classes={DispatcherConfig.class})
+@ContextConfiguration(classes={BeanConfig.class})
 public class BitcoinWalletControllerTest {
     
     private final static Random RND = new Random(42L);

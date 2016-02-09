@@ -36,6 +36,8 @@ public class AppConfig {
     @Value("${bitcoin.minconf:0}")
     private int minConf;
     
+   
+    
     public FileSystemResource getConfigDir() {
         //improvement: this check needs to be done only at startup
         if(configDir != null && !configDir.exists()) {
@@ -55,4 +57,6 @@ public class AppConfig {
     public int getMinConf() {
         return minConf;
     }
+    
+    
 }

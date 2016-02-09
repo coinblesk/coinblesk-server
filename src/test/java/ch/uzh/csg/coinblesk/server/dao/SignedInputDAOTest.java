@@ -18,14 +18,14 @@ import org.springframework.test.context.web.WebAppConfiguration;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 
-import ch.uzh.csg.coinblesk.server.config.DispatcherConfig;
+import ch.uzh.csg.coinblesk.server.config.BeanConfig;
 
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @TestExecutionListeners({ DependencyInjectionTestExecutionListener.class, DirtiesContextTestExecutionListener.class, TransactionalTestExecutionListener.class,
         DbUnitTestExecutionListener.class })
 @WebAppConfiguration
-@ContextConfiguration(classes={DispatcherConfig.class})
+@ContextConfiguration(classes={BeanConfig.class})
 public class SignedInputDAOTest {
     
     private final static Random RND = new Random(42L);

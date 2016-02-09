@@ -22,7 +22,6 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
@@ -45,11 +44,12 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             return "ROLE_USER";
         }
     }
-    //don't care about generating new salt as we use matcher here only, so make it static
-    final private static PasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder();
+        
+    @Autowired
+    private UserAccountService userAccountService;
     
     @Autowired
-    UserAccountService userAccountService;
+    private  PasswordEncoder passwordEncoder;
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
@@ -66,21 +66,18 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Override
     protected AuthenticationManager authenticationManager() throws Exception {
-        return new AuthenticationManager() {
-            @Override
-            public Authentication authenticate(final Authentication authentication) throws AuthenticationException {
-                final String username = authentication.getPrincipal().toString();
-                final String password = authentication.getCredentials().toString();
-
-                final UserAccount userAccount = userAccountService.getByUsername(username);
-                if (!userAccount.isEmailVerified()) {
-                    throw new AuthenticationServiceException("Email is not verified yet");
-                }
-                if (!PASSWORD_ENCODER.matches(password, userAccount.getPassword())) {
-                    throw new BadCredentialsException("Wrong username/password");
-                }
-                return new UsernamePasswordAuthenticationToken(username, password, LIST);
+        return (final Authentication authentication) -> {
+            final String username = authentication.getPrincipal().toString();
+            final String password = authentication.getCredentials().toString();
+            
+            final UserAccount userAccount = userAccountService.getByUsername(username);
+            if (userAccount.getEmailToken()!=null) {
+                throw new AuthenticationServiceException("Email is not verified yet");
             }
+            if (!passwordEncoder.matches(password, userAccount.getPassword())) {
+                throw new BadCredentialsException("Wrong username/password");
+            }
+            return new UsernamePasswordAuthenticationToken(username, password, LIST);
         };
     }
 }

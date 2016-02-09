@@ -50,11 +50,11 @@ public class UserAccount implements Serializable {
     private boolean deleted;
     @Column(name = "BALANCE", nullable = false, precision = 25, scale = 8)
     private BigDecimal balance;
-    @Column(name = "EMAIL_VERIFIED", nullable = false)
-    private boolean emailVerified;
+    @Column(name = "EMAIL_TOKEN", nullable = true)
+    private String emailToken;
     @Column(name = "VERSION", nullable = false)
     private byte version;
-
+    
     public boolean isDeleted() {
         return deleted;
     }
@@ -118,12 +118,12 @@ public class UserAccount implements Serializable {
         return this;
     }
 
-    public boolean isEmailVerified() {
-        return emailVerified;
+    public String getEmailToken() {
+        return emailToken;
     }
 
-    public UserAccount setEmailVerified(boolean emailVerified) {
-        this.emailVerified = emailVerified;
+    public UserAccount setEmailToken(String emailToken) {
+        this.emailToken = emailToken;
         return this;
     }
 
@@ -151,8 +151,8 @@ public class UserAccount implements Serializable {
         sb.append(getCreationDate());
         sb.append(", balance: ");
         sb.append(getBalance());
-        sb.append(", emailVeryfied: ");
-        sb.append(isEmailVerified());
+        sb.append(", emailToken: ");
+        sb.append(getEmailToken());
         sb.append(", version: ");
         sb.append(getVersion());
         return sb.toString();

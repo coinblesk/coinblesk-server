@@ -19,7 +19,7 @@ import org.springframework.test.context.web.WebAppConfiguration;
 
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 
-import ch.uzh.csg.coinblesk.server.config.DispatcherConfig;
+import ch.uzh.csg.coinblesk.server.config.BeanConfig;
 import ch.uzh.csg.coinblesk.server.service.BitcoinWalletService;
 
 
@@ -27,7 +27,7 @@ import ch.uzh.csg.coinblesk.server.service.BitcoinWalletService;
 @TestExecutionListeners({ DependencyInjectionTestExecutionListener.class, DirtiesContextTestExecutionListener.class, TransactionalTestExecutionListener.class,
         DbUnitTestExecutionListener.class })
 @WebAppConfiguration
-@ContextConfiguration(classes={DispatcherConfig.class})
+@ContextConfiguration(classes={BeanConfig.class})
 public class ClientWatchingKeyDAOTest {
     
     private final static NetworkParameters PARAMS = TestNet3Params.get();
