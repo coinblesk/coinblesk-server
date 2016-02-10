@@ -83,13 +83,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         @Override
         public boolean matches(HttpServletRequest request) {
             // No CSRF due to allowedMethod
-            System.out.println("IN MATECHER ");
             if(allowedMethods.matcher(request.getMethod()).matches()) {
                 return false;
             }
             //http://stackoverflow.com/questions/4931323/whats-the-difference-between-getrequesturi-and-getpathinfo-methods-in-httpservl
             String url = request.getServletPath();
-            System.out.println("IN MATECHER "+ url);
             if(startsWith(url, REQUIRE_USER_ROLE)) {
                 if(startsWith(url, REQUIRE_NO_USER_ROLE_CREATE) || 
                         startsWith(url, REQUIRE_NO_USER_ROLE_ACTIVATE)) {
