@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.UUID;
 import javax.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -105,5 +106,28 @@ public class UserAccountService {
         //activate, enitiy is in attached state
         found.setEmailToken(null);
         return new StatusTO().setSuccess();
+    }
+
+    @Transactional
+    public StatusTO delete(String email) {
+        final int result = userAccountDao.remove(email);
+        if(result == 0) {
+            return new StatusTO().reason(StatusTO.Reason.NO_ACCOUNT);
+        }
+        if(result > 1) {
+            return new StatusTO().reason(StatusTO.Reason.ACCOUNT_ERROR);
+        }
+        return new StatusTO().setSuccess();
+    }
+
+    @Transactional
+    public UserAccountTO get(String email) {
+        final UserAccount userAccount = userAccountDao.getByAttribute("email", email);
+        if(userAccount == null) {
+            return null;
+        }
+        final UserAccountTO userAccountTO = new UserAccountTO();
+        userAccountTO.email(userAccount.getEmail());
+        return userAccountTO;
     }
 }

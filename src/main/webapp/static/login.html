@@ -1,0 +1,33 @@
+<html>
+    <head>
+        <script>
+            function setCsrfHeader() {
+                var req = new XMLHttpRequest();
+                req.open('GET', document.location, false);
+                req.send(null);
+                //header may look like:
+                // X-CSRF-HEADER:"78154f1f-a2eb-4073-834e-afe951c22c1b"
+                var token = req.getResponseHeader('X-CSRF-HEADER');
+                document.getElementById('_csrf').value = token;
+            }
+            window.onload = setCsrfHeader;
+        </script>
+    </head>
+    <body>
+        <h1>Login</h1>
+
+        <form action="login" method="post">       
+            <p>
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username"/>	
+            </p>
+            <p>
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password"/>	
+            </p>
+
+            <input type="hidden" id="_csrf" name="_csrf" value="n/a"/>
+            <button type="submit" class="btn">Log in</button>
+        </form>
+    </body>
+</html>

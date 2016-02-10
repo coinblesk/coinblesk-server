@@ -12,7 +12,7 @@ import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.ViewResolverRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
-import org.springframework.web.servlet.view.JstlView;
+//import org.springframework.web.servlet.view.JstlView;
 
 @Configuration
 @EnableWebMvc
@@ -33,9 +33,13 @@ public class WebMvcConfiguration extends WebMvcConfigurerAdapter {
     @Override
     public void configureViewResolvers(ViewResolverRegistry registry) {
         InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
-        viewResolver.setViewClass(JstlView.class);
-        viewResolver.setPrefix("/WEB-INF/views/");
-        viewResolver.setSuffix(".jsp");
+        //no need for JSP
+        //viewResolver.setViewClass(JstlView.class);
+        //viewResolver.setPrefix("/WEB-INF/views/");
+        //viewResolver.setSuffix(".jsp");
+        viewResolver.setPrefix("/static/");
+        viewResolver.setSuffix(".html");
+        
         registry.viewResolver(viewResolver);
     }
     

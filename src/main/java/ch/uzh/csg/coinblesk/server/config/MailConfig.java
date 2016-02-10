@@ -30,13 +30,13 @@ public class MailConfig {
     @Value("${email.debug:false}")
     private boolean debug;
     
-    @Value("${email.trust}")
+    @Value("${email.trust:}")
     private String trust;
     
-    @Value("${email.username}")
+    @Value("${email.username:}")
     private String username;
     
-    @Value("${email.password}")
+    @Value("${email.password:}")
     private String password;
     
     @Value("${email.admin:bocek@ifi.uzh.ch}")
