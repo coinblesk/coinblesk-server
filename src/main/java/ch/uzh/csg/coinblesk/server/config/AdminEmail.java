@@ -5,12 +5,11 @@
  */
 package ch.uzh.csg.coinblesk.server.config;
 
-import org.springframework.mail.SimpleMailMessage;
-
 /**
  *
  * @author draft
  */
 public interface AdminEmail {
     public void send(String subject, String text);
+    public int sentEmails();
 }

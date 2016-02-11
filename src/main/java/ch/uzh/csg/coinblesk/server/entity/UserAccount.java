@@ -40,7 +40,7 @@ public class UserAccount implements Serializable {
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "CREATIONDATE", nullable = false)
     private Date creationDate;
-    @Column(name = "USERNAME", nullable = false)
+    @Column(name = "USERNAME", nullable = true)
     private String username;
     @Column(name = "EMAIL", unique = true, nullable = false)
     private String email;
@@ -48,7 +48,7 @@ public class UserAccount implements Serializable {
     private String password;
     @Column(name = "DELETED", nullable = false)
     private boolean deleted;
-    @Column(name = "BALANCE", nullable = false, precision = 25, scale = 8)
+    @Column(name = "BALANCE", nullable = true, precision = 25, scale = 8)
     private BigDecimal balance;
     @Column(name = "EMAIL_TOKEN", nullable = true)
     private String emailToken;

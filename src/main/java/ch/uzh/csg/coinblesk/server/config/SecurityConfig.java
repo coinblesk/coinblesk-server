@@ -21,11 +21,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -48,9 +48,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     final private static List<GrantedAuthority> LIST = new ArrayList<>(1);
     final private static String REQUEST_ATTRIBUTE_NAME = "_csrf";
     final private static String RESPONSE_HEADER_NAME = "X-CSRF-HEADER";
-    final private static String[] REQUIRE_USER_ROLE = {"/user/**", "/u/**"};
-    final private static String[] REQUIRE_NO_USER_ROLE_CREATE = {"/user/create/**", "/user/c/**", "/u/c/**", "/u/create/**"};
-    final private static String[] REQUIRE_NO_USER_ROLE_ACTIVATE = {"/user/activate/**", "/user/a/**", "/u/a/**", "/u/activate/**"};
+    final private static String[] REQUIRE_USER_ROLE = {"/user/a/**", "user/auth/**", "u/auth/**", "/u/a/**"};
                
     static {
          LIST.add(new UserRole());
@@ -65,7 +63,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                         filterChain.doFilter(request, response);
 			return;
                     }
-                    //to not use JSP we want the token to be in the HTTP header (not as a cookie)
+                    //to not use JSP we want the token to be in the HTTP header
                     CsrfToken csrfToken = (CsrfToken) request.getAttribute(REQUEST_ATTRIBUTE_NAME);
                     if(csrfToken != null) {
                         HttpServletResponse res = (HttpServletResponse) response;
@@ -89,10 +87,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             //http://stackoverflow.com/questions/4931323/whats-the-difference-between-getrequesturi-and-getpathinfo-methods-in-httpservl
             String url = request.getServletPath();
             if(startsWith(url, REQUIRE_USER_ROLE)) {
-                if(startsWith(url, REQUIRE_NO_USER_ROLE_CREATE) || 
-                        startsWith(url, REQUIRE_NO_USER_ROLE_ACTIVATE)) {
-                            return false;
-                }
                 return true;
             }
             return false;
@@ -102,27 +96,21 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     
     private static boolean startsWith(String text, String... needles) {
         for(String needle:needles) {
-            needle = removeTrailing(needle, "*");
+            //remove trailing * as we handle startswith
+            while(needle.endsWith("*") && !needle.isEmpty()) {
+                needle = needle.substring(0, needle.length() - 1);
+            }
             if(needle.isEmpty()) {
                 return true;
             }
             if(needle.contains("*")) {
                 throw new RuntimeException("only trailing * can be handled");
             }
-            needle = removeTrailing(needle, "/");
             if(text.startsWith(needle)) {
                 return true;
             }
         }
         return false;
-    }
-    
-    private static String removeTrailing(String text, String trail) {
-        //remove trailing * as we handle startswith
-        while(text.endsWith(trail) && !text.isEmpty()) {
-            text = text.substring(0, text.length() - 1);
-        }
-        return text;
     }
     
     final private static class UserRole implements GrantedAuthority {
@@ -145,34 +133,29 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .requireCsrfProtectionMatcher(new CsfrIgnoreRequestMatcher())
                 .and()
             .authorizeRequests()
-                .antMatchers(REQUIRE_NO_USER_ROLE_CREATE).permitAll()
-                .antMatchers(REQUIRE_NO_USER_ROLE_ACTIVATE).permitAll()
                 .antMatchers(REQUIRE_USER_ROLE).hasRole("USER")
             //TODO: this below requires JSP, find a way to have HTML only (if possible)
                 .and()
             .formLogin()
                 .loginPage("/login")
+                .defaultSuccessUrl("/login?success")
                 .and()
             .addFilterAfter(new CsfrHeaderAppendFilter(), CsrfFilter.class);
         
     }
 
-    /*@Autowired
-    public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
-        auth
-                .inMemoryAuthentication()
-                .withUser("user").password("password").roles("USER");
-    }*/
-
-    
     @Override
     @Bean
     protected AuthenticationManager authenticationManager() throws Exception {
         return (final Authentication authentication) -> {
-            final String username = authentication.getPrincipal().toString();
+            final String email = authentication.getPrincipal().toString();
             final String password = authentication.getCredentials().toString();
             
-            final UserAccount userAccount = userAccountService.getByUsername(username);
+            /*if(true) {
+                return new UsernamePasswordAuthenticationToken(email, password, LIST);
+            }*/
+            
+            final UserAccount userAccount = userAccountService.getByEmail(email);
             if (userAccount == null) {
                 throw new BadCredentialsException("Wrong username/password");
             }
@@ -182,7 +165,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             if (!passwordEncoder.matches(password, userAccount.getPassword())) {
                 throw new BadCredentialsException("Wrong username/password");
             }
-            return new UsernamePasswordAuthenticationToken(username, password, LIST);
+            return new UsernamePasswordAuthenticationToken(email, password, LIST);
         };
     }
 }

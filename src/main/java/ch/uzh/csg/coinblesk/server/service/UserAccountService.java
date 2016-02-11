@@ -5,20 +5,15 @@
  */
 package ch.uzh.csg.coinblesk.server.service;
 
-import ch.uzh.csg.coinblesk.server.bitcoin.InvalidTransactionException;
-import ch.uzh.csg.coinblesk.server.config.AdminEmail;
 import ch.uzh.csg.coinblesk.server.dao.UserAccountDAO;
 import ch.uzh.csg.coinblesk.server.entity.UserAccount;
 import ch.uzh.csg.coinblesk.server.utils.Pair;
 import com.coinblesk.json.StatusTO;
 import com.coinblesk.json.UserAccountTO;
 import java.util.Date;
-import java.util.List;
 import java.util.UUID;
 import javax.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -30,8 +25,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class UserAccountService {
 
-    //as senn in: https://www.w3.org/TR/html5/forms.html#valid-e-mail-address
-    public static final String EMAIL_REGEX = "/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/";
+    //as senn in: http://www.mkyong.com/regular-expressions/how-to-validate-email-address-with-regular-expression/
+    private static final String EMAIL_PATTERN = 
+		"^[_A-Za-z0-9-\\+]+(\\.[_A-Za-z0-9-]+)*@"
+		+ "[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$";
     
     @Autowired
     private UserAccountDAO userAccountDao;
@@ -40,11 +37,7 @@ public class UserAccountService {
     private PasswordEncoder passwordEncoder;
     
     @Transactional
-    public UserAccount getByUsername(String username) {
-        return userAccountDao.getByAttribute("username", username);
-    }
-    
-    private UserAccount getByEmail(String email) {
+    public UserAccount getByEmail(String email) {
         return userAccountDao.getByAttribute("email", email);
     }
     
@@ -59,7 +52,7 @@ public class UserAccountService {
         if(email == null){
             return new Pair(new StatusTO().reason(StatusTO.Reason.NO_EMAIL), null);
 	}
-        if(!email.matches(EMAIL_REGEX)){
+        if(!email.matches(EMAIL_PATTERN)){
             return new Pair(new StatusTO().reason(StatusTO.Reason.INVALID_EMAIL), null);
 	}
         if(userAccountTO.password() == null || userAccountTO.password().length() < 6) {
@@ -129,5 +122,15 @@ public class UserAccountService {
         final UserAccountTO userAccountTO = new UserAccountTO();
         userAccountTO.email(userAccount.getEmail());
         return userAccountTO;
+    }
+    
+    //for debugging
+    @Transactional
+    String getToken(String email) {
+        final UserAccount userAccount = userAccountDao.getByAttribute("email", email);
+        if(userAccount == null) {
+            return null;
+        }
+        return userAccount.getEmailToken();
     }
 }

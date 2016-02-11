@@ -50,13 +50,7 @@ public class UserController {
     private JavaMailSender javaMailService;
 
     @Autowired
-    AdminEmail adminEmail;
-
-    @RequestMapping(value = "/test", method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
-    @ResponseBody
-    public String getInfo() {
-        return "yes";
-    }
+    private AdminEmail adminEmail;
 
     //CRUD for the user
     @RequestMapping(value = {"/create", "/c"}, method = RequestMethod.POST,
@@ -92,10 +86,9 @@ public class UserController {
         }
     }
 
-    @RequestMapping(value = {"/activate/{email}/{token}", "/a/{email}/{token}"}, method = RequestMethod.PATCH,
-            produces = "application/text; charset=UTF-8")
+    @RequestMapping(value = {"/verif/{email}/{token}", "/v/{email}/{token}"}, method = RequestMethod.PATCH)
     @ResponseBody
-    public ResponseEntity<String> activateAccount(@PathVariable(value="email") String email, 
+    public ResponseEntity<String> verifyEmail(@PathVariable(value="email") String email, 
             @PathVariable(value="token") String token, HttpServletRequest request) {
         LOG.debug("Activate account for {}", email);
         StatusTO status = userAccountService.activate(email, token);
@@ -106,48 +99,7 @@ public class UserController {
         }
         LOG.debug("Activate account success for {}", email);
         //TODO: text/layout
-        return new ResponseEntity<>("success, please proceed",HttpStatus.OK);
-    }
-    
-    @RequestMapping(value = {"/delete", "/d"}, method = RequestMethod.PATCH,
-            produces = "application/json; charset=UTF-8")
-    @ResponseBody
-    public StatusTO deleteAccount() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        LOG.debug("Delete account for {}", auth.getName());
-        try {
-            StatusTO status = userAccountService.delete(auth.getName());
-            if(!status.isSuccess()) {
-                LOG.error("Someone tried a delete account with an invalid username: {}/{}", auth, status.reason().name());
-                adminEmail.send("Wrong Delete Account?", "Someone tried a delete account with an invalid username: " + auth + "/" + status.reason().name());
-            }
-            LOG.debug("Delete account success for {}", auth.getName());
-            return status;
-        } catch (Exception e) {
-            LOG.error("User create error", e);
-            return new StatusTO().reason(StatusTO.Reason.SERVER_ERROR).message(e.getMessage());
-        }
-    }
-    
-    @RequestMapping(value = {"/get", "/g"}, method = RequestMethod.GET,
-            produces = "application/json; charset=UTF-8")
-    @ResponseBody
-    public UserAccountTO getAccount() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        LOG.debug("Get account for {}", auth.getName());
-        try {
-            UserAccountTO userAccount = userAccountService.get(auth.getName());
-            if(userAccount == null) {
-                LOG.error("Someone tried a delete account with an invalid username: {}", auth);
-                adminEmail.send("Wrong Delete Account?", "Someone tried a delete account with an invalid username: " + auth);
-                return null;
-            }
-            LOG.debug("Get account success for {}", auth.getName());
-            return userAccount;
-        } catch (Exception e) {
-            LOG.error("User create error", e);
-            return null;
-        }
+        return new ResponseEntity<>("Activate account success", HttpStatus.OK);
     }
 }
 

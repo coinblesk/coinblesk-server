@@ -9,6 +9,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import ch.uzh.csg.coinblesk.server.service.ForexExchangeRateService;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.mail.PasswordAuthentication;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -17,11 +18,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.JavaMailSender;
 import javax.mail.Session;
+import org.springframework.core.annotation.Order;
 import org.springframework.mail.SimpleMailMessage;
 
 @Configuration
 @ComponentScan("ch.uzh.csg.coinblesk.server")
 @EnableScheduling
+
 public class BeanConfig
 {	
     @Autowired 
@@ -82,6 +85,7 @@ public class BeanConfig
     
     @Bean
     public AdminEmail adminEmail() {
+        final AtomicInteger sent = new AtomicInteger(0);
         return new AdminEmail() {
             @Autowired 
             JavaMailSender javaMailService;
@@ -93,11 +97,17 @@ public class BeanConfig
                 smm.setTo(mailConfig.getAdmin());
                 smm.setSubject(subject);
                 smm.setText(text);
+                sent.incrementAndGet();
                 try {
                     javaMailService.send(smm);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+            }
+
+            @Override
+            public int sentEmails() {
+                return sent.get();
             }
         };   
     }
