@@ -52,7 +52,7 @@ public class PaymentController {
             consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
     @ResponseBody
-    public KeyTO register(@RequestBody KeyTO keyTO) {
+    public KeyTO keyExchange(@RequestBody KeyTO keyTO) {
         LOG.debug("Register clientHash for {}", keyTO.publicKey());
         final KeyTO serverKeyTO = new KeyTO();
         try {
