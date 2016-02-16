@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 
 import com.coinblesk.customserialization.Currency;
-import org.springframework.context.annotation.ComponentScan;
 
 
 /**

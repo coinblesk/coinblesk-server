@@ -8,7 +8,7 @@ package ch.uzh.csg.coinblesk.server.service;
 import ch.uzh.csg.coinblesk.server.dao.UserAccountDAO;
 import ch.uzh.csg.coinblesk.server.entity.UserAccount;
 import ch.uzh.csg.coinblesk.server.utils.Pair;
-import com.coinblesk.json.StatusTO;
+import com.coinblesk.json.UserAccountStatusTO;
 import com.coinblesk.json.UserAccountTO;
 import java.util.Date;
 import java.util.UUID;
@@ -41,30 +41,31 @@ public class UserAccountService {
         return userAccountDao.getByAttribute("email", email);
     }
     
+    //TODO: only used for testing. remove if possible
     @Transactional
     public void save(UserAccount userAccount) {
         userAccountDao.save(userAccount);
     }
     
     @Transactional
-    public Pair<StatusTO, UserAccount> create(final UserAccountTO userAccountTO) {
+    public Pair<UserAccountStatusTO, UserAccount> create(final UserAccountTO userAccountTO) {
         final String email = userAccountTO.email();
         if(email == null){
-            return new Pair(new StatusTO().reason(StatusTO.Reason.NO_EMAIL), null);
+            return new Pair(new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.NO_EMAIL), null);
 	}
         if(!email.matches(EMAIL_PATTERN)){
-            return new Pair(new StatusTO().reason(StatusTO.Reason.INVALID_EMAIL), null);
+            return new Pair(new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.INVALID_EMAIL), null);
 	}
         if(userAccountTO.password() == null || userAccountTO.password().length() < 6) {
-            return new Pair(new StatusTO().reason(StatusTO.Reason.PASSWORD_TOO_SHORT), null);
+            return new Pair(new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.PASSWORD_TOO_SHORT), null);
 	}
         
         final UserAccount found = userAccountDao.getByAttribute("email", email);
         if(found != null) {
             if(found.getEmailToken()!=null) {
-                return new Pair(new StatusTO().reason(StatusTO.Reason.EMAIL_ALREADY_EXISTS_NOT_ACTIVATED), found);
+                return new Pair(new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.EMAIL_ALREADY_EXISTS_NOT_ACTIVATED), found);
             }
-            return new Pair(new StatusTO().reason(StatusTO.Reason.EMAIL_ALREADY_EXISTS_ACTIVATED), found);
+            return new Pair(new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.EMAIL_ALREADY_EXISTS_ACTIVATED), found);
         }
         
         //convert TO to Entity
@@ -76,41 +77,41 @@ public class UserAccountService {
 	userAccount.setVersion((byte)2);
         userAccount.setEmailToken(UUID.randomUUID().toString());
         userAccountDao.save(userAccount);
-        return new Pair(new StatusTO().setSuccess(), userAccount);
+        return new Pair(new UserAccountStatusTO().setSuccess(), userAccount);
     }
 
     @Transactional
-    public StatusTO activate(String email, String token) {
+    public UserAccountStatusTO activate(String email, String token) {
         final UserAccount found = userAccountDao.getByAttribute("email", email);
         if(found == null) {
             //no such email address - notok
-            return new StatusTO().reason(StatusTO.Reason.NO_EMAIL);
+            return new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.NO_EMAIL);
         }
         if(found.getEmailToken() == null) {
             //already acitaveted - ok
-            return new StatusTO().setSuccess();
+            return new UserAccountStatusTO().setSuccess();
         }
         
         if(!found.getEmailToken().equals(token)) {
             //wrong token - notok
-            return new StatusTO().reason(StatusTO.Reason.INVALID_EMAIL_TOKEN);
+            return new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.INVALID_EMAIL_TOKEN);
         }
         
         //activate, enitiy is in attached state
         found.setEmailToken(null);
-        return new StatusTO().setSuccess();
+        return new UserAccountStatusTO().setSuccess();
     }
 
     @Transactional
-    public StatusTO delete(String email) {
+    public UserAccountStatusTO delete(String email) {
         final int result = userAccountDao.remove(email);
         if(result == 0) {
-            return new StatusTO().reason(StatusTO.Reason.NO_ACCOUNT);
+            return new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.NO_ACCOUNT);
         }
         if(result > 1) {
-            return new StatusTO().reason(StatusTO.Reason.ACCOUNT_ERROR);
+            return new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.ACCOUNT_ERROR);
         }
-        return new StatusTO().setSuccess();
+        return new UserAccountStatusTO().setSuccess();
     }
 
     @Transactional
@@ -126,7 +127,7 @@ public class UserAccountService {
     
     //for debugging
     @Transactional
-    String getToken(String email) {
+    public String getToken(String email) {
         final UserAccount userAccount = userAccountDao.getByAttribute("email", email);
         if(userAccount == null) {
             return null;

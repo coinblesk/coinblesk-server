@@ -3,19 +3,17 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package ch.uzh.csg.coinblesk.server.service;
+package ch.uzh.csg.coinblesk.server.controller;
 
 import ch.uzh.csg.coinblesk.server.config.AdminEmail;
 import ch.uzh.csg.coinblesk.server.config.BeanConfig;
 import ch.uzh.csg.coinblesk.server.config.SecurityConfig;
-import ch.uzh.csg.coinblesk.server.utils.Pair;
-import com.coinblesk.json.StatusTO;
+import ch.uzh.csg.coinblesk.server.service.UserAccountService;
+import com.coinblesk.json.UserAccountStatusTO;
 import com.coinblesk.json.UserAccountTO;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import java.util.LinkedList;
-import java.util.Queue;
 import javax.servlet.http.HttpSession;
 import org.junit.Assert;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -23,16 +21,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestExecutionListeners;
@@ -47,7 +40,6 @@ import org.springframework.web.context.WebApplicationContext;
 import ch.uzh.csg.coinblesk.server.utilTest.*;
 import org.springframework.mock.web.MockHttpSession;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 /**
  *
@@ -91,33 +83,33 @@ public class AuthTest {
 	mockMvc.perform(get("/u/a/g").secure(true)).andExpect(status().is3xxRedirection());
         UserAccountTO userAccountTO = new UserAccountTO();
         MvcResult res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
-        StatusTO status = GSON.fromJson(res.getResponse().getContentAsString(), StatusTO.class);
-        Assert.assertEquals(StatusTO.Reason.NO_EMAIL.nr(), status.reason().nr());
+        UserAccountStatusTO status = GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
+        Assert.assertEquals(UserAccountStatusTO.Reason.NO_EMAIL.nr(), status.reason().nr());
         
         userAccountTO.email("test-test.test");
         res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
-        status = GSON.fromJson(res.getResponse().getContentAsString(), StatusTO.class);
-        Assert.assertEquals(StatusTO.Reason.INVALID_EMAIL.nr(), status.reason().nr());
+        status = GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
+        Assert.assertEquals(UserAccountStatusTO.Reason.INVALID_EMAIL.nr(), status.reason().nr());
         
         userAccountTO.email("test@test.test");
         res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
-        status = GSON.fromJson(res.getResponse().getContentAsString(), StatusTO.class);
-        Assert.assertEquals(StatusTO.Reason.PASSWORD_TOO_SHORT.nr(), status.reason().nr());
+        status = GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
+        Assert.assertEquals(UserAccountStatusTO.Reason.PASSWORD_TOO_SHORT.nr(), status.reason().nr());
         
         userAccountTO.password("1234");
         res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
-        status = GSON.fromJson(res.getResponse().getContentAsString(), StatusTO.class);
-        Assert.assertEquals(StatusTO.Reason.PASSWORD_TOO_SHORT.nr(), status.reason().nr());
+        status = GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
+        Assert.assertEquals(UserAccountStatusTO.Reason.PASSWORD_TOO_SHORT.nr(), status.reason().nr());
         
         userAccountTO.password("123456");
         res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
-        status = GSON.fromJson(res.getResponse().getContentAsString(), StatusTO.class);
+        status = GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
         Assert.assertTrue(status.isSuccess());
         Assert.assertEquals(1, adminEmail.sentEmails());
         
         res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
-        status = GSON.fromJson(res.getResponse().getContentAsString(), StatusTO.class);
-        Assert.assertEquals(StatusTO.Reason.EMAIL_ALREADY_EXISTS_NOT_ACTIVATED.nr(), status.reason().nr());
+        status = GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
+        Assert.assertEquals(UserAccountStatusTO.Reason.EMAIL_ALREADY_EXISTS_NOT_ACTIVATED.nr(), status.reason().nr());
         Assert.assertEquals(2, adminEmail.sentEmails());
         
         //activate

@@ -18,7 +18,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.JavaMailSender;
 import javax.mail.Session;
-import org.springframework.core.annotation.Order;
 import org.springframework.mail.SimpleMailMessage;
 
 @Configuration
