@@ -6,12 +6,17 @@
 package ch.uzh.csg.coinblesk.server.service;
 
 import ch.uzh.csg.coinblesk.server.dao.KeyDAO;
+import ch.uzh.csg.coinblesk.server.dao.RefundDAO;
 import ch.uzh.csg.coinblesk.server.entity.Keys;
+import ch.uzh.csg.coinblesk.server.entity.Refund;
+import ch.uzh.csg.coinblesk.server.utils.Pair;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import javax.transaction.Transactional;
 import org.bitcoinj.core.ECKey;
@@ -25,102 +30,86 @@ import org.springframework.stereotype.Service;
  *
  * @author Thomas Bocek
  */
-
 @Service
 public class KeyService {
-    
+
     private final static Logger LOG = LoggerFactory.getLogger(KeyService.class);
-    
+
     @Autowired
     private KeyDAO clientKeyDAO;
     
+    @Autowired
+    private RefundDAO refundDAO;
+
     @Transactional
-    public Keys getByHash(final String clientHash) {
-        final byte[] clientHashRaw = Base64.getDecoder().decode(clientHash);
-        return getByHash(clientHashRaw);
-    }
-    
-    @Transactional
-    public Keys getByHash(final byte[] clientHashRaw) {
-        return clientKeyDAO.getByHash(clientHashRaw);
+    public Keys getByClientPublicKey(final String clientPublicKey) {
+        final byte[] clientPublicKeyRaw = Base64.getDecoder().decode(clientPublicKey);
+        return getByClientPublicKey(clientPublicKeyRaw);
     }
 
     @Transactional
-    public ECKey getClientECPublicKeyByHash(final String clientHash) {
-        final byte[] clientHashRaw = Base64.getDecoder().decode(clientHash);
-        return getClientECPublicKeyByHash(clientHashRaw);
+    public Keys getByClientPublicKey(final byte[] clientPublicKeyRaw) {
+        return clientKeyDAO.findByClientPublicKey(clientPublicKeyRaw);
     }
-    
+
     @Transactional
-    public ECKey getClientECPublicKeyByHash(final byte[] clientHashRaw) {
-        final Keys keys = clientKeyDAO.getByHash(clientHashRaw);
-        return ECKey.fromPublicOnly(keys.clientPublicKey());
+    public List<ECKey> getPublicECKeysByClientPublicKey(final String clientPublicKey) {
+        final byte[] clientPublicKeyRaw = Base64.getDecoder().decode(clientPublicKey);
+        return getPublicECKeysByClientPublicKey(clientPublicKeyRaw);
     }
-    
+
     @Transactional
-    public ECKey getServerECKeysByHash(final String clientHash) {
-        final byte[] clientHashRaw = Base64.getDecoder().decode(clientHash);
-        return getServerECKeysByHash(clientHashRaw);
-    }
-    
-    @Transactional
-    public ECKey getServerECKeysByHash(final byte[] clientHashRaw) {
-        final Keys keys = clientKeyDAO.getByHash(clientHashRaw);
-        return ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey());
-    }
-    
-    @Transactional
-    public List<ECKey> getPublicECKeysByHash(final String clientHash) {
-        final byte[] clientHashRaw = Base64.getDecoder().decode(clientHash);
-        return getPublicECKeysByHash(clientHashRaw);
-    }
-    
-    @Transactional
-    public List<ECKey> getPublicECKeysByHash(final byte[] clientHashRaw) {
-        final Keys keys = clientKeyDAO.getByHash(clientHashRaw);
+    public List<ECKey> getPublicECKeysByClientPublicKey(final byte[] clientPublicKeyRaw) {
+        final Keys keys = clientKeyDAO.findByClientPublicKey(clientPublicKeyRaw);
         final List<ECKey> retVal = new ArrayList<>(2);
         retVal.add(ECKey.fromPublicOnly(keys.clientPublicKey()));
         retVal.add(ECKey.fromPublicOnly(keys.serverPublicKey()));
         return Collections.unmodifiableList(retVal);
     }
-    
+
     @Transactional
-    public boolean create(final String clientPublicKey, 
+    public Pair<Boolean, Keys> create(final String clientPublicKey,
             final byte[] serverPublicKey, final byte[] serverPrivateKey) {
-        if(clientPublicKey == null || serverPublicKey == null || serverPrivateKey == null){
+        if (clientPublicKey == null || serverPublicKey == null || serverPrivateKey == null) {
             throw new IllegalArgumentException("null not excpected here");
-	}
-        
+        }
+
         final byte[] clientPublicKeyRaw = Base64.getDecoder().decode(clientPublicKey);
-        final byte[] clientHashRaw = sha256(clientPublicKeyRaw);
         
         final Keys clientKey = new Keys()
-                .clientHash(clientHashRaw)
                 .clientPublicKey(clientPublicKeyRaw)
                 .serverPrivateKey(serverPrivateKey)
                 .serverPublicKey(serverPublicKey);
-        
+
         //need to check if it exists here, as not all DBs does that for us
-        final Keys keys = clientKeyDAO.getByHash(clientHashRaw);
-        if(keys != null) {
-            return false;
+        final Keys keys = clientKeyDAO.findByClientPublicKey(clientPublicKeyRaw);
+        if (keys != null) {
+            return new Pair<>(false, keys);
         }
-        
+
         clientKeyDAO.save(clientKey);
-        return true;
-    }
-    
-    public static byte[] sha256(byte[] input) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return digest.digest(input);
-        } catch(NoSuchAlgorithmException ex) {
-            LOG.error("cannot hash", ex);
-            throw new RuntimeException(ex);
-        }
+        return new Pair<>(true, clientKey);
     }
 
-    public void addRefundTransaction(Transaction tx) {
-        byte[] raw = tx.unsafeBitcoinSerialize();
+    @Transactional
+    public List<List<ECKey>> all() {
+        final List<Keys> all = clientKeyDAO.findAll();
+        final List<List<ECKey>> retVal = new ArrayList<>();
+        for (Keys entity : all) {
+            final List<ECKey> keys = new ArrayList<>(2);
+            keys.add(ECKey.fromPublicOnly(entity.clientPublicKey()));
+            keys.add(ECKey.fromPublicOnly(entity.serverPublicKey()));
+            retVal.add(keys);
+        }
+        return retVal;
+    }
+    
+    @Transactional
+    public void addRefundTransaction(String clientPublicKey, byte[] refundTransaction) {
+       Refund refund = new Refund();
+       refund.clientPublicKey(Base64.getDecoder().decode(clientPublicKey));
+       refund.refundTx(refundTransaction);
+       refund.creationDate(new Date());
+       refundDAO.save(refund);
     }
 }

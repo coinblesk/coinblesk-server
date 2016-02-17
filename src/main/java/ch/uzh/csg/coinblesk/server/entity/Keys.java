@@ -5,7 +5,6 @@ import java.io.Serializable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
-import javax.persistence.Lob;
 
 @Entity(name = "KEYS")
 public class Keys implements Serializable {
@@ -13,9 +12,6 @@ public class Keys implements Serializable {
     private static final long serialVersionUID = -7496348013847426913L;
 
     @Id
-    @Column(name = "CLIENT_HASH", nullable = false, updatable = false, length=32)
-    private byte[] clientHash;
-    
     @Column(name = "CLIENT_PUBLIC_KEY", nullable = false, updatable = false, length=255)
     private byte[] clientPublicKey;
     
@@ -24,15 +20,6 @@ public class Keys implements Serializable {
     
     @Column(name = "SERVER_PRIVATE_KEY", nullable = false, updatable = false, length=255)
     private byte[] serverPrivateKey;
-    
-    public byte[] clientHash() {
-        return clientHash;
-    }
-    
-    public Keys clientHash(byte[] clientHash) {
-        this.clientHash = clientHash;
-        return this;
-    }
     
     public byte[] clientPublicKey() {
         return clientPublicKey;

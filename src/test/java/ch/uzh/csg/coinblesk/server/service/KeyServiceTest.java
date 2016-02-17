@@ -45,12 +45,10 @@ public class KeyServiceTest {
         byte[] pubKey = ecKeyServer.getPubKey();
         byte[] privKey = ecKeyServer.getPrivKeyBytes();
 
-        boolean retVal = keyService.create(clientPublicKey, pubKey, privKey);
+        boolean retVal = keyService.create(clientPublicKey, pubKey, privKey).element0();
         Assert.assertTrue(retVal);
-        Keys keys = keyService.getByHash(KeyService.sha256(ecKeyClient.getPubKey()));
-        Assert.assertNotNull(keys);
         //adding again should fail
-        retVal = keyService.create(clientPublicKey, pubKey, privKey);
+        retVal = keyService.create(clientPublicKey, pubKey, privKey).element0();
         Assert.assertFalse(retVal);
     }
     
@@ -62,31 +60,19 @@ public class KeyServiceTest {
         byte[] pubKey = ecKeyServer.getPubKey();
         byte[] privKey = ecKeyServer.getPrivKeyBytes();
 
-        boolean retVal = keyService.create(clientPublicKey, pubKey, privKey);
+        boolean retVal = keyService.create(clientPublicKey, pubKey, privKey).element0();
         Assert.assertTrue(retVal);
-        byte[] hash = KeyService.sha256(ecKeyClient.getPubKey());
-        Keys keys = keyService.getByHash(hash);
+        retVal = keyService.create(clientPublicKey, pubKey, privKey).element0();
+        Assert.assertFalse(retVal);
+        
+        Keys keys = keyService.getByClientPublicKey(ecKeyClient.getPubKey());
         Assert.assertNotNull(keys);
         
-        String key = Base64.getEncoder().encodeToString(hash);
-        keys = keyService.getByHash(key);
+
+        keys = keyService.getByClientPublicKey(ecKeyClient.getPubKey());
         Assert.assertNotNull(keys);
         //
-        ECKey ec = keyService.getClientECPublicKeyByHash(key);
-        Assert.assertArrayEquals(ec.getPubKey(), ecKeyClient.getPubKey());
-        //
-        ec = keyService.getClientECPublicKeyByHash(hash);
-        Assert.assertArrayEquals(ec.getPubKey(), ecKeyClient.getPubKey());
-        //
-        ec = keyService.getServerECKeysByHash(hash);
-        Assert.assertArrayEquals(ec.getPubKey(), ecKeyServer.getPubKey());
-        Assert.assertArrayEquals(ec.getPrivKeyBytes(), ecKeyServer.getPrivKeyBytes());
-        //
-        ec = keyService.getServerECKeysByHash(key);
-        Assert.assertArrayEquals(ec.getPubKey(), ecKeyServer.getPubKey());
-        Assert.assertArrayEquals(ec.getPrivKeyBytes(), ecKeyServer.getPrivKeyBytes());
-        //
-        List<ECKey> list = keyService.getPublicECKeysByHash(hash);
+        List<ECKey> list = keyService.getPublicECKeysByClientPublicKey(ecKeyClient.getPubKey());
         Assert.assertEquals(2, list.size());
         Assert.assertArrayEquals(list.get(0).getPubKey(), ecKeyClient.getPubKey());
         Assert.assertArrayEquals(list.get(1).getPubKey(), ecKeyServer.getPubKey());

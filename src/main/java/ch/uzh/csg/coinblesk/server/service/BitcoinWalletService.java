@@ -70,6 +70,7 @@ import ch.uzh.csg.coinblesk.server.dao.ClientWatchingKeyDAO;
 import ch.uzh.csg.coinblesk.server.dao.SignedInputDAO;
 import ch.uzh.csg.coinblesk.server.dao.SignedTransactionDAO;
 import ch.uzh.csg.coinblesk.server.dao.SpentOutputDAO;
+import ch.uzh.csg.coinblesk.server.utils.CoinUtils;
 
 /**
  * Abstraction of bitcoinJ
@@ -163,7 +164,7 @@ public class BitcoinWalletService {
                 List<String> mnemonicWords = new ArrayList<String>(Arrays.asList(mnemonic.split(" ")));
 
                 DeterministicSeed seed = new DeterministicSeed(mnemonicWords, null, "", creationDate);
-                privateKeyChain = new KeyChainGroup(getNetworkParams(bitcoinNet), seed).getActiveKeyChain();
+                privateKeyChain = new KeyChainGroup(CoinUtils.getNetworkParams(bitcoinNet), seed).getActiveKeyChain();
             } else {
                 LOGGER.info("Writing private seed to file");
 
@@ -229,25 +230,7 @@ public class BitcoinWalletService {
         return serverAppKit.startAsync();
     }
 
-    /**
-     * 
-     * @param bitcoinNet
-     * @return the {@link NetworkParameters} for a specific network
-     */
-    private NetworkParameters getNetworkParams(BitcoinNet bitcoinNet) {
-        switch (bitcoinNet) {
-        case UNITTEST:
-            return UnitTestParams.get();
-        case REGTEST:
-            return RegTestParams.get();
-        case TESTNET:
-            return TestNet3Params.get();
-        case MAINNET:
-            return MainNetParams.get();
-        default:
-            throw new RuntimeException("Please set the server property bitcoin.net to (unittest|regtest|testnet|main)");
-        }
-    }
+    
 
     private File getWalletDir() {
         Preconditions.checkNotNull(appConfig.getConfigDir(), "Bitcoin wallet directory must be set in the properties file");
@@ -276,7 +259,7 @@ public class BitcoinWalletService {
             }
         }
 
-        return new WalletAppKit(getNetworkParams(bitcoinNet), walletDir, getWalletPrefix(bitcoinNet));
+        return new WalletAppKit(CoinUtils.getNetworkParams(bitcoinNet), walletDir, getWalletPrefix(bitcoinNet));
     }
 
     /**
@@ -344,7 +327,7 @@ public class BitcoinWalletService {
      *         server.
      */
     public String getSerializedServerWatchingKey() {
-        return serverAppKit.wallet().getWatchingKey().serializePubB58(getNetworkParams(bitcoinNet));
+        return serverAppKit.wallet().getWatchingKey().serializePubB58(CoinUtils.getNetworkParams(bitcoinNet));
     }
 
     /**
@@ -419,7 +402,7 @@ public class BitcoinWalletService {
             return;
         }
 
-        DeterministicKey clientKey = DeterministicKey.deserializeB58(base58encodedWatchingKey, getNetworkParams(bitcoinNet));
+        DeterministicKey clientKey = DeterministicKey.deserializeB58(base58encodedWatchingKey, CoinUtils.getNetworkParams(bitcoinNet));
 
         // create married key chain with clients watching key
         MarriedKeyChain marriedClientKeyChain = MarriedKeyChain.builder().seed(privateKeyChain.getSeed()).followingKeys(clientKey).threshold(2).build();
@@ -487,7 +470,7 @@ public class BitcoinWalletService {
     }
 
     private Transaction decodeTx(String base64encodedTx) throws ProtocolException, IllegalArgumentException {
-        return new Transaction(getNetworkParams(bitcoinNet), Base64.getDecoder().decode(base64encodedTx));
+        return new Transaction(CoinUtils.getNetworkParams(bitcoinNet), Base64.getDecoder().decode(base64encodedTx));
     }
 
     private String encodeTx(Transaction tx) {

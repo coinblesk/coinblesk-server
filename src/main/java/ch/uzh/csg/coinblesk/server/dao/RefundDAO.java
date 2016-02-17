@@ -5,7 +5,7 @@
  */
 package ch.uzh.csg.coinblesk.server.dao;
 
-import ch.uzh.csg.coinblesk.server.entity.Keys;
+import ch.uzh.csg.coinblesk.server.entity.Refund;
 import java.util.List;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -20,17 +20,17 @@ import org.springframework.stereotype.Repository;
  * @author Thomas Bocek
  */
 @Repository
-public class KeyDAO {
+public class RefundDAO {
 
     @PersistenceContext()
     private EntityManager em;
 
-    public Keys findByClientPublicKey(final byte[] clientPublicKey) {
+    public Refund findByClientPublicKey(final byte[] clientPublicKey) {
         final CriteriaBuilder cb = em.getCriteriaBuilder();
-        final CriteriaQuery<Keys> query = cb.createQuery(Keys.class);
-        final Root<Keys> from = query.from(Keys.class);
+        final CriteriaQuery<Refund> query = cb.createQuery(Refund.class);
+        final Root<Refund> from = query.from(Refund.class);
         final Predicate condition = cb.equal(from.get("clientPublicKey"), clientPublicKey);
-        CriteriaQuery<Keys> select = query.select(from).where(condition);
+        CriteriaQuery<Refund> select = query.select(from).where(condition);
         return DAOUtils.getSingleResultOrNull(em.createQuery(select));
     }
     
@@ -38,11 +38,11 @@ public class KeyDAO {
         return em.merge(enity);
     }
 
-    public List<Keys> findAll() {
+    public List<Refund> findAll() {
         final CriteriaBuilder cb = em.getCriteriaBuilder();
-        final CriteriaQuery<Keys> query = cb.createQuery(Keys.class);
-        final Root<Keys> from = query.from(Keys.class);
-        CriteriaQuery<Keys> select = query.select(from);
+        final CriteriaQuery<Refund> query = cb.createQuery(Refund.class);
+        final Root<Refund> from = query.from(Refund.class);
+        CriteriaQuery<Refund> select = query.select(from);
         return em.createQuery(select).getResultList();
     }
 }
