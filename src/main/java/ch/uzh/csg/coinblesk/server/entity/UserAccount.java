@@ -27,7 +27,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
  */
 @Entity(name = "USER_ACCOUNT")
 @Table(indexes = {
-    @Index(name = "USERNAME_INDEX", columnList = "username")})
+    @Index(name = "USERNAME_INDEX", columnList = "USERNAME")})
 public class UserAccount implements Serializable {
 
     private static final long serialVersionUID = 1L;

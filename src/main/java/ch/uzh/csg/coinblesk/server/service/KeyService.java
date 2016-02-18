@@ -66,6 +66,21 @@ public class KeyService {
         retVal.add(ECKey.fromPublicOnly(keys.serverPublicKey()));
         return Collections.unmodifiableList(retVal);
     }
+    
+    @Transactional
+    public List<ECKey> getECKeysByClientPublicKey(final String clientPublicKey) {
+        final byte[] clientPublicKeyRaw = Base64.getDecoder().decode(clientPublicKey);
+        return getECKeysByClientPublicKey(clientPublicKeyRaw);
+    }
+    
+    @Transactional
+    public List<ECKey> getECKeysByClientPublicKey(final byte[] clientPublicKeyRaw) {
+        final Keys keys = clientKeyDAO.findByClientPublicKey(clientPublicKeyRaw);
+        final List<ECKey> retVal = new ArrayList<>(2);
+        retVal.add(ECKey.fromPublicOnly(keys.clientPublicKey()));
+        retVal.add(ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey()));
+        return Collections.unmodifiableList(retVal);
+    }
 
     @Transactional
     public Pair<Boolean, Keys> create(final String clientPublicKey,

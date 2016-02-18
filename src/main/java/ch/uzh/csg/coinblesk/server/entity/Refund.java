@@ -9,12 +9,13 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Index;
+import javax.persistence.Lob;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
 @Entity(name = "REFUND")
 @Table(indexes = {
-    @Index(name = "REFUND_INDEX", columnList = "refundTx")})
+    @Index(name = "REFUND_INDEX", columnList = "REFUND_TX")})
 public class Refund implements Serializable {
 
     private static final long serialVersionUID = -7496348013847426913L;
@@ -28,6 +29,7 @@ public class Refund implements Serializable {
     @Column(name = "CLIENT_PUBLIC_KEY", nullable = false, updatable = false, length=255)
     private byte[] clientPublicKey;
     
+    @Lob
     @Column(name = "REFUND_TX", nullable = false, updatable = false)
     private byte[] refundTx;
     

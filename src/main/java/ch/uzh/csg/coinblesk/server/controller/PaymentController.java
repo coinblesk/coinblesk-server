@@ -128,23 +128,31 @@ public class PaymentController {
     public RefundTO refund(@RequestBody RefundTO refundTO) {
         LOG.debug("Refund for {}", refundTO.clientPublicKey());
         try {
-            final List<ECKey> keys = clientKeyService.getPublicECKeysByClientPublicKey(refundTO.clientPublicKey());
+            final List<ECKey> keys = clientKeyService.getECKeysByClientPublicKey(refundTO.clientPublicKey());
             if(keys == null || keys.size() !=2) {
                 return new RefundTO().reason(RefundTO.Reason.KEYS_NOT_FOUND);
             }
-            final Script script = ScriptBuilder.createP2SHOutputScript(2, keys);
+            final Script redeemScript = ScriptBuilder.createP2SHOutputScript(2, keys);
             final Transaction refundTransaction = new Transaction(
                     appConfig.getNetworkParameters(), Base64.getDecoder().decode(refundTO.refundTransaction()));
-            final TransactionSignature clientSignature = new TransactionSignature(
-                    new BigInteger(refundTO.clientSignatureR()), new BigInteger(refundTO.clientSignatureS()));
+            
         
             for(int i=0;i<refundTransaction.getInputs().size();i++) {
-                final Sha256Hash sighash = refundTransaction.hashForSignature(i, script, Transaction.SigHash.ALL, false);
+                final Sha256Hash sighash = refundTransaction.hashForSignature(i, redeemScript, Transaction.SigHash.ALL, false);
                 final TransactionSignature serverSignature = new TransactionSignature(keys.get(1).sign(sighash), Transaction.SigHash.ALL, false);
-                final Script refundTransactionInputScript = ScriptBuilder.createMultiSigInputScript(clientSignature, serverSignature);
+                List<TransactionSignature> l = new ArrayList<>();
+                
+                final TransactionSignature clientSignature = new TransactionSignature(
+                    new BigInteger(refundTO.clientSignatures().get(i).clientSignatureR()), 
+                        new BigInteger(refundTO.clientSignatures().get(i).clientSignatureS()));
+                
+                l.add(clientSignature);
+                l.add(serverSignature);
+                final Script refundTransactionInputScript = ScriptBuilder.createP2SHMultiSigInputScript(l, redeemScript);
                 refundTransaction.getInput(i).setScriptSig(refundTransactionInputScript);
-                refundTransaction.getInput(i).verify();
+                //refundTransaction.getInput(i).verify();
             }
+            //refundTransaction.verify();
         
             byte[] refundTx = refundTransaction.unsafeBitcoinSerialize();
             clientKeyService.addRefundTransaction(refundTO.clientPublicKey(), refundTx);
