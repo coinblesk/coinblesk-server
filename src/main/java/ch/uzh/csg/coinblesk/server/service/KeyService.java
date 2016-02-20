@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import javax.transaction.Transactional;
+import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Transaction;
 import org.slf4j.Logger;
@@ -83,9 +84,9 @@ public class KeyService {
     }
 
     @Transactional
-    public Pair<Boolean, Keys> create(final String clientPublicKey,
+    public Pair<Boolean, Keys> create(final String clientPublicKey, final byte[] p2shHash,
             final byte[] serverPublicKey, final byte[] serverPrivateKey) {
-        if (clientPublicKey == null || serverPublicKey == null || serverPrivateKey == null) {
+        if (clientPublicKey == null || p2shHash == null || serverPublicKey == null || serverPrivateKey == null ) {
             throw new IllegalArgumentException("null not excpected here");
         }
 
@@ -93,6 +94,7 @@ public class KeyService {
         
         final Keys clientKey = new Keys()
                 .clientPublicKey(clientPublicKeyRaw)
+                .p2shHash(p2shHash)
                 .serverPrivateKey(serverPrivateKey)
                 .serverPublicKey(serverPublicKey);
 
@@ -126,5 +128,10 @@ public class KeyService {
        refund.refundTx(refundTransaction);
        refund.creationDate(new Date());
        refundDAO.save(refund);
+    }
+    
+    @Transactional
+    public boolean containsP2SH(Address p2shAddress) {
+        return clientKeyDAO.containsP2SH(p2shAddress.getHash160());
     }
 }

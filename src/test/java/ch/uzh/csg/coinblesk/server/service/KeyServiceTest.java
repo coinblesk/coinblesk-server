@@ -42,13 +42,15 @@ public class KeyServiceTest {
         ECKey ecKeyClient = new ECKey();
         String clientPublicKey = Base64.getEncoder().encodeToString(ecKeyClient.getPubKey());
         ECKey ecKeyServer = new ECKey();
+        byte[] hash = new byte[20];
+        hash[0]=1;
         byte[] pubKey = ecKeyServer.getPubKey();
         byte[] privKey = ecKeyServer.getPrivKeyBytes();
 
-        boolean retVal = keyService.create(clientPublicKey, pubKey, privKey).element0();
+        boolean retVal = keyService.create(clientPublicKey, hash, pubKey, privKey).element0();
         Assert.assertTrue(retVal);
         //adding again should fail
-        retVal = keyService.create(clientPublicKey, pubKey, privKey).element0();
+        retVal = keyService.create(clientPublicKey, hash, pubKey, privKey).element0();
         Assert.assertFalse(retVal);
     }
     
@@ -57,12 +59,14 @@ public class KeyServiceTest {
         ECKey ecKeyClient = new ECKey();
         String clientPublicKey = Base64.getEncoder().encodeToString(ecKeyClient.getPubKey());
         ECKey ecKeyServer = new ECKey();
+        byte[] hash = new byte[20];
+        hash[0]=2;
         byte[] pubKey = ecKeyServer.getPubKey();
         byte[] privKey = ecKeyServer.getPrivKeyBytes();
 
-        boolean retVal = keyService.create(clientPublicKey, pubKey, privKey).element0();
+        boolean retVal = keyService.create(clientPublicKey, hash, pubKey, privKey).element0();
         Assert.assertTrue(retVal);
-        retVal = keyService.create(clientPublicKey, pubKey, privKey).element0();
+        retVal = keyService.create(clientPublicKey, hash, pubKey, privKey).element0();
         Assert.assertFalse(retVal);
         
         Keys keys = keyService.getByClientPublicKey(ecKeyClient.getPubKey());

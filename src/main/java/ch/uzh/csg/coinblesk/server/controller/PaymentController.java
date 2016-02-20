@@ -8,6 +8,7 @@ package ch.uzh.csg.coinblesk.server.controller;
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import ch.uzh.csg.coinblesk.server.entity.Keys;
 import ch.uzh.csg.coinblesk.server.service.KeyService;
+import ch.uzh.csg.coinblesk.server.service.TransactionService;
 import ch.uzh.csg.coinblesk.server.service.WalletService;
 import ch.uzh.csg.coinblesk.server.utils.CoinUtils;
 import ch.uzh.csg.coinblesk.server.utils.Pair;
@@ -15,16 +16,19 @@ import com.coinblesk.bitcoin.BitcoinNet;
 import com.coinblesk.json.BalanceTO;
 import com.coinblesk.json.KeyTO;
 import com.coinblesk.json.RefundTO;
+import com.coinblesk.json.SignTO;
 import java.math.BigInteger;
 import java.util.ArrayList;
 
 import java.util.Base64;
 import java.util.List;
+import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
@@ -58,6 +62,9 @@ public class PaymentController {
     @Autowired
     private WalletService walletService;
     
+    @Autowired
+    private TransactionService transactionService;
+    
     
 
     /**
@@ -78,15 +85,21 @@ public class PaymentController {
         final KeyTO serverKeyTO = new KeyTO();
         try {
             final String clientPublicKey = keyTO.publicKey();
+            final byte[] clientPublicKeyRaw = Base64.getDecoder().decode(clientPublicKey);
             final ECKey serverEcKey = new ECKey();
-            final Pair<Boolean, Keys> retVal = clientKeyService.create(clientPublicKey, serverEcKey.getPubKey(), serverEcKey.getPrivKeyBytes());
+            final List<ECKey> keys = new ArrayList<>(2);
+            keys.add(ECKey.fromPublicOnly(clientPublicKeyRaw));
+            keys.add(serverEcKey);
+            final Script script = ScriptBuilder.createP2SHOutputScript(2, keys);
+            final Pair<Boolean, Keys> retVal = clientKeyService.create(clientPublicKey, 
+                    script.getToAddress(appConfig.getNetworkParameters()).getHash160(), serverEcKey.getPubKey(), serverEcKey.getPrivKeyBytes());
             if (retVal.element0()) {
                 serverKeyTO.publicKey(Base64.getEncoder().encodeToString(serverEcKey.getPubKey()));
-                final List<ECKey> keys = new ArrayList<>(2);
+                
                 keys.add(ECKey.fromPublicOnly(retVal.element1().clientPublicKey()));
                 keys.add(serverEcKey);
                 //2-of-2 multisig
-                final Script script = ScriptBuilder.createP2SHOutputScript(2, keys);
+                
                 walletService.addWatching(script);
                 return serverKeyTO.setSuccess();
             } else {
@@ -167,19 +180,78 @@ public class PaymentController {
         }
     }
     
-    @RequestMapping(value = {"/multi-sig", "/m"}, method = RequestMethod.POST,
+    @RequestMapping(value = {"/sign", "/s"}, method = RequestMethod.POST,
             consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
     @ResponseBody
-    public void multiSig() {
+    public SignTO sign(@RequestBody SignTO signTO) {
+        final List<ECKey> keys = clientKeyService.getECKeysByClientPublicKey(signTO.clientPublicKey());
+        if(keys == null || keys.size() !=2) {
+                return new SignTO().reason(SignTO.Reason.KEYS_NOT_FOUND);
+        }
+        final Script redeemScript = ScriptBuilder.createP2SHOutputScript(2, keys);
+        Address p2shAddressFrom = redeemScript.getToAddress(appConfig.getNetworkParameters());
+        if(signTO.amountToSpend() == null) {
+            return new SignTO().reason(SignTO.Reason.AMOUNT_EMPTY);
+        }
+        Coin amountToSpend = Coin.valueOf(signTO.amountToSpend());
+        if(signTO.p2shAddress() == null || signTO.p2shAddress().isEmpty()) {
+            return new SignTO().reason(SignTO.Reason.ADDRESS_EMPTY);
+        }
+        Address p2shAddressTo = new Address(appConfig.getNetworkParameters(), Base64.getDecoder().decode(signTO.p2shAddress()));
+        if(!clientKeyService.containsP2SH(p2shAddressFrom)) {
+            return new SignTO().reason(SignTO.Reason.ADDRESS_UNKNOWN);
+        }
         
-    }
-    
-    @RequestMapping(value = {"/tx", "/t"}, method = RequestMethod.POST,
-            consumes = "application/json; charset=UTF-8",
-            produces = "application/json; charset=UTF-8")
-    @ResponseBody
-    public void transaction() {
+        //get all outputs from the BT network
+        List<TransactionOutput> outputs = walletService.getOutputs(p2shAddressFrom);
+        //in addition, get the outputs from previous TX, possibly not yet published in the BT network
+        outputs.addAll(transactionService.pendingOutputs());
+        //TODO: check if the outputs does not exceed the lock time of the refund tx
+        //TODO: check if outputs not already spent (double spending)
+        //now we have all valid outputs and we know its before the refund lock time gets valid. So we can sign this tx
         
+        final Transaction tx = new Transaction(appConfig.getNetworkParameters());
+        Coin remainingAmount = Coin.ZERO;
+        for(TransactionOutput output:outputs) {
+            tx.addInput(output);
+            remainingAmount = remainingAmount.add(output.getValue());
+        }
+        remainingAmount = remainingAmount.subtract(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE);
+        if(amountToSpend.isGreaterThan(remainingAmount)) {
+            return new SignTO().reason(SignTO.Reason.NOT_ENOUGH_COINS);
+        }
+        
+        tx.addOutput(amountToSpend, p2shAddressTo); //to recipient
+        tx.addOutput(remainingAmount, p2shAddressFrom); //back to sender
+        //rest is tx fee
+        //TODO: add outputs to DB to pendingOutputs that will become valid, make sure these p2sh address came from us!
+        if(clientKeyService.containsP2SH(p2shAddressTo)) {
+           //add to pending output 
+        }
+        //TODO: update spentoutputs -> all inputs of this tx are now unspendable (double spending)
+        //TODO: this and the above double spending must be in a transaction!!
+        
+        //sign
+        for(int i=0;i<tx.getInputs().size();i++) {
+            final Sha256Hash sighash = tx.hashForSignature(i, redeemScript, Transaction.SigHash.ALL, false);
+            final TransactionSignature serverSignature = new TransactionSignature(keys.get(1).sign(sighash), Transaction.SigHash.ALL, false);
+            
+            List<TransactionSignature> l = new ArrayList<>();
+                
+            final TransactionSignature clientSignature = new TransactionSignature(
+                new BigInteger(signTO.clientSignatures().get(i).clientSignatureR()), 
+                    new BigInteger(signTO.clientSignatures().get(i).clientSignatureS()));
+                
+                l.add(clientSignature);
+                l.add(serverSignature);
+                final Script refundTransactionInputScript = ScriptBuilder.createP2SHMultiSigInputScript(l, redeemScript);
+                tx.getInput(i).setScriptSig(refundTransactionInputScript);
+                //refundTransaction.getInput(i).verify();
+            }
+        
+        //TODO: create two new refunds with the new values
+        
+        return null; //return tx, two refunds
     }
 }

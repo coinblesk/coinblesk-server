@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.PostConstruct;
+import org.bitcoinj.core.Address;
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.DownloadProgressTracker;
@@ -179,5 +180,16 @@ public class WalletService {
                 }
             }
         });
+    }
+    
+    public List<TransactionOutput> getOutputs(Address p2shAddress) {
+        List<TransactionOutput> retVal = new ArrayList<>();
+        List<TransactionOutput> all = wallet.getWatchedOutputs(true);
+        for(TransactionOutput to:all) {
+            if(to.getAddressFromP2SH(appConfig.getNetworkParameters()).equals(p2shAddress)) {
+                retVal.add(to);
+            }
+        }
+        return retVal;
     }
 }

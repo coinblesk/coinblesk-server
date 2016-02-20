@@ -6,6 +6,7 @@
 package ch.uzh.csg.coinblesk.server.dao;
 
 import ch.uzh.csg.coinblesk.server.entity.Keys;
+import ch.uzh.csg.coinblesk.server.entity.SpentOutputs;
 import java.util.List;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -44,5 +45,15 @@ public class KeyDAO {
         final Root<Keys> from = query.from(Keys.class);
         CriteriaQuery<Keys> select = query.select(from);
         return em.createQuery(select).getResultList();
+    }
+
+    public boolean containsP2SH(byte[] hash160) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Long> query = cb.createQuery(Long.class);
+        final Root<Keys> from = query.from(Keys.class);
+        query.select(cb.count(from));
+        final Predicate condition = cb.equal(from.get("p2shHash"), hash160);
+        query.where(condition);
+        return em.createQuery(query).getSingleResult() > 0;
     }
 }
