@@ -89,7 +89,7 @@ public class UserController {
             if(!status.isSuccess()) {
                 LOG.error("Someone tried a link with an invalid token: {}/{}/{}", email, token, status.reason().name());
                 adminEmail.send("Wrong Link?", "Someone tried a link with an invalid token: "+email+" / "+token+ "/"+status.reason().name());
-                throw new WrongLinkException();
+                throw new BadRequestException("Wrong Link");
             }
             LOG.debug("Activate account success for {}", email);
             //TODO: text/layout
@@ -100,8 +100,12 @@ public class UserController {
         }
     }
     
-    @ResponseStatus(value=HttpStatus.BAD_REQUEST, reason="Wrong Link")
-    public class WrongLinkException extends RuntimeException {}
+    @ResponseStatus(value=HttpStatus.BAD_REQUEST)
+    public class BadRequestException extends RuntimeException {
+        public BadRequestException(String reason) {
+            super(reason);
+        }
+    }
     
     @ResponseStatus(value=HttpStatus.INTERNAL_SERVER_ERROR)
     public class InternalServerErrorException extends RuntimeException {

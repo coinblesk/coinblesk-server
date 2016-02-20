@@ -113,7 +113,7 @@ public class AuthTest {
         Assert.assertEquals(2, adminEmail.sentEmails());
         
         //activate
-        mockMvc.perform(patch("/u/v/test@test.test/blub").secure(true)).andExpect(status().is4xxClientError());
+        mockMvc.perform(patch("/u/v/test@test.test/blub").secure(true)).andExpect(status().is5xxServerError());
         Assert.assertEquals(3, adminEmail.sentEmails());
         
         //get correct token

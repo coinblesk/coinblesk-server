@@ -54,11 +54,11 @@ public class UserTest {
     }
     
     @Test
-    @DatabaseSetup("classpath:DbUnitFiles/addedUser.xml")
+    @DatabaseSetup("classpath:DbUnitFiles/addedUserWithId.xml")
     public void testGetUser() throws Exception {
         UserAccount u1 = userAccountService.getByEmail("test");
         Assert.assertNull(u1);
         UserAccount u2 = userAccountService.getByEmail("test@test.test");
-        Assert.assertEquals("test@test.test", u2.getPassword());
+        Assert.assertEquals("blub", u2.getPassword());
     }
 }

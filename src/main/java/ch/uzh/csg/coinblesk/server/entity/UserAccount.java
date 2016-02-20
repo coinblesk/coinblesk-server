@@ -33,8 +33,7 @@ public class UserAccount implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @Id
-    @SequenceGenerator(name = "pk_sequence", sequenceName = "useracccount_id_seq", allocationSize = 1)
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "pk_sequence")
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "ID", nullable = false)
     private long id;
     @Temporal(TemporalType.TIMESTAMP)

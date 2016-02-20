@@ -21,8 +21,7 @@ public class Refund implements Serializable {
     private static final long serialVersionUID = -7496348013847426913L;
 
     @Id
-    @SequenceGenerator(name = "pk_sequence", sequenceName = "refund_id_seq", allocationSize = 1)
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "pk_sequence")
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "ID", nullable = false)
     private long id;
     

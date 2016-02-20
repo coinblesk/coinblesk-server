@@ -544,7 +544,6 @@ public class BitcoinWalletServiceTest {
     
     @Test
     @Transactional
-    @ExpectedDatabase(value = "classpath:DbUnitFiles/addedTransaction.xml", assertionMode = DatabaseAssertionMode.NON_STRICT_UNORDERED)
     public void testAddDoubleSpendSpentOutputs() throws Exception {
     	WalletAppKit clientAppKit = getClientAppKit();
     	Transaction tx = FakeTxBuilder.createFakeTx(params, Coin.FIFTY_COINS, clientAppKit.wallet().currentReceiveAddress());
@@ -555,6 +554,8 @@ public class BitcoinWalletServiceTest {
     	Transaction tx2 = FakeTxBuilder.createFakeTx(params, Coin.FIFTY_COINS, clientAppKit.wallet().currentReceiveAddress(), new Address(params, new byte[20]))[1];
     	System.err.println(tx2);
     	Assert.assertFalse(bitcoinWalletService.getSpentOutputDao().isDoubleSpend(tx2));
+        //we need to check if we have one entry, doing this with DB unit does not work, as sequence of PK may be different
+        Assert.assertEquals(1, bitcoinWalletService.getSpentOutputDao().count());
     }
     
     @Test

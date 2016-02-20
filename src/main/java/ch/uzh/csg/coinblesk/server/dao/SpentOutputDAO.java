@@ -77,6 +77,14 @@ public class SpentOutputDAO {
 		final int result = em.createQuery(cq).executeUpdate();
 		LOGGER.debug("old entries removed: {}", result);
 	}
+        
+        public long count() {
+            CriteriaBuilder qb = em.getCriteriaBuilder();
+            CriteriaQuery<Long> cq = qb.createQuery(Long.class);
+            cq.select(qb.count(cq.from(SpentOutputs.class)));
+            return em.createQuery(cq).getSingleResult();
+        }
+          
 	
 	final static public class DBTask {
 		
