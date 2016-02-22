@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Coin;
@@ -64,6 +65,10 @@ public class WalletService {
     
     private BlockChain blockChain;
     
+    private PeerGroup peerGroup;
+    
+    private BlockStore blockStore;
+    
     @PostConstruct
     public void init() throws IOException, UnreadableWalletException, BlockStoreException {
         final NetworkParameters params = appConfig.getNetworkParameters();
@@ -97,9 +102,9 @@ public class WalletService {
         //wallet.currentAddress(KeyChain.KeyPurpose.RECEIVE_FUNDS);
         wallet.autosaveToFile(walletFile, 5, TimeUnit.SECONDS, null);
         walletWatchKeys();
-        BlockStore blockStore = new SPVBlockStore(params, chainFile);
+        blockStore = new SPVBlockStore(params, chainFile);
         blockChain = new BlockChain(params, blockStore);
-        PeerGroup peerGroup = new PeerGroup(params, blockChain);
+        peerGroup = new PeerGroup(params, blockChain);
         
         if (BitcoinNet.of(appConfig.getBitcoinNet()) == BitcoinNet.UNITTEST) {
             peerGroup.addAddress(new PeerAddress(InetAddress.getLocalHost(), params.getPort()));
@@ -157,6 +162,31 @@ public class WalletService {
         List<Script> list = new ArrayList<>(1);
         list.add(script);
         wallet.addWatchedScripts(list);
+    }
+    
+    @PreDestroy
+    public void shutdown() {
+        try {
+            if(peerGroup != null) {
+                peerGroup.stop();
+            }
+        } catch (Exception e) {
+            LOG.error("cannot stop peerGroup", e);
+        }
+        try {
+            if(blockStore != null) {
+                blockStore.close();
+            }
+        } catch (Exception e) {
+            LOG.error("cannot close blockStore", e);
+        }
+        try {
+            if(wallet != null) {
+                wallet.shutdownAutosaveAndWait();
+            }
+        } catch (Exception e) {
+            LOG.error("cannot shutdown wallet", e);
+        }
     }
     
     private void installShutdownHook(final PeerGroup peerGroup, final BlockStore blockStore, 
