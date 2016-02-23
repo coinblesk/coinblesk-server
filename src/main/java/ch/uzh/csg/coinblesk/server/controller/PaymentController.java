@@ -14,7 +14,7 @@ import ch.uzh.csg.coinblesk.server.utils.CoinUtils;
 import ch.uzh.csg.coinblesk.server.utils.Pair;
 import com.coinblesk.bitcoin.BitcoinNet;
 import com.coinblesk.json.BalanceTO;
-import com.coinblesk.json.CompleteSign;
+import com.coinblesk.json.CompleteSignTO;
 import com.coinblesk.json.KeyTO;
 import com.coinblesk.json.PrepareHalfSignTO;
 import com.coinblesk.json.RefundP2shTO;
@@ -213,7 +213,7 @@ public class PaymentController {
             final Address p2shAddressFrom = redeemScript.getToAddress(appConfig.getNetworkParameters());
             
             final Coin amountToSpend = Coin.valueOf(prepareSignTO.amountToSpend());
-            if(prepareSignTO.p2shAddress() == null || prepareSignTO.p2shAddress().length == 0) {
+            if(prepareSignTO.p2shAddress() == null || prepareSignTO.p2shAddress().isEmpty()) {
                 return new PrepareHalfSignTO().reason(PrepareHalfSignTO.Reason.ADDRESS_EMPTY);
             }
             final Address p2shAddressTo = new Address(appConfig.getNetworkParameters(), prepareSignTO.p2shAddress());
@@ -269,7 +269,7 @@ public class PaymentController {
             //get referenced tx with id-hash
             Transaction halfSignedTx = storedHalfTx.get(clientKey);
             
-            List<TransactionOutPoint> points = deserialize(refundP2shTO.transactionOutputs());
+            List<TransactionOutPoint> points = deserialize(refundP2shTO.transactionOutpoints());
             List<TransactionSignature> clientSigs = deserialize2(refundP2shTO.refundSignatures());
             
             List<TransactionOutput> outs = find(halfSignedTx.getOutputs(), p2shAddressFrom);
@@ -345,11 +345,11 @@ public class PaymentController {
             consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
     @ResponseBody
-    public CompleteSign sign(@RequestBody CompleteSign signTO) {
+    public CompleteSignTO sign(@RequestBody CompleteSignTO signTO) {
         
         final List<ECKey> keys = clientKeyService.getECKeysByClientPublicKey(signTO.clientPublicKey());
         if(keys == null || keys.size() !=2) {
-                return new CompleteSign().reason(CompleteSign.Reason.KEYS_NOT_FOUND);
+                return new CompleteSignTO().reason(CompleteSignTO.Reason.KEYS_NOT_FOUND);
         }
         
         Transaction fullTx = new Transaction(appConfig.getNetworkParameters(), signTO.fullSignedTransaction());
@@ -357,7 +357,7 @@ public class PaymentController {
         
         //broadcast to network
         
-        return new CompleteSign().setSuccess();
+        return new CompleteSignTO().setSuccess();
     }
     
     
@@ -469,22 +469,24 @@ public class PaymentController {
             final TransactionSignature serverSignature = new TransactionSignature(serverKey.sign(sighash), Transaction.SigHash.ALL, false);
             
             List<TransactionSignature> l = new ArrayList<>();
-            
+            sigs.add(serverSignature);
             //not known yet, fill with zero
             final TransactionSignature clientSignature;
-            if(clientSigs == null) {
-                clientSignature = new TransactionSignature(BigInteger.ZERO, BigInteger.ZERO);
-            } else {
+            if(clientSigs != null) {
+                
+            
                 clientSignature = clientSigs.get(i);
+            
+            
+                //TODO: does order matter? yes it does!
+            
+                l.add(serverSignature);
+                l.add(clientSignature);
+                
+                
+                final Script refundTransactionInputScript = ScriptBuilder.createP2SHMultiSigInputScript(l, redeemScript);
+                tx.getInput(i).setScriptSig(refundTransactionInputScript);
             }
-            
-            //TODO: does order matter?
-            
-            l.add(serverSignature);
-            l.add(clientSignature);
-            sigs.add(serverSignature);
-            final Script refundTransactionInputScript = ScriptBuilder.createP2SHMultiSigInputScript(l, redeemScript);
-            tx.getInput(i).setScriptSig(refundTransactionInputScript);
         }
         return new Pair<>(new PrepareHalfSignTO().setSuccess(), new Pair<>(tx, sigs));
     }

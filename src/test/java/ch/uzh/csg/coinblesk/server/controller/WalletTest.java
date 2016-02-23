@@ -12,7 +12,7 @@ import ch.uzh.csg.coinblesk.server.service.WalletService;
 import ch.uzh.csg.coinblesk.server.utilTest.TestBean;
 import ch.uzh.csg.coinblesk.server.utils.Pair;
 import com.coinblesk.json.BalanceTO;
-import com.coinblesk.json.CompleteSign;
+import com.coinblesk.json.CompleteSignTO;
 import com.coinblesk.json.KeyTO;
 import com.coinblesk.json.PrepareHalfSignTO;
 import com.coinblesk.json.RefundP2shTO;
@@ -153,7 +153,7 @@ public class WalletTest {
         keys.add(ecKeyClient);
         keys.add(ECKey.fromPublicOnly(Base64.getDecoder().decode(status.publicKey())));
         final Script redeemScript = ScriptBuilder.createP2SHOutputScript(2, keys);
-        Transaction tx = FakeTxBuilder.createFakeTx(appConfig.getNetworkParameters(), Coin.MICROCOIN, redeemScript.getToAddress(appConfig.getNetworkParameters()));
+        Transaction tx = FakeTxBuilder.createFakeTx(appConfig.getNetworkParameters(), Coin.COIN, redeemScript.getToAddress(appConfig.getNetworkParameters()));
         Assert.assertTrue(tx.getOutputs().get(0).getScriptPubKey().isPayToScriptHash());
         Assert.assertTrue(tx.getOutputs().get(1).getScriptPubKey().isSentToAddress());
         //create refund tx based on the topup
@@ -211,12 +211,12 @@ public class WalletTest {
     
     @Test
     public void testRequestBTC() throws Exception {
-        //Merchant
+        //Merchant Setup
         ECKey ecKeyMerchant = new ECKey();
         ECKey ecKeyServerMerchant = register(ecKeyMerchant);
         Script redeemScriptServerMerchant = createRedeemScript(ecKeyMerchant, ecKeyServerMerchant);
         Address p2shAddressMerchant = redeemScriptServerMerchant.getToAddress(appConfig.getNetworkParameters());
-        //Client
+        //Client Seutp
         ECKey ecKeyClient = new ECKey();
         ECKey ecKeyServerClient = register(ecKeyClient);
         Script redeemScriptServerClient = createRedeemScript(ecKeyClient, ecKeyServerClient);
@@ -224,83 +224,86 @@ public class WalletTest {
         //preload client
         Transaction funding = sendFakeCoins(Coin.valueOf(10000), p2shAddressClient);
         
-        //Merchant requests 1000s to address p2shAddressTo, sends to client
+        //Merchant requests 1000s to address p2shAddressTo, sends to Client
         Coin amountToRequest = Coin.valueOf(1000);
         
-        //client sends ok, merchant forwards to server TODO: signatures or encryption
+        //Client sends ok, Merchant forwards to Server 
         PrepareHalfSignTO prepareHalfSignTO = new PrepareHalfSignTO();
         prepareHalfSignTO.amountToSpend(amountToRequest.longValue());
         prepareHalfSignTO.clientPublicKey(ecKeyClient.getPubKey());
-        prepareHalfSignTO.p2shAddress(p2shAddressMerchant.getHash160());
-        //
+        prepareHalfSignTO.p2shAddress(p2shAddressMerchant.toString());
+        //TODO: signatures or encryption
         MvcResult res = mockMvc.perform(post("/p/p").secure(true).
                 contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(prepareHalfSignTO))).andExpect(status().isOk()).andReturn();
         PrepareHalfSignTO status = GSON.fromJson(res.getResponse().getContentAsString(), PrepareHalfSignTO.class);
+        //Merchant get back a half signed transaction from Server
         Transaction halfSignedTx = new Transaction(appConfig.getNetworkParameters(), status.halfSignedTransaction());
         
-        //now, we give the sigs to the client
+        //Merchant only gives the signatures to the Client
         List<TransactionSignature> sigs = deserialize(status.signatures());
-                
+         
         
-        // those sigs go to the client
-        //client rebuilds the tx
+        //Now we are at the Client Side
+        //Client rebuilds the tx and adds the signatures from the Server, making it a full transaction
         List<TransactionOutput> outputs = funding.getOutputs();
         Pair<Transaction,List<TransactionSignature>> fullTxPair = PaymentController.createHalfSignedTx(appConfig.getNetworkParameters(), outputs, 
                 p2shAddressClient, p2shAddressMerchant, amountToRequest, redeemScriptServerClient, ecKeyClient, sigs).element1();
-        //now we have the full tx, based on that create the refund tx
+        //Client now has the full tx, based on that, Client creates the refund tx
         Pair<Transaction,Pair<List<TransactionOutPoint>,List<TransactionSignature>>> pair = 
                 generateRefundTransaction2(find(fullTxPair.element0().getOutputs(), p2shAddressClient), 
                         ecKeyClient.toAddress(appConfig.getNetworkParameters()), redeemScriptServerClient, ecKeyClient);
-        sigs = pair.element1().element1();
-        
+        //The refund is currently only signed by the Client (half)
         Transaction halfSignedRefundTx = pair.element0();
-        //this info goes to the server
-        //server now builds the full refund and signs it, send back sigs
+        //The Client sends the refund signatures and the transaction outpoints to the Merchant
+        //The Merchant forwards it to the server
         RefundP2shTO refundP2shTO = new RefundP2shTO();
         refundP2shTO.clientPublicKey(Base64.getEncoder().encodeToString(ecKeyClient.getPubKey()));
-        refundP2shTO.refundTransaction(serialize(pair.element1().element0()));
+        refundP2shTO.transactionOutpoints(serialize(pair.element1().element0()));
         refundP2shTO.refundSignatures(serialize2(pair.element1().element1()));
         
         res = mockMvc.perform(post("/p/f").secure(true).
                 contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(refundP2shTO))).andExpect(status().isOk()).andReturn();
         RefundP2shTO status2 = GSON.fromJson(res.getResponse().getContentAsString(), RefundP2shTO.class);
         Assert.assertTrue(status2.isSuccess());
-        //we now have the full refund tx and including the sigs, for convenincie, the sigs are in the json as well
-        //send the sigs to the client
+        //Server sends back the full refund tx and including the sigs, for convenincie, the sigs are in the json as well
+        //Server sends sigs to Merchant, Merchant to Client
+        //Now, Client applies the signatures and gets the complete Refund TX
         Transaction refundClient = signFully(halfSignedRefundTx, pair.element1().element1(), 
                 deserialize(status2.refundSignatures()), redeemScriptServerClient);
         Transaction refundServer = new Transaction(appConfig.getNetworkParameters(), status2.fullRefundTransaction());
+        //test both refund tx, as built by the Client and by the Server
         Assert.assertEquals(refundClient, refundServer);
         
-        //now we are ok, send the sigs to the sever so that the server can create the full tx, the merchant can build this as well.
-        Transaction fullTxMerchant = signFully(halfSignedTx, fullTxPair.element1(), sigs, redeemScriptServerClient);
-        CompleteSign cs = new CompleteSign();
+        //Client is now to send the sigs in order that the server can make a full tx. 
+        List<TransactionSignature> clientSigs = sigs;
+        //In fact also the Merchant has the information to build a full tx. The Merchant sends the full tx to the server
+        Transaction fullTxMerchant = signFully(halfSignedTx, fullTxPair.element1(), clientSigs, redeemScriptServerClient);
+        CompleteSignTO cs = new CompleteSignTO();
         cs.clientPublicKey(ecKeyClient.getPubKey());
         cs.fullSignedTransaction(fullTxMerchant.unsafeBitcoinSerialize());
         res = mockMvc.perform(post("/p/s").secure(true).
                 contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(cs))).andExpect(status().isOk()).andReturn();
-        CompleteSign status3 = GSON.fromJson(res.getResponse().getContentAsString(), CompleteSign.class);
+        CompleteSignTO status3 = GSON.fromJson(res.getResponse().getContentAsString(), CompleteSignTO.class);
+        //success!
         Assert.assertTrue(status3.isSuccess());
+        //Server or Merchant can broadcast the full tx
         sendFakeBroadcast(fullTxMerchant);
         
-        System.out.println("client: "+fullTxMerchant);
-        for(TransactionInput ti:fullTxMerchant.getInputs()) {
-            System.out.println("clientI11: "+bytesToHex(ti.bitcoinSerialize()));
-        }
-        for(TransactionOutput to:fullTxMerchant.getOutputs()) {
-            System.out.println("clientO11: "+bytesToHex(to.bitcoinSerialize()));
-        }
-        
-        System.out.println("server: "+fullTxPair.element0());
-        for(TransactionInput ti:fullTxPair.element0().getInputs()) {
-            System.out.println("serverI11: "+bytesToHex(ti.bitcoinSerialize()));
-        }
-        for(TransactionOutput to:fullTxPair.element0().getOutputs()) {
-            System.out.println("serverO11: "+bytesToHex(to.bitcoinSerialize()));
-        }
-        
         Assert.assertEquals(fullTxMerchant, fullTxPair.element0());
-        //check balance
+        
+        //check balance on Client
+        String clientPublicKey = Base64.getEncoder().encodeToString(ecKeyClient.getPubKey());
+        KeyTO keyTO = new KeyTO().publicKey(clientPublicKey);
+        res = mockMvc.perform(get("/p/b").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
+        BalanceTO balance = GSON.fromJson(res.getResponse().getContentAsString(), BalanceTO.class);
+        Assert.assertEquals("0.00008", balance.balance());
+        
+        //check balance on Merchant
+        String merchantPublicKey = Base64.getEncoder().encodeToString(ecKeyMerchant.getPubKey());
+        keyTO = new KeyTO().publicKey(merchantPublicKey);
+        res = mockMvc.perform(get("/p/b").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
+        balance = GSON.fromJson(res.getResponse().getContentAsString(), BalanceTO.class);
+        Assert.assertEquals("0.00001", balance.balance());
     }
     
     final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
