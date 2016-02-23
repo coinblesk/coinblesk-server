@@ -1,3 +1,7 @@
+dependencies {
+    compile 'org.postgresql:postgresql:9.4.1208.jre7'
+}
+
 remotes {
     test {
         host = 'bitcoin2-test.csg.uzh.ch'
