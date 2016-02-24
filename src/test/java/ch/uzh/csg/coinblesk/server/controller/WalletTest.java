@@ -8,6 +8,7 @@ package ch.uzh.csg.coinblesk.server.controller;
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import ch.uzh.csg.coinblesk.server.config.BeanConfig;
 import ch.uzh.csg.coinblesk.server.config.SecurityConfig;
+import static ch.uzh.csg.coinblesk.server.controller.PaymentController.merge;
 import ch.uzh.csg.coinblesk.server.service.WalletService;
 import ch.uzh.csg.coinblesk.server.utilTest.TestBean;
 import ch.uzh.csg.coinblesk.server.utils.Pair;
@@ -249,28 +250,55 @@ public class WalletTest {
         Pair<Transaction,List<TransactionSignature>> fullTxPair = PaymentController.createHalfSignedTx(appConfig.getNetworkParameters(), outputs, 
                 p2shAddressClient, p2shAddressMerchant, amountToRequest, redeemScriptServerClient, ecKeyClient, sigs).element1();
         //Client now has the full tx, based on that, Client creates the refund tx
+        
+        List<TransactionOutput> clientWalletOutputs = funding.getOutputs();
+        List<TransactionOutput> clientOuts = merge(appConfig.getNetworkParameters(), 
+        fullTxPair.element0(), clientWalletOutputs, p2shAddressClient);
+        System.err.println("On the client side we have "+clientOuts.size()+" outputs" + clientOuts);
+        
         Pair<Transaction,Pair<List<TransactionOutPoint>,List<TransactionSignature>>> pair = 
-                generateRefundTransaction2(find(fullTxPair.element0().getOutputs(), p2shAddressClient), 
+                generateRefundTransaction2(clientOuts, 
                         ecKeyClient.toAddress(appConfig.getNetworkParameters()), redeemScriptServerClient, ecKeyClient);
+        System.err.println("On the client side we have points "+pair.element1().element0().size()+" outputs" + pair.element1().element0());
         //The refund is currently only signed by the Client (half)
         Transaction halfSignedRefundTx = pair.element0();
         //The Client sends the refund signatures and the transaction outpoints to the Merchant
-        //The Merchant forwards it to the server
+        //The Merchant forwards it to the server, adds its refund signature as well
         RefundP2shTO refundP2shTO = new RefundP2shTO();
-        refundP2shTO.clientPublicKey(Base64.getEncoder().encodeToString(ecKeyClient.getPubKey()));
+        refundP2shTO.clientPublicKey(ecKeyClient.getPubKey());
         refundP2shTO.transactionOutpoints(serialize(pair.element1().element0()));
-        refundP2shTO.refundSignatures(serialize2(pair.element1().element1()));
+        refundP2shTO.refundSignaturesClient(serialize2(pair.element1().element1()));
+        //This goes from the Client to the Merhchant, which recreates the refund tx and adds its sigs
+        
+        List<TransactionOutput> merchantWalletOutputs = walletService.getOutputs(p2shAddressMerchant);
+        //TODO: halfSignedTx is irrelevant in this case
+        List<TransactionOutput> merchantOuts = merge(appConfig.getNetworkParameters(), 
+            halfSignedTx, merchantWalletOutputs, p2shAddressMerchant);
+        
+        Pair<Transaction,List<TransactionSignature>> pairRefundMerchandHalf = PaymentController.generateRefundTransaction2(appConfig.getNetworkParameters(), 
+                merchantOuts, 
+                p2shAddressMerchant, 
+                redeemScriptServerMerchant, 
+                ecKeyMerchant, 
+                pair.element1().element0(), null);
+        
+        refundP2shTO.merchantPublicKey(ecKeyMerchant.getPubKey());
+        refundP2shTO.refundSignaturesMerchant(serialize2(pairRefundMerchandHalf.element1()));
         
         res = mockMvc.perform(post("/p/f").secure(true).
                 contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(refundP2shTO))).andExpect(status().isOk()).andReturn();
         RefundP2shTO status2 = GSON.fromJson(res.getResponse().getContentAsString(), RefundP2shTO.class);
         Assert.assertTrue(status2.isSuccess());
         //Server sends back the full refund tx and including the sigs, for convenincie, the sigs are in the json as well
-        //Server sends sigs to Merchant, Merchant to Client
+        //Server sends sigs to Merchant, Merchant has now the refund as well
+        Transaction refundMerchant = new Transaction(appConfig.getNetworkParameters(), status2.fullRefundTransactionMerchant());
+        Assert.assertNotNull(refundMerchant);
+        
+        //now, Merchant to Client, only the  sigs
         //Now, Client applies the signatures and gets the complete Refund TX
         Transaction refundClient = signFully(halfSignedRefundTx, pair.element1().element1(), 
-                deserialize(status2.refundSignatures()), redeemScriptServerClient);
-        Transaction refundServer = new Transaction(appConfig.getNetworkParameters(), status2.fullRefundTransaction());
+                deserialize(status2.refundSignaturesServer()), redeemScriptServerClient);
+        Transaction refundServer = new Transaction(appConfig.getNetworkParameters(), status2.fullRefundTransactionClient());
         //test both refund tx, as built by the Client and by the Server
         Assert.assertEquals(refundClient, refundServer);
         

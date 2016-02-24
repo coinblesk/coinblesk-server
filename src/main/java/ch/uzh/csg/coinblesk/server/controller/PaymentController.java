@@ -25,6 +25,7 @@ import java.util.ArrayList;
 
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import org.bitcoinj.core.Address;
@@ -261,29 +262,56 @@ public class PaymentController {
         LOG.debug("Prepare half signed {}", refundP2shTO.clientPublicKey());
         try {
             //get client public key (identifier)
-            final List<ECKey> keys = clientKeyService.getECKeysByClientPublicKey(refundP2shTO.clientPublicKey());
-            final ECKey clientKey = keys.get(0);
-            final ECKey serverKey = keys.get(1);
-            final Script redeemScript = ScriptBuilder.createP2SHOutputScript(2, keys);
-            final Address p2shAddressFrom = redeemScript.getToAddress(appConfig.getNetworkParameters());
+            final List<ECKey> keysClient = clientKeyService.getECKeysByClientPublicKey(refundP2shTO.clientPublicKey());
+            final ECKey clientKey = keysClient.get(0);
+            final ECKey serverClientKey = keysClient.get(1);
+            final Script serverClientRedeemScript = ScriptBuilder.createP2SHOutputScript(2, keysClient);
+            final Address p2shAddressFrom = serverClientRedeemScript.getToAddress(appConfig.getNetworkParameters());
+            //get merchant public key
+            final List<ECKey> keysMerchant = clientKeyService.getECKeysByClientPublicKey(refundP2shTO.merchantPublicKey());
+            final ECKey merchantKey = keysMerchant.get(0);
+            final ECKey serverMerchantKey = keysMerchant.get(1);
+            final Script serverMerchantRedeemScript = ScriptBuilder.createP2SHOutputScript(2, keysMerchant);
+            final Address p2shAddressTo = serverMerchantRedeemScript.getToAddress(appConfig.getNetworkParameters());
+            
             //get referenced tx with id-hash
             Transaction halfSignedTx = storedHalfTx.get(clientKey);
             
             List<TransactionOutPoint> points = deserialize(refundP2shTO.transactionOutpoints());
-            List<TransactionSignature> clientSigs = deserialize2(refundP2shTO.refundSignatures());
+            List<TransactionSignature> clientSigs = deserialize2(refundP2shTO.refundSignaturesClient());
+            List<TransactionSignature> merchantSigs = deserialize2(refundP2shTO.refundSignaturesMerchant());
             
-            List<TransactionOutput> outs = find(halfSignedTx.getOutputs(), p2shAddressFrom);
-            Pair<Transaction,List<TransactionSignature>> pair = generateRefundTransaction2(
-                    outs, 
+            //Client refund is here, we can do a full refund
+            List<TransactionOutput> clientWalletOutputs = walletService.getOutputs(p2shAddressFrom);
+            List<TransactionOutput> clientOuts = merge(appConfig.getNetworkParameters(), 
+                    halfSignedTx, clientWalletOutputs, p2shAddressFrom);
+            System.err.println("On the server side we have "+clientOuts.size()+" outputs" + clientOuts);
+            System.err.println("On the server side we have points "+points.size()+" outputs" + points);
+            
+            Pair<Transaction,List<TransactionSignature>> pair = generateRefundTransaction2(appConfig.getNetworkParameters(),
+                    clientOuts, 
                     clientKey.toAddress(appConfig.getNetworkParameters()), 
-                    redeemScript, 
-                    serverKey, 
+                    serverClientRedeemScript, 
+                    serverClientKey, 
                     points, 
                     clientSigs);
-            
             RefundP2shTO retVal = new RefundP2shTO();
-            retVal.setSuccess().fullRefundTransaction(pair.element0().unsafeBitcoinSerialize());
-            retVal.refundSignatures(serialize(pair.element1()));
+            retVal.setSuccess().fullRefundTransactionClient(pair.element0().unsafeBitcoinSerialize());
+            retVal.refundSignaturesServer(serialize(pair.element1()));
+            //Merchant refund is here, we can do a full refund
+            
+            List<TransactionOutput> merchantWalletOutputs = walletService.getOutputs(p2shAddressTo);
+            List<TransactionOutput> merchantOuts = merge(appConfig.getNetworkParameters(), 
+                    halfSignedTx, merchantWalletOutputs, p2shAddressTo);
+            
+            Pair<Transaction,List<TransactionSignature>> pairMerchant = generateRefundTransaction2(appConfig.getNetworkParameters(),
+                    merchantOuts, 
+                    merchantKey.toAddress(appConfig.getNetworkParameters()), 
+                    serverMerchantRedeemScript, 
+                    serverMerchantKey, 
+                    points, 
+                    merchantSigs);
+            retVal.setSuccess().fullRefundTransactionMerchant(pairMerchant.element0().unsafeBitcoinSerialize());
             
             return retVal;
         
@@ -295,7 +323,7 @@ public class PaymentController {
         }
     }
     
-    private List<TransactionOutput> find(List<TransactionOutput> input, Address to) {
+    /*private List<TransactionOutput> find(List<TransactionOutput> input, Address to) {
         List<TransactionOutput> retVal = new ArrayList<>();
         for(TransactionOutput tout:input) {
             Address a = tout.getAddressFromP2SH(appConfig.getNetworkParameters());
@@ -304,12 +332,12 @@ public class PaymentController {
             }
         }
         return retVal;
-    }
+    }*/
     
-    private Pair<Transaction,List<TransactionSignature>> generateRefundTransaction2(
+    public static Pair<Transaction,List<TransactionSignature>> generateRefundTransaction2(NetworkParameters params,
             List<TransactionOutput> outputs, Address refund, Script redeemScript, ECKey ecKeyServer, 
             List<TransactionOutPoint> points,List<TransactionSignature> clientSigs) {
-        final Transaction refundTransaction = new Transaction(appConfig.getNetworkParameters());
+        final Transaction refundTransaction = new Transaction(params);
         final long unixTime = ((System.currentTimeMillis() / 1000L) / (10 * 60)) * (10 * 60);
         //TODO: send ower network as well,
         final long lockTime = unixTime + (LOCK_TIME_MONTHS * UNIX_TIME_MONTH);
@@ -317,7 +345,7 @@ public class PaymentController {
         for(int i=0;i<outputs.size();i++) {
             TransactionOutput output = outputs.get(i);
             TransactionOutPoint outPoint = points.get(i);
-            TransactionInput ti = new TransactionInput(appConfig.getNetworkParameters(), null, redeemScript.getProgram(), outPoint, output.getValue());
+            TransactionInput ti = new TransactionInput(params, null, redeemScript.getProgram(), outPoint, output.getValue());
             refundTransaction.addInput(ti);
             remainingAmount = remainingAmount.add(output.getValue());
         }
@@ -330,13 +358,15 @@ public class PaymentController {
         for(int i=0;i<refundTransaction.getInputs().size();i++) {
             final Sha256Hash sighash = refundTransaction.hashForSignature(i, redeemScript, Transaction.SigHash.ALL, false);
             final TransactionSignature serverSignature = new TransactionSignature(ecKeyServer.sign(sighash), Transaction.SigHash.ALL, false);
-            List<TransactionSignature> l = new ArrayList<>();
-            final TransactionSignature clientSignature = clientSigs.get(i);
-            l.add(clientSignature);
-            l.add(serverSignature);
             serverSigs.add(serverSignature);
-            final Script refundTransactionInputScript = ScriptBuilder.createP2SHMultiSigInputScript(l, redeemScript);
-            refundTransaction.getInput(i).setScriptSig(refundTransactionInputScript);
+            if(clientSigs != null) {
+                List<TransactionSignature> l = new ArrayList<>();
+                final TransactionSignature clientSignature = clientSigs.get(i);
+                l.add(clientSignature);
+                l.add(serverSignature);
+                final Script refundTransactionInputScript = ScriptBuilder.createP2SHMultiSigInputScript(l, redeemScript);
+                refundTransaction.getInput(i).setScriptSig(refundTransactionInputScript);
+            }
         }
         return new Pair<>(refundTransaction, serverSigs);
     }
@@ -515,5 +545,43 @@ public class PaymentController {
             retVal.add(new RefundP2shTO.TxSig().clientSignatureR(sig.r.toString()).clientSignatureS(sig.s.toString()));
         }
         return retVal;
+    }
+
+    public static List<TransactionOutput> merge(NetworkParameters params, Transaction halfSignedTx, List<TransactionOutput> walletOutputs, Address p2shAddress) {
+        //first remove the outputs from walletOutput that are/will be burned by halfSignedTx
+        List<TransactionOutput> newOutputs = new ArrayList<>();
+        for(TransactionOutput to:walletOutputs) {
+            boolean safeToAdd = true;
+            if(!isOurAddress(params, to, p2shAddress)) {
+                safeToAdd = false;
+                break;
+            }
+            for(TransactionInput input:halfSignedTx.getInputs()) {
+                TransactionOutput burnedOutput = input.getConnectedOutput();
+                if(to.equals(burnedOutput)) {
+                    safeToAdd = false;
+                    break;
+                }
+            }
+            if(safeToAdd) {
+                newOutputs.add(to);
+            }
+        }
+        //then add the outputs from the halfSignedTx that will be available in the future
+        
+        for(TransactionOutput tout:halfSignedTx.getOutputs()) {
+            if(isOurAddress(params, tout, p2shAddress)) {
+                newOutputs.add(tout);
+            }
+        }
+        return newOutputs;
+    }
+    
+    private static boolean isOurAddress(NetworkParameters params, TransactionOutput to, Address ourAddress) {
+        Address a = to.getAddressFromP2SH(params);
+        if(a != null && a.equals(ourAddress)) {
+            return true;
+        }
+        return false;
     }
 }
