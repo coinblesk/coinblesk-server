@@ -194,7 +194,7 @@ public class PaymentController {
         }
     }
     
-    private static Map<ECKey, Transaction> storedHalfTx = new HashMap<>();
+    private static Transaction debug;
     
     @RequestMapping(value = {"/prepare", "/p"}, method = RequestMethod.POST,
             consumes = "application/json; charset=UTF-8",
@@ -218,6 +218,9 @@ public class PaymentController {
                 return new PrepareHalfSignTO().reason(PrepareHalfSignTO.Reason.ADDRESS_EMPTY);
             }
             final Address p2shAddressTo = new Address(appConfig.getNetworkParameters(), prepareSignTO.p2shAddress());
+            
+           
+            
             if(!clientKeyService.containsP2SH(p2shAddressFrom)) {
                 return new PrepareHalfSignTO().reason(PrepareHalfSignTO.Reason.ADDRESS_UNKNOWN);
             }
@@ -235,9 +238,7 @@ public class PaymentController {
             
             if(halfSignedTx.element0().isSuccess()) {
                 halfSignedTx.element0().halfSignedTransaction(halfSignedTx.element1().element0().unsafeBitcoinSerialize());
-                //store halfSignedTx for client
-                //TODO: make this a proper storage
-                storedHalfTx.put(clientKey, halfSignedTx.element1().element0());
+                debug = halfSignedTx.element1().element0();
             }
             halfSignedTx.element0().signatures(serialize(halfSignedTx.element1().element1()));
             return halfSignedTx.element0();
@@ -274,8 +275,20 @@ public class PaymentController {
             final Script serverMerchantRedeemScript = ScriptBuilder.createP2SHOutputScript(2, keysMerchant);
             final Address p2shAddressTo = serverMerchantRedeemScript.getToAddress(appConfig.getNetworkParameters());
             
-            //get referenced tx with id-hash
-            Transaction halfSignedTx = storedHalfTx.get(clientKey);
+            System.err.println("from: "+p2shAddressFrom+" to: "+p2shAddressTo);
+            
+            //get referenced tx and connect it to our wallet again
+            /*final Transaction halfSignedTx2 = new Transaction(appConfig.getNetworkParameters() ,refundP2shTO.halfSignedTransaction());
+            for(TransactionInput ti:halfSignedTx2.getInputs()) {
+                TransactionInput.ConnectionResult rc = ti.connect(walletService.unspentTransactions(), TransactionInput.ConnectMode.ABORT_ON_CONFLICT);
+                System.err.println("rc:"+rc);
+            }*/
+            final Transaction halfSignedTx = debug;
+            System.err.println("hhhh: "+halfSignedTx);
+            System.err.println("hhhh111: "+halfSignedTx.getInput(0).getConnectedOutput());
+            System.err.println("aaaa: "+debug);
+            System.err.println("aaaa111: "+debug.getInput(0).getConnectedOutput());
+            
             
             List<TransactionOutPoint> points = deserialize(refundP2shTO.transactionOutpoints());
             List<TransactionSignature> clientSigs = deserialize2(refundP2shTO.refundSignaturesClient());
@@ -553,9 +566,8 @@ public class PaymentController {
         for(TransactionOutput to:walletOutputs) {
             boolean safeToAdd = true;
             if(!isOurAddress(params, to, p2shAddress)) {
-                safeToAdd = false;
                 break;
-            }
+            } 
             for(TransactionInput input:halfSignedTx.getInputs()) {
                 TransactionOutput burnedOutput = input.getConnectedOutput();
                 if(to.equals(burnedOutput)) {
@@ -563,8 +575,12 @@ public class PaymentController {
                     break;
                 }
             }
+            
             if(safeToAdd) {
                 newOutputs.add(to);
+                System.err.println("addtx:"+to);
+            } else {
+                System.err.println("notaddtx:"+to);
             }
         }
         //then add the outputs from the halfSignedTx that will be available in the future
@@ -572,6 +588,9 @@ public class PaymentController {
         for(TransactionOutput tout:halfSignedTx.getOutputs()) {
             if(isOurAddress(params, tout, p2shAddress)) {
                 newOutputs.add(tout);
+                System.err.println("addtx2:"+tout);
+            } else {
+                System.err.println("notaddtx2:"+tout);
             }
         }
         return newOutputs;

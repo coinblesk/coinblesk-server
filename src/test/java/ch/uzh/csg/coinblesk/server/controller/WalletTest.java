@@ -223,10 +223,10 @@ public class WalletTest {
         Script redeemScriptServerClient = createRedeemScript(ecKeyClient, ecKeyServerClient);
         Address p2shAddressClient = redeemScriptServerClient.getToAddress(appConfig.getNetworkParameters());
         //preload client
-        Transaction funding = sendFakeCoins(Coin.valueOf(10000), p2shAddressClient);
+        Transaction funding = sendFakeCoins(Coin.valueOf(123450), p2shAddressClient);
         
         //Merchant requests 1000s to address p2shAddressTo, sends to Client
-        Coin amountToRequest = Coin.valueOf(1000);
+        Coin amountToRequest = Coin.valueOf(9876);
         
         //Client sends ok, Merchant forwards to Server 
         PrepareHalfSignTO prepareHalfSignTO = new PrepareHalfSignTO();
@@ -263,7 +263,7 @@ public class WalletTest {
         //The refund is currently only signed by the Client (half)
         Transaction halfSignedRefundTx = pair.element0();
         //The Client sends the refund signatures and the transaction outpoints to the Merchant
-        //The Merchant forwards it to the server, adds its refund signature as well
+        //The Merchant forwards it to the server, adds its refund signature as well, and the half signed transaction from previous (state)
         RefundP2shTO refundP2shTO = new RefundP2shTO();
         refundP2shTO.clientPublicKey(ecKeyClient.getPubKey());
         refundP2shTO.transactionOutpoints(serialize(pair.element1().element0()));
@@ -284,6 +284,7 @@ public class WalletTest {
         
         refundP2shTO.merchantPublicKey(ecKeyMerchant.getPubKey());
         refundP2shTO.refundSignaturesMerchant(serialize2(pairRefundMerchandHalf.element1()));
+        refundP2shTO.halfSignedTransaction(halfSignedTx.unsafeBitcoinSerialize());
         
         res = mockMvc.perform(post("/p/f").secure(true).
                 contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(refundP2shTO))).andExpect(status().isOk()).andReturn();
@@ -315,23 +316,22 @@ public class WalletTest {
         //success!
         Assert.assertTrue(status3.isSuccess());
         //Server or Merchant can broadcast the full tx
-        sendFakeBroadcast(fullTxMerchant);
-        
         Assert.assertEquals(fullTxMerchant, fullTxPair.element0());
+        sendFakeBroadcast(fullTxMerchant);
         
         //check balance on Client
         String clientPublicKey = Base64.getEncoder().encodeToString(ecKeyClient.getPubKey());
         KeyTO keyTO = new KeyTO().publicKey(clientPublicKey);
         res = mockMvc.perform(get("/p/b").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
         BalanceTO balance = GSON.fromJson(res.getResponse().getContentAsString(), BalanceTO.class);
-        Assert.assertEquals("0.00008", balance.balance());
+        Assert.assertEquals("0.00108574", balance.balance());
         
         //check balance on Merchant
         String merchantPublicKey = Base64.getEncoder().encodeToString(ecKeyMerchant.getPubKey());
         keyTO = new KeyTO().publicKey(merchantPublicKey);
         res = mockMvc.perform(get("/p/b").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
         balance = GSON.fromJson(res.getResponse().getContentAsString(), BalanceTO.class);
-        Assert.assertEquals("0.00001", balance.balance());
+        Assert.assertEquals("0.00009876", balance.balance());
     }
     
     final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();

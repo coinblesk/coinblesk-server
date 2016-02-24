@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -25,6 +26,7 @@ import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerAddress;
 import org.bitcoinj.core.PeerGroup;
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionOutput;
@@ -41,6 +43,7 @@ import org.bitcoinj.store.UnreadableWalletException;
 import org.bitcoinj.wallet.CoinSelection;
 import org.bitcoinj.wallet.CoinSelector;
 import org.bitcoinj.wallet.KeyChain;
+import org.bitcoinj.wallet.WalletTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -162,6 +165,11 @@ public class WalletService {
         List<Script> list = new ArrayList<>(1);
         list.add(script);
         wallet.addWatchedScripts(list);
+       
+    }
+    
+    public Map<Sha256Hash, Transaction> unspentTransactions() {
+         return wallet.getTransactionPool(WalletTransaction.Pool.UNSPENT);
     }
     
     @PreDestroy
