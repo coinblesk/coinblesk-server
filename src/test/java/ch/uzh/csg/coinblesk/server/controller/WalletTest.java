@@ -247,13 +247,15 @@ public class WalletTest {
         //Now we are at the Client Side
         //Client rebuilds the tx and adds the signatures from the Server, making it a full transaction
         List<TransactionOutput> outputs = funding.getOutputs();
-        Pair<Transaction,List<TransactionSignature>> fullTxPair = PaymentController.createHalfSignedTx(appConfig.getNetworkParameters(), outputs, 
-                p2shAddressClient, p2shAddressMerchant, amountToRequest, redeemScriptServerClient, ecKeyClient, sigs).element1();
+        Pair<Transaction,List<TransactionSignature>> fullTxPair = PaymentController.createHalfSignedTx(
+                appConfig.getNetworkParameters(), outputs, 
+                p2shAddressClient, p2shAddressMerchant, amountToRequest, redeemScriptServerClient, 
+                ecKeyClient, sigs, false).element1();
         //Client now has the full tx, based on that, Client creates the refund tx
         
         List<TransactionOutput> clientWalletOutputs = funding.getOutputs();
         List<TransactionOutput> clientOuts = merge(appConfig.getNetworkParameters(), 
-        fullTxPair.element0(), clientWalletOutputs, p2shAddressClient);
+        fullTxPair.element0(), clientWalletOutputs, p2shAddressClient, null);
         System.err.println("On the client side we have "+clientOuts.size()+" outputs" + clientOuts);
         
         Pair<Transaction,Pair<List<TransactionOutPoint>,List<TransactionSignature>>> pair = 
@@ -273,7 +275,7 @@ public class WalletTest {
         List<TransactionOutput> merchantWalletOutputs = walletService.getOutputs(p2shAddressMerchant);
         //TODO: halfSignedTx is irrelevant in this case
         List<TransactionOutput> merchantOuts = merge(appConfig.getNetworkParameters(), 
-            halfSignedTx, merchantWalletOutputs, p2shAddressMerchant);
+            halfSignedTx, merchantWalletOutputs, p2shAddressMerchant, null);
         
         Pair<Transaction,List<TransactionSignature>> pairRefundMerchandHalf = PaymentController.generateRefundTransaction2(appConfig.getNetworkParameters(), 
                 merchantOuts, 
@@ -294,6 +296,8 @@ public class WalletTest {
         //Server sends sigs to Merchant, Merchant has now the refund as well
         Transaction refundMerchant = new Transaction(appConfig.getNetworkParameters(), status2.fullRefundTransactionMerchant());
         Assert.assertNotNull(refundMerchant);
+        Assert.assertEquals(1, refundMerchant.getInputs().size());
+        Assert.assertEquals(1, refundMerchant.getOutputs().size());
         
         //now, Merchant to Client, only the  sigs
         //Now, Client applies the signatures and gets the complete Refund TX
@@ -302,6 +306,8 @@ public class WalletTest {
         Transaction refundServer = new Transaction(appConfig.getNetworkParameters(), status2.fullRefundTransactionClient());
         //test both refund tx, as built by the Client and by the Server
         Assert.assertEquals(refundClient, refundServer);
+        Assert.assertEquals(1, refundClient.getInputs().size());
+        Assert.assertEquals(1, refundClient.getOutputs().size());
         
         //Client is now to send the sigs in order that the server can make a full tx. 
         List<TransactionSignature> clientSigs = sigs;
