@@ -221,8 +221,6 @@ public class PaymentController {
             }
             final Address p2shAddressTo = new Address(appConfig.getNetworkParameters(), prepareSignTO.p2shAddress());
             
-           
-            
             if(!clientKeyService.containsP2SH(p2shAddressFrom)) {
                 return new PrepareHalfSignTO().reason(PrepareHalfSignTO.Reason.ADDRESS_UNKNOWN);
             }
@@ -235,16 +233,20 @@ public class PaymentController {
             //TODO: check if outputs not already spent (double spending)
             //now we have all valid outputs and we know its before the refund lock time gets valid. So we can sign this tx
             
-            Pair<PrepareHalfSignTO, Pair<Transaction,List<TransactionSignature>>> halfSignedTx = createHalfSignedTx(
+            Transaction tx = BitcoinUtils.createTx(
                     appConfig.getNetworkParameters(), outputs, p2shAddressFrom, 
-                    p2shAddressTo, amountToSpend, redeemScript, serverKey, null, true);
+                    p2shAddressTo, amountToSpend.value, redeemScript);
             
-            if(halfSignedTx.element0().isSuccess()) {
-                halfSignedTx.element0().halfSignedTransaction(halfSignedTx.element1().element0().unsafeBitcoinSerialize());
+            if(tx == null) {
+                return new PrepareHalfSignTO()
+                    .reason(PrepareHalfSignTO.Reason.NOT_ENOUGH_COINS);
             }
             
-            halfSignedTx.element0().signatures(SerializeUtils.serializeSignatures(halfSignedTx.element1().element1()));
-            return halfSignedTx.element0();
+            List<TransactionSignature> serverTxSigs = BitcoinUtils.partiallySign(tx, redeemScript, serverKey);
+            PrepareHalfSignTO retVal = new PrepareHalfSignTO();
+            retVal.halfSignedTransaction(tx.unsafeBitcoinSerialize());
+            retVal.signatures(SerializeUtils.serializeSignatures(serverTxSigs));
+            return retVal;
         
         
         //create half sign tx, with output to payment address, change to p2sh from client
@@ -280,6 +282,7 @@ public class PaymentController {
             
             //get referenced tx and connect it to our wallet again
             final Transaction halfSignedTx = new Transaction(appConfig.getNetworkParameters() ,refundP2shTO.halfSignedTransaction());
+            //TODO: this is unsigned, get the sigs and check it that we applied the signature!
             
             List<TransactionOutPoint> points = SerializeUtils.deserializeOutPoints(
                     appConfig.getNetworkParameters(), refundP2shTO.transactionOutpoints());
@@ -308,13 +311,13 @@ public class PaymentController {
                     .reason(RefundP2shTO.Reason.NOT_ENOUGH_FUNDS);
             }
             
-            List<TransactionSignature> partiallySignedRefundClient = BitcoinUtils.partiallySign(
+            List<TransactionSignature> partiallySignedRefundServer = BitcoinUtils.partiallySign(
                     unsignedRefundClient, serverClientRedeemScript, serverClientKey);
-            BitcoinUtils.applySignatures(unsignedRefundClient, serverClientRedeemScript, partiallySignedRefundClient, clientSigs);
+            BitcoinUtils.applySignatures(unsignedRefundClient, serverClientRedeemScript, clientSigs, partiallySignedRefundServer);
             //unsignedRefund is now fully signed
             RefundP2shTO retVal = new RefundP2shTO();
             retVal.setSuccess().fullRefundTransactionClient(unsignedRefundClient.unsafeBitcoinSerialize());
-            retVal.refundSignaturesServer(SerializeUtils.serializeSignatures(partiallySignedRefundClient));
+            retVal.refundSignaturesServer(SerializeUtils.serializeSignatures(partiallySignedRefundServer));
             
 
 
@@ -389,7 +392,7 @@ public class PaymentController {
         return new CompleteSignTO().setSuccess();
     }
 
-    public static Pair<PrepareHalfSignTO, Pair<Transaction,List<TransactionSignature>>> createHalfSignedTx(
+    /*public static Pair<PrepareHalfSignTO, Pair<Transaction,List<TransactionSignature>>> createHalfSignedTx(
             NetworkParameters params, List<TransactionOutput> outputs, Address p2shAddressFrom, 
             Address p2shAddressTo, Coin amountToSpend, Script redeemScript, ECKey serverKey, 
             List<TransactionSignature> clientSigs, boolean detach) {
@@ -402,11 +405,11 @@ public class PaymentController {
             if(a!=null && a.equals(redeemScript.getToAddress(params))) {
                 
                 TransactionInput ti = tx.addInput(output);
-                /*if(detach) {
-                    //output.markAsUnspent();
-                    //ti.setParent(null);
-                    //ti.disconnect();
-                }*/
+                //if(detach) {
+                //    //output.markAsUnspent();
+                //    //ti.setParent(null);
+                //    //ti.disconnect();
+                //}/
                 remainingAmount = remainingAmount.add(output.getValue());
             }
         }
@@ -452,7 +455,7 @@ public class PaymentController {
             }
         }
         return new Pair<>(new PrepareHalfSignTO().setSuccess(), new Pair<>(tx, sigs));
-    }
+    }*/
 
     
 
