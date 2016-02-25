@@ -8,7 +8,6 @@ package ch.uzh.csg.coinblesk.server.controller;
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import ch.uzh.csg.coinblesk.server.config.BeanConfig;
 import ch.uzh.csg.coinblesk.server.config.SecurityConfig;
-import static ch.uzh.csg.coinblesk.server.controller.PaymentController.merge;
 import ch.uzh.csg.coinblesk.server.service.WalletService;
 import ch.uzh.csg.coinblesk.server.utilTest.TestBean;
 import ch.uzh.csg.coinblesk.server.utils.Pair;
@@ -256,12 +255,10 @@ public class WalletTest {
         List<TransactionOutput> clientWalletOutputs = funding.getOutputs();
         List<TransactionOutput> clientOuts = merge(appConfig.getNetworkParameters(), 
         fullTxPair.element0(), clientWalletOutputs, p2shAddressClient, null);
-        System.err.println("On the client side we have "+clientOuts.size()+" outputs" + clientOuts);
         
         Pair<Transaction,Pair<List<TransactionOutPoint>,List<TransactionSignature>>> pair = 
                 generateRefundTransaction2(clientOuts, 
                         ecKeyClient.toAddress(appConfig.getNetworkParameters()), redeemScriptServerClient, ecKeyClient);
-        System.err.println("On the client side we have points "+pair.element1().element0().size()+" outputs" + pair.element1().element0());
         //The refund is currently only signed by the Client (half)
         Transaction halfSignedRefundTx = pair.element0();
         //The Client sends the refund signatures and the transaction outpoints to the Merchant
