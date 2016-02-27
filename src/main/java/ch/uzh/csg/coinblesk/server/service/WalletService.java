@@ -6,8 +6,6 @@
 package ch.uzh.csg.coinblesk.server.service;
 
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
-import ch.uzh.csg.coinblesk.server.controller.PaymentController;
-import ch.uzh.csg.coinblesk.server.utils.Pair;
 import com.coinblesk.bitcoin.BitcoinNet;
 import java.io.File;
 import java.io.IOException;
@@ -28,11 +26,9 @@ import org.bitcoinj.core.PeerAddress;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Wallet;
 import org.bitcoinj.core.WalletEventListener;
-import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
@@ -42,7 +38,6 @@ import org.bitcoinj.store.SPVBlockStore;
 import org.bitcoinj.store.UnreadableWalletException;
 import org.bitcoinj.wallet.CoinSelection;
 import org.bitcoinj.wallet.CoinSelector;
-import org.bitcoinj.wallet.KeyChain;
 import org.bitcoinj.wallet.WalletTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -124,6 +119,10 @@ public class WalletService {
         peerGroup.start();
         final DownloadProgressTracker listener = new DownloadProgressTracker();
         peerGroup.startBlockChainDownload(listener);
+        //TODO: add wallet listener, and remove burnedoutputs when confirmed tx 
+        // has those outputs (maintenance)
+        //also remove the approved tx, once we see them in the blockchain (maintenance)
+
     }
     
     private void walletWatchKeys() {
@@ -175,7 +174,7 @@ public class WalletService {
     @PreDestroy
     public void shutdown() {
         try {
-            if(peerGroup != null) {
+            if(peerGroup != null && peerGroup.isRunning()) {
                 peerGroup.stop();
             }
         } catch (Exception e) {
@@ -202,7 +201,9 @@ public class WalletService {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override public void run() {
                 try {
-                    peerGroup.stop();
+                    if(peerGroup.isRunning()) {
+                        peerGroup.stop();
+                    }
                 } catch (Exception e) {
                     LOG.error("cannot stop peerGroup", e);
                 }
@@ -212,7 +213,7 @@ public class WalletService {
                     LOG.error("cannot close blockStore", e);
                 }
                 try {
-                     wallet.shutdownAutosaveAndWait();
+                    wallet.shutdownAutosaveAndWait();
                 } catch (Exception e) {
                     LOG.error("cannot shutdown wallet", e);
                 }

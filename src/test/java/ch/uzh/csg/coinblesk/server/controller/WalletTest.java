@@ -335,6 +335,7 @@ public class WalletTest {
         //server call
         CompleteSignTO cs = new CompleteSignTO()
                 .clientPublicKey(ecKeyClient.getPubKey())
+                .merchantPublicKey(ecKeyMerchant.getPubKey())
                 .fullSignedTransaction(fullTxMerchant.unsafeBitcoinSerialize());
         res = mockMvc.perform(post("/p/s").secure(true).
                 contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(cs))).andExpect(status().isOk()).andReturn();

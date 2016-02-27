@@ -68,6 +68,9 @@ public class PaymentController {
 
     @Autowired
     private TransactionService transactionService;
+    
+    @Autowired
+    private KeyService keyService;
 
     /**
      * Input is the KeyTO with the client public key. The server will create for
@@ -199,19 +202,40 @@ public class PaymentController {
             //get all outputs from the BT network
             List<TransactionOutput> outputs = walletService.getOutputs(p2shAddressFrom);
             //in addition, get the outputs from previous TX, possibly not yet published in the BT network
-            outputs.addAll(transactionService.pendingOutputs());
+            outputs.addAll(transactionService.approvedReceiving(params, p2shAddressFrom));
+            outputs.removeAll(transactionService.approvedSpending(params, p2shAddressFrom));
+            
             //TODO: check if the lock time is still high enough
-            //TODO: check if outputs not already spent (double spending)
             //now we have all valid outputs and we know its before the refund lock time gets valid. 
             //So we can sign this tx
 
             Transaction tx = BitcoinUtils.createTx(
                     params, outputs, p2shAddressFrom,
                     p2shAddressTo, amountToSpend.value, redeemScript);
-
+            
             if (tx == null) {
                 return new PrepareHalfSignTO().type(Type.NOT_ENOUGH_COINS);
             }
+            
+            if(!keyService.burnOutputFromNewTransaction(tx.getInputs())) {
+                //double spending?
+                //if we alreday have the outpoints for the tx, then we already
+                //sent out the keys. The client can then use the keys, to submit
+                //the transaction on its own. Thus, the server must keep track
+                //of those outpoints
+                //
+                //if for any reason the client gets the keys, but fails to continue
+                //in the payment process, its funds are marked as "burned". So the client
+                //cannot use its fund with another merchant. Once the keys have been
+                //issued, the client needs to finish the payment process.
+                //
+                //TODO: as a fallback, the burned outputs needs to be reseted. The server
+                //sends back a re-topup transaction and the client signs it, the server
+                //broadcasts the tx, thus, needing ~10min to make funds available it such a case.
+                return new PrepareHalfSignTO().type(Type.DOUBLE_SPENDING);
+            }
+
+            
 
             //sign the tx with the server keys
             List<TransactionSignature> serverTxSigs = BitcoinUtils.partiallySign(tx, redeemScript, serverKey);
@@ -329,14 +353,31 @@ public class PaymentController {
         LOG.debug("Complete sign {}", signTO.clientPublicKey());
         try {
             final NetworkParameters params = appConfig.getNetworkParameters();
-            final List<ECKey> keys = clientKeyService.getECKeysByClientPublicKey(signTO.clientPublicKey());
-            if (keys == null || keys.size() != 2) {
+            
+            final List<ECKey> keysClient = clientKeyService.getECKeysByClientPublicKey(signTO.clientPublicKey());
+            if (keysClient == null || keysClient.size() != 2) {
                 return new CompleteSignTO().type(Type.KEYS_NOT_FOUND);
             }
+            final Script serverClientRedeemScript = ScriptBuilder.createP2SHOutputScript(2, keysClient);
+            final Address p2shAddressFrom = serverClientRedeemScript.getToAddress(params);
+           
+            final List<ECKey> keysMerchant = clientKeyService.getECKeysByClientPublicKey(signTO.merchantPublicKey());
+            if (keysMerchant == null || keysMerchant.size() != 2) {
+                return new CompleteSignTO().type(Type.KEYS_NOT_FOUND);
+            }
+            final Script serverMerchantRedeemScript = ScriptBuilder.createP2SHOutputScript(2, keysMerchant);
+            final Address p2shAddressTo = serverMerchantRedeemScript.getToAddress(params);
+            
 
             Transaction fullTx = new Transaction(params, signTO.fullSignedTransaction());
-            //TODO: check fullTx
-
+            //TODO: check fullTx, check client/server sigs
+            transactionService.approveTx(fullTx, p2shAddressFrom, p2shAddressTo);
+            
+            //TODO: this could be removed here, but I haven't fully thought this through
+            //for the moment its safer to remove the burned outputs once we see the 
+            //tx in the blockchain
+            //keyService.removeConfirmedBurnedOutput(fullTx.getInputs());
+            
             //TODO: broadcast to network
             return new CompleteSignTO().setSuccess();
         } catch (Exception e) {

@@ -16,7 +16,7 @@ public class Keys implements Serializable {
     private static final long serialVersionUID = -7496348013847426913L;
 
     @Id
-    @Column(name = "CLIENT_PUBLIC_KEY", unique=true, nullable = false, updatable = false, length=255)
+    @Column(name = "CLIENT_PUBLIC_KEY", updatable = false, length=255)
     private byte[] clientPublicKey;
     
     @Column(name = "P2SH_HASH", unique=true, nullable = false, updatable = false, length=255)

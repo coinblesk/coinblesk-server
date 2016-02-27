@@ -6,7 +6,6 @@
 package ch.uzh.csg.coinblesk.server.dao;
 
 import ch.uzh.csg.coinblesk.server.entity.Keys;
-import ch.uzh.csg.coinblesk.server.entity.SpentOutputs;
 import java.util.List;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;

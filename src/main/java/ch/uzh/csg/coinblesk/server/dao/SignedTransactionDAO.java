@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
 import ch.uzh.csg.coinblesk.server.entity.SignedTransactions;
-import ch.uzh.csg.coinblesk.server.entity.SpentOutputs;
 
 @Repository
 public class SignedTransactionDAO {
