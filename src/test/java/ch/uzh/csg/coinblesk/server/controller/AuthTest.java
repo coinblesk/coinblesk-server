@@ -38,6 +38,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import ch.uzh.csg.coinblesk.server.utilTest.*;
+import com.coinblesk.json.Type;
 import org.springframework.mock.web.MockHttpSession;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 
@@ -84,22 +85,22 @@ public class AuthTest {
         UserAccountTO userAccountTO = new UserAccountTO();
         MvcResult res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
         UserAccountStatusTO status = GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
-        Assert.assertEquals(UserAccountStatusTO.Reason.NO_EMAIL.nr(), status.reason().nr());
+        Assert.assertEquals(Type.NO_EMAIL.nr(), status.type().nr());
         
         userAccountTO.email("test-test.test");
         res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
         status = GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
-        Assert.assertEquals(UserAccountStatusTO.Reason.INVALID_EMAIL.nr(), status.reason().nr());
+        Assert.assertEquals(Type.INVALID_EMAIL.nr(), status.type().nr());
         
         userAccountTO.email("test@test.test");
         res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
         status = GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
-        Assert.assertEquals(UserAccountStatusTO.Reason.PASSWORD_TOO_SHORT.nr(), status.reason().nr());
+        Assert.assertEquals(Type.PASSWORD_TOO_SHORT.nr(), status.type().nr());
         
         userAccountTO.password("1234");
         res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
         status = GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
-        Assert.assertEquals(UserAccountStatusTO.Reason.PASSWORD_TOO_SHORT.nr(), status.reason().nr());
+        Assert.assertEquals(Type.PASSWORD_TOO_SHORT.nr(), status.type().nr());
         
         userAccountTO.password("123456");
         res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
@@ -109,7 +110,7 @@ public class AuthTest {
         
         res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
         status = GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
-        Assert.assertEquals(UserAccountStatusTO.Reason.EMAIL_ALREADY_EXISTS_NOT_ACTIVATED.nr(), status.reason().nr());
+        Assert.assertEquals(Type.EMAIL_ALREADY_EXISTS_NOT_ACTIVATED.nr(), status.type().nr());
         Assert.assertEquals(2, adminEmail.sentEmails());
         
         //activate

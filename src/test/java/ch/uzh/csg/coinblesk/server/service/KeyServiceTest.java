@@ -5,11 +5,13 @@
  */
 package ch.uzh.csg.coinblesk.server.service;
 
+import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import ch.uzh.csg.coinblesk.server.config.BeanConfig;
 import ch.uzh.csg.coinblesk.server.entity.Keys;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import java.util.Base64;
 import java.util.List;
+import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,36 +39,36 @@ public class KeyServiceTest {
     @Autowired
     private KeyService keyService;
     
+    @Autowired
+    private AppConfig appConfig;
+    
     @Test
     public void testAddKey() throws Exception {
         ECKey ecKeyClient = new ECKey();
-        String clientPublicKey = Base64.getEncoder().encodeToString(ecKeyClient.getPubKey());
         ECKey ecKeyServer = new ECKey();
-        byte[] hash = new byte[20];
-        hash[0]=1;
+        Address address = ecKeyClient.toAddress(appConfig.getNetworkParameters());
         byte[] pubKey = ecKeyServer.getPubKey();
         byte[] privKey = ecKeyServer.getPrivKeyBytes();
 
-        boolean retVal = keyService.create(clientPublicKey, hash, pubKey, privKey).element0();
+        boolean retVal = keyService.storeKeysAndAddress(pubKey, address, pubKey, privKey).element0();
         Assert.assertTrue(retVal);
         //adding again should fail
-        retVal = keyService.create(clientPublicKey, hash, pubKey, privKey).element0();
+        retVal = keyService.storeKeysAndAddress(pubKey, address, pubKey, privKey).element0();
         Assert.assertFalse(retVal);
     }
     
     @Test
     public void testAddKey2() throws Exception {
         ECKey ecKeyClient = new ECKey();
-        String clientPublicKey = Base64.getEncoder().encodeToString(ecKeyClient.getPubKey());
         ECKey ecKeyServer = new ECKey();
-        byte[] hash = new byte[20];
-        hash[0]=2;
+        Address address = ecKeyServer.toAddress(appConfig.getNetworkParameters());
+        
         byte[] pubKey = ecKeyServer.getPubKey();
         byte[] privKey = ecKeyServer.getPrivKeyBytes();
 
-        boolean retVal = keyService.create(clientPublicKey, hash, pubKey, privKey).element0();
+        boolean retVal = keyService.storeKeysAndAddress(pubKey, address, pubKey, privKey).element0();
         Assert.assertTrue(retVal);
-        retVal = keyService.create(clientPublicKey, hash, pubKey, privKey).element0();
+        retVal = keyService.storeKeysAndAddress(pubKey, address, pubKey, privKey).element0();
         Assert.assertFalse(retVal);
         
         Keys keys = keyService.getByClientPublicKey(ecKeyClient.getPubKey());

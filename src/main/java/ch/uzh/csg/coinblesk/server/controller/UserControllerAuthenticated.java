@@ -7,6 +7,7 @@ package ch.uzh.csg.coinblesk.server.controller;
 
 import ch.uzh.csg.coinblesk.server.config.AdminEmail;
 import ch.uzh.csg.coinblesk.server.service.UserAccountService;
+import com.coinblesk.json.Type;
 import com.coinblesk.json.UserAccountStatusTO;
 import com.coinblesk.json.UserAccountTO;
 import org.slf4j.Logger;
@@ -44,14 +45,14 @@ public class UserControllerAuthenticated {
         try {
             UserAccountStatusTO status = userAccountService.delete(auth.getName());
             if(!status.isSuccess()) {
-                LOG.error("Someone tried a delete account with an invalid username: {}/{}", auth, status.reason().name());
-                adminEmail.send("Wrong Delete Account?", "Someone tried a delete account with an invalid username: " + auth + "/" + status.reason().name());
+                LOG.error("Someone tried a delete account with an invalid username: {}/{}", auth, status.type().name());
+                adminEmail.send("Wrong Delete Account?", "Someone tried a delete account with an invalid username: " + auth + "/" + status.type().name());
             }
             LOG.debug("Delete account success for {}", auth.getName());
             return status;
         } catch (Exception e) {
             LOG.error("User create error", e);
-            return new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.SERVER_ERROR).message(e.getMessage());
+            return new UserAccountStatusTO().type(Type.SERVER_ERROR).message(e.getMessage());
         }
     }
     

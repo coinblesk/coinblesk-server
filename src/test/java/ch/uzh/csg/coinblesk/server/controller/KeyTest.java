@@ -9,6 +9,7 @@ import ch.uzh.csg.coinblesk.server.config.BeanConfig;
 import ch.uzh.csg.coinblesk.server.config.SecurityConfig;
 import ch.uzh.csg.coinblesk.server.utilTest.TestBean;
 import com.coinblesk.json.KeyTO;
+import com.coinblesk.json.Type;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -73,19 +74,18 @@ public class KeyTest {
         MvcResult res = mockMvc.perform(post("/p/x").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
         KeyTO status = GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
         Assert.assertEquals(false, status.isSuccess());
-        Assert.assertEquals(KeyTO.Reason.SERVER_ERROR, status.reason());
+        Assert.assertEquals(Type.SERVER_ERROR, status.type());
         Assert.assertNull(status.publicKey());
         //with bogus key
-        keyTO = new KeyTO().publicKey("bogus=======");
+        keyTO = new KeyTO().publicKey("bogus=======".getBytes());
         res = mockMvc.perform(post("/p/x").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
         status = GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
         Assert.assertEquals(false, status.isSuccess());
-        Assert.assertEquals(KeyTO.Reason.SERVER_ERROR, status.reason());
+        Assert.assertEquals(Type.SERVER_ERROR, status.type());
         Assert.assertNull(status.publicKey());
         //with good pubilc key
         ECKey ecKeyClient = new ECKey();
-        String clientPublicKey = Base64.getEncoder().encodeToString(ecKeyClient.getPubKey());
-        keyTO = new KeyTO().publicKey(clientPublicKey);
+        keyTO = new KeyTO().publicKey(ecKeyClient.getPubKey());
         res = mockMvc.perform(post("/p/x").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
         status = GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
         Assert.assertEquals(true, status.isSuccess());

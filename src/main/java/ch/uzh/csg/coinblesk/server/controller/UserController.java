@@ -9,6 +9,7 @@ import ch.uzh.csg.coinblesk.server.config.AdminEmail;
 import ch.uzh.csg.coinblesk.server.entity.UserAccount;
 import ch.uzh.csg.coinblesk.server.service.UserAccountService;
 import ch.uzh.csg.coinblesk.server.utils.Pair;
+import com.coinblesk.json.Type;
 import com.coinblesk.json.UserAccountStatusTO;
 import com.coinblesk.json.UserAccountTO;
 import javax.servlet.http.HttpServletRequest;
@@ -56,7 +57,7 @@ public class UserController {
             //TODO: reactived if deleted flag is set
             Pair<UserAccountStatusTO, UserAccount> pair = userAccountService.create(userAccount);
             if ((pair.element0().isSuccess()
-                    || pair.element0().reason() == UserAccountStatusTO.Reason.EMAIL_ALREADY_EXISTS_NOT_ACTIVATED)
+                    || pair.element0().type() == Type.EMAIL_ALREADY_EXISTS_NOT_ACTIVATED)
                     && pair.element1() != null && pair.element1().getEmailToken() != null) {
                 SimpleMailMessage smm = new SimpleMailMessage();
                 smm.setFrom("bitcoin@csg.uzh.ch");
@@ -75,7 +76,7 @@ public class UserController {
             return pair.element0();
         } catch (Exception e) {
             LOG.error("User create error", e);
-            return new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.SERVER_ERROR).message(e.getMessage());
+            return new UserAccountStatusTO().type(Type.SERVER_ERROR).message(e.getMessage());
         }
     }
 
@@ -87,8 +88,8 @@ public class UserController {
         try {
             UserAccountStatusTO status = userAccountService.activate(email, token);
             if(!status.isSuccess()) {
-                LOG.error("Someone tried a link with an invalid token: {}/{}/{}", email, token, status.reason().name());
-                adminEmail.send("Wrong Link?", "Someone tried a link with an invalid token: "+email+" / "+token+ "/"+status.reason().name());
+                LOG.error("Someone tried a link with an invalid token: {}/{}/{}", email, token, status.type().name());
+                adminEmail.send("Wrong Link?", "Someone tried a link with an invalid token: "+email+" / "+token+ "/"+status.type().name());
                 throw new BadRequestException("Wrong Link");
             }
             LOG.debug("Activate account success for {}", email);

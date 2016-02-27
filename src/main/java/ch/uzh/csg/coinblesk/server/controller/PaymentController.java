@@ -10,35 +10,25 @@ import ch.uzh.csg.coinblesk.server.entity.Keys;
 import ch.uzh.csg.coinblesk.server.service.KeyService;
 import ch.uzh.csg.coinblesk.server.service.TransactionService;
 import ch.uzh.csg.coinblesk.server.service.WalletService;
-import ch.uzh.csg.coinblesk.server.utils.CoinUtils;
 import ch.uzh.csg.coinblesk.server.utils.Pair;
-import com.coinblesk.bitcoin.BitcoinNet;
 import com.coinblesk.json.BalanceTO;
 import com.coinblesk.json.CompleteSignTO;
 import com.coinblesk.json.KeyTO;
 import com.coinblesk.json.PrepareHalfSignTO;
 import com.coinblesk.json.RefundP2shTO;
 import com.coinblesk.json.RefundTO;
-import com.coinblesk.json.SignTO;
+import com.coinblesk.json.Type;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.SerializeUtils;
-import java.math.BigInteger;
 import java.util.ArrayList;
 
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.TransactionSignature;
@@ -62,25 +52,22 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping(value = {"/payment", "/p"})
 public class PaymentController {
-    
-    public final static long UNIX_TIME_MONTH = 60*60*24*30;
-    public final static int LOCK_TIME_MONTHS = 3;
+
+    public final static int LOCK_TIME_DAYS = 2;
 
     private final static Logger LOG = LoggerFactory.getLogger(PaymentController.class);
-    
+
     @Autowired
     private AppConfig appConfig;
 
     @Autowired
     private KeyService clientKeyService;
-    
+
     @Autowired
     private WalletService walletService;
-    
+
     @Autowired
     private TransactionService transactionService;
-    
-    
 
     /**
      * Input is the KeyTO with the client public key. The server will create for
@@ -97,40 +84,37 @@ public class PaymentController {
     @ResponseBody
     public KeyTO keyExchange(@RequestBody KeyTO keyTO) {
         LOG.debug("Register clientHash for {}", keyTO.publicKey());
-        final KeyTO serverKeyTO = new KeyTO();
         try {
-            final String clientPublicKey = keyTO.publicKey();
-            final byte[] clientPublicKeyRaw = Base64.getDecoder().decode(clientPublicKey);
+            final NetworkParameters params = appConfig.getNetworkParameters();
+            final byte[] clientPublicKey = keyTO.publicKey();
             final ECKey serverEcKey = new ECKey();
             final List<ECKey> keys = new ArrayList<>(2);
-            keys.add(ECKey.fromPublicOnly(clientPublicKeyRaw));
+            keys.add(ECKey.fromPublicOnly(clientPublicKey));
             keys.add(serverEcKey);
-            
-            //TODO: if key already exists, return public key from server only
+            //2-of-2 multisig
             final Script script = ScriptBuilder.createP2SHOutputScript(2, keys);
-            final Pair<Boolean, Keys> retVal = clientKeyService.create(clientPublicKey, 
-                    script.getToAddress(appConfig.getNetworkParameters()).getHash160(), serverEcKey.getPubKey(), serverEcKey.getPrivKeyBytes());
+            final Address p2shAddressClient = script.getToAddress(params);
+
+            final Pair<Boolean, Keys> retVal = clientKeyService.storeKeysAndAddress(clientPublicKey,
+                    p2shAddressClient, serverEcKey.getPubKey(),
+                    serverEcKey.getPrivKeyBytes());
+            final KeyTO serverKeyTO = new KeyTO();
             if (retVal.element0()) {
-                
-                serverKeyTO.publicKey(Base64.getEncoder().encodeToString(serverEcKey.getPubKey()));
-                
-                keys.add(ECKey.fromPublicOnly(retVal.element1().clientPublicKey()));
-                keys.add(serverEcKey);
-                //2-of-2 multisig
-                
+                serverKeyTO.publicKey(serverEcKey.getPubKey());
                 walletService.addWatching(script);
                 return serverKeyTO.setSuccess();
             } else {
-                return serverKeyTO.reason(KeyTO.Reason.KEY_ALREADY_EXISTS);
+                serverKeyTO.publicKey(retVal.element1().serverPublicKey());
+                return serverKeyTO.type(Type.KEY_ALREADY_EXISTS);
             }
         } catch (Exception e) {
             LOG.error("register keys error", e);
-            serverKeyTO.reason(KeyTO.Reason.SERVER_ERROR);
-            serverKeyTO.message(e.getMessage());
-            return serverKeyTO;
+            return new KeyTO()
+                    .type(Type.SERVER_ERROR)
+                    .message(e.getMessage());
         }
     }
-    
+
     @RequestMapping(value = {"/balance", "/b"}, method = RequestMethod.GET,
             consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
@@ -140,18 +124,17 @@ public class PaymentController {
         try {
             final List<ECKey> keys = clientKeyService.getPublicECKeysByClientPublicKey(keyTO.publicKey());
             final Script script = ScriptBuilder.createP2SHOutputScript(2, keys);
-            Coin balance = walletService.balance(script);
-            return new BalanceTO()
-                    .balance(balance.toPlainString());
-            
+            final Coin balance = walletService.balance(script);
+            return new BalanceTO().balance(balance.value);
+
         } catch (Exception e) {
             LOG.error("register keys error", e);
             return new BalanceTO()
-                    .reason(BalanceTO.Reason.SERVER_ERROR)
+                    .type(Type.SERVER_ERROR)
                     .message(e.getMessage());
         }
     }
-    
+
     @RequestMapping(value = {"/refund", "/r"}, method = RequestMethod.POST,
             consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
@@ -159,45 +142,34 @@ public class PaymentController {
     public RefundTO refund(@RequestBody RefundTO refundTO) {
         LOG.debug("Refund for {}", refundTO.clientPublicKey());
         try {
+            final NetworkParameters params = appConfig.getNetworkParameters();
             final List<ECKey> keys = clientKeyService.getECKeysByClientPublicKey(refundTO.clientPublicKey());
-            if(keys == null || keys.size() !=2) {
-                return new RefundTO().reason(RefundTO.Reason.KEYS_NOT_FOUND);
+            if (keys == null || keys.size() != 2) {
+                return new RefundTO().type(Type.KEYS_NOT_FOUND);
             }
             final Script redeemScript = ScriptBuilder.createP2SHOutputScript(2, keys);
-            final Transaction refundTransaction = new Transaction(
-                    appConfig.getNetworkParameters(), Base64.getDecoder().decode(refundTO.refundTransaction()));
-            
-        
-            for(int i=0;i<refundTransaction.getInputs().size();i++) {
-                final Sha256Hash sighash = refundTransaction.hashForSignature(i, redeemScript, Transaction.SigHash.ALL, false);
-                final TransactionSignature serverSignature = new TransactionSignature(keys.get(1).sign(sighash), Transaction.SigHash.ALL, false);
-                List<TransactionSignature> l = new ArrayList<>();
-                
-                final TransactionSignature clientSignature = new TransactionSignature(
-                    new BigInteger(refundTO.clientSignatures().get(i).clientSignatureR()), 
-                        new BigInteger(refundTO.clientSignatures().get(i).clientSignatureS()));
-                
-                l.add(clientSignature);
-                l.add(serverSignature);
-                final Script refundTransactionInputScript = ScriptBuilder.createP2SHMultiSigInputScript(l, redeemScript);
-                refundTransaction.getInput(i).setScriptSig(refundTransactionInputScript);
-                //refundTransaction.getInput(i).verify();
-            }
-            //refundTransaction.verify();
-        
+            //this is how the client sees the tx
+            final Transaction refundTransaction = new Transaction(params, refundTO.refundTransaction());
+            final int lockTime = BitcoinUtils.lockTimeBlock(LOCK_TIME_DAYS, walletService.currentBlock());
+            //ignore client setting
+            refundTransaction.setLockTime(lockTime);
+            List<TransactionSignature> clientSigs = SerializeUtils.deserializeSignatures(refundTO.clientSignatures());
+            List<TransactionSignature> serverSigs = BitcoinUtils.partiallySign(refundTransaction, redeemScript, keys.get(1));
+            BitcoinUtils.applySignatures(refundTransaction, redeemScript, clientSigs, serverSigs);
+
+            //TODO: enable
+            //refundTransaction.verify(); make sure those inputs are from the known p2sh address (min conf)
             byte[] refundTx = refundTransaction.unsafeBitcoinSerialize();
             clientKeyService.addRefundTransaction(refundTO.clientPublicKey(), refundTx);
-        
-            return new RefundTO().setSuccess().refundTransaction(
-                    Base64.getEncoder().encodeToString(refundTx));
+            return new RefundTO().setSuccess().refundTransaction(refundTx);
         } catch (Exception e) {
             LOG.error("register keys error", e);
             return new RefundTO()
-                    .reason(RefundTO.Reason.SERVER_ERROR)
+                    .type(Type.SERVER_ERROR)
                     .message(e.getMessage());
         }
     }
-    
+
     @RequestMapping(value = {"/prepare", "/p"}, method = RequestMethod.POST,
             consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
@@ -205,61 +177,58 @@ public class PaymentController {
     public PrepareHalfSignTO prepareHalfSign(@RequestBody PrepareHalfSignTO prepareSignTO) {
         LOG.debug("Prepare half signed {}", prepareSignTO.clientPublicKey());
         try {
+            final NetworkParameters params = appConfig.getNetworkParameters();
             final List<ECKey> keys = clientKeyService.getECKeysByClientPublicKey(prepareSignTO.clientPublicKey());
-            
-            if(keys == null || keys.size() !=2) {
-                return new PrepareHalfSignTO().reason(PrepareHalfSignTO.Reason.KEYS_NOT_FOUND);
+            if (keys == null || keys.size() != 2) {
+                return new PrepareHalfSignTO().type(Type.KEYS_NOT_FOUND);
             }
-            final ECKey clientKey = keys.get(0);
             final ECKey serverKey = keys.get(1);
             final Script redeemScript = ScriptBuilder.createP2SHOutputScript(2, keys);
-            final Address p2shAddressFrom = redeemScript.getToAddress(appConfig.getNetworkParameters());
-            
+            final Address p2shAddressFrom = redeemScript.getToAddress(params);
             final Coin amountToSpend = Coin.valueOf(prepareSignTO.amountToSpend());
-            if(prepareSignTO.p2shAddress() == null || prepareSignTO.p2shAddress().isEmpty()) {
-                return new PrepareHalfSignTO().reason(PrepareHalfSignTO.Reason.ADDRESS_EMPTY);
+
+            if (prepareSignTO.p2shAddressTo() == null || prepareSignTO.p2shAddressTo().isEmpty()) {
+                return new PrepareHalfSignTO().type(Type.ADDRESS_EMPTY);
             }
-            final Address p2shAddressTo = new Address(appConfig.getNetworkParameters(), prepareSignTO.p2shAddress());
-            
-            if(!clientKeyService.containsP2SH(p2shAddressFrom)) {
-                return new PrepareHalfSignTO().reason(PrepareHalfSignTO.Reason.ADDRESS_UNKNOWN);
+            final Address p2shAddressTo = new Address(params, prepareSignTO.p2shAddressTo());
+
+            if (!clientKeyService.containsP2SH(p2shAddressFrom)) {
+                return new PrepareHalfSignTO().type(Type.ADDRESS_UNKNOWN);
             }
-            
+
             //get all outputs from the BT network
             List<TransactionOutput> outputs = walletService.getOutputs(p2shAddressFrom);
             //in addition, get the outputs from previous TX, possibly not yet published in the BT network
             outputs.addAll(transactionService.pendingOutputs());
-            //TODO: check if the outputs does not exceed the lock time of the refund tx
+            //TODO: check if the lock time is still high enough
             //TODO: check if outputs not already spent (double spending)
-            //now we have all valid outputs and we know its before the refund lock time gets valid. So we can sign this tx
-            
+            //now we have all valid outputs and we know its before the refund lock time gets valid. 
+            //So we can sign this tx
+
             Transaction tx = BitcoinUtils.createTx(
-                    appConfig.getNetworkParameters(), outputs, p2shAddressFrom, 
+                    params, outputs, p2shAddressFrom,
                     p2shAddressTo, amountToSpend.value, redeemScript);
-            
-            if(tx == null) {
-                return new PrepareHalfSignTO()
-                    .reason(PrepareHalfSignTO.Reason.NOT_ENOUGH_COINS);
+
+            if (tx == null) {
+                return new PrepareHalfSignTO().type(Type.NOT_ENOUGH_COINS);
             }
-            
+
+            //sign the tx with the server keys
             List<TransactionSignature> serverTxSigs = BitcoinUtils.partiallySign(tx, redeemScript, serverKey);
-            PrepareHalfSignTO retVal = new PrepareHalfSignTO();
-            retVal.halfSignedTransaction(tx.unsafeBitcoinSerialize());
-            retVal.signatures(SerializeUtils.serializeSignatures(serverTxSigs));
-            return retVal;
-        
-        
-        //create half sign tx, with output to payment address, change to p2sh from client
-        //store half signed tx with id-hash
-        //return half signed tx
+            //TODO: mark these outputs as burned!! With the sig, the client can send it to 
+            //the Bitcoin network itself.
+            return new PrepareHalfSignTO()
+                    .unsignedTransaction(tx.unsafeBitcoinSerialize())
+                    .signatures(SerializeUtils.serializeSignatures(serverTxSigs));
+
         } catch (Exception e) {
             LOG.error("register keys error", e);
             return new PrepareHalfSignTO()
-                    .reason(PrepareHalfSignTO.Reason.SERVER_ERROR)
+                    .type(Type.SERVER_ERROR)
                     .message(e.getMessage());
         }
     }
-    
+
     @RequestMapping(value = {"/refund-p2sh", "/f"}, method = RequestMethod.POST,
             consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
@@ -267,203 +236,114 @@ public class PaymentController {
     public RefundP2shTO refundToP2SH(@RequestBody RefundP2shTO refundP2shTO) {
         LOG.debug("Prepare half signed {}", refundP2shTO.clientPublicKey());
         try {
+            final NetworkParameters params = appConfig.getNetworkParameters();
             //get client public key (identifier)
             final List<ECKey> keysClient = clientKeyService.getECKeysByClientPublicKey(refundP2shTO.clientPublicKey());
             final ECKey clientKey = keysClient.get(0);
             final ECKey serverClientKey = keysClient.get(1);
             final Script serverClientRedeemScript = ScriptBuilder.createP2SHOutputScript(2, keysClient);
-            final Address p2shAddressFrom = serverClientRedeemScript.getToAddress(appConfig.getNetworkParameters());
+            final Address p2shAddressFrom = serverClientRedeemScript.getToAddress(params);
             //get merchant public key
             final List<ECKey> keysMerchant = clientKeyService.getECKeysByClientPublicKey(refundP2shTO.merchantPublicKey());
             final ECKey merchantKey = keysMerchant.get(0);
             final ECKey serverMerchantKey = keysMerchant.get(1);
             final Script serverMerchantRedeemScript = ScriptBuilder.createP2SHOutputScript(2, keysMerchant);
-            final Address p2shAddressTo = serverMerchantRedeemScript.getToAddress(appConfig.getNetworkParameters());
-            
-            //get referenced tx and connect it to our wallet again
-            final Transaction halfSignedTx = new Transaction(appConfig.getNetworkParameters() ,refundP2shTO.halfSignedTransaction());
-            //TODO: this is unsigned, get the sigs and check it that we applied the signature!
-            
-            List<TransactionOutPoint> points = SerializeUtils.deserializeOutPoints(
-                    appConfig.getNetworkParameters(), refundP2shTO.transactionOutpoints());
-            List<TransactionSignature> clientSigs = SerializeUtils.deserializeSignatures(refundP2shTO.refundSignaturesClient());
-            List<TransactionSignature> merchantSigs = SerializeUtils.deserializeSignatures(refundP2shTO.refundSignaturesMerchant());
-            
+            final Address p2shAddressTo = serverMerchantRedeemScript.getToAddress(params);
+
+            final Transaction tx = new Transaction(params, refundP2shTO.unsignedTransaction());
+            //TODO: this tx is unsigned, get the sigs and check it that we applied the signature! we want to be stateless
+
+            //we now get from the client the outpoints for the refund tx (including hash)
+            List<TransactionOutPoint> refundClientPoints = SerializeUtils.deserializeOutPoints(
+                    params, refundP2shTO.refundClientOutpoints());
+            //the client and the merchant have signed the refund tx, the client created the refund tx, 
+            //the merchant and server using the outpoints to recreate the tx
+
             //Client refund is here, we can do a full refund
-            List<TransactionOutput> clientWalletOutputs = walletService.getOutputs(p2shAddressFrom);
-            List<TransactionOutput> clientMergedOutputs = BitcoinUtils.mergeOutputs(appConfig.getNetworkParameters(), 
-                    halfSignedTx, clientWalletOutputs, p2shAddressFrom, 
-                    (TransactionOutPoint t) -> walletService.findParentOutput(t.getHash(), t.getIndex()));
-            
-            //for the unsiged refund we need the TransactionOutPoint and the value from the clientMergedOutputs, 
-            //the client did the same operation as well
-            LinkedHashMap<TransactionOutPoint, Coin> outputsToUseClient = BitcoinUtils.mergeOutPointsValue(points, clientMergedOutputs);
-            
-            
-            int lockTime = BitcoinUtils.lockTimeBlock(2, walletService.currentBlock());
-            Transaction unsignedRefundClient = BitcoinUtils.generateUnsignedRefundTx(
-                    appConfig.getNetworkParameters(), outputsToUseClient, 
-                    clientKey.toAddress(appConfig.getNetworkParameters()), 
-                    serverClientRedeemScript, lockTime);
-            
-            if(unsignedRefundClient == null) {
-                return new RefundP2shTO()
-                    .reason(RefundP2shTO.Reason.NOT_ENOUGH_FUNDS);
+            List<TransactionSignature> clientRefundSignatures = SerializeUtils.deserializeSignatures(refundP2shTO.refundSignaturesClient());
+            Pair<Transaction, List<TransactionSignature>> refundClientPair = createClientRefund(clientKey.toAddress(params),
+                    serverClientKey, tx, p2shAddressFrom,
+                    refundClientPoints, clientRefundSignatures, serverClientRedeemScript);
+            if(refundClientPair == null) {
+                 return new RefundP2shTO().type(Type.NOT_ENOUGH_COINS);
             }
-            
-            List<TransactionSignature> partiallySignedRefundServer = BitcoinUtils.partiallySign(
-                    unsignedRefundClient, serverClientRedeemScript, serverClientKey);
-            BitcoinUtils.applySignatures(unsignedRefundClient, serverClientRedeemScript, clientSigs, partiallySignedRefundServer);
             //unsignedRefund is now fully signed
             RefundP2shTO retVal = new RefundP2shTO();
-            retVal.setSuccess().fullRefundTransactionClient(unsignedRefundClient.unsafeBitcoinSerialize());
-            retVal.refundSignaturesServer(SerializeUtils.serializeSignatures(partiallySignedRefundServer));
-            
-
+            retVal.fullRefundTransactionClient(refundClientPair.element0().unsafeBitcoinSerialize());
+            retVal.refundSignaturesClientServer(SerializeUtils.serializeSignatures(refundClientPair.element1()));
 
             //Merchant refund is here, we can do a full refund
-            
-            List<TransactionOutput> merchantWalletOutputs = walletService.getOutputs(p2shAddressTo);
-            
-            List<TransactionOutput> merchantMergedOutputs = BitcoinUtils.mergeOutputs(appConfig.getNetworkParameters(), 
-                    halfSignedTx, merchantWalletOutputs, p2shAddressTo, 
-                    (TransactionOutPoint t) -> walletService.findParentOutput(t.getHash(), t.getIndex()));
-            
-            //for the unsiged refund we need the TransactionOutPoint and the value from the clientMergedOutputs, 
-            //the client did the same operation as well
-            LinkedHashMap<TransactionOutPoint, Coin> outputsToUseMerchant = BitcoinUtils.mergeOutPointsValue(points, merchantMergedOutputs);
-            
-            
-            Transaction unsignedRefundMerchant = BitcoinUtils.generateUnsignedRefundTx(
-                    appConfig.getNetworkParameters(), outputsToUseMerchant, 
-                    merchantKey.toAddress(appConfig.getNetworkParameters()), 
-                    serverMerchantRedeemScript, lockTime);
-            
-            if(unsignedRefundMerchant == null) {
-                return new RefundP2shTO()
-                    .reason(RefundP2shTO.Reason.NOT_ENOUGH_FUNDS);
-            }
-            
-            List<TransactionSignature> partiallySignedRefundMerchant = BitcoinUtils.partiallySign(
-                    unsignedRefundMerchant, serverMerchantRedeemScript, serverMerchantKey);
-            BitcoinUtils.applySignatures(unsignedRefundMerchant, serverMerchantRedeemScript, partiallySignedRefundMerchant, merchantSigs);
+            List<TransactionSignature> merchantRefundSignatures = SerializeUtils.deserializeSignatures(refundP2shTO.refundSignaturesMerchant());
+            Transaction unsignedRefundMerchant = new Transaction(params, refundP2shTO.unsignedRefundMerchantTransaction());
+            List<TransactionSignature> partiallySignedRefundServer = BitcoinUtils.partiallySign(
+                unsignedRefundMerchant, serverMerchantRedeemScript, serverMerchantKey);
+            BitcoinUtils.applySignatures(unsignedRefundMerchant, serverMerchantRedeemScript, merchantRefundSignatures, partiallySignedRefundServer);
+            //TODO: check this tx!
             
             retVal.setSuccess().fullRefundTransactionMerchant(unsignedRefundMerchant.unsafeBitcoinSerialize());
-            
             return retVal;
-        
+
         } catch (Exception e) {
             LOG.error("register keys error", e);
             return new RefundP2shTO()
-                    .reason(RefundP2shTO.Reason.SERVER_ERROR)
+                    .type(Type.SERVER_ERROR)
                     .message(e.getMessage());
         }
     }
-    
-    /*private List<TransactionOutput> find(List<TransactionOutput> input, Address to) {
-        List<TransactionOutput> retVal = new ArrayList<>();
-        for(TransactionOutput tout:input) {
-            Address a = tout.getAddressFromP2SH(appConfig.getNetworkParameters());
-            if(a != null && a.equals(to)) {
-                retVal.add(tout);
-            }
+
+    private Pair<Transaction, List<TransactionSignature>> createClientRefund(final Address addressTo,
+            final ECKey serverKey, final Transaction tx,
+            final Address p2shAddress, final List<TransactionOutPoint> refundPoints,
+            List<TransactionSignature> refundSignatures, final Script redeemScript) throws Exception {
+        final NetworkParameters params = appConfig.getNetworkParameters();
+
+        List<TransactionOutput> clientWalletOutputs = walletService.getOutputs(p2shAddress);
+        List<TransactionOutput> clientMergedOutputs = BitcoinUtils.mergeOutputs(params,
+                tx, clientWalletOutputs, p2shAddress);
+
+        //for the unsiged refund we need the TransactionOutPoint and the value from the clientMergedOutputs, 
+        //the client did the same operation as well
+        LinkedHashMap<TransactionOutPoint, Coin> outputsToUseClient = BitcoinUtils.convertOutPoints(refundPoints, clientMergedOutputs);
+
+        int lockTime = BitcoinUtils.lockTimeBlock(LOCK_TIME_DAYS, walletService.currentBlock());
+        Transaction unsignedRefund = BitcoinUtils.generateUnsignedRefundTx(
+                params, outputsToUseClient,
+                addressTo,
+                redeemScript, lockTime);
+
+        if (unsignedRefund == null) {
+            return null;
         }
-        return retVal;
-    }*/
-    
-    
-    
+
+        List<TransactionSignature> partiallySignedRefundServer = BitcoinUtils.partiallySign(
+                unsignedRefund, redeemScript, serverKey);
+        BitcoinUtils.applySignatures(unsignedRefund, redeemScript, refundSignatures, partiallySignedRefundServer);
+        return new Pair(unsignedRefund, partiallySignedRefundServer);
+    }
+
     @RequestMapping(value = {"/complete-sign", "/s"}, method = RequestMethod.POST,
             consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
     @ResponseBody
     public CompleteSignTO sign(@RequestBody CompleteSignTO signTO) {
-        
-        final List<ECKey> keys = clientKeyService.getECKeysByClientPublicKey(signTO.clientPublicKey());
-        if(keys == null || keys.size() !=2) {
-                return new CompleteSignTO().reason(CompleteSignTO.Reason.KEYS_NOT_FOUND);
+        LOG.debug("Complete sign {}", signTO.clientPublicKey());
+        try {
+            final NetworkParameters params = appConfig.getNetworkParameters();
+            final List<ECKey> keys = clientKeyService.getECKeysByClientPublicKey(signTO.clientPublicKey());
+            if (keys == null || keys.size() != 2) {
+                return new CompleteSignTO().type(Type.KEYS_NOT_FOUND);
+            }
+
+            Transaction fullTx = new Transaction(params, signTO.fullSignedTransaction());
+            //TODO: check fullTx
+
+            //TODO: broadcast to network
+            return new CompleteSignTO().setSuccess();
+        } catch (Exception e) {
+            LOG.error("register keys error", e);
+            return new CompleteSignTO()
+                    .type(Type.SERVER_ERROR)
+                    .message(e.getMessage());
         }
-        
-        Transaction fullTx = new Transaction(appConfig.getNetworkParameters(), signTO.fullSignedTransaction());
-        //TODO: check fullTx
-        
-        //broadcast to network
-        
-        return new CompleteSignTO().setSuccess();
     }
-
-    /*public static Pair<PrepareHalfSignTO, Pair<Transaction,List<TransactionSignature>>> createHalfSignedTx(
-            NetworkParameters params, List<TransactionOutput> outputs, Address p2shAddressFrom, 
-            Address p2shAddressTo, Coin amountToSpend, Script redeemScript, ECKey serverKey, 
-            List<TransactionSignature> clientSigs, boolean detach) {
-        
-        
-        final Transaction tx = new Transaction(params);
-        Coin remainingAmount = Coin.ZERO;
-        for(TransactionOutput output:outputs) {
-            Address a = output.getAddressFromP2SH(params);
-            if(a!=null && a.equals(redeemScript.getToAddress(params))) {
-                
-                TransactionInput ti = tx.addInput(output);
-                //if(detach) {
-                //    //output.markAsUnspent();
-                //    //ti.setParent(null);
-                //    //ti.disconnect();
-                //}/
-                remainingAmount = remainingAmount.add(output.getValue());
-            }
-        }
-        remainingAmount = remainingAmount.subtract(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE);
-        if(amountToSpend.isGreaterThan(remainingAmount)) {
-            return new Pair<>(new PrepareHalfSignTO().reason(PrepareHalfSignTO.Reason.NOT_ENOUGH_COINS), null);
-        }
-        remainingAmount = remainingAmount.subtract(amountToSpend);
-        tx.addOutput(amountToSpend, p2shAddressTo); //to recipient
-        tx.addOutput(remainingAmount, p2shAddressFrom); //back to sender
-        //rest is tx fee
-        //TODO: add outputs to DB to pendingOutputs that will become valid, make sure these p2sh address came from us!
-        //if(clientKeyService.containsP2SH(p2shAddressTo)) {
-           //add to pending output 
-        //}
-        //TODO: update spentoutputs -> all inputs of this tx are now unspendable (double spending)
-        //TODO: this and the above double spending must be in a transaction!!
-        
-        //sign
-        List<TransactionSignature> sigs = new ArrayList<>();
-        for(int i=0;i<tx.getInputs().size();i++) {
-            final Sha256Hash sighash = tx.hashForSignature(i, redeemScript, Transaction.SigHash.ALL, false);
-            final TransactionSignature serverSignature = new TransactionSignature(serverKey.sign(sighash), Transaction.SigHash.ALL, false);
-            
-            List<TransactionSignature> l = new ArrayList<>();
-            sigs.add(serverSignature);
-            //not known yet, fill with zero
-            final TransactionSignature clientSignature;
-            if(clientSigs != null) {
-                
-            
-                clientSignature = clientSigs.get(i);
-            
-            
-                //TODO: does order matter? yes it does!
-            
-                l.add(serverSignature);
-                l.add(clientSignature);
-                
-                
-                final Script refundTransactionInputScript = ScriptBuilder.createP2SHMultiSigInputScript(l, redeemScript);
-                tx.getInput(i).setScriptSig(refundTransactionInputScript);
-            }
-        }
-        return new Pair<>(new PrepareHalfSignTO().setSuccess(), new Pair<>(tx, sigs));
-    }*/
-
-    
-
-   
-
-    
-
-    
-    
-    
 }

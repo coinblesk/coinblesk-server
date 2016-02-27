@@ -84,22 +84,22 @@ public class KeyService {
     }
 
     @Transactional
-    public Pair<Boolean, Keys> create(final String clientPublicKey, final byte[] p2shHash,
+    public Pair<Boolean, Keys> storeKeysAndAddress(final byte[] clientPublicKey, final Address p2shAdderss,
             final byte[] serverPublicKey, final byte[] serverPrivateKey) {
-        if (clientPublicKey == null || p2shHash == null || serverPublicKey == null || serverPrivateKey == null ) {
+        if (clientPublicKey == null || p2shAdderss == null || serverPublicKey == null || serverPrivateKey == null ) {
             throw new IllegalArgumentException("null not excpected here");
         }
-
-        final byte[] clientPublicKeyRaw = Base64.getDecoder().decode(clientPublicKey);
         
+        byte[] p2shHash = p2shAdderss.getHash160();
+
         final Keys clientKey = new Keys()
-                .clientPublicKey(clientPublicKeyRaw)
+                .clientPublicKey(clientPublicKey)
                 .p2shHash(p2shHash)
                 .serverPrivateKey(serverPrivateKey)
                 .serverPublicKey(serverPublicKey);
 
         //need to check if it exists here, as not all DBs does that for us
-        final Keys keys = clientKeyDAO.findByClientPublicKey(clientPublicKeyRaw);
+        final Keys keys = clientKeyDAO.findByClientPublicKey(clientPublicKey);
         if (keys != null) {
             return new Pair<>(false, keys);
         }
@@ -122,9 +122,9 @@ public class KeyService {
     }
     
     @Transactional
-    public void addRefundTransaction(String clientPublicKey, byte[] refundTransaction) {
+    public void addRefundTransaction(byte[] clientPublicKey, byte[] refundTransaction) {
        Refund refund = new Refund();
-       refund.clientPublicKey(Base64.getDecoder().decode(clientPublicKey));
+       refund.clientPublicKey(clientPublicKey);
        refund.refundTx(refundTransaction);
        refund.creationDate(new Date());
        refundDAO.save(refund);

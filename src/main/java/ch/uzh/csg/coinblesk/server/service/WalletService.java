@@ -231,10 +231,6 @@ public class WalletService {
         return retVal;
     }
 
-    public TransactionOutput findParentOutput(Sha256Hash hash, long index) {
-        return wallet.getTransaction(hash).getOutput(index);
-    }
-
     public int currentBlock() {
         return wallet.getLastBlockSeenHeight();
     }

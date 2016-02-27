@@ -8,6 +8,7 @@ package ch.uzh.csg.coinblesk.server.service;
 import ch.uzh.csg.coinblesk.server.dao.UserAccountDAO;
 import ch.uzh.csg.coinblesk.server.entity.UserAccount;
 import ch.uzh.csg.coinblesk.server.utils.Pair;
+import com.coinblesk.json.Type;
 import com.coinblesk.json.UserAccountStatusTO;
 import com.coinblesk.json.UserAccountTO;
 import java.util.Date;
@@ -51,21 +52,21 @@ public class UserAccountService {
     public Pair<UserAccountStatusTO, UserAccount> create(final UserAccountTO userAccountTO) {
         final String email = userAccountTO.email();
         if(email == null){
-            return new Pair(new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.NO_EMAIL), null);
+            return new Pair(new UserAccountStatusTO().type(Type.NO_EMAIL), null);
 	}
         if(!email.matches(EMAIL_PATTERN)){
-            return new Pair(new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.INVALID_EMAIL), null);
+            return new Pair(new UserAccountStatusTO().type(Type.INVALID_EMAIL), null);
 	}
         if(userAccountTO.password() == null || userAccountTO.password().length() < 6) {
-            return new Pair(new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.PASSWORD_TOO_SHORT), null);
+            return new Pair(new UserAccountStatusTO().type(Type.PASSWORD_TOO_SHORT), null);
 	}
         
         final UserAccount found = userAccountDao.getByAttribute("email", email);
         if(found != null) {
             if(found.getEmailToken()!=null) {
-                return new Pair(new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.EMAIL_ALREADY_EXISTS_NOT_ACTIVATED), found);
+                return new Pair(new UserAccountStatusTO().type(Type.EMAIL_ALREADY_EXISTS_NOT_ACTIVATED), found);
             }
-            return new Pair(new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.EMAIL_ALREADY_EXISTS_ACTIVATED), found);
+            return new Pair(new UserAccountStatusTO().type(Type.EMAIL_ALREADY_EXISTS_ACTIVATED), found);
         }
         
         //convert TO to Entity
@@ -85,7 +86,7 @@ public class UserAccountService {
         final UserAccount found = userAccountDao.getByAttribute("email", email);
         if(found == null) {
             //no such email address - notok
-            return new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.NO_EMAIL);
+            return new UserAccountStatusTO().type(Type.NO_EMAIL);
         }
         if(found.getEmailToken() == null) {
             //already acitaveted - ok
@@ -94,7 +95,7 @@ public class UserAccountService {
         
         if(!found.getEmailToken().equals(token)) {
             //wrong token - notok
-            return new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.INVALID_EMAIL_TOKEN);
+            return new UserAccountStatusTO().type(Type.INVALID_EMAIL_TOKEN);
         }
         
         //activate, enitiy is in attached state
@@ -106,10 +107,10 @@ public class UserAccountService {
     public UserAccountStatusTO delete(String email) {
         final int result = userAccountDao.remove(email);
         if(result == 0) {
-            return new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.NO_ACCOUNT);
+            return new UserAccountStatusTO().type(Type.NO_ACCOUNT);
         }
         if(result > 1) {
-            return new UserAccountStatusTO().reason(UserAccountStatusTO.Reason.ACCOUNT_ERROR);
+            return new UserAccountStatusTO().type(Type.ACCOUNT_ERROR);
         }
         return new UserAccountStatusTO().setSuccess();
     }
