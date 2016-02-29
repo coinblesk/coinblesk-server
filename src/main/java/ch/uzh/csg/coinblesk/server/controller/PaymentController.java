@@ -352,7 +352,7 @@ public class PaymentController {
         LOG.debug("Complete sign {}", signTO.clientPublicKey());
         try {
             final NetworkParameters params = appConfig.getNetworkParameters();
-            
+            //TODO: client/merchant key not needed
             final List<ECKey> keysClient = clientKeyService.getECKeysByClientPublicKey(signTO.clientPublicKey());
             if (keysClient == null || keysClient.size() != 2) {
                 return new CompleteSignTO().type(Type.KEYS_NOT_FOUND);
