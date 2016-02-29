@@ -154,7 +154,7 @@ public class PaymentController {
             final Transaction refundTransaction = new Transaction(params, refundTO.refundTransaction());
             //TODO: check client setting for locktime
             List<TransactionSignature> clientSigs = SerializeUtils.deserializeSignatures(refundTO.clientSignatures());
-
+            
             final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
             List<TransactionSignature> serverSigs = BitcoinUtils.partiallySign(refundTransaction, redeemScript, keys.get(1));
             BitcoinUtils.applySignatures(refundTransaction, redeemScript, clientSigs, serverSigs);
@@ -378,6 +378,8 @@ public class PaymentController {
             //keyService.removeConfirmedBurnedOutput(fullTx.getInputs());
             
             //TODO: broadcast to network
+            
+            //TODO: now we can also check if the refund tx is valid
             return new CompleteSignTO().setSuccess();
         } catch (Exception e) {
             LOG.error("register keys error", e);
