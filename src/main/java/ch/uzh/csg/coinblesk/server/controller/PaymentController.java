@@ -150,13 +150,14 @@ public class PaymentController {
             if (keys == null || keys.size() != 2) {
                 return new RefundTO().type(Type.KEYS_NOT_FOUND);
             }
-            final Script redeemScript = ScriptBuilder.createP2SHOutputScript(2, keys);
             //this is how the client sees the tx
             final Transaction refundTransaction = new Transaction(params, refundTO.refundTransaction());
             final int lockTime = BitcoinUtils.lockTimeBlock(LOCK_TIME_DAYS, walletService.currentBlock());
             //ignore client setting
             refundTransaction.setLockTime(lockTime);
             List<TransactionSignature> clientSigs = SerializeUtils.deserializeSignatures(refundTO.clientSignatures());
+
+            final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
             List<TransactionSignature> serverSigs = BitcoinUtils.partiallySign(refundTransaction, redeemScript, keys.get(1));
             BitcoinUtils.applySignatures(refundTransaction, redeemScript, clientSigs, serverSigs);
 
@@ -186,8 +187,8 @@ public class PaymentController {
                 return new PrepareHalfSignTO().type(Type.KEYS_NOT_FOUND);
             }
             final ECKey serverKey = keys.get(1);
-            final Script redeemScript = ScriptBuilder.createP2SHOutputScript(2, keys);
-            final Address p2shAddressFrom = redeemScript.getToAddress(params);
+            final Script p2SHOutputScript = ScriptBuilder.createP2SHOutputScript(2, keys);
+            final Address p2shAddressFrom = p2SHOutputScript.getToAddress(params);
             final Coin amountToSpend = Coin.valueOf(prepareSignTO.amountToSpend());
 
             if (prepareSignTO.p2shAddressTo() == null || prepareSignTO.p2shAddressTo().isEmpty()) {
@@ -211,7 +212,7 @@ public class PaymentController {
 
             Transaction tx = BitcoinUtils.createTx(
                     params, outputs, p2shAddressFrom,
-                    p2shAddressTo, amountToSpend.value, redeemScript);
+                    p2shAddressTo, amountToSpend.value, p2SHOutputScript);
             
             if (tx == null) {
                 return new PrepareHalfSignTO().type(Type.NOT_ENOUGH_COINS);
@@ -235,8 +236,8 @@ public class PaymentController {
                 return new PrepareHalfSignTO().type(Type.DOUBLE_SPENDING);
             }
 
-            
 
+            final Script redeemScript = ScriptBuilder.createRedeemScript(2,keys);
             //sign the tx with the server keys
             List<TransactionSignature> serverTxSigs = BitcoinUtils.partiallySign(tx, redeemScript, serverKey);
             //TODO: mark these outputs as burned!! With the sig, the client can send it to 
