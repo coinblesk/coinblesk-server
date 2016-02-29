@@ -152,15 +152,13 @@ public class PaymentController {
             }
             //this is how the client sees the tx
             final Transaction refundTransaction = new Transaction(params, refundTO.refundTransaction());
-            final int lockTime = BitcoinUtils.lockTimeBlock(LOCK_TIME_DAYS, walletService.currentBlock());
-            //ignore client setting
-            refundTransaction.setLockTime(lockTime);
+            //TODO: check client setting for locktime
             List<TransactionSignature> clientSigs = SerializeUtils.deserializeSignatures(refundTO.clientSignatures());
 
             final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
             List<TransactionSignature> serverSigs = BitcoinUtils.partiallySign(refundTransaction, redeemScript, keys.get(1));
             BitcoinUtils.applySignatures(refundTransaction, redeemScript, clientSigs, serverSigs);
-
+            refundTO.serverSignatures(SerializeUtils.serializeSignatures(serverSigs));
             //TODO: enable
             //refundTransaction.verify(); make sure those inputs are from the known p2sh address (min conf)
             byte[] refundTx = refundTransaction.unsafeBitcoinSerialize();
