@@ -212,7 +212,7 @@ public class PaymentController {
 
             Transaction tx = BitcoinUtils.createTx(
                     params, outputs, p2shAddressFrom,
-                    p2shAddressTo, amountToSpend.value, p2SHOutputScript);
+                    p2shAddressTo, amountToSpend.value);
             
             if (tx == null) {
                 return new PrepareHalfSignTO().type(Type.NOT_ENOUGH_COINS);

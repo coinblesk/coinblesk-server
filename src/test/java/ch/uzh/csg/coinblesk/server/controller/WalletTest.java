@@ -247,7 +247,7 @@ public class WalletTest {
         List<TransactionOutput> clientWalletOutputs = funding.getOutputs();
         Transaction txClient = BitcoinUtils.createTx(appConfig.getNetworkParameters(), 
                 clientWalletOutputs, p2shAddressClient, p2shAddressMerchant, 
-                amountToRequest.value, redeemScriptServerClient);
+                amountToRequest.value);
         List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(txClient, redeemScriptServerClient, ecKeyClient);
         BitcoinUtils.applySignatures(txClient, redeemScriptServerClient, clientSigs, serverSigs);
         //Client now has the full tx, based on that, Client creates the refund tx
