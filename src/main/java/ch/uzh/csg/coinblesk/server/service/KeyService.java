@@ -11,7 +11,7 @@ import ch.uzh.csg.coinblesk.server.dao.RefundDAO;
 import ch.uzh.csg.coinblesk.server.entity.BurnedOutput;
 import ch.uzh.csg.coinblesk.server.entity.Keys;
 import ch.uzh.csg.coinblesk.server.entity.Refund;
-import ch.uzh.csg.coinblesk.server.utils.Pair;
+import com.coinblesk.util.Pair;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
@@ -20,8 +20,10 @@ import java.util.List;
 import javax.transaction.Transactional;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
+import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -140,7 +142,17 @@ public class KeyService {
     }
     
     @Transactional
-    public boolean burnOutputFromNewTransaction(List<TransactionInput> inputsFromNewTransaction) {
+    public List<TransactionOutPoint> burnedOutpoints(NetworkParameters params, byte[] clientPublicKey) {
+        final List<TransactionOutPoint> retVal = new ArrayList<>();
+        List<BurnedOutput> burnedOutputs = burnedOutputDAO.findByClientKey(clientPublicKey);
+        for(BurnedOutput burnedOutput:burnedOutputs) {
+            retVal.add(new TransactionOutPoint(params, burnedOutput.transactionOutpoint(), 0));
+        }
+        return retVal;
+    }
+    
+    @Transactional
+    public boolean burnOutputFromNewTransaction(byte[] clientPublicKey, List<TransactionInput> inputsFromNewTransaction) {
         for(TransactionInput transactionInput:inputsFromNewTransaction) {
             byte[] outpoints = transactionInput.getOutpoint().bitcoinSerialize();
             BurnedOutput burnedOutput = burnedOutputDAO.findByTxOutpoint(outpoints);
@@ -149,6 +161,7 @@ public class KeyService {
             }
             burnedOutput = new BurnedOutput()
                     .transactionOutpoint(outpoints)
+                    .clientPublicKey(clientPublicKey)
                     .creationDate(new Date());
             burnedOutputDAO.save(burnedOutput);
         }
@@ -156,7 +169,7 @@ public class KeyService {
     }
     
     @Transactional
-    public boolean burnOutpuFromOldTransactiont(List<TransactionOutput> outputsFromOldTransaction) {
+    public boolean burnOutpuFromOldTransactiont(byte[] clientPublicKey, List<TransactionOutput> outputsFromOldTransaction) {
         for(TransactionOutput transactionOutput:outputsFromOldTransaction) {
             byte[] outpoints = transactionOutput.getOutPointFor().bitcoinSerialize();
             BurnedOutput burnedOutput = burnedOutputDAO.findByTxOutpoint(outpoints);
@@ -165,6 +178,7 @@ public class KeyService {
             }
             burnedOutput = new BurnedOutput()
                     .transactionOutpoint(outpoints)
+                    .clientPublicKey(clientPublicKey)
                     .creationDate(new Date());
             burnedOutputDAO.save(burnedOutput);
         }

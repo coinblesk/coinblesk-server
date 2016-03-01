@@ -6,6 +6,7 @@
 package ch.uzh.csg.coinblesk.server.dao;
 
 import ch.uzh.csg.coinblesk.server.entity.BurnedOutput;
+import java.util.List;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.criteria.CriteriaBuilder;
@@ -32,6 +33,15 @@ public class BurnedOutputDAO {
         final Predicate condition = cb.equal(from.get("transactionOutpoint"), txOutpoint);
         CriteriaQuery<BurnedOutput> select = query.select(from).where(condition);
         return DAOUtils.getSingleResultOrNull(em.createQuery(select));
+    }
+    
+    public List<BurnedOutput> findByClientKey(final byte[] clientPublicKey) {
+        final CriteriaBuilder cb = em.getCriteriaBuilder();
+        final CriteriaQuery<BurnedOutput> query = cb.createQuery(BurnedOutput.class);
+        final Root<BurnedOutput> from = query.from(BurnedOutput.class);
+        final Predicate condition = cb.equal(from.get("clientPublicKey"), clientPublicKey);
+        CriteriaQuery<BurnedOutput> select = query.select(from).where(condition);
+        return em.createQuery(select).getResultList();
     }
     
     public <T> T save(final T enity) {

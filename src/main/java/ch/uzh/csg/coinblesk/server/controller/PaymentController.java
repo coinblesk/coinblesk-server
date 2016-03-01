@@ -10,7 +10,6 @@ import ch.uzh.csg.coinblesk.server.entity.Keys;
 import ch.uzh.csg.coinblesk.server.service.KeyService;
 import ch.uzh.csg.coinblesk.server.service.TransactionService;
 import ch.uzh.csg.coinblesk.server.service.WalletService;
-import ch.uzh.csg.coinblesk.server.utils.Pair;
 import com.coinblesk.json.BalanceTO;
 import com.coinblesk.json.CompleteSignTO;
 import com.coinblesk.json.KeyTO;
@@ -19,8 +18,10 @@ import com.coinblesk.json.RefundP2shTO;
 import com.coinblesk.json.RefundTO;
 import com.coinblesk.json.Type;
 import com.coinblesk.util.BitcoinUtils;
+import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
 import java.util.ArrayList;
+import java.util.Iterator;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,6 +30,7 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.TransactionSignature;
@@ -117,7 +119,7 @@ public class PaymentController {
                     .message(e.getMessage());
         }
     }
-
+    
     @RequestMapping(value = {"/balance", "/b"}, method = RequestMethod.GET,
             consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
@@ -138,11 +140,11 @@ public class PaymentController {
         }
     }
 
-    @RequestMapping(value = {"/refund", "/r"}, method = RequestMethod.POST,
+    @RequestMapping(value = {"/payout-p2sh", "/o"}, method = RequestMethod.POST,
             consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
     @ResponseBody
-    public RefundTO refund(@RequestBody RefundTO refundTO) {
+    public RefundTO payout(@RequestBody RefundTO refundTO) {
         LOG.debug("Refund for {}", refundTO.clientPublicKey());
         try {
             final NetworkParameters params = appConfig.getNetworkParameters();
@@ -150,20 +152,18 @@ public class PaymentController {
             if (keys == null || keys.size() != 2) {
                 return new RefundTO().type(Type.KEYS_NOT_FOUND);
             }
-            //this is how the client sees the tx
-            final Transaction refundTransaction = new Transaction(params, refundTO.refundTransaction());
-            //TODO: check client setting for locktime
-            List<TransactionSignature> clientSigs = SerializeUtils.deserializeSignatures(refundTO.clientSignatures());
+            final Script p2SHOutputScript = ScriptBuilder.createP2SHOutputScript(2, keys);
+            final Address p2shAddressFrom = p2SHOutputScript.getToAddress(params);
             
-            final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
-            List<TransactionSignature> serverSigs = BitcoinUtils.partiallySign(refundTransaction, redeemScript, keys.get(1));
-            BitcoinUtils.applySignatures(refundTransaction, redeemScript, clientSigs, serverSigs);
-            refundTO.serverSignatures(SerializeUtils.serializeSignatures(serverSigs));
-            //TODO: enable
-            //refundTransaction.verify(); make sure those inputs are from the known p2sh address (min conf)
-            byte[] refundTx = refundTransaction.unsafeBitcoinSerialize();
-            clientKeyService.addRefundTransaction(refundTO.clientPublicKey(), refundTx);
-            return new RefundTO().setSuccess().refundTransaction(refundTx);
+            List<TransactionOutput> outputs = walletService.getOutputs(p2shAddressFrom);
+            //in addition, get the outputs from previous TX, possibly not yet published in the BT network
+            outputs.addAll(transactionService.approvedReceiving(params, p2shAddressFrom));
+            outputs.removeAll(transactionService.approvedSpending(params, p2shAddressFrom));
+            
+            //mark those outputs as burned!
+            //TODO: send the outputs to the new address (can be a p2sh address)
+            return new RefundTO().type(Type.KEYS_NOT_FOUND);
+            
         } catch (Exception e) {
             LOG.error("register keys error", e);
             return new RefundTO()
@@ -179,6 +179,7 @@ public class PaymentController {
     public PrepareHalfSignTO prepareHalfSign(@RequestBody PrepareHalfSignTO prepareSignTO) {
         LOG.debug("Prepare half signed {}", prepareSignTO.clientPublicKey());
         try {
+            //TODO: check if the request came from the client, otherwise DoS is possible
             final NetworkParameters params = appConfig.getNetworkParameters();
             final List<ECKey> keys = clientKeyService.getECKeysByClientPublicKey(prepareSignTO.clientPublicKey());
             if (keys == null || keys.size() != 2) {
@@ -216,7 +217,7 @@ public class PaymentController {
                 return new PrepareHalfSignTO().type(Type.NOT_ENOUGH_COINS);
             }
             
-            if(!keyService.burnOutputFromNewTransaction(tx.getInputs())) {
+            if(!keyService.burnOutputFromNewTransaction(prepareSignTO.clientPublicKey(), tx.getInputs())) {
                 //double spending?
                 //if we alreday have the outpoints for the tx, then we already
                 //sent out the keys. The client can then use the keys, to submit
@@ -240,7 +241,7 @@ public class PaymentController {
             List<TransactionSignature> serverTxSigs = BitcoinUtils.partiallySign(tx, redeemScript, serverKey);
             //TODO: mark these outputs as burned!! With the sig, the client can send it to 
             //the Bitcoin network itself.
-            return new PrepareHalfSignTO()
+            return new PrepareHalfSignTO().setSuccess()
                     .unsignedTransaction(tx.unsafeBitcoinSerialize())
                     .signatures(SerializeUtils.serializeSignatures(serverTxSigs));
 
@@ -263,47 +264,69 @@ public class PaymentController {
             //get client public key (identifier)
             final List<ECKey> keysClient = clientKeyService.getECKeysByClientPublicKey(refundP2shTO.clientPublicKey());
             final ECKey clientKey = keysClient.get(0);
-            final ECKey serverClientKey = keysClient.get(1);
+            final ECKey serverKey = keysClient.get(1);
             final Script serverClientRedeemScript = ScriptBuilder.createP2SHOutputScript(2, keysClient);
-            final Address p2shAddressFrom = serverClientRedeemScript.getToAddress(params);
-            //get merchant public key
-            final List<ECKey> keysMerchant = clientKeyService.getECKeysByClientPublicKey(refundP2shTO.merchantPublicKey());
-            final ECKey merchantKey = keysMerchant.get(0);
-            final ECKey serverMerchantKey = keysMerchant.get(1);
-            final Script serverMerchantRedeemScript = ScriptBuilder.createP2SHOutputScript(2, keysMerchant);
-            final Address p2shAddressTo = serverMerchantRedeemScript.getToAddress(params);
-
-            final Transaction tx = new Transaction(params, refundP2shTO.unsignedTransaction());
-            //TODO: this tx is unsigned, get the sigs and check it that we applied the signature! we want to be stateless
-
-            //we now get from the client the outpoints for the refund tx (including hash)
-            List<TransactionOutPoint> refundClientPoints = SerializeUtils.deserializeOutPoints(
-                    params, refundP2shTO.refundClientOutpoints());
-            //the client and the merchant have signed the refund tx, the client created the refund tx, 
-            //the merchant and server using the outpoints to recreate the tx
-
-            //Client refund is here, we can do a full refund
-            List<TransactionSignature> clientRefundSignatures = SerializeUtils.deserializeSignatures(refundP2shTO.refundSignaturesClient());
-            Pair<Transaction, List<TransactionSignature>> refundClientPair = createClientRefund(clientKey.toAddress(params),
-                    serverClientKey, tx, p2shAddressFrom,
-                    refundClientPoints, clientRefundSignatures, serverClientRedeemScript);
-            if(refundClientPair == null) {
-                 return new RefundP2shTO().type(Type.NOT_ENOUGH_COINS);
-            }
-            //unsignedRefund is now fully signed
-            RefundP2shTO retVal = new RefundP2shTO();
-            retVal.fullRefundTransactionClient(refundClientPair.element0().unsafeBitcoinSerialize());
-            retVal.refundSignaturesClientServer(SerializeUtils.serializeSignatures(refundClientPair.element1()));
-
-            //Merchant refund is here, we can do a full refund
-            List<TransactionSignature> merchantRefundSignatures = SerializeUtils.deserializeSignatures(refundP2shTO.refundSignaturesMerchant());
-            Transaction unsignedRefundMerchant = new Transaction(params, refundP2shTO.unsignedRefundMerchantTransaction());
-            List<TransactionSignature> partiallySignedRefundServer = BitcoinUtils.partiallySign(
-                unsignedRefundMerchant, serverMerchantRedeemScript, serverMerchantKey);
-            BitcoinUtils.applySignatures(unsignedRefundMerchant, serverMerchantRedeemScript, merchantRefundSignatures, partiallySignedRefundServer);
-            //TODO: check this tx!
+            final Script redeemScript = ScriptBuilder.createRedeemScript(2, keysClient);
+            final Address p2shAddress = serverClientRedeemScript.getToAddress(params);
             
-            retVal.setSuccess().fullRefundTransactionMerchant(unsignedRefundMerchant.unsafeBitcoinSerialize());
+            //we now get from the client the outpoints for the refund tx (including hash)
+            List<Pair<TransactionOutPoint,Coin>> refundClientPoints = SerializeUtils.deserializeOutPointsCoin(
+                    params, refundP2shTO.refundClientOutpointsCoinPair());
+            //Client refund sigs are here, we can do a full refund
+            List<TransactionSignature> refundSignatures = SerializeUtils.deserializeSignatures(refundP2shTO.refundSignaturesClient());
+            
+            //now get all the output we want the refund, for client this will be one entry, for merchant this
+            //will return multiple entries
+            List<TransactionOutput> clientWalletOutputs = walletService.getOutputs(p2shAddress);
+            //add/remove pending 
+            clientWalletOutputs.addAll(transactionService.approvedReceiving(params, p2shAddress));
+            clientWalletOutputs.removeAll(transactionService.approvedSpending(params, p2shAddress));
+            
+            //remove burned outputs
+            List<TransactionOutPoint> to = keyService.burnedOutpoints(params, clientKey.getPubKey());
+            for(Iterator<TransactionOutput> i=clientWalletOutputs.iterator();i.hasNext();) {
+                TransactionOutput output = i.next();
+                for(TransactionOutPoint t:to) {
+                    if(output.getParentTransaction().getHash().equals(t.getHash())) {
+                        i.remove();
+                        break;
+                    }
+                }
+            }
+            
+            //sanity check: client cannot give us burned outpoints
+            for(TransactionOutPoint t:to) {
+                for(Pair<TransactionOutPoint,Coin> p:refundClientPoints) {
+                    if(t.equals(p.element0())) {
+                        return new RefundP2shTO().type(Type.SERVER_ERROR);
+                    }
+                }
+            }
+            
+            
+            List<TransactionInput> preBuiltInupts = BitcoinUtils.convertPointsToInputs(params, refundClientPoints, redeemScript);
+            
+            //TODO: this must be the same as the timelock on the client!!
+            final int lockTime = BitcoinUtils.lockTimeBlock(LOCK_TIME_DAYS, walletService.currentBlock());
+            Transaction unsignedRefund = BitcoinUtils.generateUnsignedRefundTx(
+                params, clientWalletOutputs, preBuiltInupts,
+                clientKey.toAddress(params), redeemScript, lockTime);
+
+            System.err.println("raw refund server:"+unsignedRefund);
+            System.err.println("redeem: "+redeemScript);
+            if (unsignedRefund == null) {
+                return new RefundP2shTO().type(Type.NOT_ENOUGH_COINS);
+            }
+
+            List<TransactionSignature> partiallySignedRefundServer = BitcoinUtils.partiallySign(
+                    unsignedRefund, redeemScript, serverKey);
+            BitcoinUtils.applySignatures(unsignedRefund, redeemScript, refundSignatures, partiallySignedRefundServer);
+            
+            //unsignedRefund is now fully signed
+            RefundP2shTO retVal = new RefundP2shTO().setSuccess()
+                .fullRefundTransaction(unsignedRefund.unsafeBitcoinSerialize())
+                .refundSignaturesServer(SerializeUtils.serializeSignatures(partiallySignedRefundServer));
+
             return retVal;
 
         } catch (Exception e) {
@@ -312,36 +335,6 @@ public class PaymentController {
                     .type(Type.SERVER_ERROR)
                     .message(e.getMessage());
         }
-    }
-
-    private Pair<Transaction, List<TransactionSignature>> createClientRefund(final Address addressTo,
-            final ECKey serverKey, final Transaction tx,
-            final Address p2shAddress, final List<TransactionOutPoint> refundPoints,
-            List<TransactionSignature> refundSignatures, final Script redeemScript) throws Exception {
-        final NetworkParameters params = appConfig.getNetworkParameters();
-
-        List<TransactionOutput> clientWalletOutputs = walletService.getOutputs(p2shAddress);
-        List<TransactionOutput> clientMergedOutputs = BitcoinUtils.mergeOutputs(params,
-                tx, clientWalletOutputs, p2shAddress);
-
-        //for the unsiged refund we need the TransactionOutPoint and the value from the clientMergedOutputs, 
-        //the client did the same operation as well
-        LinkedHashMap<TransactionOutPoint, Coin> outputsToUseClient = BitcoinUtils.convertOutPoints(refundPoints, clientMergedOutputs);
-
-        int lockTime = BitcoinUtils.lockTimeBlock(LOCK_TIME_DAYS, walletService.currentBlock());
-        Transaction unsignedRefund = BitcoinUtils.generateUnsignedRefundTx(
-                params, outputsToUseClient,
-                addressTo,
-                redeemScript, lockTime);
-
-        if (unsignedRefund == null) {
-            return null;
-        }
-
-        List<TransactionSignature> partiallySignedRefundServer = BitcoinUtils.partiallySign(
-                unsignedRefund, redeemScript, serverKey);
-        BitcoinUtils.applySignatures(unsignedRefund, redeemScript, refundSignatures, partiallySignedRefundServer);
-        return new Pair(unsignedRefund, partiallySignedRefundServer);
     }
 
     @RequestMapping(value = {"/complete-sign", "/s"}, method = RequestMethod.POST,

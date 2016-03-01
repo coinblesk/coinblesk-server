@@ -7,10 +7,10 @@ package ch.uzh.csg.coinblesk.server.service;
 
 import ch.uzh.csg.coinblesk.server.dao.UserAccountDAO;
 import ch.uzh.csg.coinblesk.server.entity.UserAccount;
-import ch.uzh.csg.coinblesk.server.utils.Pair;
 import com.coinblesk.json.Type;
 import com.coinblesk.json.UserAccountStatusTO;
 import com.coinblesk.json.UserAccountTO;
+import com.coinblesk.util.Pair;
 import java.util.Date;
 import java.util.UUID;
 import javax.transaction.Transactional;

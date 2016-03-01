@@ -6,12 +6,11 @@
 package ch.uzh.csg.coinblesk.server.utilTest;
 
 import ch.uzh.csg.coinblesk.server.config.AdminEmail;
-import ch.uzh.csg.coinblesk.server.utils.Pair;
+import com.coinblesk.util.Pair;
 import java.util.LinkedList;
 import java.util.Queue;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.test.context.ContextConfiguration;
 
 /**
  *
