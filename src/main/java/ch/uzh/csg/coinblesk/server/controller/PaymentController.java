@@ -140,11 +140,11 @@ public class PaymentController {
         }
     }
 
-    @RequestMapping(value = {"/payout-p2sh", "/o"}, method = RequestMethod.POST,
+    @RequestMapping(value = {"/refund", "/r"}, method = RequestMethod.POST,
             consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
     @ResponseBody
-    public RefundTO payout(@RequestBody RefundTO refundTO) {
+    public RefundTO refund(@RequestBody RefundTO refundTO) {
         LOG.debug("Refund for {}", refundTO.clientPublicKey());
         try {
             final NetworkParameters params = appConfig.getNetworkParameters();
@@ -152,18 +152,20 @@ public class PaymentController {
             if (keys == null || keys.size() != 2) {
                 return new RefundTO().type(Type.KEYS_NOT_FOUND);
             }
-            final Script p2SHOutputScript = ScriptBuilder.createP2SHOutputScript(2, keys);
-            final Address p2shAddressFrom = p2SHOutputScript.getToAddress(params);
+            //this is how the client sees the tx
+            final Transaction refundTransaction = new Transaction(params, refundTO.refundTransaction());
+            //TODO: check client setting for locktime
+            List<TransactionSignature> clientSigs = SerializeUtils.deserializeSignatures(refundTO.clientSignatures());
             
-            List<TransactionOutput> outputs = walletService.getOutputs(p2shAddressFrom);
-            //in addition, get the outputs from previous TX, possibly not yet published in the BT network
-            outputs.addAll(transactionService.approvedReceiving(params, p2shAddressFrom));
-            outputs.removeAll(transactionService.approvedSpending(params, p2shAddressFrom));
-            
-            //mark those outputs as burned!
-            //TODO: send the outputs to the new address (can be a p2sh address)
-            return new RefundTO().type(Type.KEYS_NOT_FOUND);
-            
+            final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
+            List<TransactionSignature> serverSigs = BitcoinUtils.partiallySign(refundTransaction, redeemScript, keys.get(1));
+            BitcoinUtils.applySignatures(refundTransaction, redeemScript, clientSigs, serverSigs);
+            refundTO.serverSignatures(SerializeUtils.serializeSignatures(serverSigs));
+            //TODO: enable
+            //refundTransaction.verify(); make sure those inputs are from the known p2sh address (min conf)
+            byte[] refundTx = refundTransaction.unsafeBitcoinSerialize();
+            clientKeyService.addRefundTransaction(refundTO.clientPublicKey(), refundTx);
+            return new RefundTO().setSuccess().refundTransaction(refundTx);
         } catch (Exception e) {
             LOG.error("register keys error", e);
             return new RefundTO()
