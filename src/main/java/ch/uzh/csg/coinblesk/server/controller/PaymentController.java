@@ -219,23 +219,7 @@ public class PaymentController {
                 return new PrepareHalfSignTO().type(Type.NOT_ENOUGH_COINS);
             }
             
-            if(!keyService.burnOutputFromNewTransaction(prepareSignTO.clientPublicKey(), tx.getInputs())) {
-                //double spending?
-                //if we alreday have the outpoints for the tx, then we already
-                //sent out the keys. The client can then use the keys, to submit
-                //the transaction on its own. Thus, the server must keep track
-                //of those outpoints
-                //
-                //if for any reason the client gets the keys, but fails to continue
-                //in the payment process, its funds are marked as "burned". So the client
-                //cannot use its fund with another merchant. Once the keys have been
-                //issued, the client needs to finish the payment process.
-                //
-                //TODO: as a fallback, the burned outputs needs to be reseted. The server
-                //sends back a re-topup transaction and the client signs it, the server
-                //broadcasts the tx, thus, needing ~10min to make funds available it such a case.
-                return new PrepareHalfSignTO().type(Type.DOUBLE_SPENDING);
-            }
+            keyService.burnOutputFromNewTransaction(params, tx.getInputs());
 
 
             final Script redeemScript = ScriptBuilder.createRedeemScript(2,keys);
@@ -283,28 +267,6 @@ public class PaymentController {
             //add/remove pending 
             clientWalletOutputs.addAll(transactionService.approvedReceiving(params, p2shAddress));
             clientWalletOutputs.removeAll(transactionService.approvedSpending(params, p2shAddress));
-            
-            //remove burned outputs
-            List<TransactionOutPoint> to = keyService.burnedOutpoints(params, clientKey.getPubKey());
-            for(Iterator<TransactionOutput> i=clientWalletOutputs.iterator();i.hasNext();) {
-                TransactionOutput output = i.next();
-                for(TransactionOutPoint t:to) {
-                    if(output.getParentTransaction().getHash().equals(t.getHash())) {
-                        i.remove();
-                        break;
-                    }
-                }
-            }
-            
-            //sanity check: client cannot give us burned outpoints
-            for(TransactionOutPoint t:to) {
-                for(Pair<TransactionOutPoint,Coin> p:refundClientPoints) {
-                    if(t.equals(p.element0())) {
-                        return new RefundP2shTO().type(Type.SERVER_ERROR);
-                    }
-                }
-            }
-            
             
             List<TransactionInput> preBuiltInupts = BitcoinUtils.convertPointsToInputs(params, refundClientPoints, redeemScript);
             
@@ -364,18 +326,26 @@ public class PaymentController {
             
 
             Transaction fullTx = new Transaction(params, signTO.fullSignedTransaction());
+            List<Pair<TransactionOutPoint, Integer>> outpoints = keyService.burnOutputFromNewTransaction(params, fullTx.getInputs());
+            boolean instantPayment = true;
+            for(Pair<TransactionOutPoint, Integer> p:outpoints) {
+                if(p.element1() != 2) {
+                    instantPayment = false;
+                    break;
+                }
+            }
+            //TODO: check refund tx as well for instantPayment
             //TODO: check fullTx, check client/server sigs
-            transactionService.approveTx(fullTx, p2shAddressFrom, p2shAddressTo);
-            
-            //TODO: this could be removed here, but I haven't fully thought this through
-            //for the moment its safer to remove the burned outputs once we see the 
-            //tx in the blockchain
-            //keyService.removeConfirmedBurnedOutput(fullTx.getInputs());
-            
             //TODO: broadcast to network
+            if(instantPayment) {
+                transactionService.approveTx(fullTx, p2shAddressFrom, p2shAddressTo);
+                keyService.removeConfirmedBurnedOutput(fullTx.getInputs());
+                return new CompleteSignTO().setSuccess();
+            } else {
+                //TODO: check when we receive the tx over the bitcoin network, than we can make a removeConfirmedBurnedOutput()
+                return new CompleteSignTO().type(Type.NO_INSTANT_PAYMENT);
+            }
             
-            //TODO: now we can also check if the refund tx is valid
-            return new CompleteSignTO().setSuccess();
         } catch (Exception e) {
             LOG.error("register keys error", e);
             return new CompleteSignTO()

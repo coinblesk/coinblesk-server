@@ -18,29 +18,29 @@ public class BurnedOutput implements Serializable {
 
     @Id
     @Column(name = "TX_OUTPOINT", updatable = false, length=255)
-    private byte[] transactionOutpoint;
+    private byte[] txOutpoint;
     
-    @Column(name = "CLIENT_PUBLIC_KEY", updatable = false, length=255)
-    private byte[] clientPublicKey;
+    @Column(name = "TX_OUTPOINT_COUNTER")
+    private int txOutpointCounter;
     
     @Column(name = "CREATIONDATE", nullable = false)
     private Date creationDate;
     
-    public byte[] transactionOutpoint() {
-        return transactionOutpoint;
+    public byte[] txOutpoint() {
+        return txOutpoint;
     }
     
-    public BurnedOutput transactionOutpoint(byte[] transactionOutpoint) {
-        this.transactionOutpoint = transactionOutpoint;
+    public BurnedOutput txOutpoint(byte[] txOutpoint) {
+        this.txOutpoint = txOutpoint;
         return this;
     }
     
-    public byte[] clientPublicKey() {
-        return clientPublicKey;
+    public int txOutpointCounter() {
+        return txOutpointCounter;
     }
     
-    public BurnedOutput clientPublicKey(byte[] clientPublicKey) {
-        this.clientPublicKey = clientPublicKey;
+    public BurnedOutput txOutpointCounter(int txOutpointCounter) {
+        this.txOutpointCounter = txOutpointCounter;
         return this;
     }
     
