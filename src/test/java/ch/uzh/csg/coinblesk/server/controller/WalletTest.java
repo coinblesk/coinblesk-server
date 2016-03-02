@@ -22,6 +22,9 @@ import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
+import com.github.springtestdbunit.annotation.DatabaseOperation;
+import com.github.springtestdbunit.annotation.DatabaseSetup;
+import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import com.github.springtestdbunit.annotation.ExpectedDatabase;
 import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
 import java.io.IOException;
@@ -259,6 +262,7 @@ public class WalletTest {
     }
     
     @Test
+    @DatabaseTearDown(value={"classpath:DbUnitFiles/emptyDB.xml"}, type = DatabaseOperation.DELETE_ALL)
     public void testReplayAttack() throws Exception {
         Client client = new Client(appConfig.getNetworkParameters(), mockMvc);
         sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
@@ -325,6 +329,7 @@ public class WalletTest {
     }
     
     @Test
+    @DatabaseTearDown(value={"classpath:DbUnitFiles/emptyDB.xml"}, type = DatabaseOperation.DELETE_ALL)
     @ExpectedDatabase(value = "classpath:DbUnitFiles/burnedOutputs.xml", assertionMode = DatabaseAssertionMode.NON_STRICT_UNORDERED)
     public void testBurnOutputsTwice() throws Exception {
         Client client = new Client(appConfig.getNetworkParameters(), mockMvc);
@@ -338,6 +343,7 @@ public class WalletTest {
     }
     
     @Test
+    @DatabaseTearDown(value={"classpath:DbUnitFiles/emptyDB.xml"}, type = DatabaseOperation.DELETE_ALL)
     public void testServerSignatures() throws Exception {
         Client client = new Client(appConfig.getNetworkParameters(), mockMvc);
         sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
