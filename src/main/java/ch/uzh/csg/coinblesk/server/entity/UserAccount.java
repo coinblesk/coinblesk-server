@@ -37,7 +37,7 @@ public class UserAccount implements Serializable {
     @Column(name = "ID", nullable = false)
     private long id;
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "CREATIONDATE", nullable = false)
+    @Column(name = "CREATION_DATE", nullable = false)
     private Date creationDate;
     @Column(name = "USERNAME", nullable = true)
     private String username;

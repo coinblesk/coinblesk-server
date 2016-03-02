@@ -8,6 +8,8 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Index;
 import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 
 @Entity(name = "BURNED_OUTPUTS")
 @Table(indexes = {
@@ -26,7 +28,8 @@ public class BurnedOutput implements Serializable {
     @Column(name = "CLIENT_PUBLIC_KEY", updatable = false, length=255)
     private byte[] clientPublicKey;
     
-    @Column(name = "CREATIONDATE", nullable = false)
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "CREATION_DATE", nullable = false)
     private Date creationDate;
     
     public byte[] txOutpoint() {

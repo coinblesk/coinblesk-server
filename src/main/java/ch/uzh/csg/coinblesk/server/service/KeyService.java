@@ -7,8 +7,10 @@ package ch.uzh.csg.coinblesk.server.service;
 
 import ch.uzh.csg.coinblesk.server.dao.KeyDAO;
 import ch.uzh.csg.coinblesk.server.dao.RefundDAO;
+import ch.uzh.csg.coinblesk.server.dao.ReplayProtectionDAO;
 import ch.uzh.csg.coinblesk.server.entity.Keys;
 import ch.uzh.csg.coinblesk.server.entity.Refund;
+import ch.uzh.csg.coinblesk.server.entity.ReplayProtection;
 import com.coinblesk.util.Pair;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -37,6 +39,9 @@ public class KeyService {
     
     @Autowired
     private RefundDAO refundDAO;
+    
+    @Autowired
+    private ReplayProtectionDAO replayProtectionDAO;
     
     @Transactional
     public Keys getByClientPublicKey(final String clientPublicKey) {
@@ -73,6 +78,9 @@ public class KeyService {
     @Transactional
     public List<ECKey> getECKeysByClientPublicKey(final byte[] clientPublicKeyRaw) {
         final Keys keys = clientKeyDAO.findByClientPublicKey(clientPublicKeyRaw);
+        if(keys == null) {
+            return Collections.emptyList();
+        }
         final List<ECKey> retVal = new ArrayList<>(2);
         retVal.add(ECKey.fromPublicOnly(keys.clientPublicKey()));
         retVal.add(ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey()));
@@ -130,4 +138,19 @@ public class KeyService {
     public boolean containsP2SH(Address p2shAddress) {
         return clientKeyDAO.containsP2SH(p2shAddress.getHash160());
     }
+    
+    @Transactional
+    public boolean checkReplayAttack(byte[] clientPublicKey, Date currentDate) {
+        ReplayProtection seen = replayProtectionDAO.findByClientPublicKeyDate(clientPublicKey, currentDate);
+        if(seen != null) {
+            return false;
+        }
+        //TODO: clean old entries, eg. two days old
+        ReplayProtection newEntry = new ReplayProtection()
+                .clientPublicKey(clientPublicKey)
+                .seenDate(currentDate);
+        replayProtectionDAO.save(newEntry);
+        return true;
+    }
+    
 }

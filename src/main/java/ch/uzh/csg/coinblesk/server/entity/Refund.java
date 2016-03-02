@@ -11,6 +11,8 @@ import javax.persistence.Id;
 import javax.persistence.Index;
 import javax.persistence.Lob;
 import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 
 @Entity(name = "REFUND")
 @Table(indexes = {
@@ -31,7 +33,8 @@ public class Refund implements Serializable {
     @Column(name = "REFUND_TX", nullable = false, updatable = false)
     private byte[] refundTx;
     
-    @Column(name = "CREATIONDATE", nullable = false)
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "CREATION_DATE", nullable = false)
     private Date creationDate;
     
     public long id() {

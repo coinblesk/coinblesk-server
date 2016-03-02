@@ -9,6 +9,8 @@ import javax.persistence.Id;
 import javax.persistence.Index;
 import javax.persistence.Lob;
 import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 
 @Entity(name = "APPROVED_TX")
 @Table(indexes = {
@@ -32,7 +34,8 @@ public class ApprovedTx implements Serializable {
     @Column(name = "ADDRESS_TO", nullable = false, updatable = false, length=255)
     private byte[] addressTo;
     
-    @Column(name = "CREATIONDATE", nullable = false)
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "CREATION_DATE", nullable = false)
     private Date creationDate;
     
     public byte[] txHash() {
