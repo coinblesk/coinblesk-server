@@ -115,7 +115,7 @@ public class WalletService {
        
         blockChain.addWallet(wallet);
         peerGroup.addWallet(wallet);
-        installShutdownHook(peerGroup, blockStore, wallet);
+        installShutdownHook();
         peerGroup.start();
         final DownloadProgressTracker listener = new DownloadProgressTracker();
         peerGroup.startBlockChainDownload(listener);
@@ -176,47 +176,34 @@ public class WalletService {
         try {
             if(peerGroup != null && peerGroup.isRunning()) {
                 peerGroup.stop();
+                peerGroup = null;
             }
         } catch (Exception e) {
-            LOG.error("cannot stop peerGroup", e);
+            LOG.error("cannot stop peerGroup in shutdown", e);
         }
         try {
             if(blockStore != null) {
                 blockStore.close();
+                blockStore = null;
             }
         } catch (Exception e) {
-            LOG.error("cannot close blockStore", e);
+            LOG.error("cannot close blockStore in shutdown", e);
         }
         try {
             if(wallet != null) {
                 wallet.shutdownAutosaveAndWait();
+                wallet = null;
             }
         } catch (Exception e) {
-            LOG.error("cannot shutdown wallet", e);
+            LOG.error("cannot shutdown wallet in shutdown", e);
         }
     }
     
-    private void installShutdownHook(final PeerGroup peerGroup, final BlockStore blockStore, 
-            final Wallet wallet) {
+    private void installShutdownHook(/*final PeerGroup peerGroup, final BlockStore blockStore, 
+            final Wallet wallet*/) {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override public void run() {
-                try {
-                    if(peerGroup.isRunning()) {
-                        peerGroup.stop();
-                    }
-                } catch (Exception e) {
-                    LOG.error("cannot stop peerGroup", e);
-                }
-                try {
-                    blockStore.close();
-                } catch (Exception e) {
-                    LOG.error("cannot close blockStore", e);
-                }
-                try {
-                    wallet.shutdownAutosaveAndWait();
-                } catch (Exception e) {
-                    LOG.error("cannot shutdown wallet", e);
-                }
+                shutdown();
             }
         });
     }

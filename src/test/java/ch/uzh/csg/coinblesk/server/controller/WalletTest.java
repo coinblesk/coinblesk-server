@@ -24,6 +24,7 @@ import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -103,8 +104,10 @@ public class WalletTest {
     }
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
+        walletService.shutdown();
         mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();
+        walletService.init();
         //TODO cleanup wallet
     }
 
