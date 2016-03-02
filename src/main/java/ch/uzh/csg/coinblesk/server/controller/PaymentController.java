@@ -197,8 +197,17 @@ public class PaymentController {
             
             if(fromClient.before(fromServerDayBefore)) {
                 return new PrepareHalfSignTO()
-                    .type(Type.OLD_TIME);
+                    .type(Type.TIME_MISMATCH);
             }
+            
+            Calendar fromServerDayAfter = Calendar.getInstance();
+            fromServerDayAfter.add(Calendar.DAY_OF_YEAR,1);
+            
+            if(fromClient.after(fromServerDayAfter)) {
+                return new PrepareHalfSignTO()
+                    .type(Type.TIME_MISMATCH);
+            }
+            
             if(!SerializeUtils.verifySig(prepareSignTO, ECKey.fromPublicOnly(prepareSignTO.clientPublicKey()))) {
                 return new PrepareHalfSignTO()
                     .type(Type.SIGNATURE_ERROR);

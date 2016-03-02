@@ -22,8 +22,8 @@ import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.github.springtestdbunit.annotation.ExpectedDatabase;
+import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -97,12 +97,6 @@ public class WalletTest {
 
     private static MockMvc mockMvc;
 
-    private static final Gson GSON;
-
-    static {
-        GSON = new GsonBuilder().create();
-    }
-
     @Before
     public void setUp() throws Exception {
         walletService.shutdown();
@@ -117,13 +111,13 @@ public class WalletTest {
         ECKey ecKeyClient = new ECKey();
 
         KeyTO keyTO = new KeyTO().publicKey(ecKeyClient.getPubKey());
-        MvcResult res = mockMvc.perform(post("/p/x").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
-        KeyTO status = GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
+        MvcResult res = mockMvc.perform(post("/p/x").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
+        KeyTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
         Assert.assertEquals(true, status.isSuccess());
         Assert.assertNotNull(status.publicKey());
 
-        res = mockMvc.perform(get("/p/b").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
-        BalanceTO balance = GSON.fromJson(res.getResponse().getContentAsString(), BalanceTO.class);
+        res = mockMvc.perform(get("/p/b").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
+        BalanceTO balance = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), BalanceTO.class);
         Assert.assertEquals(0, balance.balance());
 
         //
@@ -133,8 +127,8 @@ public class WalletTest {
         final Script script = ScriptBuilder.createP2SHOutputScript(2, keys);
         sendFakeCoins(Coin.MICROCOIN, script.getToAddress(appConfig.getNetworkParameters()));
 
-        res = mockMvc.perform(get("/p/b").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
-        balance = GSON.fromJson(res.getResponse().getContentAsString(), BalanceTO.class);
+        res = mockMvc.perform(get("/p/b").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
+        balance = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), BalanceTO.class);
         Assert.assertEquals(Coin.MICROCOIN.value, balance.balance());
 
         //pay to multisig address in unittest
@@ -145,8 +139,8 @@ public class WalletTest {
         //register with good pubilc key
         ECKey ecKeyClient = new ECKey();
         KeyTO keyTO = new KeyTO().publicKey(ecKeyClient.getPubKey());
-        MvcResult res = mockMvc.perform(post("/p/x").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
-        KeyTO status = GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
+        MvcResult res = mockMvc.perform(post("/p/x").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
+        KeyTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
         Assert.assertEquals(true, status.isSuccess());
         Assert.assertNotNull(status.publicKey());
 
@@ -169,8 +163,8 @@ public class WalletTest {
         rto.clientPublicKey(ecKeyClient.getPubKey());
         rto.refundTransaction(refund.unsafeBitcoinSerialize());
         rto.clientSignatures(SerializeUtils.serializeSignatures(tss));
-        res = mockMvc.perform(post("/p/r").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(rto))).andExpect(status().isOk()).andReturn();
-        RefundTO refundRet = GSON.fromJson(res.getResponse().getContentAsString(), RefundTO.class);
+        res = mockMvc.perform(post("/p/r").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(rto))).andExpect(status().isOk()).andReturn();
+        RefundTO refundRet = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), RefundTO.class);
         Transaction fullRefund = new Transaction(appConfig.getNetworkParameters(), refundRet.refundTransaction());
         //todo test tx
     }
@@ -217,14 +211,25 @@ public class WalletTest {
         Date now = new Date(1);
         PrepareHalfSignTO status = prepareServerCall(amountToRequest, client, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
         Assert.assertFalse(status.isSuccess());
-        Assert.assertEquals(Type.OLD_TIME, status.type());
+        Assert.assertEquals(Type.TIME_MISMATCH, status.type());
+    }
+    
+    @Test
+    public void testNewTime() throws Exception {
+        Client client = new Client(appConfig.getNetworkParameters(), mockMvc);
+        sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
+        Coin amountToRequest = Coin.valueOf(9876);
+        Date now = new Date(Long.MAX_VALUE/2);
+        PrepareHalfSignTO status = prepareServerCall(amountToRequest, client, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
+        Assert.assertFalse(status.isSuccess());
+        Assert.assertEquals(Type.TIME_MISMATCH, status.type());
     }
     
     @Test
     public void testMissingInputCoin() throws Exception {
         Client client = new Client(appConfig.getNetworkParameters(), mockMvc);
         sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
-        Date now = new Date(1);
+        Date now = new Date();
         PrepareHalfSignTO status = prepareServerCall(Coin.valueOf(0), client, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
         Assert.assertFalse(status.isSuccess());
         Assert.assertEquals(Type.INPUT_MISMATCH, status.type());
@@ -247,7 +252,7 @@ public class WalletTest {
         Coin amountToRequest = Coin.valueOf(9876);
         Date now = new Date();
         PrepareHalfSignTO prepareHalfSignTO = prepareServerCallInput(amountToRequest, client.ecKey(), new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
-        SerializeUtils.addSig(prepareHalfSignTO, new ECKey());
+        SerializeUtils.sign(prepareHalfSignTO, new ECKey());
         PrepareHalfSignTO status = prepareServerCallOutput(prepareHalfSignTO);
         Assert.assertFalse(status.isSuccess());
         Assert.assertEquals(Type.SIGNATURE_ERROR, status.type());
@@ -276,7 +281,7 @@ public class WalletTest {
         
         ECKey key = new ECKey();
         PrepareHalfSignTO prepareHalfSignTO = prepareServerCallInput(amountToRequest, key, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
-        SerializeUtils.addSig(prepareHalfSignTO, key);
+        SerializeUtils.sign(prepareHalfSignTO, key);
         PrepareHalfSignTO status = prepareServerCallOutput(prepareHalfSignTO);
         
         Assert.assertFalse(status.isSuccess());
@@ -291,10 +296,58 @@ public class WalletTest {
         Date now = new Date();
         PrepareHalfSignTO prepareHalfSignTO = prepareServerCallInput(amountToRequest, client.ecKey(), new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
         prepareHalfSignTO.p2shAddressTo("1");
-        SerializeUtils.addSig(prepareHalfSignTO, client.ecKey());
+        SerializeUtils.sign(prepareHalfSignTO, client.ecKey());
         PrepareHalfSignTO status = prepareServerCallOutput(prepareHalfSignTO);
         Assert.assertFalse(status.isSuccess());
         Assert.assertEquals(Type.ADDRESS_EMPTY, status.type());
+    }
+    
+    @Test
+    public void testAddressNotEnoughFunds() throws Exception {
+        Client client = new Client(appConfig.getNetworkParameters(), mockMvc);
+        sendFakeCoins(Coin.valueOf(1), client.p2shAddress());
+        Coin amountToRequest = Coin.valueOf(9876);
+        Date now = new Date();
+        PrepareHalfSignTO status = prepareServerCall(amountToRequest, client, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
+        Assert.assertFalse(status.isSuccess());
+        Assert.assertEquals(Type.NOT_ENOUGH_COINS, status.type());
+    }
+    
+    @Test
+    public void testAddressOnlyDust() throws Exception {
+        Client client = new Client(appConfig.getNetworkParameters(), mockMvc);
+        sendFakeCoins(Coin.valueOf(700), client.p2shAddress());
+        Coin amountToRequest = Coin.valueOf(100);
+        Date now = new Date();
+        PrepareHalfSignTO status = prepareServerCall(amountToRequest, client, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
+        Assert.assertFalse(status.isSuccess());
+        Assert.assertEquals(Type.NOT_ENOUGH_COINS, status.type());
+    }
+    
+    @Test
+    @ExpectedDatabase(value = "classpath:DbUnitFiles/burnedOutputs.xml", assertionMode = DatabaseAssertionMode.NON_STRICT_UNORDERED)
+    public void testBurnOutputsTwice() throws Exception {
+        Client client = new Client(appConfig.getNetworkParameters(), mockMvc);
+        sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
+        Date now = new Date();
+        PrepareHalfSignTO status = prepareServerCall(Coin.valueOf(9876), client, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
+        Assert.assertTrue(status.isSuccess());
+        Date now2 = new Date(now.getTime() + 5000L);
+        status = prepareServerCall(Coin.valueOf(9876), client, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now2);
+        Assert.assertTrue(status.isSuccess());
+    }
+    
+    @Test
+    public void testServerSignatures() throws Exception {
+        Client client = new Client(appConfig.getNetworkParameters(), mockMvc);
+        sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
+        Date now = new Date();
+        PrepareHalfSignTO status = prepareServerCall(Coin.valueOf(9876), client, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
+        Assert.assertTrue(status.isSuccess());
+        Transaction tx = new Transaction(appConfig.getNetworkParameters(), status.unsignedTransaction());
+        List<TransactionSignature> sigs = SerializeUtils.deserializeSignatures(status.signatures());
+        Assert.assertTrue(SerializeUtils.verifyTxSignatures(tx, sigs, client.redeemScript(), client.ecKeyServer()));
+        Assert.assertFalse(SerializeUtils.verifyTxSignatures(tx, sigs, client.redeemScript(), client.ecKey()));
     }
     
     //TODO: test not enough coins, too small amount of coins
@@ -323,7 +376,7 @@ public class WalletTest {
                 .clientPublicKey(client.ecKey().getPubKey())
                 .p2shAddressTo(merchant.p2shAddress().toString())
                 .currentDate(now);
-        SerializeUtils.addSig(createSig, client.ecKey());
+        SerializeUtils.sign(createSig, client.ecKey());
         TxSig clientSig = createSig.messageSig();
         //Client sends ok, publickey (and client signs/encrypts it) + amount/p2shAddressMerchant
         
@@ -449,8 +502,8 @@ public class WalletTest {
 
     private long balanceServerCall(Client client) throws Exception {
         KeyTO keyTO = new KeyTO().publicKey(client.ecKey().getPubKey());
-        MvcResult res = mockMvc.perform(get("/p/b").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
-        BalanceTO balance = GSON.fromJson(res.getResponse().getContentAsString(), BalanceTO.class);
+        MvcResult res = mockMvc.perform(get("/p/b").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
+        BalanceTO balance = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), BalanceTO.class);
         return balance.balance();
     }
 
@@ -460,8 +513,8 @@ public class WalletTest {
                 .p2shAddressTo(p2shAddressTo.toString())
                 .fullSignedTransaction(fullTx.unsafeBitcoinSerialize());
         MvcResult res = mockMvc.perform(post("/p/s").secure(true).
-                contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(cs))).andExpect(status().isOk()).andReturn();
-        return GSON.fromJson(res.getResponse().getContentAsString(), CompleteSignTO.class);
+                contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(cs))).andExpect(status().isOk()).andReturn();
+        return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), CompleteSignTO.class);
     }
 
     private RefundP2shTO refundServerCall(Client client, List<Pair<TransactionOutPoint, Coin>> refundClientOutpoints,
@@ -471,8 +524,8 @@ public class WalletTest {
         refundP2shTO.refundClientOutpointsCoinPair(SerializeUtils.serializeOutPointsCoin(refundClientOutpoints));
         refundP2shTO.refundSignaturesClient(SerializeUtils.serializeSignatures(partiallySignedRefundClient));
         MvcResult res = mockMvc.perform(post("/p/f").secure(true).
-                contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(refundP2shTO))).andExpect(status().isOk()).andReturn();
-        return GSON.fromJson(res.getResponse().getContentAsString(), RefundP2shTO.class);
+                contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(refundP2shTO))).andExpect(status().isOk()).andReturn();
+        return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), RefundP2shTO.class);
     }
 
     private PrepareHalfSignTO prepareServerCall(Coin amountToRequest, Client client, Address to, TxSig clientSig, Date date) throws Exception {
@@ -482,8 +535,8 @@ public class WalletTest {
     
      private PrepareHalfSignTO prepareServerCallOutput(PrepareHalfSignTO prepareHalfSignTO) throws Exception {
          MvcResult res = mockMvc.perform(post("/p/p").secure(true).
-                contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(prepareHalfSignTO))).andExpect(status().isOk()).andReturn();
-        return GSON.fromJson(res.getResponse().getContentAsString(), PrepareHalfSignTO.class);
+                contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(prepareHalfSignTO))).andExpect(status().isOk()).andReturn();
+        return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), PrepareHalfSignTO.class);
      }
     
     private PrepareHalfSignTO prepareServerCallInput(Coin amountToRequest, ECKey client, Address to, TxSig clientSig, Date date) throws Exception { 
@@ -494,7 +547,7 @@ public class WalletTest {
                 .messageSig(clientSig)
                 .currentDate(date);
         if(prepareHalfSignTO.messageSig() == null) {
-            SerializeUtils.addSig(prepareHalfSignTO, client);
+            SerializeUtils.sign(prepareHalfSignTO, client);
         }
         return prepareHalfSignTO;
     }
@@ -505,8 +558,8 @@ public class WalletTest {
     private ECKey registerServerCall(ECKey ecKeyClient) throws Exception {
         KeyTO keyTO = new KeyTO().publicKey(ecKeyClient.getPubKey());
         MvcResult res = mockMvc.perform(post("/p/x").secure(true).
-                contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
-        KeyTO status = GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
+                contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
+        KeyTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
         return ECKey.fromPublicOnly(status.publicKey());
     }
 
@@ -543,77 +596,5 @@ public class WalletTest {
         return tx;
     }
 
-    /*private Pair<Transaction,List<TransactionSignature>> generateRefundTransaction(List<TransactionOutput> outputs, ECKey publicClientKey, Script redeemScript, ECKey ecKeyClient) {
-        final Transaction refundTransaction = new Transaction(appConfig.getNetworkParameters());
-        final long unixTime = ((System.currentTimeMillis() / 1000L) / (10 * 60)) * (10 * 60);
-        final long lockTime = unixTime + (LOCK_TIME_MONTHS * UNIX_TIME_MONTH);
-        Coin remainingAmount = Coin.ZERO;
-        for(TransactionOutput output:outputs) {
-            Address a = output.getAddressFromP2SH(appConfig.getNetworkParameters());
-            if(a!=null && a.equals(redeemScript.getToAddress(appConfig.getNetworkParameters()))) {
-                refundTransaction.addInput(output);
-                remainingAmount = remainingAmount.add(output.getValue());
-            }
-        }
-        
-        remainingAmount = remainingAmount.subtract(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE);
-        refundTransaction.addOutput(remainingAmount, publicClientKey);
-        refundTransaction.setLockTime(lockTime);
-        //sign input, they are multisig
-        List<TransactionSignature> clientSigs = new ArrayList<>();
-        for(int i=0;i<refundTransaction.getInputs().size();i++) {
-            final Sha256Hash sighash = refundTransaction.hashForSignature(i, redeemScript, Transaction.SigHash.ALL, false);
-            final TransactionSignature clientSignature = new TransactionSignature(ecKeyClient.sign(sighash), Transaction.SigHash.ALL, false);
-            clientSigs.add(clientSignature);
-        }
-        
-
-        return new Pair<>(refundTransaction, clientSigs);
-    }
     
-    private Pair<Transaction,Pair<List<TransactionOutPoint>,List<TransactionSignature>>> generateRefundTransaction2(List<TransactionOutput> outputs, Address refund, Script redeemScript, ECKey ecKeyClient) {
-        final Transaction refundTransaction = new Transaction(appConfig.getNetworkParameters());
-        final long unixTime = ((System.currentTimeMillis() / 1000L) / (10 * 60)) * (10 * 60);
-        final long lockTime = unixTime + (LOCK_TIME_MONTHS * UNIX_TIME_MONTH);
-        Coin remainingAmount = Coin.ZERO;
-        for(TransactionOutput output:outputs) {
-            Address a = output.getAddressFromP2SH(appConfig.getNetworkParameters());
-            if(a!=null && a.equals(redeemScript.getToAddress(appConfig.getNetworkParameters()))) {
-                refundTransaction.addInput(output);
-                remainingAmount = remainingAmount.add(output.getValue());
-            }
-        }
-        
-        remainingAmount = remainingAmount.subtract(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE);
-        refundTransaction.addOutput(remainingAmount, refund);
-        refundTransaction.setLockTime(lockTime);
-        //sign input, they are multisig
-        List<TransactionSignature> clientSigs = new ArrayList<>();
-        List<TransactionOutPoint> tpoint = new ArrayList<>();
-        for(int i=0;i<refundTransaction.getInputs().size();i++) {
-            final Sha256Hash sighash = refundTransaction.hashForSignature(i, redeemScript, Transaction.SigHash.ALL, false);
-            final TransactionSignature clientSignature = new TransactionSignature(ecKeyClient.sign(sighash), Transaction.SigHash.ALL, false);
-            clientSigs.add(clientSignature);
-            tpoint.add(refundTransaction.getInputs().get(i).getOutpoint());
-        }
-        
-        storedHalfRefundTx.put(ecKeyClient, refundTransaction);
-        return new Pair<>(refundTransaction,new Pair<>(tpoint, clientSigs));
-    }
-    
-     private static Map<ECKey, Transaction> storedHalfRefundTx = new HashMap<>();
-
-    
-
-    private Transaction signFully(Transaction tx, 
-            List<TransactionSignature> clientSigs, List<TransactionSignature> serverSigs, Script redeemScript) {
-        for(int i=0;i<tx.getInputs().size();i++) {
-            List<TransactionSignature> l = new ArrayList<>(2);
-            l.add(clientSigs.get(i));
-            l.add(serverSigs.get(i));
-            final Script refundTransactionInputScript = ScriptBuilder.createP2SHMultiSigInputScript(l, redeemScript);
-            tx.getInput(i).setScriptSig(refundTransactionInputScript);
-        }    
-        return tx;   
-    }*/
 }

@@ -1,5 +1,6 @@
 package ch.uzh.csg.coinblesk.server.config;
 
+import com.coinblesk.util.SerializeUtils;
 import java.util.List;
 
 import org.springframework.context.annotation.Configuration;
@@ -21,6 +22,7 @@ public class WebMvcConfiguration extends WebMvcConfigurerAdapter {
     @Override
     public void configureMessageConverters(List<HttpMessageConverter < ? >> converters) {
         GsonHttpMessageConverter gsonHttpMessageConverter = new GsonHttpMessageConverter();
+        gsonHttpMessageConverter.setGson(SerializeUtils.GSON);
         converters.add(gsonHttpMessageConverter);
     }
     
