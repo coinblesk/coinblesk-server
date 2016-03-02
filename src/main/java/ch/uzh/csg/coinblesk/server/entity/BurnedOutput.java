@@ -23,6 +23,9 @@ public class BurnedOutput implements Serializable {
     @Column(name = "TX_OUTPOINT_COUNTER")
     private int txOutpointCounter;
     
+    @Column(name = "CLIENT_PUBLIC_KEY", updatable = false, length=255)
+    private byte[] clientPublicKey;
+    
     @Column(name = "CREATIONDATE", nullable = false)
     private Date creationDate;
     
@@ -41,6 +44,15 @@ public class BurnedOutput implements Serializable {
     
     public BurnedOutput txOutpointCounter(int txOutpointCounter) {
         this.txOutpointCounter = txOutpointCounter;
+        return this;
+    }
+    
+    public byte[] clientPublicKey() {
+        return clientPublicKey;
+    }
+    
+    public BurnedOutput clientPublicKey(byte[] clientPublicKey) {
+        this.clientPublicKey = clientPublicKey;
         return this;
     }
     

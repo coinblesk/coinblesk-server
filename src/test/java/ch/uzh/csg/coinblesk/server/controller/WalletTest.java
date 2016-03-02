@@ -209,20 +209,9 @@ public class WalletTest {
         Coin amountToRequest = Coin.valueOf(9876);
         PrepareHalfSignTO status = prepare(amountToRequest, client, new ECKey().toAddress(appConfig.getNetworkParameters()));
         Assert.assertTrue(status.isSuccess());
-        //send again -> no outputs available as all our outputs are burned
+        //send again -> burned counter is increased
         status = prepare(amountToRequest, client, new ECKey().toAddress(appConfig.getNetworkParameters()));
-        Assert.assertEquals(Type.DOUBLE_SPENDING, status.type());
-    }
-    
-    @Test
-    public void testRefundBurned() throws Exception {
-        Client client = new Client(appConfig.getNetworkParameters(), mockMvc);
-        sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
-        Coin amountToRequest = Coin.valueOf(9876);
-        PrepareHalfSignTO status = prepare(amountToRequest, client, new ECKey().toAddress(appConfig.getNetworkParameters()));
         Assert.assertTrue(status.isSuccess());
-        //now we want the money back, request retopup from server
-        
     }
     
     private PrepareHalfSignTO prepare(Coin amountToRequest, Client client, Address to) throws Exception {
@@ -238,22 +227,13 @@ public class WalletTest {
     
     @Test
     public void testRequestBTC() throws Exception {
-        //***********Merchant******* Setup
-        ECKey ecKeyMerchant = new ECKey();
-        ECKey ecKeyServerMerchant = register(ecKeyMerchant);
-        Script p2shScriptServerMerchant = createP2SHScript(ecKeyMerchant, ecKeyServerMerchant);
-        Script redeemScriptServerMerchant = createRedeemScript(ecKeyMerchant, ecKeyServerMerchant);
-        Address p2shAddressMerchant = p2shScriptServerMerchant.getToAddress(appConfig.getNetworkParameters());
+        //***********Merchant/Client******* Setup
+        Client merchant = new Client(appConfig.getNetworkParameters(), mockMvc);
+        Client client = new Client(appConfig.getNetworkParameters(), mockMvc);
         //**************************
         
-        //**********Client********** Seutp
-        ECKey ecKeyClient = new ECKey();
-        ECKey ecKeyServerClient = register(ecKeyClient);
-        Script p2shScriptServerClient = createP2SHScript(ecKeyClient, ecKeyServerClient);
-        Script redeemScriptServerClient = createRedeemScript(ecKeyClient, ecKeyServerClient);
-        Address p2shAddressClient = p2shScriptServerClient.getToAddress(appConfig.getNetworkParameters());
         //preload client
-        Transaction funding = sendFakeCoins(Coin.valueOf(123450), p2shAddressClient);
+        Transaction funding = sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
         //*************************
 
         //***********Merchant******* 
@@ -269,8 +249,8 @@ public class WalletTest {
         //***********Merchant******* 
         PrepareHalfSignTO prepareHalfSignTO = new PrepareHalfSignTO()
                 .amountToSpend(amountToRequest.longValue())
-                .clientPublicKey(ecKeyClient.getPubKey())
-                .p2shAddressTo(p2shAddressMerchant.toString());
+                .clientPublicKey(client.ecKey().getPubKey())
+                .p2shAddressTo(merchant.p2shAddress().toString());
         //send request to sever
         MvcResult res = mockMvc.perform(post("/p/p").secure(true).
                 contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(prepareHalfSignTO))).andExpect(status().isOk()).andReturn();
@@ -285,39 +265,39 @@ public class WalletTest {
         //Client rebuilds the tx and adds the signatures from the Server, making it a full transaction
         List<TransactionOutput> clientWalletOutputs = funding.getOutputs();
         Transaction txClient = BitcoinUtils.createTx(appConfig.getNetworkParameters(), 
-                clientWalletOutputs, p2shAddressClient, p2shAddressMerchant, 
+                clientWalletOutputs, client.p2shAddress(), merchant.p2shAddress(), 
                 amountToRequest.value);
-        List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(txClient, redeemScriptServerClient, ecKeyClient);
-        BitcoinUtils.applySignatures(txClient, redeemScriptServerClient, clientSigs, serverSigs);
+        List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(txClient, client.redeemScript(), client.ecKey());
+        BitcoinUtils.applySignatures(txClient, client.redeemScript(), clientSigs, serverSigs);
         //Client now has the full tx, based on that, Client creates the refund tx
         //Client uses the outputs of the tx as all the outputs are in that tx, no
         //need to merge
         List<TransactionOutput> clientMergedOutputs = BitcoinUtils.myOutputs(
-                appConfig.getNetworkParameters(), txClient.getOutputs(), p2shAddressClient);
+                appConfig.getNetworkParameters(), txClient.getOutputs(), client.p2shAddress());
         int lockTime = BitcoinUtils.lockTimeBlock(2, walletService.currentBlock());
         Transaction unsignedRefundTx = BitcoinUtils.generateUnsignedRefundTx(
                 appConfig.getNetworkParameters(), clientMergedOutputs, null,
-                ecKeyClient.toAddress(appConfig.getNetworkParameters()), redeemScriptServerClient, lockTime);
+                client.ecKey().toAddress(appConfig.getNetworkParameters()), client.redeemScript(), lockTime);
         System.err.println("raw refund client:"+unsignedRefundTx);
-        System.err.println("redeem: "+redeemScriptServerClient);
+        System.err.println("redeem: "+client.redeemScript());
         if(unsignedRefundTx == null) {
             throw new RuntimeException("not enough funds");
         }
         //The refund is currently only signed by the Client (half)
         List<TransactionSignature> partiallySignedRefundClient = BitcoinUtils.partiallySign(
-                    unsignedRefundTx, redeemScriptServerClient, ecKeyClient);
+                    unsignedRefundTx, client.redeemScript(), client.ecKey());
         List<Pair<TransactionOutPoint,Coin>> refundClientOutpoints = BitcoinUtils.outpointsFromInput(unsignedRefundTx);
         //The client also needs to create the outpoits for the refund for the merchant, as the client
         //is the only one that knows that full tx at the moment
         //but this is only! for the output of the current tx
-        List<Pair<TransactionOutPoint, Coin>> refundMerchantOutpoints = BitcoinUtils.outpointsFromOutputFor(appConfig.getNetworkParameters(), txClient, p2shAddressMerchant);
+        List<Pair<TransactionOutPoint, Coin>> refundMerchantOutpoints = BitcoinUtils.outpointsFromOutputFor(appConfig.getNetworkParameters(), txClient, merchant.p2shAddress());
         //The Client sends the refund signatures and the transaction outpoints (client, merchant) to the Merchant
         //*************************
         
         //***********Merchant******* 
         //The Merchant forwards it to the server, adds its refund signature as well, and the half signed transaction from previous (state)
         RefundP2shTO refundP2shTO = new RefundP2shTO();
-        refundP2shTO.clientPublicKey(ecKeyClient.getPubKey());
+        refundP2shTO.clientPublicKey(client.ecKey().getPubKey());
         refundP2shTO.refundClientOutpointsCoinPair(SerializeUtils.serializeOutPointsCoin(refundClientOutpoints));
         refundP2shTO.refundSignaturesClient(SerializeUtils.serializeSignatures(partiallySignedRefundClient));
         res = mockMvc.perform(post("/p/f").secure(true).
@@ -329,19 +309,20 @@ public class WalletTest {
         
         //This goes from the Client to the Merhchant, which recreates the refund tx and adds its sigs
         //first get the inputs
-        List<TransactionInput> preBuiltInupts = BitcoinUtils.convertPointsToInputs(appConfig.getNetworkParameters(), refundMerchantOutpoints, redeemScriptServerMerchant);
-        List<TransactionOutput> merchantWalletOutputs = walletService.getOutputs(p2shAddressMerchant);
+        List<TransactionInput> preBuiltInupts = BitcoinUtils.convertPointsToInputs(
+                appConfig.getNetworkParameters(), refundMerchantOutpoints, merchant.redeemScript());
+        List<TransactionOutput> merchantWalletOutputs = walletService.getOutputs(merchant.p2shAddress());
         //add/remove pending, approved, remove burned
         Transaction unsignedRefundMerchant = BitcoinUtils.generateUnsignedRefundTx(
                     appConfig.getNetworkParameters(), merchantWalletOutputs, preBuiltInupts,
-                    ecKeyMerchant.toAddress(appConfig.getNetworkParameters()), redeemScriptServerMerchant, lockTime);
+                    merchant.ecKey().toAddress(appConfig.getNetworkParameters()), merchant.redeemScript(), lockTime);
         if(unsignedRefundMerchant == null) {
             throw new RuntimeException("not enough funds");
         }
         List<TransactionSignature> partiallySignedRefundMerchant = BitcoinUtils.partiallySign(
-                    unsignedRefundMerchant, redeemScriptServerMerchant, ecKeyMerchant);
+                    unsignedRefundMerchant, merchant.redeemScript(), merchant.ecKey());
         refundP2shTO = new RefundP2shTO();
-        refundP2shTO.clientPublicKey(ecKeyMerchant.getPubKey());
+        refundP2shTO.clientPublicKey(merchant.ecKey().getPubKey());
         refundP2shTO.refundClientOutpointsCoinPair(SerializeUtils.serializeOutPointsCoin(refundMerchantOutpoints));
         refundP2shTO.refundSignaturesClient(SerializeUtils.serializeSignatures(partiallySignedRefundMerchant));
         //Merchant does server call
@@ -362,7 +343,7 @@ public class WalletTest {
         //Now, Client applies the signatures and gets the complete Refund TX
         List<TransactionSignature> refundServerSigs = SerializeUtils.deserializeSignatures(statusClient.refundSignaturesServer());
         BitcoinUtils.applySignatures(unsignedRefundTx, 
-                redeemScriptServerClient, partiallySignedRefundClient, refundServerSigs);
+                client.redeemScript(), partiallySignedRefundClient, refundServerSigs);
         Transaction refundClient = unsignedRefundTx;
         //client does not have this, just for testing:
         Transaction refundServer = new Transaction(appConfig.getNetworkParameters(), statusClient.fullRefundTransaction());
@@ -378,12 +359,12 @@ public class WalletTest {
         
         //***********Merchant******* 
         BitcoinUtils.applySignatures(txServer, 
-                redeemScriptServerClient, clientSigs, serverSigs);
+                client.redeemScript(), clientSigs, serverSigs);
         Transaction fullTxMerchant = txServer;
         //server call
         CompleteSignTO cs = new CompleteSignTO()
-                .clientPublicKey(ecKeyClient.getPubKey())
-                .merchantPublicKey(ecKeyMerchant.getPubKey())
+                .clientPublicKey(client.ecKey().getPubKey())
+                .merchantPublicKey(merchant.ecKey().getPubKey())
                 .fullSignedTransaction(fullTxMerchant.unsafeBitcoinSerialize());
         res = mockMvc.perform(post("/p/s").secure(true).
                 contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(cs))).andExpect(status().isOk()).andReturn();
@@ -397,13 +378,13 @@ public class WalletTest {
         
         //*****CHECKS********
         //check balance on Client
-        KeyTO keyTO = new KeyTO().publicKey(ecKeyClient.getPubKey());
+        KeyTO keyTO = new KeyTO().publicKey(client.ecKey().getPubKey());
         res = mockMvc.perform(get("/p/b").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
         BalanceTO balance = GSON.fromJson(res.getResponse().getContentAsString(), BalanceTO.class);
         Assert.assertEquals(108574, balance.balance());
         
         //check balance on Merchant
-        keyTO = new KeyTO().publicKey(ecKeyMerchant.getPubKey());
+        keyTO = new KeyTO().publicKey(merchant.ecKey().getPubKey());
         res = mockMvc.perform(get("/p/b").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
         balance = GSON.fromJson(res.getResponse().getContentAsString(), BalanceTO.class);
         Assert.assertEquals(9876, balance.balance());

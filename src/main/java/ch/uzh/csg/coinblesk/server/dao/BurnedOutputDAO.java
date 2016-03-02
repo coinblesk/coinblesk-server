@@ -30,7 +30,7 @@ public class BurnedOutputDAO {
         final CriteriaBuilder cb = em.getCriteriaBuilder();
         final CriteriaQuery<BurnedOutput> query = cb.createQuery(BurnedOutput.class);
         final Root<BurnedOutput> from = query.from(BurnedOutput.class);
-        final Predicate condition = cb.equal(from.get("transactionOutpoint"), txOutpoint);
+        final Predicate condition = cb.equal(from.get("txOutpoint"), txOutpoint);
         CriteriaQuery<BurnedOutput> select = query.select(from).where(condition);
         return DAOUtils.getSingleResultOrNull(em.createQuery(select));
     }
@@ -52,7 +52,7 @@ public class BurnedOutputDAO {
         final CriteriaBuilder cb = em.getCriteriaBuilder();
         final CriteriaDelete<BurnedOutput> delete = cb.createCriteriaDelete(BurnedOutput.class);
         final Root from = delete.from(BurnedOutput.class);
-        final Predicate condition = cb.equal(from.get("transactionOutpoint"), outpoints);
+        final Predicate condition = cb.equal(from.get("txOutpoint"), outpoints);
         delete.where(condition);
         return em.createQuery(delete).executeUpdate();
     }

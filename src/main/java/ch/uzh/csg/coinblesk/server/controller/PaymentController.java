@@ -219,7 +219,8 @@ public class PaymentController {
                 return new PrepareHalfSignTO().type(Type.NOT_ENOUGH_COINS);
             }
             
-            keyService.burnOutputFromNewTransaction(params, tx.getInputs());
+            transactionService.burnOutputFromNewTransaction(
+                    params, prepareSignTO.clientPublicKey(), tx.getInputs());
 
 
             final Script redeemScript = ScriptBuilder.createRedeemScript(2,keys);
@@ -267,6 +268,28 @@ public class PaymentController {
             //add/remove pending 
             clientWalletOutputs.addAll(transactionService.approvedReceiving(params, p2shAddress));
             clientWalletOutputs.removeAll(transactionService.approvedSpending(params, p2shAddress));
+            //remove pending/burned outputs
+            
+            //remove burned outputs
+            List<TransactionOutPoint> to = transactionService.burnedOutpoints(params, clientKey.getPubKey());
+            for(Iterator<TransactionOutput> i=clientWalletOutputs.iterator();i.hasNext();) {
+                TransactionOutput output = i.next();
+                for(TransactionOutPoint t:to) {
+                    if(output.getParentTransaction().getHash().equals(t.getHash())) {
+                        i.remove();
+                        break;
+                    }
+                }
+            }
+            
+            //sanity check: client cannot give us burned outpoints
+            for(TransactionOutPoint t:to) {
+                for(Pair<TransactionOutPoint,Coin> p:refundClientPoints) {
+                    if(t.equals(p.element0())) {
+                        return new RefundP2shTO().type(Type.SERVER_ERROR);
+                    }
+                }
+            }
             
             List<TransactionInput> preBuiltInupts = BitcoinUtils.convertPointsToInputs(params, refundClientPoints, redeemScript);
             
@@ -326,7 +349,9 @@ public class PaymentController {
             
 
             Transaction fullTx = new Transaction(params, signTO.fullSignedTransaction());
-            List<Pair<TransactionOutPoint, Integer>> outpoints = keyService.burnOutputFromNewTransaction(params, fullTx.getInputs());
+            //TODO: the part below need to run in a transaction!! read/write
+            List<Pair<TransactionOutPoint, Integer>> outpoints = transactionService.burnOutputFromNewTransaction(
+                    params, signTO.clientPublicKey(), fullTx.getInputs());
             boolean instantPayment = true;
             for(Pair<TransactionOutPoint, Integer> p:outpoints) {
                 if(p.element1() != 2) {
@@ -339,7 +364,7 @@ public class PaymentController {
             //TODO: broadcast to network
             if(instantPayment) {
                 transactionService.approveTx(fullTx, p2shAddressFrom, p2shAddressTo);
-                keyService.removeConfirmedBurnedOutput(fullTx.getInputs());
+                transactionService.removeConfirmedBurnedOutput(fullTx.getInputs());
                 return new CompleteSignTO().setSuccess();
             } else {
                 //TODO: check when we receive the tx over the bitcoin network, than we can make a removeConfirmedBurnedOutput()

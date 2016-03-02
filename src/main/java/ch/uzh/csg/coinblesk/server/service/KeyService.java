@@ -5,10 +5,8 @@
  */
 package ch.uzh.csg.coinblesk.server.service;
 
-import ch.uzh.csg.coinblesk.server.dao.BurnedOutputDAO;
 import ch.uzh.csg.coinblesk.server.dao.KeyDAO;
 import ch.uzh.csg.coinblesk.server.dao.RefundDAO;
-import ch.uzh.csg.coinblesk.server.entity.BurnedOutput;
 import ch.uzh.csg.coinblesk.server.entity.Keys;
 import ch.uzh.csg.coinblesk.server.entity.Refund;
 import com.coinblesk.util.Pair;
@@ -20,10 +18,6 @@ import java.util.List;
 import javax.transaction.Transactional;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.TransactionInput;
-import org.bitcoinj.core.TransactionOutPoint;
-import org.bitcoinj.core.TransactionOutput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,9 +38,6 @@ public class KeyService {
     @Autowired
     private RefundDAO refundDAO;
     
-    @Autowired
-    private BurnedOutputDAO burnedOutputDAO;
-
     @Transactional
     public Keys getByClientPublicKey(final String clientPublicKey) {
         final byte[] clientPublicKeyRaw = Base64.getDecoder().decode(clientPublicKey);
@@ -138,36 +129,5 @@ public class KeyService {
     @Transactional
     public boolean containsP2SH(Address p2shAddress) {
         return clientKeyDAO.containsP2SH(p2shAddress.getHash160());
-    }
-    
-    @Transactional
-    public List<Pair<TransactionOutPoint, Integer>> burnOutputFromNewTransaction(
-            NetworkParameters params, List<TransactionInput> inputsFromNewTransaction) {
-        final List<Pair<TransactionOutPoint, Integer>> retVal = new ArrayList<>(2 * inputsFromNewTransaction.size());
-        for(TransactionInput transactionInput:inputsFromNewTransaction) {
-            byte[] outpoints = transactionInput.getOutpoint().bitcoinSerialize();
-            BurnedOutput burnedOutput = burnedOutputDAO.findByTxOutpoint(outpoints);
-            if(burnedOutput != null) {
-                burnedOutput.txOutpointCounter(burnedOutput.txOutpointCounter() + 1);
-            } else {
-                burnedOutput = new BurnedOutput()
-                    .txOutpoint(outpoints)
-                    .txOutpointCounter(1)
-                    .creationDate(new Date());
-                burnedOutputDAO.save(burnedOutput);
-            }
-            TransactionOutPoint txOutpoint = new TransactionOutPoint(params, burnedOutput.txOutpoint(), 0);
-            retVal.add(new Pair<>(txOutpoint, burnedOutput.txOutpointCounter()));
-        }
-        return retVal;
-    }
-    
-    @Transactional
-    public void removeConfirmedBurnedOutput(List<TransactionInput> inputsFromConfirmedTransaction) {
-        for(TransactionInput transactionInput:inputsFromConfirmedTransaction) {
-            byte[] outpoints = transactionInput.getOutpoint().bitcoinSerialize();
-            burnedOutputDAO.remove(outpoints);
-        }
-            
     }
 }
