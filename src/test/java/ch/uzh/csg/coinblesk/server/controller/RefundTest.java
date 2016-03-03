@@ -226,8 +226,8 @@ public class RefundTest {
         Transaction fullTx = refundInput.fullTx();
         Transaction refund1 = new Transaction(params, statusRefund1.fullRefundTransaction());
         Transaction refund2 = new Transaction(params, statusRefund2.fullRefundTransaction());
-        refund1.getInput(0).verify(fullTx.getOutput(0));
-        refund2.getInput(0).verify(fullTx.getOutput(1));
+        refund1.getInput(0).verify(fullTx.getOutput(refund1.getInput(0).getOutpoint().getIndex()));
+        refund2.getInput(0).verify(fullTx.getOutput(refund2.getInput(0).getOutpoint().getIndex()));
     }
     
     private List<TransactionSignature> createMerchantInputForRefund(List<Pair<TransactionOutPoint, Coin>> refundMerchantOutpoints) {
