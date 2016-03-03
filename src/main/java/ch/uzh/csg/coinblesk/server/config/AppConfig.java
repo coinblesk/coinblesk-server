@@ -38,7 +38,8 @@ public class AppConfig {
     @Value("${bitcoin.minconf:0}")
     private int minConf;
     
-   
+    @Value("${bitcoin.locktime:2}")
+    private int locktime;
     
     public FileSystemResource getConfigDir() {
         //improvement: this check needs to be done only at startup
@@ -61,6 +62,10 @@ public class AppConfig {
     }
     
     public int getMinConf() {
+        return locktime;
+    }
+    
+    public int lockTime() {
         return minConf;
     }
     

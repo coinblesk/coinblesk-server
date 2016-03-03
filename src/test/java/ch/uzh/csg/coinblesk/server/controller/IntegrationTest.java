@@ -28,6 +28,7 @@ import com.github.springtestdbunit.annotation.ExpectedDatabase;
 import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import org.bitcoinj.core.Address;
@@ -67,6 +68,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 //http://www.soroushjp.com/2014/12/20/bitcoin-multisig-the-hard-way-understanding-raw-multisignature-bitcoin-transactions/
 /**
@@ -78,7 +81,7 @@ import org.springframework.web.context.WebApplicationContext;
     DbUnitTestExecutionListener.class})
 @ContextConfiguration(classes = {TestBean.class, BeanConfig.class, SecurityConfig.class})
 @WebAppConfiguration
-public class WalletTest {
+public class IntegrationTest {
 
     public final static long UNIX_TIME_MONTH = 60 * 60 * 24 * 30;
     public final static int LOCK_TIME_MONTHS = 3;
@@ -153,10 +156,9 @@ public class WalletTest {
         Assert.assertTrue(tx.getOutputs().get(1).getScriptPubKey().isSentToAddress());
         //create refund tx based on the topup
         ECKey refundAddress = new ECKey();
-        int lockTime = BitcoinUtils.lockTimeBlock(2, walletService.currentBlock());
         Transaction refund = BitcoinUtils.generateUnsignedRefundTx(
                 appConfig.getNetworkParameters(), tx.getOutputs(), null,
-                refundAddress.toAddress(appConfig.getNetworkParameters()), redeemScript, lockTime);
+                refundAddress.toAddress(appConfig.getNetworkParameters()), redeemScript, walletService.refundLockTime());
         List<TransactionSignature> tss = BitcoinUtils.partiallySign(refund, redeemScript, ecKeyClient);
         RefundTO rto = new RefundTO();
         rto.clientPublicKey(ecKeyClient.getPubKey());
@@ -208,9 +210,19 @@ public class WalletTest {
         sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
         Coin amountToRequest = Coin.valueOf(9876);
         Date now = new Date(1);
-        PrepareHalfSignTO status = prepareServerCall(amountToRequest, client, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
-        Assert.assertFalse(status.isSuccess());
-        Assert.assertEquals(Type.TIME_MISMATCH, status.type());
+        //
+        PrepareHalfSignTO statusPrepare = prepareServerCall(amountToRequest, client, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
+        Assert.assertFalse(statusPrepare.isSuccess());
+        Assert.assertEquals(Type.TIME_MISMATCH, statusPrepare.type());
+        //
+        RefundP2shTO statusRefund = refundServerCall(client, null, Collections.emptyList(), now);
+        Assert.assertFalse(statusRefund.isSuccess());
+        Assert.assertEquals(Type.TIME_MISMATCH, statusRefund.type());
+        //
+        CompleteSignTO statusSign = completeSignServerCall(client, client.p2shAddress(), new Transaction(appConfig.getNetworkParameters()), now);
+        Assert.assertFalse(statusSign.isSuccess());
+        Assert.assertEquals(Type.TIME_MISMATCH, statusSign.type());
+        
     }
     
     @Test
@@ -219,9 +231,18 @@ public class WalletTest {
         sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
         Coin amountToRequest = Coin.valueOf(9876);
         Date now = new Date(Long.MAX_VALUE/2);
+        //
         PrepareHalfSignTO status = prepareServerCall(amountToRequest, client, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
         Assert.assertFalse(status.isSuccess());
         Assert.assertEquals(Type.TIME_MISMATCH, status.type());
+        //
+        RefundP2shTO statusRefund = refundServerCall(client, null, Collections.emptyList(), now);
+        Assert.assertFalse(statusRefund.isSuccess());
+        Assert.assertEquals(Type.TIME_MISMATCH, statusRefund.type());
+        //
+        CompleteSignTO statusSign = completeSignServerCall(client, client.p2shAddress(), new Transaction(appConfig.getNetworkParameters()), now);
+        Assert.assertFalse(statusSign.isSuccess());
+        Assert.assertEquals(Type.TIME_MISMATCH, statusSign.type());
     }
     
     @Test
@@ -449,10 +470,10 @@ public class WalletTest {
         //need to merge
         List<TransactionOutput> clientMergedOutputs = BitcoinUtils.myOutputs(
                 appConfig.getNetworkParameters(), txClient.getOutputs(), client.p2shAddress());
-        int lockTime = BitcoinUtils.lockTimeBlock(2, walletService.currentBlock());
+        
         Transaction unsignedRefundTx = BitcoinUtils.generateUnsignedRefundTx(
                 appConfig.getNetworkParameters(), clientMergedOutputs, null,
-                client.ecKey().toAddress(appConfig.getNetworkParameters()), client.redeemScript(), lockTime);
+                client.ecKey().toAddress(appConfig.getNetworkParameters()), client.redeemScript(), walletService.refundLockTime());
         if (unsignedRefundTx == null) {
             throw new RuntimeException("not enough funds");
         }
@@ -469,7 +490,7 @@ public class WalletTest {
 
         //***********Merchant******* 
         //The Merchant forwards it to the server, adds its refund signature as well, and the half signed transaction from previous (state)
-        RefundP2shTO statusClient = refundServerCall(client, refundClientOutpoints, partiallySignedRefundClient);
+        RefundP2shTO statusClient = refundServerCall(client, refundClientOutpoints, partiallySignedRefundClient, new Date());
         Assert.assertTrue(statusClient.isSuccess());
         //now the merchant has the full refund for the client
 
@@ -481,13 +502,13 @@ public class WalletTest {
         //add/remove pending, approved, remove burned
         Transaction unsignedRefundMerchant = BitcoinUtils.generateUnsignedRefundTx(
                 appConfig.getNetworkParameters(), merchantWalletOutputs, preBuiltInupts,
-                merchant.ecKey().toAddress(appConfig.getNetworkParameters()), merchant.redeemScript(), lockTime);
+                merchant.ecKey().toAddress(appConfig.getNetworkParameters()), merchant.redeemScript(), walletService.refundLockTime());
         if (unsignedRefundMerchant == null) {
             throw new RuntimeException("not enough funds");
         }
         List<TransactionSignature> partiallySignedRefundMerchant = BitcoinUtils.partiallySign(
                 unsignedRefundMerchant, merchant.redeemScript(), merchant.ecKey());
-        RefundP2shTO statusMerchant = refundServerCall(merchant, refundMerchantOutpoints, partiallySignedRefundMerchant);
+        RefundP2shTO statusMerchant = refundServerCall(merchant, refundMerchantOutpoints, partiallySignedRefundMerchant, new Date());
         Assert.assertTrue(statusMerchant.isSuccess());
         //Server sends back the full refund tx and including the sigs, for convenincie, the sigs are in the json as well
         //Server sends sigs to Merchant, Merchant has now the refund as well
@@ -520,13 +541,13 @@ public class WalletTest {
         BitcoinUtils.applySignatures(txServer, client.redeemScript(), clientSigs, serverSigs);
         Transaction fullTxMerchant = txServer;
         //server call
-        CompleteSignTO status3 = completeSignServerCall(client, merchant.p2shAddress(), fullTxMerchant);
+        CompleteSignTO status3 = completeSignServerCall(client, merchant.p2shAddress(), fullTxMerchant, new Date());
 
         //success!
         Assert.assertTrue(status3.isSuccess());
         //Server or Merchant can broadcast the full tx
         Assert.assertEquals(fullTxMerchant, txClient);
-        sendFakeBroadcast(fullTxMerchant);
+        sendFakeBroadcast(walletService.blockChain(), fullTxMerchant);
         //*************************
 
         //*****CHECKS********
@@ -553,12 +574,13 @@ public class WalletTest {
         return balance.balance();
     }
 
-    private CompleteSignTO completeSignServerCall(Client client, Address p2shAddressTo, Transaction fullTx) throws UnsupportedEncodingException, Exception {
+    private CompleteSignTO completeSignServerCall(
+            Client client, Address p2shAddressTo, Transaction fullTx, Date now) throws UnsupportedEncodingException, Exception {
         CompleteSignTO cs = new CompleteSignTO()
                 .clientPublicKey(client.ecKey().getPubKey())
                 .p2shAddressTo(p2shAddressTo.toString())
                 .fullSignedTransaction(fullTx.unsafeBitcoinSerialize())
-                .currentDate(new Date());
+                .currentDate(now);
         if(cs.messageSig() == null) {
             SerializeUtils.sign(cs, client.ecKey());
         }
@@ -567,13 +589,13 @@ public class WalletTest {
         return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), CompleteSignTO.class);
     }
 
-    private RefundP2shTO refundServerCall(Client client, List<Pair<TransactionOutPoint, Coin>> refundClientOutpoints,
-            List<TransactionSignature> partiallySignedRefundClient) throws Exception {
+    private RefundP2shTO refundServerCall(Client client, List<Pair<TransactionOutPoint, Coin>> refundClientOutpoint,
+            List<TransactionSignature> partiallySignedRefundClient, Date date) throws Exception {
         RefundP2shTO refundP2shTO = new RefundP2shTO();
         refundP2shTO.clientPublicKey(client.ecKey().getPubKey());
-        refundP2shTO.refundClientOutpointsCoinPair(SerializeUtils.serializeOutPointsCoin(refundClientOutpoints));
+        refundP2shTO.refundClientOutpointsCoinPair(SerializeUtils.serializeOutPointsCoin(refundClientOutpoint));
         refundP2shTO.refundSignaturesClient(SerializeUtils.serializeSignatures(partiallySignedRefundClient));
-        refundP2shTO.currentDate(new Date());
+        refundP2shTO.currentDate(date);
         if(refundP2shTO.messageSig() == null) {
             SerializeUtils.sign(refundP2shTO, client.ecKey());
         }
@@ -633,8 +655,7 @@ public class WalletTest {
         return redeemScript;
     }
 
-    private Transaction sendFakeBroadcast(Transaction tx) throws BlockStoreException, VerificationException, PrunedException, InterruptedException {
-        BlockChain chain = walletService.blockChain();
+    static Transaction sendFakeBroadcast(BlockChain chain, Transaction tx) throws BlockStoreException, VerificationException, PrunedException, InterruptedException {
         Block block = FakeTxBuilder.makeSolvedTestBlock(chain.getBlockStore().getChainHead().getHeader(), tx);
         chain.add(block);
         Thread.sleep(250);

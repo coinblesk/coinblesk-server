@@ -219,7 +219,7 @@ public class WalletService {
         return retVal;
     }
 
-    public int currentBlock() {
-        return wallet.getLastBlockSeenHeight();
+    public int refundLockTime() {
+        return wallet.getLastBlockSeenHeight() + appConfig.lockTime();
     }
 }
