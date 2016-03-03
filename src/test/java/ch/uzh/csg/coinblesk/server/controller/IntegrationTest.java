@@ -547,7 +547,7 @@ public class IntegrationTest {
         Assert.assertTrue(status3.isSuccess());
         //Server or Merchant can broadcast the full tx
         Assert.assertEquals(fullTxMerchant, txClient);
-        sendFakeBroadcast(walletService.blockChain(), fullTxMerchant);
+        sendFakeBroadcast(fullTxMerchant, walletService.blockChain());
         //*************************
 
         //*****CHECKS********
@@ -655,9 +655,11 @@ public class IntegrationTest {
         return redeemScript;
     }
 
-    static Transaction sendFakeBroadcast(BlockChain chain, Transaction tx) throws BlockStoreException, VerificationException, PrunedException, InterruptedException {
-        Block block = FakeTxBuilder.makeSolvedTestBlock(chain.getBlockStore().getChainHead().getHeader(), tx);
-        chain.add(block);
+    static Transaction sendFakeBroadcast(Transaction tx, BlockChain... chains) throws BlockStoreException, VerificationException, PrunedException, InterruptedException {
+        for(BlockChain chain:chains) {
+            Block block = FakeTxBuilder.makeSolvedTestBlock(chain.getBlockStore().getChainHead().getHeader(), tx);
+            chain.add(block);
+        }
         Thread.sleep(250);
         return tx;
     }

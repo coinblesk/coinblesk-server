@@ -357,7 +357,8 @@ public class GenericEndpointTest {
         return new RefundInput()
                 .clientOutpoint(refundClientOutpoints)
                 .merchantOutpoint(refundMerchantOutpoints)
-                .clientSinatures(partiallySignedRefundClient);
+                .clientSinatures(partiallySignedRefundClient)
+                .fullTx(txClient);
         
     }
 }

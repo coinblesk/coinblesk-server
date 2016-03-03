@@ -8,6 +8,7 @@ package ch.uzh.csg.coinblesk.server.controller;
 import com.coinblesk.util.Pair;
 import java.util.List;
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.crypto.TransactionSignature;
 
@@ -20,6 +21,7 @@ public class RefundInput {
     private List<Pair<TransactionOutPoint, Coin>> clientOutpoint;
     private List<Pair<TransactionOutPoint, Coin>> merchantOutpoint;
     private List<TransactionSignature> clientSinatures;
+    private Transaction fullTx;
 
     public List<Pair<TransactionOutPoint, Coin>> clientOutpoint() {
         return clientOutpoint;
@@ -46,5 +48,14 @@ public class RefundInput {
     public RefundInput clientSinatures(List<TransactionSignature> clientSinatures) {
         this.clientSinatures = clientSinatures;
         return this;
+    }
+
+    public RefundInput fullTx(Transaction fullTx) {
+        this.fullTx = fullTx;
+        return this;
+    }
+    
+    public Transaction fullTx() {
+        return fullTx;
     }
 }

@@ -230,7 +230,7 @@ public class PaymentController {
                     params, prepareSignTO.clientPublicKey(), tx.getInputs());
 
 
-            final Script redeemScript = ScriptBuilder.createRedeemScript(2,keys);
+            final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
             //sign the tx with the server keys
             List<TransactionSignature> serverTxSigs = BitcoinUtils.partiallySign(tx, redeemScript, serverKey);
             //TODO: mark these outputs as burned!! With the sig, the client can send it to 

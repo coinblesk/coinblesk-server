@@ -11,12 +11,13 @@
   
   <!-- Levels: OFF, ERROR, WARN, INFO, DEBUG, TRACE and ALL.  -->
   
-   <logger name="ch.uzh.csg" level="DEBUG"/>
-   <logger name="org.springframework" level="DEBUG"/>
-   <logger name="org.bitcoinj.core" level="WARN"/>
+  <logger name="com.coinblesk" level="ALL"/> 
+  <logger name="ch.uzh.csg" level="ALL"/>
+  <logger name="org.springframework" level="DEBUG"/>
+  <logger name="org.bitcoinj" level="DEBUG"/>
    
 
-  <root level="ALL">
+  <root level="WARN">
     <appender-ref ref="STDOUT" />
   </root>
 </configuration>

@@ -129,7 +129,7 @@ public class WalletService {
         final List<List<ECKey>> all = keyService.all();
         final List<Script> scripts = new ArrayList<>();
         for(List<ECKey> keys:all) {
-            final Script script = ScriptBuilder.createMultiSigOutputScript(2, keys);
+            final Script script = ScriptBuilder.createRedeemScript(2, keys);
             scripts.add(script);
         }
         wallet.addWatchedScripts(scripts);
@@ -220,6 +220,7 @@ public class WalletService {
     }
 
     public int refundLockTime() {
-        return wallet.getLastBlockSeenHeight() + appConfig.lockTime();
+        int locktime = appConfig.lockTime();
+        return wallet.getLastBlockSeenHeight() + locktime;
     }
 }

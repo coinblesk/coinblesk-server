@@ -99,7 +99,7 @@ public class PrepareTest {
     @Test
     public void testAddressEmpty() throws Exception {
         Client client = new Client(params, mockMvc);
-        sendFakeCoins(params, walletService.blockChain(), Coin.valueOf(123450), client.p2shAddress());
+        sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(), walletService.blockChain());
         Coin amountToRequest = Coin.valueOf(9876);
         Date now = new Date();
         PrepareHalfSignTO prepareHalfSignTO = prepareServerCallInput(
@@ -114,7 +114,7 @@ public class PrepareTest {
     @Test
     public void testAddressNotEnoughFunds() throws Exception {
         Client client = new Client(params, mockMvc);
-        sendFakeCoins(params, walletService.blockChain(), Coin.valueOf(1), client.p2shAddress());
+        sendFakeCoins(params, Coin.valueOf(1), client.p2shAddress(),  walletService.blockChain());
         Coin amountToRequest = Coin.valueOf(9876);
         Date now = new Date();
         PrepareHalfSignTO status = prepareServerCall(
@@ -126,7 +126,7 @@ public class PrepareTest {
     @Test
     public void testAddressOnlyDust() throws Exception {
         Client client = new Client(params, mockMvc);
-        sendFakeCoins(params, walletService.blockChain(), Coin.valueOf(700), client.p2shAddress());
+        sendFakeCoins(params, Coin.valueOf(700), client.p2shAddress(), walletService.blockChain());
         Coin amountToRequest = Coin.valueOf(100);
         Date now = new Date();
         PrepareHalfSignTO status = prepareServerCall(
@@ -141,7 +141,7 @@ public class PrepareTest {
             assertionMode = DatabaseAssertionMode.NON_STRICT_UNORDERED)
     public void testBurnOutputsTwice() throws Exception {
         Client client = new Client(params, mockMvc);
-        sendFakeCoins(params, walletService.blockChain(), Coin.valueOf(123450), client.p2shAddress());
+        sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(), walletService.blockChain());
         Date now = new Date();
         PrepareHalfSignTO status = prepareServerCall(
                 mockMvc, Coin.valueOf(9876), client, new ECKey().toAddress(params), null, now);
@@ -157,8 +157,8 @@ public class PrepareTest {
             type = DatabaseOperation.DELETE_ALL)
     public void testServerSignatures() throws Exception {
         Client client = new Client(params, mockMvc);
-        sendFakeCoins(params, walletService.blockChain(), Coin.valueOf(123450),
-                client.p2shAddress());
+        sendFakeCoins(params, Coin.valueOf(123450),
+                client.p2shAddress(), walletService.blockChain());
         Date now = new Date();
         PrepareHalfSignTO status = prepareServerCall(mockMvc, Coin.valueOf(9876), client,
                 new ECKey().toAddress(params), null, now);
@@ -177,8 +177,8 @@ public class PrepareTest {
     public void testBloomfilterFiltered() throws Exception {
         Client client = new Client(params, mockMvc);
         Transaction t1 = sendFakeCoins(
-                params, walletService.blockChain(), Coin.valueOf(123450), client.p2shAddress());
-        sendFakeCoins(params, walletService.blockChain(), Coin.valueOf(234560), client.p2shAddress());
+                params, Coin.valueOf(123450), client.p2shAddress(), walletService.blockChain());
+        sendFakeCoins(params, Coin.valueOf(234560), client.p2shAddress(), walletService.blockChain());
         Date now = new Date();
         PrepareHalfSignTO prepareHalfSignTO = prepareServerCallInput(
                 Coin.valueOf(9876), client.ecKey(), new ECKey().toAddress(params), null, now);
@@ -210,9 +210,9 @@ public class PrepareTest {
     public void testBloomfilterNotFiltered() throws Exception {
         Client client = new Client(params, mockMvc);
         Transaction t1 = sendFakeCoins(
-                params, walletService.blockChain(), Coin.valueOf(123450), client.p2shAddress());
+                params, Coin.valueOf(123450), client.p2shAddress(), walletService.blockChain());
         Transaction t2 = sendFakeCoins(
-                params, walletService.blockChain(), Coin.valueOf(234560), client.p2shAddress());
+                params, Coin.valueOf(234560), client.p2shAddress(), walletService.blockChain());
         Date now = new Date();
         PrepareHalfSignTO prepareHalfSignTO = prepareServerCallInput(
                 Coin.valueOf(9876), client.ecKey(), new ECKey().toAddress(params), null, now);
@@ -255,12 +255,14 @@ public class PrepareTest {
         return prepareHalfSignTO;
     }
 
-    static Transaction sendFakeCoins(NetworkParameters params, BlockChain chain, Coin amount, Address to) 
+    static Transaction sendFakeCoins(NetworkParameters params, Coin amount, Address to, BlockChain... chains) 
             throws VerificationException, PrunedException, BlockStoreException, InterruptedException {
         Transaction tx = FakeTxBuilder.createFakeTx(params, amount, to);
-        Block block = FakeTxBuilder.makeSolvedTestBlock(
+        for(BlockChain chain:chains) {
+            Block block = FakeTxBuilder.makeSolvedTestBlock(
                 chain.getBlockStore().getChainHead().getHeader(), tx);
-        chain.add(block);
+            chain.add(block);
+        }
         Thread.sleep(250);
         return tx;
     }
