@@ -140,14 +140,15 @@ public class KeyService {
     }
     
     @Transactional
-    public boolean checkReplayAttack(byte[] clientPublicKey, Date currentDate) {
-        ReplayProtection seen = replayProtectionDAO.findByClientPublicKeyDate(clientPublicKey, currentDate);
+    public boolean checkReplayAttack(byte[] clientPublicKey, String endpoint, Date currentDate) {
+        ReplayProtection seen = replayProtectionDAO.findByClientPublicKeyDate(clientPublicKey, endpoint, currentDate);
         if(seen != null) {
             return false;
         }
         //TODO: clean old entries, eg. two days old
         ReplayProtection newEntry = new ReplayProtection()
                 .clientPublicKey(clientPublicKey)
+                .endpoint(endpoint)
                 .seenDate(currentDate);
         replayProtectionDAO.save(newEntry);
         return true;

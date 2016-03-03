@@ -23,7 +23,10 @@ import javax.persistence.TemporalType;
 
 @Entity(name = "REPLAY_PROTECTION")
 @Table(indexes = {
-    @Index(name = "CLIENT_PUBLIC_KEY_INDEX", columnList = "CLIENT_PUBLIC_KEY")})
+    @Index(name = "CLIENT_PUBLIC_KEY_INDEX", columnList = "CLIENT_PUBLIC_KEY"),
+    @Index(name = "ENDPOINT_INDEX", columnList = "ENDPOINT"),
+    @Index(name = "SEEN_DATE_INDEX", columnList = "SEEN_DATE")
+})
 public class ReplayProtection {
     
     @Id
@@ -33,6 +36,9 @@ public class ReplayProtection {
     
     @Column(name = "CLIENT_PUBLIC_KEY", updatable = false, nullable = false, length=255)
     private byte[] clientPublicKey;
+    
+    @Column(name = "ENDPOINT", updatable = false, nullable = false, length=255)
+    private String endpoint;
     
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "SEEN_DATE", updatable = false, nullable = false)
@@ -53,6 +59,15 @@ public class ReplayProtection {
     
     public ReplayProtection clientPublicKey(byte[] clientPublicKey) {
         this.clientPublicKey = clientPublicKey;
+        return this;
+    }
+    
+    public String endpoint() {
+        return endpoint;
+    }
+    
+    public ReplayProtection endpoint(String endpoint) {
+        this.endpoint = endpoint;
         return this;
     }
     

@@ -11,6 +11,7 @@ import ch.uzh.csg.coinblesk.server.service.KeyService;
 import ch.uzh.csg.coinblesk.server.service.TransactionService;
 import ch.uzh.csg.coinblesk.server.service.WalletService;
 import com.coinblesk.json.BalanceTO;
+import com.coinblesk.json.BaseTO;
 import com.coinblesk.json.CompleteSignTO;
 import com.coinblesk.json.KeyTO;
 import com.coinblesk.json.PrepareHalfSignTO;
@@ -27,8 +28,11 @@ import java.util.Iterator;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.logging.Level;
+import javax.annotation.Nullable;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
+import org.bitcoinj.core.BloomFilter;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
@@ -184,37 +188,9 @@ public class PaymentController {
     public PrepareHalfSignTO prepareHalfSign(@RequestBody PrepareHalfSignTO prepareSignTO) {
         LOG.debug("Prepare half signed {}", prepareSignTO.clientPublicKey());
         try {
-            if(!prepareSignTO.isInputSet()) {
-                return new PrepareHalfSignTO().type(Type.INPUT_MISMATCH);
-            }
-            
-            //chekc if the client sent us a time which is way too old (1 day)
-            Calendar fromClient = Calendar.getInstance();
-            fromClient.setTime(prepareSignTO.currentDate());
-            
-            Calendar fromServerDayBefore = Calendar.getInstance();
-            fromServerDayBefore.add(Calendar.DAY_OF_YEAR,-1);
-            
-            if(fromClient.before(fromServerDayBefore)) {
-                return new PrepareHalfSignTO()
-                    .type(Type.TIME_MISMATCH);
-            }
-            
-            Calendar fromServerDayAfter = Calendar.getInstance();
-            fromServerDayAfter.add(Calendar.DAY_OF_YEAR,1);
-            
-            if(fromClient.after(fromServerDayAfter)) {
-                return new PrepareHalfSignTO()
-                    .type(Type.TIME_MISMATCH);
-            }
-            
-            if(!SerializeUtils.verifySig(prepareSignTO, ECKey.fromPublicOnly(prepareSignTO.clientPublicKey()))) {
-                return new PrepareHalfSignTO()
-                    .type(Type.SIGNATURE_ERROR);
-            }
-            if(!keyService.checkReplayAttack(prepareSignTO.clientPublicKey(), prepareSignTO.currentDate())) {
-                return new PrepareHalfSignTO()
-                    .type(Type.REPLAY_ATTACK);
+            PrepareHalfSignTO errorStatus = checkInput(prepareSignTO, "p", keyService);
+            if(errorStatus != null) {
+                return errorStatus;
             }
             final NetworkParameters params = appConfig.getNetworkParameters();
             final List<ECKey> keys = clientKeyService.getECKeysByClientPublicKey(prepareSignTO.clientPublicKey());
@@ -236,19 +212,20 @@ public class PaymentController {
             try {
                 p2shAddressTo = new Address(params, prepareSignTO.p2shAddressTo());
             } catch (AddressFormatException e) {
-                return new PrepareHalfSignTO().type(Type.ADDRESS_EMPTY); 
+                return new PrepareHalfSignTO().type(Type.ADDRESS_EMPTY).message(e.getMessage()); 
             }
 
             //get all outputs from the BT network
-            final List<TransactionOutput> outputs = walletService.getOutputs(p2shAddressFrom);
+            List<TransactionOutput> outputs = walletService.getOutputs(p2shAddressFrom);
             //in addition, get the outputs from previous TX, possibly not yet published in the BT network
             outputs.addAll(transactionService.approvedReceiving(params, p2shAddressFrom));
             outputs.removeAll(transactionService.approvedSpending(params, p2shAddressFrom));
             
-            //TODO: check if the lock time is still high enough
-            //now we have all valid outputs and we know its before the refund lock time gets valid. 
-            //So we can sign this tx
-
+            //bloom filter is optianal, if not provided all found outputs are used
+            final List<TransactionOutput> filteredOutputs = filter(params, outputs, prepareSignTO.bloomFilter());       
+            boolean filtered = !filteredOutputs.equals(outputs);
+            outputs = filteredOutputs;
+            
             final Transaction tx = BitcoinUtils.createTx(
                     params, outputs, p2shAddressFrom,
                     p2shAddressTo, amountToSpend.value);
@@ -266,7 +243,7 @@ public class PaymentController {
             List<TransactionSignature> serverTxSigs = BitcoinUtils.partiallySign(tx, redeemScript, serverKey);
             //TODO: mark these outputs as burned!! With the sig, the client can send it to 
             //the Bitcoin network itself.
-            return new PrepareHalfSignTO().setSuccess()
+            return new PrepareHalfSignTO().type(filtered ? Type.SUCCESS_FILTERED : Type.SUCCESS)
                     .unsignedTransaction(tx.unsafeBitcoinSerialize())
                     .signatures(SerializeUtils.serializeSignatures(serverTxSigs));
 
@@ -277,6 +254,8 @@ public class PaymentController {
                     .message(e.getMessage());
         }
     }
+    
+    
 
     @RequestMapping(value = {"/refund-p2sh", "/f"}, method = RequestMethod.POST,
             consumes = "application/json; charset=UTF-8",
@@ -285,6 +264,10 @@ public class PaymentController {
     public RefundP2shTO refundToP2SH(@RequestBody RefundP2shTO refundP2shTO) {
         LOG.debug("Prepare half signed {}", refundP2shTO.clientPublicKey());
         try {
+            RefundP2shTO errorStatus = checkInput(refundP2shTO, "f", keyService);
+            if(errorStatus != null) {
+                return errorStatus;
+            }
             final NetworkParameters params = appConfig.getNetworkParameters();
             //get client public key (identifier)
             final List<ECKey> keysClient = clientKeyService.getECKeysByClientPublicKey(refundP2shTO.clientPublicKey());
@@ -308,10 +291,16 @@ public class PaymentController {
             clientWalletOutputs.removeAll(transactionService.approvedSpending(params, p2shAddress));
             //remove pending/burned outputs
             
-            //remove burned outputs
+            //remove burned outputs, either we do it ourselfs, or the client can provide an optional bloomfilter
+            //if not we can check the burned output which will be the ones used for the refund
             List<TransactionOutPoint> to = transactionService.burnedOutpoints(params, clientKey.getPubKey());
-            removeBurnedOutputs(clientWalletOutputs, to);
+            if(refundP2shTO.bloomFilter() != null) {
+                clientWalletOutputs = filter(params, clientWalletOutputs, refundP2shTO.bloomFilter());       
+            } else {
+                removeBurnedOutputs(clientWalletOutputs, to);
+            }
             
+            //the outpoints need to point to the original tx
             if (checkBurnedOutpoints(to, refundClientPoints)) {
                 return new RefundP2shTO().type(Type.BURNED_OUTPUTS);
             }
@@ -349,34 +338,6 @@ public class PaymentController {
         }
     }
 
-    private boolean checkBurnedOutpoints(List<TransactionOutPoint> to, List<Pair<TransactionOutPoint, Coin>> refundClientPoints) {
-        //sanity check: client cannot give us burned outpoints
-        for (TransactionOutPoint t : to) {
-            for (Pair<TransactionOutPoint,Coin> p : refundClientPoints) {
-                if (t.equals(p.element0())) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private void removeBurnedOutputs(List<TransactionOutput> clientWalletOutputs, List<TransactionOutPoint> to) {
-        for(Iterator<TransactionOutput> i=clientWalletOutputs.iterator();i.hasNext();) {
-            TransactionOutput output = i.next();
-            for(TransactionOutPoint t:to) {
-                if(output.getParentTransaction() == null) {
-                    throw new IllegalStateException("cannot handle detached transaction outputs");
-                }
-                if(t.getHash().equals(output.getParentTransaction().getHash()) &&
-                        output.getIndex() == t.getIndex()) {
-                    i.remove();
-                    break;
-                }
-            }
-        }
-    }
-
     @RequestMapping(value = {"/complete-sign", "/s"}, method = RequestMethod.POST,
             consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
@@ -384,6 +345,10 @@ public class PaymentController {
     public CompleteSignTO sign(@RequestBody CompleteSignTO signTO) {
         LOG.debug("Complete sign {}", signTO.clientPublicKey());
         try {
+            CompleteSignTO errorStatus = checkInput(signTO, "s", keyService);
+            if(errorStatus != null) {
+                return errorStatus;
+            }
             final NetworkParameters params = appConfig.getNetworkParameters();
             //TODO: client/merchant key not needed
             final List<ECKey> keysClient = clientKeyService.getECKeysByClientPublicKey(signTO.clientPublicKey());
@@ -423,6 +388,94 @@ public class PaymentController {
             return new CompleteSignTO()
                     .type(Type.SERVER_ERROR)
                     .message(e.getMessage());
+        }
+    }
+    
+    private static List<TransactionOutput> filter(NetworkParameters params, List<TransactionOutput> outputs, @Nullable byte[] rawBloomFilter) {
+        final List<TransactionOutput> filteredOutputs = new ArrayList<>(outputs.size());    
+        if(rawBloomFilter != null) {
+            BloomFilter bloomFilter = new BloomFilter(params, rawBloomFilter);
+            for(TransactionOutput output: outputs) {
+                if(bloomFilter.contains(output.unsafeBitcoinSerialize())) {
+                    filteredOutputs.add(output);
+                }
+            }
+            return filteredOutputs;
+        }
+        return outputs;
+    }
+    
+    private static <K extends BaseTO> K newInstance(K k, Type returnType) {
+        try {
+            BaseTO b = k.getClass().newInstance();
+            b.type(returnType);
+            return (K) b;
+        } catch (InstantiationException | IllegalAccessException ex) {
+            LOG.error("cannot create instance", ex);
+        }
+        return null;
+    }
+    
+    private static <K extends BaseTO> K checkInput(K input, String endpoint, KeyService keyService) {
+        if (!input.isInputSet()) {
+            return newInstance(input, Type.INPUT_MISMATCH);
+        }
+
+        //chekc if the client sent us a time which is way too old (1 day)
+        Calendar fromClient = Calendar.getInstance();
+        fromClient.setTime(input.currentDate());
+
+        Calendar fromServerDayBefore = Calendar.getInstance();
+        fromServerDayBefore.add(Calendar.DAY_OF_YEAR, -1);
+
+        if (fromClient.before(fromServerDayBefore)) {
+            return newInstance(input, Type.TIME_MISMATCH);
+
+        }
+
+        Calendar fromServerDayAfter = Calendar.getInstance();
+        fromServerDayAfter.add(Calendar.DAY_OF_YEAR, 1);
+
+        if (fromClient.after(fromServerDayAfter)) {
+            return newInstance(input, Type.TIME_MISMATCH);
+
+        }
+
+        if (!SerializeUtils.verifySig(input, ECKey.fromPublicOnly(input.clientPublicKey()))) {
+            return newInstance(input, Type.SIGNATURE_ERROR);
+
+        }
+        if (!keyService.checkReplayAttack(input.clientPublicKey(), endpoint, input.currentDate())) {
+            return newInstance(input, Type.REPLAY_ATTACK);
+        }
+        return null;
+    }
+
+    private static boolean checkBurnedOutpoints(List<TransactionOutPoint> to, List<Pair<TransactionOutPoint, Coin>> refundClientPoints) {
+        //sanity check: client cannot give us burned outpoints
+        for (TransactionOutPoint t : to) {
+            for (Pair<TransactionOutPoint,Coin> p : refundClientPoints) {
+                if (t.equals(p.element0())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static void removeBurnedOutputs(List<TransactionOutput> clientWalletOutputs, List<TransactionOutPoint> to) {
+        for(Iterator<TransactionOutput> i=clientWalletOutputs.iterator();i.hasNext();) {
+            TransactionOutput output = i.next();
+            for(TransactionOutPoint t:to) {
+                if(output.getParentTransaction() == null) {
+                    throw new IllegalStateException("cannot handle detached transaction outputs");
+                }
+                if(t.getHash().equals(output.getParentTransaction().getHash()) &&
+                        output.getIndex() == t.getIndex()) {
+                    i.remove();
+                    break;
+                }
+            }
         }
     }
 }

@@ -23,23 +23,20 @@ import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseOperation;
-import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import com.github.springtestdbunit.annotation.ExpectedDatabase;
 import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.List;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.BlockChain;
+import org.bitcoinj.core.BloomFilter;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.PrunedException;
-import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
@@ -105,7 +102,6 @@ public class WalletTest {
         walletService.shutdown();
         mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();
         walletService.init();
-        //TODO cleanup wallet
     }
 
     @Test
@@ -356,10 +352,54 @@ public class WalletTest {
         Assert.assertFalse(SerializeUtils.verifyTxSignatures(tx, sigs, client.redeemScript(), client.ecKey()));
     }
     
-    //TODO: test not enough coins, too small amount of coins
-    //TODO: client should verify as well
+    @Test
+    @DatabaseTearDown(value={"classpath:DbUnitFiles/emptyDB.xml"}, type = DatabaseOperation.DELETE_ALL)
+    public void testBloomfilterFiltered() throws Exception {
+        Client client = new Client(appConfig.getNetworkParameters(), mockMvc);
+        Transaction t1 = sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
+        sendFakeCoins(Coin.valueOf(234560), client.p2shAddress());
+        Date now = new Date();
+        PrepareHalfSignTO prepareHalfSignTO = prepareServerCallInput(Coin.valueOf(9876), client.ecKey(), new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
+        BloomFilter bf = new BloomFilter(2, 0.001, 42L);
+        bf.insert(t1.getOutput(0).unsafeBitcoinSerialize());
+        prepareHalfSignTO.bloomFilter(bf.unsafeBitcoinSerialize());
+        SerializeUtils.sign(prepareHalfSignTO, client.ecKey());
+        PrepareHalfSignTO status = prepareServerCallOutput(prepareHalfSignTO);
+        Assert.assertEquals(Type.SUCCESS_FILTERED, status.type());
+    }
+    
+    @Test
+    @DatabaseTearDown(value={"classpath:DbUnitFiles/emptyDB.xml"}, type = DatabaseOperation.DELETE_ALL)
+    public void testBloomfilterFilteredAll() throws Exception {
+        Client client = new Client(appConfig.getNetworkParameters(), mockMvc);
+        Date now = new Date();
+        PrepareHalfSignTO prepareHalfSignTO = prepareServerCallInput(Coin.valueOf(9876), client.ecKey(), new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
+        BloomFilter bf = new BloomFilter(2, 0.001, 42L);
+        prepareHalfSignTO.bloomFilter(bf.unsafeBitcoinSerialize());
+        SerializeUtils.sign(prepareHalfSignTO, client.ecKey());
+        PrepareHalfSignTO status = prepareServerCallOutput(prepareHalfSignTO);
+        Assert.assertEquals(Type.NOT_ENOUGH_COINS, status.type());
+    }
+    
+    @Test
+    @DatabaseTearDown(value={"classpath:DbUnitFiles/emptyDB.xml"}, type = DatabaseOperation.DELETE_ALL)
+    public void testBloomfilterNotFiltered() throws Exception {
+        Client client = new Client(appConfig.getNetworkParameters(), mockMvc);
+        Transaction t1 = sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
+        Transaction t2 = sendFakeCoins(Coin.valueOf(234560), client.p2shAddress());
+        Date now = new Date();
+        PrepareHalfSignTO prepareHalfSignTO = prepareServerCallInput(Coin.valueOf(9876), client.ecKey(), new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
+        BloomFilter bf = new BloomFilter(2, 0.001, 42L);
+        bf.insert(t1.getOutput(0).unsafeBitcoinSerialize());
+        bf.insert(t2.getOutput(0).unsafeBitcoinSerialize());
+        prepareHalfSignTO.bloomFilter(bf.unsafeBitcoinSerialize());
+        SerializeUtils.sign(prepareHalfSignTO, client.ecKey());
+        PrepareHalfSignTO status = prepareServerCallOutput(prepareHalfSignTO);
+        Assert.assertEquals(Type.SUCCESS, status.type());
+    }
 
     @Test
+    @DatabaseTearDown(value={"classpath:DbUnitFiles/emptyDB.xml"}, type = DatabaseOperation.DELETE_ALL)
     public void testRequestBTC() throws Exception {
         //***********Merchant/Client******* Setup
         Client merchant = new Client(appConfig.getNetworkParameters(), mockMvc);
@@ -517,7 +557,11 @@ public class WalletTest {
         CompleteSignTO cs = new CompleteSignTO()
                 .clientPublicKey(client.ecKey().getPubKey())
                 .p2shAddressTo(p2shAddressTo.toString())
-                .fullSignedTransaction(fullTx.unsafeBitcoinSerialize());
+                .fullSignedTransaction(fullTx.unsafeBitcoinSerialize())
+                .currentDate(new Date());
+        if(cs.messageSig() == null) {
+            SerializeUtils.sign(cs, client.ecKey());
+        }
         MvcResult res = mockMvc.perform(post("/p/s").secure(true).
                 contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(cs))).andExpect(status().isOk()).andReturn();
         return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), CompleteSignTO.class);
@@ -529,6 +573,10 @@ public class WalletTest {
         refundP2shTO.clientPublicKey(client.ecKey().getPubKey());
         refundP2shTO.refundClientOutpointsCoinPair(SerializeUtils.serializeOutPointsCoin(refundClientOutpoints));
         refundP2shTO.refundSignaturesClient(SerializeUtils.serializeSignatures(partiallySignedRefundClient));
+        refundP2shTO.currentDate(new Date());
+        if(refundP2shTO.messageSig() == null) {
+            SerializeUtils.sign(refundP2shTO, client.ecKey());
+        }
         MvcResult res = mockMvc.perform(post("/p/f").secure(true).
                 contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(refundP2shTO))).andExpect(status().isOk()).andReturn();
         return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), RefundP2shTO.class);

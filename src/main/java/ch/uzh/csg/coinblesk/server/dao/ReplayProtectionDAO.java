@@ -27,13 +27,14 @@ public class ReplayProtectionDAO {
     @PersistenceContext()
     private EntityManager em;
 
-    public ReplayProtection findByClientPublicKeyDate(final byte[] clientPublicKey, Date seenDate) {
+    public ReplayProtection findByClientPublicKeyDate(final byte[] clientPublicKey, String endpoint, Date seenDate) {
         final CriteriaBuilder cb = em.getCriteriaBuilder();
         final CriteriaQuery<ReplayProtection> query = cb.createQuery(ReplayProtection.class);
         final Root<ReplayProtection> from = query.from(ReplayProtection.class);
         final Predicate condition1 = cb.equal(from.get("clientPublicKey"), clientPublicKey);
         final Predicate condition2 = cb.equal(from.get("seenDate"), seenDate);
-        final Predicate conditionAnd = cb.and(condition1, condition2);
+        final Predicate condition3 = cb.equal(from.get("endpoint"), endpoint);
+        final Predicate conditionAnd = cb.and(condition1, condition2, condition3);
         CriteriaQuery<ReplayProtection> select = query.select(from).where(conditionAnd);
         return DAOUtils.getSingleResultOrNull(em.createQuery(select));
     }
