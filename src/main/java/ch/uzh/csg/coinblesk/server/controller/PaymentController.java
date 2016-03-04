@@ -23,6 +23,7 @@ import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Iterator;
 
 import java.util.List;
@@ -156,7 +157,9 @@ public class PaymentController {
             //TODO: check client setting for locktime
             List<TransactionSignature> clientSigs = SerializeUtils.deserializeSignatures(refundTO.clientSignatures());
             
+            Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
             final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
+            Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
             List<TransactionSignature> serverSigs = BitcoinUtils.partiallySign(refundTransaction, redeemScript, keys.get(1));
             BitcoinUtils.applySignatures(refundTransaction, redeemScript, clientSigs, serverSigs);
             refundTO.serverSignatures(SerializeUtils.serializeSignatures(serverSigs));
@@ -229,7 +232,7 @@ public class PaymentController {
             transactionService.burnOutputFromNewTransaction(
                     params, prepareSignTO.clientPublicKey(), tx.getInputs());
 
-
+            Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
             final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
             //sign the tx with the server keys
             List<TransactionSignature> serverTxSigs = BitcoinUtils.partiallySign(tx, redeemScript, serverKey);
@@ -269,6 +272,8 @@ public class PaymentController {
             final ECKey clientKey = keysClient.get(0);
             final ECKey serverKey = keysClient.get(1);
             final Script serverClientRedeemScript = ScriptBuilder.createP2SHOutputScript(2, keysClient);
+            
+            Collections.sort(keysClient,ECKey.PUBKEY_COMPARATOR);
             final Script redeemScript = ScriptBuilder.createRedeemScript(2, keysClient);
             final Address p2shAddress = serverClientRedeemScript.getToAddress(params);
             

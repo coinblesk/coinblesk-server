@@ -66,7 +66,7 @@ public class KeyService {
         final List<ECKey> retVal = new ArrayList<>(2);
         retVal.add(ECKey.fromPublicOnly(keys.clientPublicKey()));
         retVal.add(ECKey.fromPublicOnly(keys.serverPublicKey()));
-        return Collections.unmodifiableList(retVal);
+        return retVal;
     }
     
     @Transactional
@@ -84,7 +84,7 @@ public class KeyService {
         final List<ECKey> retVal = new ArrayList<>(2);
         retVal.add(ECKey.fromPublicOnly(keys.clientPublicKey()));
         retVal.add(ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey()));
-        return Collections.unmodifiableList(retVal);
+        return retVal;
     }
 
     @Transactional

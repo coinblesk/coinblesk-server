@@ -9,6 +9,7 @@ import com.coinblesk.json.KeyTO;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
@@ -78,6 +79,7 @@ public class Client {
         final List<ECKey> keys = new ArrayList<>();
         keys.add(ecKeyClient);
         keys.add(ecKeyServer);
+        Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
         return ScriptBuilder.createRedeemScript(2, keys);
     }
     
