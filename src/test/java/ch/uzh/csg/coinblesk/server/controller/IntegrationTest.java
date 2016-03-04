@@ -464,7 +464,7 @@ public class IntegrationTest {
                 clientWalletOutputs, client.p2shAddress(), merchant.p2shAddress(),
                 amountToRequest.value);
         List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(txClient, client.redeemScript(), client.ecKey());
-        BitcoinUtils.applySignatures(txClient, client.redeemScript(), clientSigs, serverSigs);
+        BitcoinUtils.applySignatures(txClient, client.redeemScript(), clientSigs, serverSigs, client.clientFirst());
         //Client now has the full tx, based on that, Client creates the refund tx
         //Client uses the outputs of the tx as all the outputs are in that tx, no
         //need to merge
@@ -523,7 +523,7 @@ public class IntegrationTest {
         //Now, Client applies the signatures and gets the complete Refund TX
         List<TransactionSignature> refundServerSigs = SerializeUtils.deserializeSignatures(statusClient.refundSignaturesServer());
         BitcoinUtils.applySignatures(unsignedRefundTx,
-                client.redeemScript(), partiallySignedRefundClient, refundServerSigs);
+                client.redeemScript(), partiallySignedRefundClient, refundServerSigs, client.clientFirst());
         Transaction refundClient = unsignedRefundTx;
         //client does not have this, just for testing:
         Transaction refundServer = new Transaction(appConfig.getNetworkParameters(), statusClient.fullRefundTransaction());
@@ -538,7 +538,7 @@ public class IntegrationTest {
         //*************************
 
         //***********Merchant******* 
-        BitcoinUtils.applySignatures(txServer, client.redeemScript(), clientSigs, serverSigs);
+        BitcoinUtils.applySignatures(txServer, client.redeemScript(), clientSigs, serverSigs, client.clientFirst());
         Transaction fullTxMerchant = txServer;
         //server call
         CompleteSignTO status3 = completeSignServerCall(client, merchant.p2shAddress(), fullTxMerchant, new Date());

@@ -316,7 +316,7 @@ public class GenericEndpointTest {
                 clientWalletOutputs, client.p2shAddress(), p2shAddress,
                 amountToRequest.value);
         List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(txClient, client.redeemScript(), client.ecKey());
-        BitcoinUtils.applySignatures(txClient, client.redeemScript(), clientSigs, serverSigs);
+        BitcoinUtils.applySignatures(txClient, client.redeemScript(), clientSigs, serverSigs, client.clientFirst());
         return txClient;
     }
 
@@ -331,7 +331,7 @@ public class GenericEndpointTest {
                 clientWalletOutputs, client.p2shAddress(), p2shAddress,
                 amountToRequest.value);
         List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(txClient, client.redeemScript(), client.ecKey());
-        BitcoinUtils.applySignatures(txClient, client.redeemScript(), clientSigs, serverSigs);
+        BitcoinUtils.applySignatures(txClient, client.redeemScript(), clientSigs, serverSigs, client.clientFirst());
         //Client now has the full tx, based on that, Client creates the refund tx
         //Client uses the outputs of the tx as all the outputs are in that tx, no
         //need to merge

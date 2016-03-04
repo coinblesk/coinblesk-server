@@ -6,6 +6,7 @@
 package ch.uzh.csg.coinblesk.server.controller;
 
 import com.coinblesk.json.KeyTO;
+import com.coinblesk.util.BitcoinUtils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.util.ArrayList;
@@ -73,6 +74,14 @@ public class Client {
         keys.add(ecKeyClient);
         keys.add(ecKeyServer);
         return ScriptBuilder.createP2SHOutputScript(2, keys);
+    }
+    
+    public boolean clientFirst() {
+        final List<ECKey> keys = new ArrayList<>();
+        keys.add(ecKey);
+        keys.add(ecKeyServer);
+        Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
+        return BitcoinUtils.clientFirst(keys, ecKey);
     }
     
     private Script createRedeemScript(ECKey ecKeyClient, ECKey ecKeyServer) {

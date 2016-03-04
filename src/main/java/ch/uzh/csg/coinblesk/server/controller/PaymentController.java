@@ -156,12 +156,12 @@ public class PaymentController {
             final Transaction refundTransaction = new Transaction(params, refundTO.refundTransaction());
             //TODO: check client setting for locktime
             List<TransactionSignature> clientSigs = SerializeUtils.deserializeSignatures(refundTO.clientSignatures());
-            
+            ECKey clientKey = keys.get(0);
             Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
             final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
-            Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
             List<TransactionSignature> serverSigs = BitcoinUtils.partiallySign(refundTransaction, redeemScript, keys.get(1));
-            BitcoinUtils.applySignatures(refundTransaction, redeemScript, clientSigs, serverSigs);
+            boolean clientFirst = BitcoinUtils.clientFirst(keys, clientKey);
+            BitcoinUtils.applySignatures(refundTransaction, redeemScript, clientSigs, serverSigs, clientFirst);
             refundTO.serverSignatures(SerializeUtils.serializeSignatures(serverSigs));
             //TODO: enable
             //refundTransaction.verify(); make sure those inputs are from the known p2sh address (min conf)
@@ -268,13 +268,13 @@ public class PaymentController {
             
             final NetworkParameters params = appConfig.getNetworkParameters();
             //get client public key (identifier)
-            final List<ECKey> keysClient = keyService.getECKeysByClientPublicKey(refundP2shTO.clientPublicKey());
-            final ECKey clientKey = keysClient.get(0);
-            final ECKey serverKey = keysClient.get(1);
-            final Script serverClientRedeemScript = ScriptBuilder.createP2SHOutputScript(2, keysClient);
             
-            Collections.sort(keysClient,ECKey.PUBKEY_COMPARATOR);
-            final Script redeemScript = ScriptBuilder.createRedeemScript(2, keysClient);
+            final ECKey clientKey = keys.get(0);
+            final ECKey serverKey = keys.get(1);
+            final Script serverClientRedeemScript = ScriptBuilder.createP2SHOutputScript(2, keys);
+            
+            Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
+            final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
             final Address p2shAddress = serverClientRedeemScript.getToAddress(params);
             
             //we now get from the client the outpoints for the refund tx (including hash)
@@ -322,7 +322,8 @@ public class PaymentController {
 
             List<TransactionSignature> partiallySignedRefundServer = BitcoinUtils.partiallySign(
                     unsignedRefund, redeemScript, serverKey);
-            BitcoinUtils.applySignatures(unsignedRefund, redeemScript, refundSignatures, partiallySignedRefundServer);
+            boolean clientFirst = BitcoinUtils.clientFirst(keys, clientKey);
+            BitcoinUtils.applySignatures(unsignedRefund, redeemScript, refundSignatures, partiallySignedRefundServer, clientFirst);
             
             //unsignedRefund is now fully signed
             RefundP2shTO retVal = new RefundP2shTO().setSuccess()
