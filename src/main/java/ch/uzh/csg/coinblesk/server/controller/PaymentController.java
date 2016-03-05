@@ -21,12 +21,17 @@ import com.coinblesk.json.Type;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
+import com.google.common.collect.HashBiMap;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
 import javax.annotation.Nullable;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
@@ -34,13 +39,17 @@ import org.bitcoinj.core.BloomFilter;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionBroadcast;
+import org.bitcoinj.core.TransactionBroadcaster;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
+import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -246,8 +255,9 @@ public class PaymentController {
                 bloomFilter.insert(output.unsafeBitcoinSerialize());
             }
             
-            transactionService.burnOutputFromNewTransaction(
+            List<Pair<TransactionOutPoint, Integer>> burned = transactionService.burnOutputFromNewTransaction(
                     params, prepareSignTO.clientPublicKey(), tx.getInputs());
+            walletService.addWatchingOutpointsForRemoval(burned);
 
             Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
             final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
@@ -352,10 +362,11 @@ public class PaymentController {
                     unsignedRefund, redeemScript, serverKey);
             boolean clientFirst = BitcoinUtils.clientFirst(keys, clientKey);
             BitcoinUtils.applySignatures(unsignedRefund, redeemScript, refundSignatures, partiallySignedRefundServer, clientFirst);
-            
+            byte[] refundTx = unsignedRefund.unsafeBitcoinSerialize();
+            keyService.addRefundTransaction(refundP2shTO.clientPublicKey(), refundTx);
             //unsignedRefund is now fully signed
             RefundP2shTO retVal = new RefundP2shTO().setSuccess()
-                .fullRefundTransaction(unsignedRefund.unsafeBitcoinSerialize())
+                .fullRefundTransaction(refundTx)
                 .refundSignaturesServer(SerializeUtils.serializeSignatures(partiallySignedRefundServer));
 
             return retVal;
@@ -394,26 +405,38 @@ public class PaymentController {
            
             final Address p2shAddressTo = new Address(params, signTO.p2shAddressTo());
             
-            Transaction fullTx = new Transaction(params, signTO.fullSignedTransaction());
-            //TODO: the part below need to run in a transaction!! read/write
-            List<Pair<TransactionOutPoint, Integer>> outpoints = transactionService.burnOutputFromNewTransaction(
-                    params, signTO.clientPublicKey(), fullTx.getInputs());
-            boolean instantPayment = true;
-            for(Pair<TransactionOutPoint, Integer> p:outpoints) {
-                if(p.element1() != 2) {
-                    instantPayment = false;
-                    break;
+            final Transaction fullTx = new Transaction(params, signTO.fullSignedTransaction());
+            
+            //check if tx is valid, outputs not spent and script/sigantures are valid
+            if(!SerializeUtils.verifyRefund(fullTx, walletService.unspentTransactions())) {
+                LOG.debug("{CompleteSign} verifyTx error for {}", clientId);
+                return new CompleteSignTO().type(Type.INVALID_TX);
+            }
+            //and outputs are timelocked
+            Map<Sha256Hash, Transaction> copy = new HashMap<>(walletService.unspentTransactions());
+            copy.put(fullTx.getHash(), fullTx);
+            for(Transaction refund: keyService.findRefundTransaction(params, signTO.clientPublicKey())) {
+                //check if refund is valid and could be cashed in
+                if(SerializeUtils.verifyRefund(refund, copy)) {
+                    long lockTimeRefund = refund.getLockTime();
+                    long observedBlockTime = walletService.refundEarliestLockTime();
+                    if(lockTimeRefund < observedBlockTime) {
+                        LOG.debug("{CompleteSign} locktime of refund {} is about to expire, we see {}, renew locktime for {}",lockTimeRefund, observedBlockTime, clientId);
+                        return new CompleteSignTO().type(Type.INVALID_LOCKTIME);
+                    } else {
+                        LOG.debug("{CompleteSign} locktime of refund {} is valid, we see {}, renew locktime for {}",lockTimeRefund, observedBlockTime, clientId);
+                    }
                 }
             }
-            //TODO: check refund tx as well for instantPayment
-            //TODO: check fullTx, check client/server sigs
-            //TODO: broadcast to network
-            if(instantPayment) {
-                transactionService.approveTx(fullTx, p2shAddressFrom, p2shAddressTo);
-                transactionService.removeConfirmedBurnedOutput(fullTx.getInputs());
+            //ok, refunds are locked or no refund found
+            broadcast(fullTx, clientId);
+            
+            if(transactionService.checkInstantTx(params, fullTx, signTO.clientPublicKey(), p2shAddressFrom,
+                    p2shAddressTo)) {
+                LOG.debug("{CompleteSign} instant payment OK for {}", clientId);
                 return new CompleteSignTO().setSuccess();
             } else {
-                //TODO: check when we receive the tx over the bitcoin network, than we can make a removeConfirmedBurnedOutput()
+                LOG.debug("{CompleteSign} instant payment NOT OK for {}", clientId);
                 return new CompleteSignTO().type(Type.NO_INSTANT_PAYMENT);
             }
             
@@ -423,6 +446,23 @@ public class PaymentController {
                     .type(Type.SERVER_ERROR)
                     .message(e.getMessage());
         }
+    }
+
+    private void broadcast(final Transaction fullTx, final String clientId) {
+        //broadcast immediately
+        final TransactionBroadcast broadcast = walletService.peerGroup().broadcastTransaction(fullTx);
+        broadcast.future().addListener(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Transaction tx = broadcast.future().get();
+                    LOG.debug("{CompleteSign} tx {} broadcasted for {}", tx, clientId);
+                } catch (InterruptedException | ExecutionException ex) {
+                    LOG.error("{CompleteSign} tx {} NOT broadcasted for {}", fullTx, clientId);
+                    LOG.error("{CompleteSign} broadcast error", ex);
+                }
+            }
+        }, Threading.USER_THREAD);
     }
     
     public static List<TransactionOutput> filter(NetworkParameters params, List<TransactionOutput> outputs, @Nullable byte[] rawBloomFilter) {

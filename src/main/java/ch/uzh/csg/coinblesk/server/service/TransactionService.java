@@ -9,6 +9,8 @@ import ch.uzh.csg.coinblesk.server.dao.ApprovedTxDAO;
 import ch.uzh.csg.coinblesk.server.dao.BurnedOutputDAO;
 import ch.uzh.csg.coinblesk.server.entity.ApprovedTx;
 import ch.uzh.csg.coinblesk.server.entity.BurnedOutput;
+import com.coinblesk.json.CompleteSignTO;
+import com.coinblesk.json.Type;
 import com.coinblesk.util.Pair;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -60,16 +62,7 @@ public class TransactionService {
         return retVal;
     }
 
-    @Transactional
-    public void approveTx(Transaction fullTx, Address p2shAddressFrom, Address p2shAddressTo) {
-        ApprovedTx approvedTx = new ApprovedTx()
-                .txHash(fullTx.getHash().getBytes())
-                .tx(fullTx.bitcoinSerialize())
-                .addressFrom(p2shAddressFrom.getHash160())
-                .addressTo(p2shAddressTo.getHash160())
-                .creationDate(new Date());
-        approvedTxDAO.save(approvedTx);
-    }
+    
     
     @Transactional
     public List<Pair<TransactionOutPoint, Integer>> burnOutputFromNewTransaction(
@@ -94,14 +87,8 @@ public class TransactionService {
         return retVal;
     }
     
-    @Transactional
-    public void removeConfirmedBurnedOutput(List<TransactionInput> inputsFromConfirmedTransaction) {
-        for(TransactionInput transactionInput:inputsFromConfirmedTransaction) {
-            byte[] outpoints = transactionInput.getOutpoint().bitcoinSerialize();
-            burnedOutputDAO.remove(outpoints);
-        }
-            
-    }
+    
+    
 
     @Transactional
     public List<TransactionOutPoint> burnedOutpoints(NetworkParameters params, byte[] clientPublicKey) {
@@ -113,4 +100,48 @@ public class TransactionService {
         return retVal;
     }
     
+    @Transactional
+    public boolean checkInstantTx(NetworkParameters params, Transaction fullTx, 
+            byte[] clientPublicKey, Address p2shAddressFrom, Address p2shAddressTo) {
+         List<Pair<TransactionOutPoint, Integer>> outpoints = burnOutputFromNewTransaction(
+                    params, clientPublicKey, fullTx.getInputs());
+            boolean instantPayment = true;
+            for(Pair<TransactionOutPoint, Integer> p:outpoints) {
+                if(p.element1() != 2) {
+                    instantPayment = false;
+                    break;
+                }
+            }
+            
+            if(instantPayment) {
+                approveTx(fullTx, p2shAddressFrom, p2shAddressTo);
+                removeConfirmedBurnedOutput(fullTx.getInputs());
+                return true;
+            } else {
+                return false;
+            }
+    }
+    
+    private void approveTx(Transaction fullTx, Address p2shAddressFrom, Address p2shAddressTo) {
+        ApprovedTx approvedTx = new ApprovedTx()
+                .txHash(fullTx.getHash().getBytes())
+                .tx(fullTx.unsafeBitcoinSerialize())
+                .addressFrom(p2shAddressFrom.getHash160())
+                .addressTo(p2shAddressTo.getHash160())
+                .creationDate(new Date());
+        approvedTxDAO.save(approvedTx);
+    }
+    
+    @Transactional
+    public void removeConfirmedBurnedOutput(List<TransactionInput> inputsFromConfirmedTransaction) {
+        for(TransactionInput transactionInput:inputsFromConfirmedTransaction) {
+            byte[] outpoints = transactionInput.getOutpoint().bitcoinSerialize();
+            burnedOutputDAO.remove(outpoints);
+        }         
+    }
+
+    @Transactional
+    public void removeApproved(Transaction approved) {
+        approvedTxDAO.remove(approved.getHash().getBytes());
+    }
 }

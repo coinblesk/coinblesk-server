@@ -7,6 +7,7 @@ package ch.uzh.csg.coinblesk.server.service;
 
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import com.coinblesk.bitcoin.BitcoinNet;
+import com.coinblesk.util.Pair;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -26,6 +27,7 @@ import org.bitcoinj.core.PeerAddress;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Wallet;
 import org.bitcoinj.net.discovery.DnsDiscovery;
@@ -57,6 +59,9 @@ public class WalletService {
     
     @Autowired
     private KeyService keyService;
+    
+     @Autowired
+    private TransactionService transactionService;
    
     private Wallet wallet;
     
@@ -222,5 +227,27 @@ public class WalletService {
         final int locktime = appConfig.lockTime();
         final int lockPrecision = appConfig.lockPrecision();
         return (((wallet.getLastBlockSeenHeight() + locktime) / lockPrecision) + 1) * lockPrecision;
+    }
+    
+    public int refundEarliestLockTime() {
+        final int lockPrecision = appConfig.lockPrecision();
+        return ((wallet.getLastBlockSeenHeight() / lockPrecision) + 2) * lockPrecision;
+    }
+
+    public void addWatchingOutpointsForRemoval(List<Pair<TransactionOutPoint, Integer>> burned) {
+        //TODO: mainteenance during startup        
+        //TODO: maintenance cleanup, add listener and do:
+        //transactionService.removeConfirmedBurnedOutput(inputsFromConfirmedTransaction);
+    }
+    
+    public void addWatchingTxForRemoval(Transaction approved) {
+        //TODO: transaction malleability may spam the system
+        //TODO: mainteenance during startup        
+        //TODO: maintenance cleanup, add listener and do:
+        //transactionService.removeApproved(approved);
+    }
+
+    public PeerGroup peerGroup() {
+        return peerGroup;
     }
 }

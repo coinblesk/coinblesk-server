@@ -25,13 +25,13 @@ public class RefundDAO {
     @PersistenceContext()
     private EntityManager em;
 
-    public Refund findByClientPublicKey(final byte[] clientPublicKey) {
+    public List<Refund> findByClientPublicKey(final byte[] clientPublicKey) {
         final CriteriaBuilder cb = em.getCriteriaBuilder();
         final CriteriaQuery<Refund> query = cb.createQuery(Refund.class);
         final Root<Refund> from = query.from(Refund.class);
         final Predicate condition = cb.equal(from.get("clientPublicKey"), clientPublicKey);
         CriteriaQuery<Refund> select = query.select(from).where(condition);
-        return DAOUtils.getSingleResultOrNull(em.createQuery(select));
+        return em.createQuery(select).getResultList();
     }
     
     public <T> T save(final T enity) {

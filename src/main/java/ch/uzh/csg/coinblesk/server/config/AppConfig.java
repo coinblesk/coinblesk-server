@@ -38,10 +38,10 @@ public class AppConfig {
     @Value("${bitcoin.minconf:0}")
     private int minConf;
     
-    @Value("${bitcoin.locktime:3}")
+    @Value("${bitcoin.locktime:8}")
     private int lockTime;
     
-    @Value("${bitcoin.lockPrecision:10}")
+    @Value("${bitcoin.lockPrecision:3}")
     private int lockPrecision;
     
     public FileSystemResource getConfigDir() {

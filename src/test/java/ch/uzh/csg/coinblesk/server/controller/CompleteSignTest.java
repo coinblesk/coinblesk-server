@@ -12,6 +12,7 @@ import static ch.uzh.csg.coinblesk.server.controller.GenericEndpointTest.createI
 import static ch.uzh.csg.coinblesk.server.controller.IntegrationTest.sendFakeBroadcast;
 import ch.uzh.csg.coinblesk.server.service.WalletService;
 import ch.uzh.csg.coinblesk.server.utilTest.TestBean;
+import com.coinblesk.json.CompleteSignTO;
 import com.coinblesk.json.PrepareHalfSignTO;
 import com.coinblesk.json.RefundP2shTO;
 import com.coinblesk.json.Type;
@@ -152,6 +153,91 @@ public class CompleteSignTest {
         tmpDir.delete();
     }
 
-    //TODO: test complete sign
+    @Test
+    public void testComplete() throws Exception {
+        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.signatures());
+        Transaction txClient = BitcoinUtils.createTx(
+                params, funding.getOutputs(), client.p2shAddress(), merchant.p2shAddress(),
+                amountToRequest.value);
+        RefundInput refundInput = createInputForRefund(
+                params, client, merchant.p2shAddress(), serverSigs, lockTime, txClient);
+        RefundP2shTO statusRefund1 = GenericEndpointTest.refundServerCall(mockMvc,
+                client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), new Date());
+        Assert.assertTrue(statusRefund1.isSuccess());
+        //do signing
+        Transaction fullTx = refundInput.fullTx();
+        CompleteSignTO status3 = GenericEndpointTest.completeSignServerCall(mockMvc, client.ecKey(), merchant.p2shAddress(), fullTx, new Date());
+        Assert.assertTrue(status3.isSuccess());
+        Assert.assertEquals(Type.SUCCESS, status3.type());
+    }
+    
+    @Test
+    public void testCompleteNoInstant() throws Exception {
+        PrepareTest.prepareServerCall(mockMvc, amountToRequest, client, merchant.p2shAddress(), null, new Date());
+        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.signatures());
+        Transaction txClient = BitcoinUtils.createTx(
+                params, funding.getOutputs(), client.p2shAddress(), merchant.p2shAddress(),
+                amountToRequest.value);
+        RefundInput refundInput = createInputForRefund(
+                params, client, merchant.p2shAddress(), serverSigs, lockTime, txClient);
+        RefundP2shTO statusRefund1 = GenericEndpointTest.refundServerCall(mockMvc,
+                client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), new Date());
+        Assert.assertTrue(statusRefund1.isSuccess());
+        //do signing
+        Transaction fullTx = refundInput.fullTx();
+        CompleteSignTO status3 = GenericEndpointTest.completeSignServerCall(mockMvc, client.ecKey(), merchant.p2shAddress(), fullTx, new Date());
+        Assert.assertTrue(status3.isSuccess());
+        Assert.assertEquals(Type.NO_INSTANT_PAYMENT, status3.type());
+    }
+    
+    @Test
+    public void testCompleteSpentOutputs() throws Exception {
+        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.signatures());
+        Transaction txClient = BitcoinUtils.createTx(
+                params, funding.getOutputs(), client.p2shAddress(), merchant.p2shAddress(),
+                amountToRequest.value);
+        RefundInput refundInput = createInputForRefund(
+                params, client, merchant.p2shAddress(), serverSigs, lockTime, txClient);
+        RefundP2shTO statusRefund1 = GenericEndpointTest.refundServerCall(mockMvc,
+                client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), new Date());
+        Assert.assertTrue(statusRefund1.isSuccess());
+        //do signing
+        Transaction fullTx = refundInput.fullTx();
+        //spend outputs
+        Transaction tx = new Transaction(params);
+        tx.addInput(funding.getOutput(0));
+        tx.addOutput(Coin.valueOf(10000), merchant.p2shAddress());
+        IntegrationTest.sendFakeBroadcast(tx, walletService.blockChain(), clientAppKit.chain());
+        CompleteSignTO status3 = GenericEndpointTest.completeSignServerCall(mockMvc, client.ecKey(), merchant.p2shAddress(), fullTx, new Date());
+        Assert.assertFalse(status3.isSuccess());
+        Assert.assertEquals(Type.INVALID_TX, status3.type());
+    }
+    
+    @Test
+    public void testCompleteInvalidRefund() throws Exception {
+        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.signatures());
+        Transaction txClient = BitcoinUtils.createTx(
+                params, funding.getOutputs(), client.p2shAddress(), merchant.p2shAddress(),
+                amountToRequest.value);
+        RefundInput refundInput = createInputForRefund(
+                params, client, merchant.p2shAddress(), serverSigs, lockTime, txClient);
+        RefundP2shTO statusRefund1 = GenericEndpointTest.refundServerCall(mockMvc,
+                client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), new Date());
+        Assert.assertTrue(statusRefund1.isSuccess());
+        //do signing
+        Transaction fullTx = refundInput.fullTx();
+        //spend outputs
+        ECKey sig = new ECKey();
+        for(int i=0;i<8;i++) {
+            //create 8 blocks
+            PrepareTest.sendFakeCoins(params, amountToRequest, 
+                sig.toAddress(params), walletService.blockChain(), clientAppKit.chain());
+            
+        }
+        CompleteSignTO status3 = GenericEndpointTest.completeSignServerCall(mockMvc, client.ecKey(), merchant.p2shAddress(), fullTx, new Date());
+        Assert.assertFalse(status3.isSuccess());
+        Assert.assertEquals(Type.INVALID_LOCKTIME, status3.type());
+    }
+            
 
 }

@@ -114,7 +114,7 @@ public class GenericEndpointTest {
         Assert.assertFalse(statusRefund.isSuccess());
         Assert.assertEquals(Type.TIME_MISMATCH, statusRefund.type());
         // test /complete-sign
-        CompleteSignTO statusSign = completeSignServerCall(client.ecKey(), client.p2shAddress(), new Transaction(params), now);
+        CompleteSignTO statusSign = completeSignServerCall(mockMvc,client.ecKey(), client.p2shAddress(), new Transaction(params), now);
         Assert.assertFalse(statusSign.isSuccess());
         Assert.assertEquals(Type.TIME_MISMATCH, statusSign.type());
 
@@ -135,7 +135,7 @@ public class GenericEndpointTest {
         Assert.assertFalse(statusRefund.isSuccess());
         Assert.assertEquals(Type.TIME_MISMATCH, statusRefund.type());
         // test /complete-sign
-        CompleteSignTO statusSign = completeSignServerCall(client.ecKey(), client.p2shAddress(), new Transaction(params), now);
+        CompleteSignTO statusSign = completeSignServerCall(mockMvc,client.ecKey(), client.p2shAddress(), new Transaction(params), now);
         Assert.assertFalse(statusSign.isSuccess());
         Assert.assertEquals(Type.TIME_MISMATCH, statusSign.type());
     }
@@ -161,7 +161,7 @@ public class GenericEndpointTest {
         // test /complete-sign
         CompleteSignTO completeSignTO = completeSignServerCallInput(client.ecKey(), client.p2shAddress(), new Transaction(params), now);
         SerializeUtils.sign(completeSignTO, new ECKey());
-        CompleteSignTO statusSign = completeSignServerCallOutput(completeSignTO);
+        CompleteSignTO statusSign = completeSignServerCallOutput(mockMvc,completeSignTO);
         Assert.assertFalse(statusSign.isSuccess());
         Assert.assertEquals(Type.SIGNATURE_ERROR, statusSign.type());
         
@@ -189,7 +189,7 @@ public class GenericEndpointTest {
         // test /complete-sign
         CompleteSignTO completeSignTO = completeSignServerCallInput(key, client.p2shAddress(), new Transaction(params), now);
         SerializeUtils.sign(completeSignTO, key);
-        CompleteSignTO statusSign = completeSignServerCallOutput(completeSignTO);
+        CompleteSignTO statusSign = completeSignServerCallOutput(mockMvc,completeSignTO);
         Assert.assertFalse(statusSign.isSuccess());
         Assert.assertEquals(Type.KEYS_NOT_FOUND, statusSign.type());
     }
@@ -222,21 +222,21 @@ public class GenericEndpointTest {
         Assert.assertEquals(Type.REPLAY_ATTACK, statusRefund2.type());
         // test /complete-sign
         Transaction tx = createTx(client, merchantAddress, amountToRequest, serverSigs, t.getOutputs());
-        CompleteSignTO statusSign1 = completeSignServerCall(client.ecKey(), merchantAddress, tx, now);
+        CompleteSignTO statusSign1 = completeSignServerCall(mockMvc,client.ecKey(), merchantAddress, tx, now);
         Assert.assertTrue(statusSign1.isSuccess());
         Assert.assertEquals(Type.SUCCESS, statusSign1.type());
-        CompleteSignTO statusSign2 = completeSignServerCall(client.ecKey(), merchantAddress, tx, now);
+        CompleteSignTO statusSign2 = completeSignServerCall(mockMvc,client.ecKey(), merchantAddress, tx, now);
         Assert.assertFalse(statusSign2.isSuccess());
         Assert.assertEquals(Type.REPLAY_ATTACK, statusSign2.type());
     }
     
-    private CompleteSignTO completeSignServerCall(
-            ECKey client, Address p2shAddressTo, Transaction fullTx, Date now) throws UnsupportedEncodingException, Exception {
+    static CompleteSignTO completeSignServerCall(
+           MockMvc mockMvc,  ECKey client, Address p2shAddressTo, Transaction fullTx, Date now) throws UnsupportedEncodingException, Exception {
         CompleteSignTO cs = completeSignServerCallInput(client, p2shAddressTo, fullTx, now);
-        return completeSignServerCallOutput(cs);
+        return completeSignServerCallOutput(mockMvc, cs);
     }
 
-    private CompleteSignTO completeSignServerCallInput(
+    static CompleteSignTO completeSignServerCallInput(
             ECKey client, Address p2shAddressTo, Transaction fullTx, Date now) throws UnsupportedEncodingException, Exception {
         CompleteSignTO cs = new CompleteSignTO()
                 .clientPublicKey(client.getPubKey())
@@ -249,7 +249,7 @@ public class GenericEndpointTest {
         return cs;
     }
     
-    private CompleteSignTO completeSignServerCallOutput(CompleteSignTO cs) throws Exception {
+    static CompleteSignTO completeSignServerCallOutput(MockMvc mockMvc, CompleteSignTO cs) throws Exception {
         MvcResult res = mockMvc.perform(post("/p/s").secure(true).
                 contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(cs))).andExpect(status().isOk()).andReturn();
         return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), CompleteSignTO.class);

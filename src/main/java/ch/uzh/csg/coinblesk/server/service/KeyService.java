@@ -20,6 +20,8 @@ import java.util.List;
 import javax.transaction.Transactional;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Transaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -132,6 +134,16 @@ public class KeyService {
        refund.refundTx(refundTransaction);
        refund.creationDate(new Date());
        refundDAO.save(refund);
+    }
+    
+    @Transactional
+    public List<Transaction> findRefundTransaction(NetworkParameters params, byte[] clientPublicKey) {
+       List<Refund> refunds = refundDAO.findByClientPublicKey(clientPublicKey);
+       List<Transaction> retVal = new ArrayList<>(refunds.size());
+       for(Refund refund:refunds) {
+           retVal.add(new Transaction(params, refund.refundTx()));
+       }
+       return retVal;
     }
     
     @Transactional

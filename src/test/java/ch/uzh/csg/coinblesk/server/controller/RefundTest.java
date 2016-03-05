@@ -227,7 +227,7 @@ public class RefundTest {
         Transaction refund = new Transaction(params, statusRefund1.fullRefundTransaction());
         Assert.assertEquals(20, refund.getLockTime());
         refund.verify();
-        Assert.assertTrue(SerializeUtils.verifRefund(refund, refundInput.fullTx()));
+        Assert.assertTrue(SerializeUtils.verifyRefund(refund, refundInput.fullTx()));
         //SerializeUtils.verifyTxSignatures(refund, serverSigs, redeemScript, serverPubKey)
     }
 
@@ -249,11 +249,11 @@ public class RefundTest {
         Transaction fullTx = refundInput.fullTx();
         Transaction refund1 = new Transaction(params, statusRefund1.fullRefundTransaction());
         Transaction refund2 = new Transaction(params, statusRefund2.fullRefundTransaction());
-        Assert.assertTrue(SerializeUtils.verifRefund(refund1, fullTx));
-        Assert.assertTrue(SerializeUtils.verifRefund(refund2, fullTx));
+        Assert.assertTrue(SerializeUtils.verifyRefund(refund1, fullTx));
+        Assert.assertTrue(SerializeUtils.verifyRefund(refund2, fullTx));
         Transaction unsigned = new Transaction(params, status.unsignedTransaction());
         BitcoinUtils.applySignatures(unsigned, client.redeemScript(), serverSigs, serverSigs, true);
-        Assert.assertFalse(SerializeUtils.verifRefund(refund2, unsigned));
+        Assert.assertFalse(SerializeUtils.verifyRefund(refund2, unsigned));
         Assert.assertEquals(10, refund1.getLockTime());
         Assert.assertEquals(10, refund2.getLockTime());
     }
@@ -372,7 +372,7 @@ public class RefundTest {
         RefundP2shTO output = GenericEndpointTest.refundServerCallOutput(mockMvc, input);
         Assert.assertTrue(output.isSuccess());
         Transaction refund = new Transaction(params, output.fullRefundTransaction());
-        Assert.assertTrue(SerializeUtils.verifRefund(refund, refundInput.fullTx(), t));
+        Assert.assertTrue(SerializeUtils.verifyRefund(refund, refundInput.fullTx(), t));
     }
     
     @Test
