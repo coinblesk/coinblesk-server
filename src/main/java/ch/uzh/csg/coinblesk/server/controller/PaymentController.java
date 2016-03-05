@@ -88,7 +88,7 @@ public class PaymentController {
             produces = "application/json; charset=UTF-8")
     @ResponseBody
     public KeyTO keyExchange(@RequestBody KeyTO keyTO) {
-        LOG.debug("Register clientHash for {}", keyTO.publicKey());
+        LOG.debug("Register clientHash for {}", SerializeUtils.bytesToHex(keyTO.publicKey()));
         try {
             final NetworkParameters params = appConfig.getNetworkParameters();
             final byte[] clientPublicKey = keyTO.publicKey();
@@ -125,7 +125,7 @@ public class PaymentController {
             produces = "application/json; charset=UTF-8")
     @ResponseBody
     public BalanceTO balance(@RequestBody KeyTO keyTO) {
-        LOG.debug("Balance clientHash for {}", keyTO.publicKey());
+        LOG.debug("Balance clientHash for {}", SerializeUtils.bytesToHex(keyTO.publicKey()));
         try {
             final List<ECKey> keys = keyService.getPublicECKeysByClientPublicKey(keyTO.publicKey());
             final Script script = ScriptBuilder.createP2SHOutputScript(2, keys);
@@ -145,21 +145,22 @@ public class PaymentController {
             produces = "application/json; charset=UTF-8")
     @ResponseBody
     public RefundTO refund(@RequestBody RefundTO refundTO) {
-        LOG.debug("Refund for {}", refundTO.clientPublicKey());
+        LOG.debug("Refund for {}", SerializeUtils.bytesToHex(refundTO.clientPublicKey()));
         try {
-            final NetworkParameters params = appConfig.getNetworkParameters();
             final List<ECKey> keys = keyService.getECKeysByClientPublicKey(refundTO.clientPublicKey());
             if (keys == null || keys.size() != 2) {
                 return new RefundTO().type(Type.KEYS_NOT_FOUND);
             }
+            final NetworkParameters params = appConfig.getNetworkParameters();
+            final ECKey serverKey = keys.get(1);
+            final ECKey clientKey = keys.get(0);
             //this is how the client sees the tx
             final Transaction refundTransaction = new Transaction(params, refundTO.refundTransaction());
             //TODO: check client setting for locktime
             List<TransactionSignature> clientSigs = SerializeUtils.deserializeSignatures(refundTO.clientSignatures());
-            ECKey clientKey = keys.get(0);
             Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
             final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
-            List<TransactionSignature> serverSigs = BitcoinUtils.partiallySign(refundTransaction, redeemScript, keys.get(1));
+            List<TransactionSignature> serverSigs = BitcoinUtils.partiallySign(refundTransaction, redeemScript, serverKey);
             boolean clientFirst = BitcoinUtils.clientFirst(keys, clientKey);
             BitcoinUtils.applySignatures(refundTransaction, redeemScript, clientSigs, serverSigs, clientFirst);
             refundTO.serverSignatures(SerializeUtils.serializeSignatures(serverSigs));
@@ -181,14 +182,17 @@ public class PaymentController {
             produces = "application/json; charset=UTF-8")
     @ResponseBody
     public PrepareHalfSignTO prepareHalfSign(@RequestBody PrepareHalfSignTO prepareSignTO) {
-        LOG.debug("Prepare half signed {}", prepareSignTO.clientPublicKey());
+        final String clientId = SerializeUtils.bytesToHex(prepareSignTO.clientPublicKey());
+        LOG.debug("{Prepare} sign half for {}", clientId);
         try {
             PrepareHalfSignTO errorStatus = checkInput(prepareSignTO, "p", keyService);
             if(errorStatus != null) {
+                LOG.debug("{Prepare} input error {} for {}", errorStatus.type(), clientId);
                 return errorStatus;
             }
             final List<ECKey> keys = keyService.getECKeysByClientPublicKey(prepareSignTO.clientPublicKey());
             if (keys == null || keys.size() != 2) {
+                LOG.debug("{Prepare} keys not found for {}", clientId);
                 return new PrepareHalfSignTO().type(Type.KEYS_NOT_FOUND);
             }
             
@@ -198,6 +202,7 @@ public class PaymentController {
             final Address p2shAddressFrom = p2SHOutputScript.getToAddress(params);
             //this should never happen, check anyway
             if (!keyService.containsP2SH(p2shAddressFrom)) {
+                LOG.debug("{Prepare} unknow address for {}", clientId);
                 return new PrepareHalfSignTO().type(Type.ADDRESS_UNKNOWN);
             }
             
@@ -207,26 +212,38 @@ public class PaymentController {
             try {
                 p2shAddressTo = new Address(params, prepareSignTO.p2shAddressTo());
             } catch (AddressFormatException e) {
+                LOG.debug("{Prepare} empty address for {}", clientId);
                 return new PrepareHalfSignTO().type(Type.ADDRESS_EMPTY).message(e.getMessage()); 
             }
 
             //get all outputs from the BT network
             List<TransactionOutput> outputs = walletService.getOutputs(p2shAddressFrom);
+            LOG.debug("{Prepare} nr. of outputs from network {} for {}", outputs.size(), clientId);
             //in addition, get the outputs from previous TX, possibly not yet published in the BT network
             outputs.addAll(transactionService.approvedReceiving(params, p2shAddressFrom));
+            LOG.debug("{Prepare} nr. of outputs after approved {} for {}", outputs.size(), clientId);
             outputs.removeAll(transactionService.approvedSpending(params, p2shAddressFrom));
+            LOG.debug("{Prepare} nr. of outputs after spent {} for {}", outputs.size(), clientId);
             
             //bloom filter is optianal, if not provided all found outputs are used
             final List<TransactionOutput> filteredOutputs = filter(params, outputs, prepareSignTO.bloomFilter());       
             boolean filtered = !filteredOutputs.equals(outputs);
             outputs = filteredOutputs;
             
+            LOG.debug("{Prepare} going for the following outputs in {} for {}", outputs, clientId);
+            
             final Transaction tx = BitcoinUtils.createTx(
                     params, outputs, p2shAddressFrom,
                     p2shAddressTo, amountToSpend.value);
             
             if (tx == null) {
+                LOG.debug("{Prepare} not enough coins for {}", clientId);
                 return new PrepareHalfSignTO().type(Type.NOT_ENOUGH_COINS);
+            }
+            
+            BloomFilter bloomFilter = new BloomFilter(outputs.size(), 0.001, 42);
+            for(TransactionOutput output: outputs) {
+                bloomFilter.insert(output.unsafeBitcoinSerialize());
             }
             
             transactionService.burnOutputFromNewTransaction(
@@ -236,14 +253,14 @@ public class PaymentController {
             final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
             //sign the tx with the server keys
             List<TransactionSignature> serverTxSigs = BitcoinUtils.partiallySign(tx, redeemScript, serverKey);
-            //TODO: mark these outputs as burned!! With the sig, the client can send it to 
-            //the Bitcoin network itself.
+            
             return new PrepareHalfSignTO().type(filtered ? Type.SUCCESS_FILTERED : Type.SUCCESS)
                     .unsignedTransaction(tx.unsafeBitcoinSerialize())
+                    .bloomFilter(bloomFilter.unsafeBitcoinSerialize())
                     .signatures(SerializeUtils.serializeSignatures(serverTxSigs));
 
         } catch (Exception e) {
-            LOG.error("register keys error", e);
+            LOG.error("{Prepare} Register keys error: " + clientId, e);
             return new PrepareHalfSignTO()
                     .type(Type.SERVER_ERROR)
                     .message(e.getMessage());
@@ -255,14 +272,17 @@ public class PaymentController {
             produces = "application/json; charset=UTF-8")
     @ResponseBody
     public RefundP2shTO refundToP2SH(@RequestBody RefundP2shTO refundP2shTO) {
-        LOG.debug("Prepare half signed {}", refundP2shTO.clientPublicKey());
+        final String clientId = SerializeUtils.bytesToHex(refundP2shTO.clientPublicKey());
+        LOG.debug("{RefundP2SH} {}", clientId);
         try {
             RefundP2shTO errorStatus = checkInput(refundP2shTO, "f", keyService);
             if(errorStatus != null) {
+                LOG.debug("{RefundP2SH} input error {} for {}", errorStatus.type(), clientId);
                 return errorStatus;
             }
             final List<ECKey> keys = keyService.getECKeysByClientPublicKey(refundP2shTO.clientPublicKey());
             if (keys == null || keys.size() != 2) {
+                LOG.debug("{RefundP2SH} keys not found for {}", clientId);
                 return new RefundP2shTO().type(Type.KEYS_NOT_FOUND);
             }
             
@@ -286,9 +306,12 @@ public class PaymentController {
             //now get all the output we want the refund, for client this will be one entry, for merchant this
             //will return multiple entries
             List<TransactionOutput> clientWalletOutputs = walletService.getOutputs(p2shAddress);
+            LOG.debug("{RefundP2SH} nr. of outputs from network {} for {}", clientWalletOutputs.size(), clientId);
             //add/remove pending 
             clientWalletOutputs.addAll(transactionService.approvedReceiving(params, p2shAddress));
+            LOG.debug("{RefundP2SH} nr. of outputs after approve {} for {}", clientWalletOutputs.size(), clientId);
             clientWalletOutputs.removeAll(transactionService.approvedSpending(params, p2shAddress));
+            LOG.debug("{RefundP2SH} nr. of outputs after spent network {} for {}", clientWalletOutputs.size(), clientId);
             //remove pending/burned outputs
             
             //remove burned outputs, either we do it ourselfs, or the client can provide an optional bloomfilter
@@ -307,16 +330,21 @@ public class PaymentController {
             
             List<TransactionInput> preBuiltInupts = BitcoinUtils.convertPointsToInputs(params, refundClientPoints, redeemScript);
             
+            LOG.debug("{RefundP2SH} going for the following outputs in {} and outpoints {} for {}", 
+                    clientWalletOutputs, preBuiltInupts, clientId);
+            
             Transaction unsignedRefund = BitcoinUtils.generateUnsignedRefundTx(
                 params, clientWalletOutputs, preBuiltInupts,
                 clientKey.toAddress(params), redeemScript, walletService.refundLockTime());
 
             if (unsignedRefund == null) {
+                LOG.debug("{RefundP2SH} not enough coins for {}", clientId);
                 return new RefundP2shTO().type(Type.NOT_ENOUGH_COINS);
             }
             
             //now we can check the client sigs
             if(!SerializeUtils.verifyTxSignatures(unsignedRefund, refundSignatures, redeemScript, clientKey)) {
+                LOG.debug("{RefundP2SH} signature mismatch with sigs {} for {}", refundSignatures, clientId);
                 return new RefundP2shTO().type(Type.SIGNATURE_ERROR);
             }
 
@@ -333,7 +361,7 @@ public class PaymentController {
             return retVal;
 
         } catch (Exception e) {
-            LOG.error("register keys error", e);
+            LOG.error("{RefundP2SH} register keys error: " + clientId, e);
             return new RefundP2shTO()
                     .type(Type.SERVER_ERROR)
                     .message(e.getMessage());
@@ -345,24 +373,23 @@ public class PaymentController {
             produces = "application/json; charset=UTF-8")
     @ResponseBody
     public CompleteSignTO sign(@RequestBody CompleteSignTO signTO) {
-        LOG.debug("Complete sign {}", signTO.clientPublicKey());
+        final String clientId = SerializeUtils.bytesToHex(signTO.clientPublicKey());
+        LOG.debug("{CompleteSign} {}", clientId);
         try {
             CompleteSignTO errorStatus = checkInput(signTO, "s", keyService);
             if(errorStatus != null) {
+                LOG.debug("{CompleteSign} input error {} for {}", errorStatus.type(), clientId);
                 return errorStatus;
             }
             final List<ECKey> keys = keyService.getECKeysByClientPublicKey(signTO.clientPublicKey());
             if (keys == null || keys.size() != 2) {
+                LOG.debug("{CompleteSign} keys not found for {}", clientId);
                 return new CompleteSignTO().type(Type.KEYS_NOT_FOUND);
             }
             
             final NetworkParameters params = appConfig.getNetworkParameters();
-            //TODO: client/merchant key not needed
-            final List<ECKey> keysClient = keyService.getECKeysByClientPublicKey(signTO.clientPublicKey());
-            if (keysClient == null || keysClient.size() != 2) {
-                return new CompleteSignTO().type(Type.KEYS_NOT_FOUND);
-            }
-            final Script serverClientRedeemScript = ScriptBuilder.createP2SHOutputScript(2, keysClient);
+            
+            final Script serverClientRedeemScript = ScriptBuilder.createP2SHOutputScript(2, keys);
             final Address p2shAddressFrom = serverClientRedeemScript.getToAddress(params);
            
             final Address p2shAddressTo = new Address(params, signTO.p2shAddressTo());
@@ -391,14 +418,14 @@ public class PaymentController {
             }
             
         } catch (Exception e) {
-            LOG.error("register keys error", e);
+            LOG.error("{CompleteSign} register keys error: "+clientId, e);
             return new CompleteSignTO()
                     .type(Type.SERVER_ERROR)
                     .message(e.getMessage());
         }
     }
     
-    private static List<TransactionOutput> filter(NetworkParameters params, List<TransactionOutput> outputs, @Nullable byte[] rawBloomFilter) {
+    public static List<TransactionOutput> filter(NetworkParameters params, List<TransactionOutput> outputs, @Nullable byte[] rawBloomFilter) {
         final List<TransactionOutput> filteredOutputs = new ArrayList<>(outputs.size());    
         if(rawBloomFilter != null) {
             BloomFilter bloomFilter = new BloomFilter(params, rawBloomFilter);

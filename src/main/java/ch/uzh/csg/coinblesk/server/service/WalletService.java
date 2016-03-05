@@ -28,7 +28,6 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Wallet;
-import org.bitcoinj.core.WalletEventListener;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
@@ -220,7 +219,8 @@ public class WalletService {
     }
 
     public int refundLockTime() {
-        int locktime = appConfig.lockTime();
-        return wallet.getLastBlockSeenHeight() + locktime;
+        final int locktime = appConfig.lockTime();
+        final int lockPrecision = appConfig.lockPrecision();
+        return (((wallet.getLastBlockSeenHeight() + locktime) / lockPrecision) + 1) * lockPrecision;
     }
 }

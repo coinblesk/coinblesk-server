@@ -210,8 +210,11 @@ public class GenericEndpointTest {
         Assert.assertEquals(Type.REPLAY_ATTACK, statusPrepare2.type());
         // test /refund-p2sh
         List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(statusPrepare1.signatures());
+        
+        Transaction txClient = BitcoinUtils.createTx(
+                params, t.getOutputs(), client.p2shAddress(), merchantAddress,amountToRequest.value);
         RefundInput refundInput = createInputForRefund(
-                      params, client, merchantAddress, amountToRequest, serverSigs, t.getOutputs(), walletService.refundLockTime());
+                      params, client, merchantAddress, serverSigs, walletService.refundLockTime(), txClient);
         RefundP2shTO statusRefund1 = refundServerCall(mockMvc, client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), now);
         Assert.assertTrue(statusRefund1.isSuccess());
         RefundP2shTO statusRefund2 = refundServerCall(mockMvc, client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), now);
@@ -319,17 +322,19 @@ public class GenericEndpointTest {
         BitcoinUtils.applySignatures(txClient, client.redeemScript(), clientSigs, serverSigs, client.clientFirst());
         return txClient;
     }
+    
+    /*Transaction txClient = BitcoinUtils.createTx(params,
+                clientWalletOutputs, client.p2shAddress(), p2shAddress,
+                amountToRequest.value);*/
 
     static RefundInput createInputForRefund(NetworkParameters params,
-            Client client, Address p2shAddress, Coin amountToRequest, List<TransactionSignature> serverSigs, 
-            List<TransactionOutput> clientWalletOutputs, int lockTime) {
+            Client client, Address p2shAddressTo, List<TransactionSignature> serverSigs, 
+            int lockTime, Transaction txClient, TransactionOutput... outputs) {
         
         //**********Client**********
         //Client rebuilds the tx and adds the signatures from the Server, making it a full transaction
         
-        Transaction txClient = BitcoinUtils.createTx(params,
-                clientWalletOutputs, client.p2shAddress(), p2shAddress,
-                amountToRequest.value);
+        
         List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(txClient, client.redeemScript(), client.ecKey());
         BitcoinUtils.applySignatures(txClient, client.redeemScript(), clientSigs, serverSigs, client.clientFirst());
         //Client now has the full tx, based on that, Client creates the refund tx
@@ -337,6 +342,10 @@ public class GenericEndpointTest {
         //need to merge
         List<TransactionOutput> clientMergedOutputs = BitcoinUtils.myOutputs(
                 params, txClient.getOutputs(), client.p2shAddress());
+        
+        for(TransactionOutput output: outputs) {
+            clientMergedOutputs.add(output);
+        }
         
         Transaction unsignedRefundTx = BitcoinUtils.generateUnsignedRefundTx(
                 params, clientMergedOutputs, null,
@@ -347,12 +356,19 @@ public class GenericEndpointTest {
         //The refund is currently only signed by the Client (half)
         List<TransactionSignature> partiallySignedRefundClient = BitcoinUtils.partiallySign(
                 unsignedRefundTx, client.redeemScript(), client.ecKey());
+        
+        System.out.println("client checks client sigs with1: "+unsignedRefundTx);
+        System.out.println("client checks client sigs with2: "+partiallySignedRefundClient);
+        
         List<Pair<TransactionOutPoint, Coin>> refundClientOutpoints = BitcoinUtils.outpointsFromInput(unsignedRefundTx);
-        Assert.assertEquals(1, refundClientOutpoints.size());
+        for(Pair<TransactionOutPoint, Coin> p: refundClientOutpoints) {
+            System.out.println("aeu"+p.element0()+"/"+p.element1());
+        }
+        Assert.assertEquals(1 + outputs.length, refundClientOutpoints.size());
         //The client also needs to create the outpoits for the refund for the merchant, as the client
         //is the only one that knows that full tx at the moment
         //but this is only! for the output of the current tx
-        List<Pair<TransactionOutPoint, Coin>> refundMerchantOutpoints = BitcoinUtils.outpointsFromOutputFor(params, txClient, p2shAddress);
+        List<Pair<TransactionOutPoint, Coin>> refundMerchantOutpoints = BitcoinUtils.outpointsFromOutputFor(params, txClient, p2shAddressTo);
         //The Client sends the refund signatures and the transaction outpoints (client, merchant) to the Merchant
         return new RefundInput()
                 .clientOutpoint(refundClientOutpoints)

@@ -41,6 +41,9 @@ public class AppConfig {
     @Value("${bitcoin.locktime:3}")
     private int lockTime;
     
+    @Value("${bitcoin.lockPrecision:10}")
+    private int lockPrecision;
+    
     public FileSystemResource getConfigDir() {
         //improvement: this check needs to be done only at startup
         if(configDir != null && !configDir.exists()) {
@@ -69,5 +72,7 @@ public class AppConfig {
         return lockTime;
     }
     
-    
+    public int lockPrecision() {
+        return lockPrecision;
+    }
 }

@@ -166,6 +166,7 @@ public class IntegrationTest {
         rto.clientSignatures(SerializeUtils.serializeSignatures(tss));
         res = mockMvc.perform(post("/p/r").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(rto))).andExpect(status().isOk()).andReturn();
         RefundTO refundRet = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), RefundTO.class);
+        Assert.assertTrue(refundRet.isSuccess());
         Transaction fullRefund = new Transaction(appConfig.getNetworkParameters(), refundRet.refundTransaction());
         //todo test tx
     }
@@ -215,7 +216,7 @@ public class IntegrationTest {
         Assert.assertFalse(statusPrepare.isSuccess());
         Assert.assertEquals(Type.TIME_MISMATCH, statusPrepare.type());
         //
-        RefundP2shTO statusRefund = refundServerCall(client, null, Collections.emptyList(), now);
+        RefundP2shTO statusRefund = refundServerCall(client, Collections.emptyList(), Collections.emptyList(), now);
         Assert.assertFalse(statusRefund.isSuccess());
         Assert.assertEquals(Type.TIME_MISMATCH, statusRefund.type());
         //
@@ -236,7 +237,7 @@ public class IntegrationTest {
         Assert.assertFalse(status.isSuccess());
         Assert.assertEquals(Type.TIME_MISMATCH, status.type());
         //
-        RefundP2shTO statusRefund = refundServerCall(client, null, Collections.emptyList(), now);
+        RefundP2shTO statusRefund = refundServerCall(client, Collections.emptyList(), Collections.emptyList(), now);
         Assert.assertFalse(statusRefund.isSuccess());
         Assert.assertEquals(Type.TIME_MISMATCH, statusRefund.type());
         //
