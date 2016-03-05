@@ -13,7 +13,7 @@ import javax.persistence.TemporalType;
 
 @Entity(name = "BURNED_OUTPUTS")
 @Table(indexes = {
-    @Index(name = "CLIENT_PUBLIC_KEY_INDEX", columnList = "CLIENT_PUBLIC_KEY")})
+    @Index(name = "BURNED_OUTPUTS_CLIENT_PUBLIC_KEY_INDEX", columnList = "CLIENT_PUBLIC_KEY")})
 public class BurnedOutput implements Serializable {
 
     private static final long serialVersionUID = -7496348013847426913L;

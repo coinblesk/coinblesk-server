@@ -255,6 +255,7 @@ public class PaymentController {
                 bloomFilter.insert(output.unsafeBitcoinSerialize());
             }
             
+            //TODO: repeating the same values does not burn it twice
             List<Pair<TransactionOutPoint, Integer>> burned = transactionService.burnOutputFromNewTransaction(
                     params, prepareSignTO.clientPublicKey(), tx.getInputs());
             walletService.addWatchingOutpointsForRemoval(burned);

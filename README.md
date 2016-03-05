@@ -4,6 +4,8 @@ A mobile Bitcoin payment solution with NFC support.
 
 ### Installation
 
+gradle clean install
+
 The following instructions are for Debian based systems.
 
 In order to install and run the CoinBlesk server, the following dependencies have to be installed:

@@ -23,7 +23,7 @@ import javax.persistence.TemporalType;
 
 @Entity(name = "REPLAY_PROTECTION")
 @Table(indexes = {
-    @Index(name = "CLIENT_PUBLIC_KEY_INDEX", columnList = "CLIENT_PUBLIC_KEY"),
+    @Index(name = "REPLAY_PROTECTION_CLIENT_PUBLIC_KEY_INDEX", columnList = "CLIENT_PUBLIC_KEY"),
     @Index(name = "ENDPOINT_INDEX", columnList = "ENDPOINT"),
     @Index(name = "SEEN_DATE_INDEX", columnList = "SEEN_DATE")
 })
