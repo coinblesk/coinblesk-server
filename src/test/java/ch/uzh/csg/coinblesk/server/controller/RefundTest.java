@@ -195,7 +195,7 @@ public class RefundTest {
 
         Assert.assertTrue(statusRefund1.isSuccess());
         Transaction refund = new Transaction(params, statusRefund1.fullRefundTransaction());
-        Assert.assertEquals(10, refund.getLockTime());
+        Assert.assertEquals(12, refund.getLockTime());
         //in unit test we can't wait for locktime, as block includes all tx
         sendFakeBroadcast(refund, walletService.blockChain(), clientAppKit.chain());
         Assert.assertEquals(103574, clientAppKit.wallet().getBalance().value);
@@ -225,7 +225,7 @@ public class RefundTest {
 
         Assert.assertTrue(statusRefund1.isSuccess());
         Transaction refund = new Transaction(params, statusRefund1.fullRefundTransaction());
-        Assert.assertEquals(20, refund.getLockTime());
+        Assert.assertEquals(18, refund.getLockTime());
         refund.verify();
         Assert.assertTrue(SerializeUtils.verifyRefund(refund, refundInput.fullTx()));
         //SerializeUtils.verifyTxSignatures(refund, serverSigs, redeemScript, serverPubKey)
@@ -254,8 +254,8 @@ public class RefundTest {
         Transaction unsigned = new Transaction(params, status.unsignedTransaction());
         BitcoinUtils.applySignatures(unsigned, client.redeemScript(), serverSigs, serverSigs, true);
         Assert.assertFalse(SerializeUtils.verifyRefund(refund2, unsigned));
-        Assert.assertEquals(10, refund1.getLockTime());
-        Assert.assertEquals(10, refund2.getLockTime());
+        Assert.assertEquals(12, refund1.getLockTime());
+        Assert.assertEquals(12, refund2.getLockTime());
     }
 
     @Test
