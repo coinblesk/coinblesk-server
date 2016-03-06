@@ -257,22 +257,65 @@ public class CompleteSignTest {
         Assert.assertEquals(Type.SUCCESS, status3.type());
         
         ///************** go again instant
+        System.out.println("****************************************************");
         PrepareHalfSignTO statusTwice = PrepareTest.prepareServerCall(
                 mockMvc, amountToRequest, client, merchant.p2shAddress(), null, new Date());
+        Assert.assertEquals(Type.SUCCESS, statusTwice.type());
+        List<TransactionSignature> serverSigsTwice = SerializeUtils.deserializeSignatures(statusTwice.signatures());
         
         Transaction txClientTwice = BitcoinUtils.createTx(
                 params, fullTx.getOutputs(), client.p2shAddress(), merchant.p2shAddress(),
                 amountToRequest.value);
         
         RefundInput refundInputTwice = createInputForRefund(
-                params, client, merchant.p2shAddress(), serverSigs, lockTime, txClientTwice);
+                params, client, merchant.p2shAddress(), serverSigsTwice, lockTime, txClientTwice);
+        RefundP2shTO statusRefundTwice = GenericEndpointTest.refundServerCall(mockMvc,
+                client.ecKey(), refundInputTwice.clientOutpoint(), refundInputTwice.clientSinatures(), new Date());
+        Assert.assertTrue(statusRefundTwice.isSuccess());
+        Transaction fullTxTwice = refundInputTwice.fullTx();
+
+        CompleteSignTO completStatusTwice = GenericEndpointTest.completeSignServerCall(mockMvc, client.ecKey(), merchant.p2shAddress(), fullTxTwice, new Date());
+        Assert.assertTrue(completStatusTwice.isSuccess());
+        Assert.assertEquals(Type.SUCCESS, completStatusTwice.type());
+    }
+    
+    @Test
+    public void testCompleteTwiceFailed() throws Exception {
+        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.signatures());
+        Transaction txClient = BitcoinUtils.createTx(
+                params, funding.getOutputs(), client.p2shAddress(), merchant.p2shAddress(),
+                amountToRequest.value);
+        RefundInput refundInput = createInputForRefund(
+                params, client, merchant.p2shAddress(), serverSigs, lockTime, txClient);
+        RefundP2shTO statusRefund1 = GenericEndpointTest.refundServerCall(mockMvc,
+                client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), new Date());
+        Assert.assertTrue(statusRefund1.isSuccess());
+        //do signing
+        Transaction fullTx = refundInput.fullTx();
+        CompleteSignTO status3 = GenericEndpointTest.completeSignServerCall(mockMvc, client.ecKey(), merchant.p2shAddress(), fullTx, new Date());
+        Assert.assertTrue(status3.isSuccess());
+        Assert.assertEquals(Type.SUCCESS, status3.type());
+        
+        ///************** go again instant
+        System.out.println("****************************************************");
+        PrepareHalfSignTO statusTwice = PrepareTest.prepareServerCall(
+                mockMvc, amountToRequest, client, merchant.p2shAddress(), null, new Date());
+        Assert.assertEquals(Type.SUCCESS, statusTwice.type());
+        List<TransactionSignature> serverSigsTwice = SerializeUtils.deserializeSignatures(statusTwice.signatures());
+        
+        Transaction txClientTwice = BitcoinUtils.createTx(
+                params, fullTx.getOutputs(), client.p2shAddress(), merchant.p2shAddress(),
+                amountToRequest.value);
+        
+        RefundInput refundInputTwice = createInputForRefund(
+                params, client, merchant.p2shAddress(), serverSigsTwice, lockTime, txClientTwice);
         RefundP2shTO statusRefundTwice = GenericEndpointTest.refundServerCall(mockMvc,
                 client.ecKey(), refundInputTwice.clientOutpoint(), refundInputTwice.clientSinatures(), new Date());
         Assert.assertTrue(statusRefundTwice.isSuccess());
         Transaction fullTxTwice = refundInput.fullTx();
+
         CompleteSignTO completStatusTwice = GenericEndpointTest.completeSignServerCall(mockMvc, client.ecKey(), merchant.p2shAddress(), fullTxTwice, new Date());
-        Assert.assertTrue(completStatusTwice.isSuccess());
-        Assert.assertEquals(Type.SUCCESS, completStatusTwice.type());
-        //TODO: check database
+        Assert.assertFalse(completStatusTwice.isSuccess());
+        Assert.assertEquals(Type.INVALID_TX, completStatusTwice.type());
     }
 }

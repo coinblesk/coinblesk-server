@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -60,7 +61,7 @@ public class WalletService {
     @Autowired
     private KeyService keyService;
     
-     @Autowired
+    @Autowired
     private TransactionService transactionService;
    
     private Wallet wallet;
@@ -171,8 +172,13 @@ public class WalletService {
        
     }
     
-    public Map<Sha256Hash, Transaction> unspentTransactions() {
-         return wallet.getTransactionPool(WalletTransaction.Pool.UNSPENT);
+    public Map<Sha256Hash, Transaction> unspentTransactions(NetworkParameters params) {
+         Map<Sha256Hash, Transaction> copy = new HashMap<>(wallet.getTransactionPool(WalletTransaction.Pool.UNSPENT));
+         //also add approved Tx
+         for(Transaction t:transactionService.approvedTx(params)) {
+             copy.put(t.getHash(), t);
+         }
+         return copy;
     }
     
     @PreDestroy

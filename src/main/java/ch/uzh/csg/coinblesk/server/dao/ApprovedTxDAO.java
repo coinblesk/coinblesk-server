@@ -6,6 +6,7 @@
 package ch.uzh.csg.coinblesk.server.dao;
 
 import ch.uzh.csg.coinblesk.server.entity.ApprovedTx;
+import ch.uzh.csg.coinblesk.server.entity.Keys;
 import java.util.List;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -25,22 +26,23 @@ public class ApprovedTxDAO {
 
     @PersistenceContext()
     private EntityManager em;
-
-    public List<ApprovedTx> findByAddressFrom(final byte[] ApprovedTx) {
+    
+    public List<ApprovedTx> findByAddress(final byte[] address) {
         final CriteriaBuilder cb = em.getCriteriaBuilder();
         final CriteriaQuery<ApprovedTx> query = cb.createQuery(ApprovedTx.class);
         final Root<ApprovedTx> from = query.from(ApprovedTx.class);
-        final Predicate condition = cb.equal(from.get("addressFrom"), ApprovedTx);
-        CriteriaQuery<ApprovedTx> select = query.select(from).where(condition);
+        final Predicate condition1 = cb.equal(from.get("addressTo"), address);
+        final Predicate condition2 = cb.equal(from.get("addressFrom"), address);
+        final Predicate conditionOr = cb.or(condition1, condition2);
+        CriteriaQuery<ApprovedTx> select = query.select(from).where(conditionOr);
         return em.createQuery(select).getResultList();
     }
     
-    public List<ApprovedTx> findByAddressTo(final byte[] ApprovedTx) {
+    public List<ApprovedTx> findAll() {
         final CriteriaBuilder cb = em.getCriteriaBuilder();
         final CriteriaQuery<ApprovedTx> query = cb.createQuery(ApprovedTx.class);
         final Root<ApprovedTx> from = query.from(ApprovedTx.class);
-        final Predicate condition = cb.equal(from.get("addressTo"), ApprovedTx);
-        CriteriaQuery<ApprovedTx> select = query.select(from).where(condition);
+        CriteriaQuery<ApprovedTx> select = query.select(from);
         return em.createQuery(select).getResultList();
     }
     
@@ -56,4 +58,6 @@ public class ApprovedTxDAO {
         delete.where(condition);
         return em.createQuery(delete).executeUpdate();
     }
+
+    
 }

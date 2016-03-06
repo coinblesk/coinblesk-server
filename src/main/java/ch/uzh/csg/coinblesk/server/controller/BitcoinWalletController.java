@@ -57,4 +57,6 @@ public class BitcoinWalletController {
        HttpStatus status = response.isSuccessful() ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
        return new ResponseEntity<T>(response, status);
    }
+   
+   //TODO: info endpoint
 }

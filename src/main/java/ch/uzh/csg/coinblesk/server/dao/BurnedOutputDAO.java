@@ -56,4 +56,11 @@ public class BurnedOutputDAO {
         delete.where(condition);
         return em.createQuery(delete).executeUpdate();
     }
+
+    public int removeAll() {
+        final CriteriaBuilder cb = em.getCriteriaBuilder();
+        final CriteriaDelete<BurnedOutput> delete = cb.createCriteriaDelete(BurnedOutput.class);
+        delete.from(BurnedOutput.class);
+        return em.createQuery(delete).executeUpdate();
+    }
 }

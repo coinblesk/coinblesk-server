@@ -16,6 +16,12 @@ sourceSets.main.resources {
 
 version = '2.1-SNAPSHOT'
 war {
+    //http://stackoverflow.com/questions/21272527/gradle-war-manifest-version-number-wrong-for-release-build
+    doFirst {
+        manifest {
+            attributes("Project": project.name, "Version": version, "Date": new Date())
+        }
+    }
     archiveName = 'coinblesk-server.war'
 }
 
@@ -68,7 +74,7 @@ dependencies {
     compile 'ch.qos.logback:logback-classic:1.1.3'
     compile 'org.slf4j:slf4j-api:1.7.13'
     compile 'com.google.guava:guava:16.0.1'
-    compile 'com.coinblesk:coinblesk-shared-resources:1.3.115'
+    compile 'com.coinblesk:coinblesk-shared-resources:1.3.117'
     compile 'com.madgag.spongycastle:core:1.54.0.0'
 
     testCompile ('junit:junit:4.12') {

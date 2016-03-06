@@ -10,6 +10,7 @@ import ch.uzh.csg.coinblesk.server.entity.Keys;
 import ch.uzh.csg.coinblesk.server.service.KeyService;
 import ch.uzh.csg.coinblesk.server.service.TransactionService;
 import ch.uzh.csg.coinblesk.server.service.WalletService;
+import ch.uzh.csg.coinblesk.server.utils.LruCache;
 import com.coinblesk.json.BalanceTO;
 import com.coinblesk.json.BaseTO;
 import com.coinblesk.json.CompleteSignTO;
@@ -21,17 +22,16 @@ import com.coinblesk.json.Type;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
-import com.google.common.collect.HashBiMap;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
-import java.util.logging.Level;
 import javax.annotation.Nullable;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
@@ -42,7 +42,6 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBroadcast;
-import org.bitcoinj.core.TransactionBroadcaster;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
@@ -82,6 +81,8 @@ public class PaymentController {
     
     @Autowired
     private KeyService keyService;
+    
+    private static final Map<String, PrepareHalfSignTO> CACHE = Collections.synchronizedMap(new LruCache<String, PrepareHalfSignTO>(1000));
 
     /**
      * Input is the KeyTO with the client public key. The server will create for
@@ -136,10 +137,22 @@ public class PaymentController {
     public BalanceTO balance(@RequestBody KeyTO keyTO) {
         LOG.debug("Balance clientHash for {}", SerializeUtils.bytesToHex(keyTO.publicKey()));
         try {
+            final NetworkParameters params = appConfig.getNetworkParameters();
             final List<ECKey> keys = keyService.getPublicECKeysByClientPublicKey(keyTO.publicKey());
             final Script script = ScriptBuilder.createP2SHOutputScript(2, keys);
-            final Coin balance = walletService.balance(script);
-            return new BalanceTO().balance(balance.value);
+            final Address p2shAddressFrom = script.getToAddress(params);
+            //final Coin balance = walletService.balance(script);
+            //return new BalanceTO().balance(balance.value);
+            
+            List<TransactionOutput> outputs = walletService.getOutputs(p2shAddressFrom);
+            LOG.debug("{Prepare} nr. of outputs from network {} for {}. Full list: {}", outputs.size(), "tdb", outputs);
+            //in addition, get the outputs from previous TX, possibly not yet published in the BT network
+            outputs.addAll(transactionService.approvedOutputs(params, p2shAddressFrom));
+            long total = 0;
+            for(TransactionOutput transactionOutput:outputs) {
+                total += transactionOutput.getValue().value;
+            }
+            return new BalanceTO().balance(total);
 
         } catch (Exception e) {
             LOG.error("register keys error", e);
@@ -191,6 +204,13 @@ public class PaymentController {
             produces = "application/json; charset=UTF-8")
     @ResponseBody
     public PrepareHalfSignTO prepareHalfSign(@RequestBody PrepareHalfSignTO prepareSignTO) {
+        //caching is important, if a client requests with the same time, then the last result is returned
+        //this will not add the outputs to the burned outputs
+        final String key = SerializeUtils.bytesToHexFull(prepareSignTO.clientPublicKey()) + prepareSignTO.currentDate();
+        PrepareHalfSignTO prepareHalfSignTO = CACHE.get(key);
+        if(prepareHalfSignTO != null) {
+            return prepareHalfSignTO;
+        }
         final String clientId = SerializeUtils.bytesToHex(prepareSignTO.clientPublicKey());
         LOG.debug("{Prepare} sign half for {}", clientId);
         try {
@@ -227,19 +247,25 @@ public class PaymentController {
 
             //get all outputs from the BT network
             List<TransactionOutput> outputs = walletService.getOutputs(p2shAddressFrom);
-            LOG.debug("{Prepare} nr. of outputs from network {} for {}", outputs.size(), clientId);
+            LOG.debug("{Prepare} nr. of outputs from network {} for {}. Full list: {}", outputs.size(), clientId, outputs);
             //in addition, get the outputs from previous TX, possibly not yet published in the BT network
-            outputs.addAll(transactionService.approvedReceiving(params, p2shAddressFrom));
-            LOG.debug("{Prepare} nr. of outputs after approved {} for {}", outputs.size(), clientId);
-            outputs.removeAll(transactionService.approvedSpending(params, p2shAddressFrom));
-            LOG.debug("{Prepare} nr. of outputs after spent {} for {}", outputs.size(), clientId);
+            outputs.addAll(transactionService.approvedOutputs(params, p2shAddressFrom));
+            LOG.debug("{Prepare} nr. of outputs after approved {} for {}. Full list: {}", outputs.size(), clientId, outputs);
             
+            //List<TransactionOutPoint> to = transactionService.burnedOutpoints(params, prepareSignTO.clientPublicKey());
+            //these are 100% spent, as we have done a /complete-sign
+            List<TransactionOutPoint> to = transactionService.spentOutputs(params, p2shAddressFrom);
+
             //bloom filter is optianal, if not provided all found outputs are used
-            final List<TransactionOutput> filteredOutputs = filter(params, outputs, prepareSignTO.bloomFilter());       
-            boolean filtered = !filteredOutputs.equals(outputs);
-            outputs = filteredOutputs;
-            
-            LOG.debug("{Prepare} going for the following outputs in {} for {}", outputs, clientId);
+            boolean filtered = false;
+            if(prepareSignTO.bloomFilter() != null) {
+                final List<TransactionOutput> filteredOutputs = filter(params, outputs, prepareSignTO.bloomFilter());       
+                filtered = !filteredOutputs.equals(outputs);
+                outputs = filteredOutputs;
+            } else {
+                removeBurnedOutputs(outputs, to);
+            }
+            LOG.debug("{Prepare} nr. of outputs after bured outputs {} for {}. Full list {}", outputs.size(), clientId, outputs);
             
             final Transaction tx = BitcoinUtils.createTx(
                     params, outputs, p2shAddressFrom,
@@ -249,6 +275,8 @@ public class PaymentController {
                 LOG.debug("{Prepare} not enough coins for {}", clientId);
                 return new PrepareHalfSignTO().type(Type.NOT_ENOUGH_COINS);
             }
+            
+            LOG.debug("{Prepare} used tx {}: {}", clientId, tx);
             
             BloomFilter bloomFilter = new BloomFilter(outputs.size(), 0.001, 42);
             for(TransactionOutput output: outputs) {
@@ -265,10 +293,12 @@ public class PaymentController {
             //sign the tx with the server keys
             List<TransactionSignature> serverTxSigs = BitcoinUtils.partiallySign(tx, redeemScript, serverKey);
             
-            return new PrepareHalfSignTO().type(filtered ? Type.SUCCESS_FILTERED : Type.SUCCESS)
+            prepareHalfSignTO = new PrepareHalfSignTO().type(filtered ? Type.SUCCESS_FILTERED : Type.SUCCESS)
                     .unsignedTransaction(tx.unsafeBitcoinSerialize())
                     .bloomFilter(bloomFilter.unsafeBitcoinSerialize())
                     .signatures(SerializeUtils.serializeSignatures(serverTxSigs));
+            CACHE.put(key, prepareHalfSignTO);
+            return prepareHalfSignTO;
 
         } catch (Exception e) {
             LOG.error("{Prepare} Register keys error: " + clientId, e);
@@ -317,12 +347,10 @@ public class PaymentController {
             //now get all the output we want the refund, for client this will be one entry, for merchant this
             //will return multiple entries
             List<TransactionOutput> clientWalletOutputs = walletService.getOutputs(p2shAddress);
-            LOG.debug("{RefundP2SH} nr. of outputs from network {} for {}", clientWalletOutputs.size(), clientId);
+            LOG.debug("{RefundP2SH} nr. of outputs from network {} for {}. Full list {}", clientWalletOutputs.size(), clientId, clientWalletOutputs);
             //add/remove pending 
-            clientWalletOutputs.addAll(transactionService.approvedReceiving(params, p2shAddress));
-            LOG.debug("{RefundP2SH} nr. of outputs after approve {} for {}", clientWalletOutputs.size(), clientId);
-            clientWalletOutputs.removeAll(transactionService.approvedSpending(params, p2shAddress));
-            LOG.debug("{RefundP2SH} nr. of outputs after spent network {} for {}", clientWalletOutputs.size(), clientId);
+            clientWalletOutputs.addAll(transactionService.approvedOutputs(params, p2shAddress));
+            LOG.debug("{RefundP2SH} nr. of outputs after approve {} for {}. Full list {}", clientWalletOutputs.size(), clientId, clientWalletOutputs);
             //remove pending/burned outputs
             
             //remove burned outputs, either we do it ourselfs, or the client can provide an optional bloomfilter
@@ -333,6 +361,8 @@ public class PaymentController {
             } else {
                 removeBurnedOutputs(clientWalletOutputs, to);
             }
+            LOG.debug("{RefundP2SH} nr. of outputs after bured outputs {} for {}. Full list {}", clientWalletOutputs.size(), clientId, clientWalletOutputs);
+            
             
             //the outpoints need to point to the original tx
             if (checkBurnedOutpoints(to, refundClientPoints)) {
@@ -407,14 +437,22 @@ public class PaymentController {
             final Address p2shAddressTo = new Address(params, signTO.p2shAddressTo());
             
             final Transaction fullTx = new Transaction(params, signTO.fullSignedTransaction());
+            LOG.debug("{CompleteSign} client {} received {}", clientId, fullTx);
             
+            //this includes approved tx
+            Map<Sha256Hash, Transaction> copy = new HashMap<>(walletService.unspentTransactions(params));
+            
+            if(copy.containsKey(fullTx.getHash())) {
+                LOG.debug("{CompleteSign} already have this TX for {}", clientId);
+                return new CompleteSignTO().type(Type.INVALID_TX);
+            }
             //check if tx is valid, outputs not spent and script/sigantures are valid
-            if(!SerializeUtils.verifyRefund(fullTx, walletService.unspentTransactions())) {
+            if(!SerializeUtils.verifyRefund(fullTx, copy)) {
                 LOG.debug("{CompleteSign} verifyTx error for {}", clientId);
                 return new CompleteSignTO().type(Type.INVALID_TX);
             }
-            //and outputs are timelocked
-            Map<Sha256Hash, Transaction> copy = new HashMap<>(walletService.unspentTransactions());
+            
+            //check if outputs are timelocked and not expiring, if not timelocked, ok as well
             copy.put(fullTx.getHash(), fullTx);
             for(Transaction refund: keyService.findRefundTransaction(params, signTO.clientPublicKey())) {
                 //check if refund is valid and could be cashed in
@@ -435,6 +473,7 @@ public class PaymentController {
             if(transactionService.checkInstantTx(params, fullTx, signTO.clientPublicKey(), p2shAddressFrom,
                     p2shAddressTo)) {
                 LOG.debug("{CompleteSign} instant payment OK for {}", clientId);
+                //walletService.commit(fullTx);
                 return new CompleteSignTO().setSuccess();
             } else {
                 LOG.debug("{CompleteSign} instant payment NOT OK for {}", clientId);
@@ -498,7 +537,7 @@ public class PaymentController {
 
         //chekc if the client sent us a time which is way too old (1 day)
         Calendar fromClient = Calendar.getInstance();
-        fromClient.setTime(input.currentDate());
+        fromClient.setTime(new Date(input.currentDate()));
 
         Calendar fromServerDayBefore = Calendar.getInstance();
         fromServerDayBefore.add(Calendar.DAY_OF_YEAR, -1);
@@ -520,7 +559,7 @@ public class PaymentController {
             return newInstance(input, Type.SIGNATURE_ERROR);
 
         }
-        if (!keyService.checkReplayAttack(input.clientPublicKey(), endpoint, input.currentDate())) {
+        if (!keyService.checkReplayAttack(input.clientPublicKey(), endpoint, new Date(input.currentDate()))) {
             return newInstance(input, Type.REPLAY_ATTACK);
         }
         return null;

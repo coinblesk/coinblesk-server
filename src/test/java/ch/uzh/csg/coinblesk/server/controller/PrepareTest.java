@@ -151,6 +151,20 @@ public class PrepareTest {
                 mockMvc, Coin.valueOf(9876), client, new ECKey().toAddress(params), null, now2);
         Assert.assertTrue(status.isSuccess());
     }
+    
+    @Test
+    @DatabaseTearDown(value = {"classpath:DbUnitFiles/emptyDB.xml"}, type = DatabaseOperation.DELETE_ALL)
+    public void testBurnCache() throws Exception {
+        Client client = new Client(params, mockMvc);
+        sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(), walletService.blockChain());
+        Date now = new Date();
+        PrepareHalfSignTO status = prepareServerCall(
+                mockMvc, Coin.valueOf(9876), client, new ECKey().toAddress(params), null, now);
+        Assert.assertTrue(status.isSuccess());
+        status = prepareServerCall(
+                mockMvc, Coin.valueOf(9876657653445L), client, new ECKey().toAddress(params), null, now);
+        Assert.assertTrue(status.isSuccess());
+    }
 
     @Test
     @DatabaseTearDown(value = {"classpath:DbUnitFiles/emptyDB.xml"},
@@ -248,7 +262,7 @@ public class PrepareTest {
                 .clientPublicKey(client.getPubKey())
                 .p2shAddressTo(to.toString())
                 .messageSig(clientSig)
-                .currentDate(date);
+                .currentDate(date.getTime());
         if (prepareHalfSignTO.messageSig() == null) {
             SerializeUtils.sign(prepareHalfSignTO, client);
         }

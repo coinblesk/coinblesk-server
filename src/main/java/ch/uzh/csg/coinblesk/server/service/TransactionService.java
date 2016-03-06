@@ -5,6 +5,7 @@
  */
 package ch.uzh.csg.coinblesk.server.service;
 
+import ch.uzh.csg.coinblesk.server.controller.PaymentController;
 import ch.uzh.csg.coinblesk.server.dao.ApprovedTxDAO;
 import ch.uzh.csg.coinblesk.server.dao.BurnedOutputDAO;
 import ch.uzh.csg.coinblesk.server.entity.ApprovedTx;
@@ -24,6 +25,8 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -33,6 +36,8 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class TransactionService {
+    
+    private final static Logger LOG = LoggerFactory.getLogger(TransactionService.class);
 
     @Autowired
     private ApprovedTxDAO approvedTxDAO;
@@ -41,28 +46,34 @@ public class TransactionService {
     private BurnedOutputDAO burnedOutputDAO;
     
     @Transactional
-    public List<TransactionOutput> approvedReceiving(NetworkParameters params, Address p2shAddress) {
-        List<ApprovedTx> approved = approvedTxDAO.findByAddressTo(p2shAddress.getHash160());
+    public List<TransactionOutput> approvedOutputs(NetworkParameters params, Address p2shAddress) {
+        List<ApprovedTx> approved = approvedTxDAO.findByAddress(p2shAddress.getHash160());
         List<TransactionOutput> retVal = new ArrayList<>();
         for(ApprovedTx approvedTx:approved) {
             Transaction tx = new Transaction(params, approvedTx.tx());
-            retVal.addAll(tx.getOutputs());
+            LOG.debug("approved for receiving {}", tx);
+            for(TransactionOutput transactionOutput:tx.getOutputs()) {
+                if(p2shAddress.equals(transactionOutput.getAddressFromP2SH(params))) {
+                    retVal.add(transactionOutput);
+                }
+            }
         }
         return retVal;
     }
-
-    @Transactional
-    public List<TransactionOutput> approvedSpending(NetworkParameters params, Address p2shAddress) {
-        List<ApprovedTx> approved = approvedTxDAO.findByAddressFrom(p2shAddress.getHash160());
-        List<TransactionOutput> retVal = new ArrayList<>();
-        for(ApprovedTx approvedTx:approved) {
-            Transaction tx = new Transaction(params, approvedTx.tx());
-            retVal.addAll(tx.getOutputs());
-        }
-        return retVal;
-    }
-
     
+    @Transactional
+    public List<TransactionOutPoint> spentOutputs(NetworkParameters params, Address p2shAddress) {
+        List<ApprovedTx> approved = approvedTxDAO.findByAddress(p2shAddress.getHash160());
+        List<TransactionOutPoint> retVal = new ArrayList<>();
+        for(ApprovedTx approvedTx:approved) {
+            Transaction tx = new Transaction(params, approvedTx.tx());
+            LOG.debug("approved spent {}", tx);
+            for(TransactionInput transactionInput:tx.getInputs()) {
+                retVal.add(transactionInput.getOutpoint());
+            }
+        }
+        return retVal;
+    }
     
     @Transactional
     public List<Pair<TransactionOutPoint, Integer>> burnOutputFromNewTransaction(
@@ -115,7 +126,7 @@ public class TransactionService {
             
             if(instantPayment) {
                 approveTx(fullTx, p2shAddressFrom, p2shAddressTo);
-                removeConfirmedBurnedOutput(fullTx.getInputs());
+                //removeConfirmedBurnedOutput(fullTx.getInputs());
                 return true;
             } else {
                 return false;
@@ -139,9 +150,25 @@ public class TransactionService {
             burnedOutputDAO.remove(outpoints);
         }         
     }
+    
+    @Transactional
+    public int removeAllBurnedOutput() {
+        return burnedOutputDAO.removeAll();
+    }
 
     @Transactional
     public void removeApproved(Transaction approved) {
         approvedTxDAO.remove(approved.getHash().getBytes());
+    }
+
+    @Transactional
+    public List<Transaction> approvedTx(NetworkParameters params) {
+        List<ApprovedTx> approved = approvedTxDAO.findAll();
+        List<Transaction> retVal = new ArrayList<>(approved.size());
+        for(ApprovedTx approvedTx:approved) {
+            Transaction tx = new Transaction(params, approvedTx.tx());
+            retVal.add(tx);
+        }
+        return retVal;
     }
 }

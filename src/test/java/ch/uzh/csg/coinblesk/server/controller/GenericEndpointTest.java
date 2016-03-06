@@ -205,9 +205,10 @@ public class GenericEndpointTest {
         // test /prepare
         PrepareHalfSignTO statusPrepare1 = prepareServerCall(amountToRequest, client, merchantAddress, null, now);
         Assert.assertTrue(statusPrepare1.isSuccess());
-        PrepareHalfSignTO statusPrepare2 = prepareServerCall(amountToRequest, client, merchantAddress, null, now);
-        Assert.assertFalse(statusPrepare2.isSuccess());
-        Assert.assertEquals(Type.REPLAY_ATTACK, statusPrepare2.type());
+        //this is caching, so no reply attack        
+        //PrepareHalfSignTO statusPrepare2 = prepareServerCall(amountToRequest, client, merchantAddress, null, now);
+        //Assert.assertFalse(statusPrepare2.isSuccess());
+        //Assert.assertEquals(Type.REPLAY_ATTACK, statusPrepare2.type());
         // test /refund-p2sh
         List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(statusPrepare1.signatures());
         
@@ -242,7 +243,7 @@ public class GenericEndpointTest {
                 .clientPublicKey(client.getPubKey())
                 .p2shAddressTo(p2shAddressTo.toString())
                 .fullSignedTransaction(fullTx.unsafeBitcoinSerialize())
-                .currentDate(now);
+                .currentDate(now.getTime());
         if (cs.messageSig() == null) {
             SerializeUtils.sign(cs, client);
         }
@@ -267,7 +268,7 @@ public class GenericEndpointTest {
         refundP2shTO.clientPublicKey(client.getPubKey());
         refundP2shTO.refundClientOutpointsCoinPair(SerializeUtils.serializeOutPointsCoin(refundClientOutpoints));
         refundP2shTO.refundSignaturesClient(SerializeUtils.serializeSignatures(partiallySignedRefundClient));
-        refundP2shTO.currentDate(date);
+        refundP2shTO.currentDate(date.getTime());
         if (refundP2shTO.messageSig() == null) {
             SerializeUtils.sign(refundP2shTO, client);
         }
@@ -291,7 +292,7 @@ public class GenericEndpointTest {
                 .clientPublicKey(client.getPubKey())
                 .p2shAddressTo(to.toString())
                 .messageSig(clientSig)
-                .currentDate(date);
+                .currentDate(date.getTime());
         if (prepareHalfSignTO.messageSig() == null) {
             SerializeUtils.sign(prepareHalfSignTO, client);
         }
@@ -337,6 +338,7 @@ public class GenericEndpointTest {
         
         List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(txClient, client.redeemScript(), client.ecKey());
         BitcoinUtils.applySignatures(txClient, client.redeemScript(), clientSigs, serverSigs, client.clientFirst());
+        System.out.println("client tx client: "+txClient);
         //Client now has the full tx, based on that, Client creates the refund tx
         //Client uses the outputs of the tx as all the outputs are in that tx, no
         //need to merge

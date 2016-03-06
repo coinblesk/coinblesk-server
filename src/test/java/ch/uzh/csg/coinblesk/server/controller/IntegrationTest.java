@@ -443,7 +443,7 @@ public class IntegrationTest {
                 .amountToSpend(amountToRequest.value)
                 .clientPublicKey(client.ecKey().getPubKey())
                 .p2shAddressTo(merchant.p2shAddress().toString())
-                .currentDate(now);
+                .currentDate(now.getTime());
         SerializeUtils.sign(createSig, client.ecKey());
         TxSig clientSig = createSig.messageSig();
         //Client sends ok, publickey (and client signs/encrypts it) + amount/p2shAddressMerchant
@@ -581,7 +581,7 @@ public class IntegrationTest {
                 .clientPublicKey(client.ecKey().getPubKey())
                 .p2shAddressTo(p2shAddressTo.toString())
                 .fullSignedTransaction(fullTx.unsafeBitcoinSerialize())
-                .currentDate(now);
+                .currentDate(now.getTime());
         if(cs.messageSig() == null) {
             SerializeUtils.sign(cs, client.ecKey());
         }
@@ -596,7 +596,7 @@ public class IntegrationTest {
         refundP2shTO.clientPublicKey(client.ecKey().getPubKey());
         refundP2shTO.refundClientOutpointsCoinPair(SerializeUtils.serializeOutPointsCoin(refundClientOutpoint));
         refundP2shTO.refundSignaturesClient(SerializeUtils.serializeSignatures(partiallySignedRefundClient));
-        refundP2shTO.currentDate(date);
+        refundP2shTO.currentDate(date.getTime());
         if(refundP2shTO.messageSig() == null) {
             SerializeUtils.sign(refundP2shTO, client.ecKey());
         }
@@ -622,7 +622,7 @@ public class IntegrationTest {
                 .clientPublicKey(client.getPubKey())
                 .p2shAddressTo(to.toString())
                 .messageSig(clientSig)
-                .currentDate(date);
+                .currentDate(date.getTime());
         if(prepareHalfSignTO.messageSig() == null) {
             SerializeUtils.sign(prepareHalfSignTO, client);
         }
