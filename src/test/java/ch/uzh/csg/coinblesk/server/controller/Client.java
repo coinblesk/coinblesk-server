@@ -42,11 +42,19 @@ public class Client {
     final private Address p2shAddress;
     
     public Client(NetworkParameters params, MockMvc mockMvc) throws Exception {
-        ecKey = new ECKey();
-        ecKeyServer = register(ecKey, mockMvc);
-        p2shScript = createP2SHScript(ecKey, ecKeyServer);
-        redeemScript  = createRedeemScript(ecKey, ecKeyServer);
-        p2shAddress = p2shScript.getToAddress(params);
+        this.ecKey = new ECKey();
+        this.ecKeyServer = register(ecKey, mockMvc);
+        this.p2shScript = createP2SHScript(ecKey, ecKeyServer);
+        this.redeemScript  = createRedeemScript(ecKey, ecKeyServer);
+        this.p2shAddress = p2shScript.getToAddress(params);
+    }
+    
+    public Client(NetworkParameters params, ECKey ecKeyClient, ECKey ecKeyServer) throws Exception {
+        this.ecKey = ecKeyClient;
+        this.ecKeyServer = ecKeyServer;
+        this.p2shScript = createP2SHScript(ecKey, ecKeyServer);
+        this.redeemScript  = createRedeemScript(ecKey, ecKeyServer);
+        this.p2shAddress = p2shScript.getToAddress(params);
     }
     
     public ECKey ecKey() {

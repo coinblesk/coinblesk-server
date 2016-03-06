@@ -26,11 +26,16 @@ import com.github.springtestdbunit.annotation.DatabaseOperation;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import com.github.springtestdbunit.annotation.ExpectedDatabase;
 import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.BlockChain;
@@ -70,6 +75,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import org.springframework.web.client.RestTemplate;
 
 //http://www.soroushjp.com/2014/12/20/bitcoin-multisig-the-hard-way-understanding-raw-multisignature-bitcoin-transactions/
 /**
@@ -418,6 +424,46 @@ public class IntegrationTest {
         SerializeUtils.sign(prepareHalfSignTO, client.ecKey());
         PrepareHalfSignTO status = prepareServerCallOutput(prepareHalfSignTO);
         Assert.assertEquals(Type.SUCCESS, status.type());
+    }
+    
+    @Test
+    public void testReal() throws IOException, Exception {
+        final String uri = "http://bitcoin2-test.csg.uzh.ch/coinblesk-server/p/x";
+        ECKey client = getKey("client");
+        //2NDHTmZ9LvZ8kMtTXrNaM4WfH96pimZo3UU
+        ECKey merchant = getKey("merchant");
+        
+        //register client
+        KeyTO keyTO = new KeyTO().publicKey(client.getPubKey());
+        RestTemplate restTemplate = new RestTemplate();
+        KeyTO result = restTemplate.postForObject(uri, keyTO, KeyTO.class);
+        ECKey serverPub = ECKey.fromPublicOnly(result.publicKey());
+        Client clientFull = new Client(appConfig.getNetworkParameters(), client, serverPub);
+        //register merchant
+        keyTO = new KeyTO().publicKey(merchant.getPubKey());
+        restTemplate = new RestTemplate();
+        result = restTemplate.postForObject(uri, keyTO, KeyTO.class);
+        serverPub = ECKey.fromPublicOnly(result.publicKey());
+        Client merchantFull = new Client(appConfig.getNetworkParameters(), merchant, serverPub);
+        
+        System.out.println("client p2sh: "+clientFull.p2shAddress());
+        System.out.println("merchant p2sh: "+merchantFull.p2shAddress());
+    }
+    
+    private ECKey getKey(String name) throws IOException {
+        Path pathPub = Paths.get("/tmp/"+name+"_key.pub");
+        Path pathPriv = Paths.get("/tmp/"+name+"_key.priv");
+        final ECKey ecKey;
+        if(pathPub.toFile().exists() && pathPriv.toFile().exists()) {
+            byte[] pub = Files.readAllBytes(pathPub);
+            byte[] priv = Files.readAllBytes(pathPriv);
+            ecKey = ECKey.fromPrivateAndPrecalculatedPublic(priv, pub);
+        } else {
+            ecKey = new ECKey();
+            Files.write(pathPub, ecKey.getPubKey());
+            Files.write(pathPriv, ecKey.getPrivKeyBytes());
+        }
+        return ecKey;
     }
 
     @Test
