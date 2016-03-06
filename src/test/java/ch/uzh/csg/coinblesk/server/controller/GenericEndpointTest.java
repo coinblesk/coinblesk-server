@@ -151,19 +151,19 @@ public class GenericEndpointTest {
         SerializeUtils.sign(prepareHalfSignTO, new ECKey());
         PrepareHalfSignTO statusPrepare = prepareServerCallOutput(prepareHalfSignTO);
         Assert.assertFalse(statusPrepare.isSuccess());
-        Assert.assertEquals(Type.SIGNATURE_ERROR, statusPrepare.type());
+        Assert.assertEquals(Type.JSON_SIGNATURE_ERROR, statusPrepare.type());
         // test /refund-p2sh
         RefundP2shTO refundP2shTO = refundServerCallInput(client.ecKey(),Collections.emptyList(), Collections.emptyList(), now);
         SerializeUtils.sign(refundP2shTO, new ECKey());
         RefundP2shTO statusRefund = refundServerCallOutput(mockMvc, refundP2shTO);
         Assert.assertFalse(statusRefund.isSuccess());
-        Assert.assertEquals(Type.SIGNATURE_ERROR, statusRefund.type());
+        Assert.assertEquals(Type.JSON_SIGNATURE_ERROR, statusRefund.type());
         // test /complete-sign
         CompleteSignTO completeSignTO = completeSignServerCallInput(client.ecKey(), client.p2shAddress(), new Transaction(params), now);
         SerializeUtils.sign(completeSignTO, new ECKey());
         CompleteSignTO statusSign = completeSignServerCallOutput(mockMvc,completeSignTO);
         Assert.assertFalse(statusSign.isSuccess());
-        Assert.assertEquals(Type.SIGNATURE_ERROR, statusSign.type());
+        Assert.assertEquals(Type.JSON_SIGNATURE_ERROR, statusSign.type());
         
     }
     

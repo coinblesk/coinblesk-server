@@ -556,7 +556,7 @@ public class PaymentController {
         }
 
         if (!SerializeUtils.verifySig(input, ECKey.fromPublicOnly(input.clientPublicKey()))) {
-            return newInstance(input, Type.SIGNATURE_ERROR);
+            return newInstance(input, Type.JSON_SIGNATURE_ERROR);
 
         }
         if (!keyService.checkReplayAttack(input.clientPublicKey(), endpoint, new Date(input.currentDate()))) {
