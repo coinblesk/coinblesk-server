@@ -15,9 +15,8 @@
   <logger name="ch.uzh.csg" level="ALL"/>
   <logger name="org.springframework" level="DEBUG"/>
   <logger name="org.bitcoinj" level="DEBUG"/>
-   
 
   <root level="WARN">
-    <appender-ref ref="STDOUT" />
+    <appender-ref ref="STDOUT" /> 
   </root>
 </configuration>

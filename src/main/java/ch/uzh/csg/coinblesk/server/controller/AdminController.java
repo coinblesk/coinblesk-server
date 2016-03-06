@@ -18,6 +18,7 @@ import java.util.jar.Manifest;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.ServletContext;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -33,6 +34,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(value = {"/admin", "/a"})
 public class AdminController {
     
+    private static org.slf4j.Logger LOG = LoggerFactory.getLogger(AdminController.class);
+    
     @Autowired
     ServletContext context;
     
@@ -42,6 +45,7 @@ public class AdminController {
     @RequestMapping(value = {"/info", "/i"}, method = RequestMethod.GET)
     @ResponseBody
     public String info() {
+        LOG.debug("Info called");
         InputStream inputStream = context.getResourceAsStream("/META-INF/MANIFEST.MF");
         try {
             Properties prop = new Properties();
