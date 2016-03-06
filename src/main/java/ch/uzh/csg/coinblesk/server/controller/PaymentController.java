@@ -444,7 +444,7 @@ public class PaymentController {
             
             if(copy.containsKey(fullTx.getHash())) {
                 LOG.debug("{CompleteSign} already have this TX for {}", clientId);
-                return new CompleteSignTO().type(Type.INVALID_TX);
+                return new CompleteSignTO().setSuccess();
             }
             //check if tx is valid, outputs not spent and script/sigantures are valid
             if(!SerializeUtils.verifyRefund(fullTx, copy)) {
