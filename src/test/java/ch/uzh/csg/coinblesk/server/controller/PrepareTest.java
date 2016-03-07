@@ -70,7 +70,7 @@ public class PrepareTest {
 
     public final static long UNIX_TIME_MONTH = 60 * 60 * 24 * 30;
     public final static int LOCK_TIME_MONTHS = 3;
-
+    
     @Autowired
     private WebApplicationContext webAppContext;
 

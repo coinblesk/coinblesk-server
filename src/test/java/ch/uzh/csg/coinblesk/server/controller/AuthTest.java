@@ -12,8 +12,6 @@ import ch.uzh.csg.coinblesk.server.service.UserAccountService;
 import com.coinblesk.json.UserAccountStatusTO;
 import com.coinblesk.json.UserAccountTO;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import javax.servlet.http.HttpSession;
 import org.junit.Assert;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -39,6 +37,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import ch.uzh.csg.coinblesk.server.utilTest.*;
 import com.coinblesk.json.Type;
+import com.coinblesk.util.SerializeUtils;
 import org.springframework.mock.web.MockHttpSession;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 
@@ -68,12 +67,6 @@ public class AuthTest {
 
     private static MockMvc mockMvc;
     
-    private static final Gson GSON;
-    
-    static {
-         GSON = new GsonBuilder().create();
-    }
-    
     @Before
     public void setUp() {
          mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();   
@@ -83,33 +76,33 @@ public class AuthTest {
     public void testCreateActivate() throws Exception {
 	mockMvc.perform(get("/u/a/g").secure(true)).andExpect(status().is3xxRedirection());
         UserAccountTO userAccountTO = new UserAccountTO();
-        MvcResult res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
-        UserAccountStatusTO status = GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
+        MvcResult res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
+        UserAccountStatusTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
         Assert.assertEquals(Type.NO_EMAIL.nr(), status.type().nr());
         
         userAccountTO.email("test-test.test");
-        res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
-        status = GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
+        res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
+        status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
         Assert.assertEquals(Type.INVALID_EMAIL.nr(), status.type().nr());
         
         userAccountTO.email("test@test.test");
-        res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
-        status = GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
+        res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
+        status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
         Assert.assertEquals(Type.PASSWORD_TOO_SHORT.nr(), status.type().nr());
         
         userAccountTO.password("1234");
-        res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
-        status = GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
+        res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
+        status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
         Assert.assertEquals(Type.PASSWORD_TOO_SHORT.nr(), status.type().nr());
         
         userAccountTO.password("123456");
-        res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
-        status = GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
+        res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
+        status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
         Assert.assertTrue(status.isSuccess());
         Assert.assertEquals(1, adminEmail.sentEmails());
         
-        res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
-        status = GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
+        res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
+        status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
         Assert.assertEquals(Type.EMAIL_ALREADY_EXISTS_NOT_ACTIVATED.nr(), status.type().nr());
         Assert.assertEquals(2, adminEmail.sentEmails());
         
@@ -129,7 +122,7 @@ public class AuthTest {
         
         HttpSession session = loginAndGetSession("test@test.test", "123456");
         res = mockMvc.perform(get("/u/a/g").secure(true).with(csrf()).session((MockHttpSession) session)).andExpect(status().isOk()).andReturn();
-        UserAccountTO uato = GSON.fromJson(res.getResponse().getContentAsString(), UserAccountTO.class);
+        UserAccountTO uato = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountTO.class);
         Assert.assertEquals("test@test.test", uato.email());
     }
     

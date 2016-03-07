@@ -7,8 +7,7 @@ package ch.uzh.csg.coinblesk.server.controller;
 
 import com.coinblesk.json.KeyTO;
 import com.coinblesk.util.BitcoinUtils;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.coinblesk.util.SerializeUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -28,12 +27,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * @author draft
  */
 public class Client {
-    
-    private static final Gson GSON;
-    
-    static {
-         GSON = new GsonBuilder().create();
-    }
     
     final private ECKey ecKey;
     final private ECKey ecKeyServer;
@@ -103,8 +96,8 @@ public class Client {
     private ECKey register(ECKey ecKeyClient, MockMvc mockMvc) throws Exception {
         KeyTO keyTO = new KeyTO().publicKey(ecKeyClient.getPubKey());
         MvcResult res = mockMvc.perform(post("/p/x").secure(true).
-                contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
-        KeyTO status = GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
+                contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
+        KeyTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
         return ECKey.fromPublicOnly(status.publicKey()); 
     }
 }

@@ -10,10 +10,8 @@ import ch.uzh.csg.coinblesk.server.config.SecurityConfig;
 import ch.uzh.csg.coinblesk.server.utilTest.TestBean;
 import com.coinblesk.json.KeyTO;
 import com.coinblesk.json.Type;
+import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import java.util.Base64;
 import org.bitcoinj.core.ECKey;
 import org.junit.Assert;
 import org.junit.Before;
@@ -54,12 +52,6 @@ public class KeyTest {
     
     private static MockMvc mockMvc;
     
-    private static final Gson GSON;
-    
-    static {
-         GSON = new GsonBuilder().create();
-    }
-    
     @Before
     public void setUp() {
          mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();   
@@ -71,23 +63,23 @@ public class KeyTest {
         mockMvc.perform(post("/p/x").secure(true)).andExpect(status().is4xxClientError());
         //with object, but no public key
         KeyTO keyTO = new KeyTO();
-        MvcResult res = mockMvc.perform(post("/p/x").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
-        KeyTO status = GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
+        MvcResult res = mockMvc.perform(post("/p/x").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
+        KeyTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
         Assert.assertEquals(false, status.isSuccess());
         Assert.assertEquals(Type.SERVER_ERROR, status.type());
         Assert.assertNull(status.publicKey());
         //with bogus key
         keyTO = new KeyTO().publicKey("bogus=======".getBytes());
-        res = mockMvc.perform(post("/p/x").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
-        status = GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
+        res = mockMvc.perform(post("/p/x").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
+        status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
         Assert.assertEquals(false, status.isSuccess());
         Assert.assertEquals(Type.SERVER_ERROR, status.type());
         Assert.assertNull(status.publicKey());
         //with good pubilc key
         ECKey ecKeyClient = new ECKey();
         keyTO = new KeyTO().publicKey(ecKeyClient.getPubKey());
-        res = mockMvc.perform(post("/p/x").secure(true).contentType(MediaType.APPLICATION_JSON).content(GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
-        status = GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
+        res = mockMvc.perform(post("/p/x").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
+        status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
         Assert.assertEquals(true, status.isSuccess());
         Assert.assertNotNull(status.publicKey());
     }
