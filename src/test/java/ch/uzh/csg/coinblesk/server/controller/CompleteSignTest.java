@@ -9,6 +9,7 @@ import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import ch.uzh.csg.coinblesk.server.config.BeanConfig;
 import ch.uzh.csg.coinblesk.server.config.SecurityConfig;
 import static ch.uzh.csg.coinblesk.server.controller.GenericEndpointTest.createInputForRefund;
+import static ch.uzh.csg.coinblesk.server.controller.IntegrationTest.balanceServerCall;
 import static ch.uzh.csg.coinblesk.server.controller.IntegrationTest.sendFakeBroadcast;
 import ch.uzh.csg.coinblesk.server.service.WalletService;
 import ch.uzh.csg.coinblesk.server.utilTest.TestBean;
@@ -277,10 +278,12 @@ public class CompleteSignTest {
         CompleteSignTO completStatusTwice = GenericEndpointTest.completeSignServerCall(mockMvc, client.ecKey(), merchant.p2shAddress(), fullTxTwice, new Date());
         Assert.assertTrue(completStatusTwice.isSuccess());
         Assert.assertEquals(Type.SUCCESS, completStatusTwice.type());
+        //check balance
+        Assert.assertEquals(123450 - 2 * (9876) - (2 * 5000), balanceServerCall(mockMvc, client)); //check balance on Client
     }
     
     @Test
-    public void testCompleteTwiceFailed() throws Exception {
+    public void testCompleteTwiceOldTx() throws Exception {
         List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.signatures());
         Transaction txClient = BitcoinUtils.createTx(
                 params, funding.getOutputs(), client.p2shAddress(), merchant.p2shAddress(),

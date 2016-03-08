@@ -179,6 +179,30 @@ public class WalletService {
     @Transactional(readOnly = true)
     public List<TransactionOutput> getOutputs(NetworkParameters params, Address p2shAddress) {
         List<TransactionOutput> retVal = new ArrayList<>();
+        List<TransactionOutPoint> spent = new ArrayList<>();
+        
+        for(Transaction t:transactionService.approvedTx(params)) {
+            for(TransactionInput to:t.getInputs()) {
+                System.out.println("add outpoint: "+to.getOutpoint());
+                spent.add(to.getOutpoint());
+            }
+        }
+        
+        Map<Sha256Hash, Transaction> unspent = unspentTransactions(params);
+        for(Transaction t:unspent.values()) {
+            for(TransactionOutput out:t.getOutputs()) {
+                if(p2shAddress.equals(out.getAddressFromP2SH(appConfig.getNetworkParameters()))) {
+                    if(!spent.contains(out.getOutPointFor())) {
+                        System.out.println("add output: "+out);
+                        retVal.add(out);
+                    } else {
+                        System.out.println("no add output: "+out);
+                    }
+                }
+            }
+        }
+        return retVal;
+        /*List<TransactionOutput> retVal = new ArrayList<>();
         List<TransactionOutput> all = wallet.getWatchedOutputs(true);
         //add our approved tx as well
         for(Transaction t:transactionService.approvedTx(params)) {
@@ -195,23 +219,9 @@ public class WalletService {
         }
         //now remove those approvedTx that we spent
         //TODO: this is a bit inefficient
-        for(Transaction t:transactionService.approvedTx(params)) {
-            for(TransactionInput to:t.getInputs()) {
-                TransactionOutPoint point = to.getOutpoint();
-                System.out.println("remove the APOINT: "+point);
-                for(Iterator<TransactionOutput> i = retVal.iterator(); i.hasNext();) {
-                    TransactionOutput tt = i.next();
-                    if(tt.getOutPointFor().equals(point)) {
-                        System.out.println("remove!");
-                        i.remove();
-                    } else {
-                        System.out.println("not remove!"+tt.getOutPointFor());
-                    }
-                }
-            }
-        }
         
-        return retVal;
+        
+        return retVal;*/
     }
     
     public long balance(NetworkParameters params, Address p2shAddress) {

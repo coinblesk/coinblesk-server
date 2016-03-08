@@ -600,8 +600,8 @@ public class IntegrationTest {
         //*************************
 
         //*****CHECKS********
-        Assert.assertEquals(108574, balanceServerCall(client)); //check balance on Client
-        Assert.assertEquals(9876, balanceServerCall(merchant)); //check balance on Merchant
+        Assert.assertEquals(108574, balanceServerCall(mockMvc, client)); //check balance on Client
+        Assert.assertEquals(9876, balanceServerCall(mockMvc, merchant)); //check balance on Merchant
     }
 
     final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
@@ -616,7 +616,7 @@ public class IntegrationTest {
         return new String(hexChars);
     }
 
-    private long balanceServerCall(Client client) throws Exception {
+    public static long balanceServerCall(MockMvc mockMvc, Client client) throws Exception {
         KeyTO keyTO = new KeyTO().publicKey(client.ecKey().getPubKey());
         MvcResult res = mockMvc.perform(get("/p/b").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
         BalanceTO balance = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), BalanceTO.class);

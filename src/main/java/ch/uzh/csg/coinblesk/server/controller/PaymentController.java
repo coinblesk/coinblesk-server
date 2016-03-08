@@ -187,7 +187,10 @@ public class PaymentController {
             //refundTransaction.verify(); make sure those inputs are from the known p2sh address (min conf)
             byte[] refundTx = refundTransaction.unsafeBitcoinSerialize();
             keyService.addRefundTransaction(refundTO.clientPublicKey(), refundTx);
-            return new RefundTO().setSuccess().refundTransaction(refundTx);
+            return new RefundTO()
+                    .setSuccess()
+                    .refundTransaction(refundTx)
+                    .serverSignatures(SerializeUtils.serializeSignatures(serverSigs));
         } catch (Exception e) {
             LOG.error("register keys error", e);
             return new RefundTO()
