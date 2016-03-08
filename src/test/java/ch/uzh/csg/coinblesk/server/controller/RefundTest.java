@@ -200,9 +200,9 @@ public class RefundTest {
         sendFakeBroadcast(refund, walletService.blockChain(), clientAppKit.chain());
         Assert.assertEquals(103574, clientAppKit.wallet().getBalance().value);
         //we have not yet sent out the real tx
-        Assert.assertEquals(123450, walletService.balance(client.p2shScript()).value);
+        Assert.assertEquals(123450, walletService.balance(params, client.p2shAddress()));
         sendFakeBroadcast(refundInput.fullTx(), walletService.blockChain(), clientAppKit.chain());
-        Assert.assertEquals(108574, walletService.balance(client.p2shScript()).value);
+        Assert.assertEquals(108574, walletService.balance(params, client.p2shAddress()));
 
     }
 
@@ -404,7 +404,8 @@ public class RefundTest {
             List<Pair<TransactionOutPoint, Coin>> refundMerchantOutpoints) {
         List<TransactionInput> preBuiltInupts = BitcoinUtils.convertPointsToInputs(
                 appConfig.getNetworkParameters(), refundMerchantOutpoints, merchant.redeemScript());
-        List<TransactionOutput> merchantWalletOutputs = walletService.getOutputs(merchant.p2shAddress());
+        List<TransactionOutput> merchantWalletOutputs = walletService.getOutputs(
+                appConfig.getNetworkParameters(), merchant.p2shAddress());
         //add/remove pending, approved, remove burned
         Transaction unsignedRefundMerchant = BitcoinUtils.generateUnsignedRefundTx(
                 appConfig.getNetworkParameters(), merchantWalletOutputs, preBuiltInupts,

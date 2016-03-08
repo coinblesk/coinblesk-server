@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -20,7 +21,6 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.BlockChain;
-import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.DownloadProgressTracker;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
@@ -28,6 +28,7 @@ import org.bitcoinj.core.PeerAddress;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Wallet;
@@ -38,13 +39,12 @@ import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
 import org.bitcoinj.store.UnreadableWalletException;
-import org.bitcoinj.wallet.CoinSelection;
-import org.bitcoinj.wallet.CoinSelector;
 import org.bitcoinj.wallet.WalletTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  *
@@ -144,27 +144,6 @@ public class WalletService {
         return blockChain;
     }
     
-    public Coin balance(final Script script) {
-        return wallet.getBalance(new CoinSelector() {
-            @Override
-            public CoinSelection select(Coin target, List<TransactionOutput> candidates) {
-                Coin coin = Coin.ZERO;
-                final List<TransactionOutput> list = new ArrayList<>();
-                for(TransactionOutput transactionOutput:candidates) {
-                    if(transactionOutput.getParentTransaction().getConfidence().getDepthInBlocks() < appConfig.getMinConf()) {
-                        continue;
-                    }
-                    if(!transactionOutput.getScriptPubKey().equals(script)) {
-                        continue;
-                    }
-                    list.add(transactionOutput);
-                    coin = coin.add(transactionOutput.getValue());
-                }
-                return new CoinSelection(coin, list);
-            }
-        });
-    }
-    
     public void addWatching(Script script) {
         List<Script> list = new ArrayList<>(1);
         list.add(script);
@@ -172,13 +151,75 @@ public class WalletService {
        
     }
     
+    public boolean connectBorken(Transaction fullTx, NetworkParameters params) {
+        wallet.commitTx(fullTx);
+        return true;
+        /*Map<Sha256Hash, Transaction> orig = wallet.getTransactionPool(WalletTransaction.Pool.UNSPENT);
+        for(TransactionInput input:fullTx.getInputs()) {
+            TransactionInput.ConnectionResult result = input.connect(
+                    orig, TransactionInput.ConnectMode.DISCONNECT_ON_CONFLICT);
+            if(result != TransactionInput.ConnectionResult.SUCCESS) {
+                return false;
+            }
+        }
+        return true;*/
+    }
+    
+    @Transactional(readOnly = true)
     public Map<Sha256Hash, Transaction> unspentTransactions(NetworkParameters params) {
-         Map<Sha256Hash, Transaction> copy = new HashMap<>(wallet.getTransactionPool(WalletTransaction.Pool.UNSPENT));
-         //also add approved Tx
-         for(Transaction t:transactionService.approvedTx(params)) {
-             copy.put(t.getHash(), t);
-         }
-         return copy;
+        Map<Sha256Hash, Transaction> copy = new HashMap<>(wallet.getTransactionPool(WalletTransaction.Pool.UNSPENT));
+        //also add approved Tx
+        List<Transaction> approvedTx = transactionService.approvedTx(params);
+        for(Transaction t:approvedTx) {
+            copy.put(t.getHash(), t);
+        }
+        return copy;
+    }
+    
+    @Transactional(readOnly = true)
+    public List<TransactionOutput> getOutputs(NetworkParameters params, Address p2shAddress) {
+        List<TransactionOutput> retVal = new ArrayList<>();
+        List<TransactionOutput> all = wallet.getWatchedOutputs(true);
+        //add our approved tx as well
+        for(Transaction t:transactionService.approvedTx(params)) {
+            all.addAll(t.getOutputs());
+        }
+        for(TransactionOutput to:all) {
+            if(to.isAvailableForSpending()) {
+                if(p2shAddress.equals(to.getAddressFromP2SH(appConfig.getNetworkParameters()))) {
+                    if(!retVal.contains(to)) {
+                        retVal.add(to);
+                    }
+                }
+            }
+        }
+        //now remove those approvedTx that we spent
+        //TODO: this is a bit inefficient
+        for(Transaction t:transactionService.approvedTx(params)) {
+            for(TransactionInput to:t.getInputs()) {
+                TransactionOutPoint point = to.getOutpoint();
+                System.out.println("remove the APOINT: "+point);
+                for(Iterator<TransactionOutput> i = retVal.iterator(); i.hasNext();) {
+                    TransactionOutput tt = i.next();
+                    if(tt.getOutPointFor().equals(point)) {
+                        System.out.println("remove!");
+                        i.remove();
+                    } else {
+                        System.out.println("not remove!"+tt.getOutPointFor());
+                    }
+                }
+            }
+        }
+        
+        return retVal;
+    }
+    
+    public long balance(NetworkParameters params, Address p2shAddress) {
+        long balance = 0;
+        for(TransactionOutput transactionOutput:getOutputs(params, p2shAddress)) {
+            balance += transactionOutput.getValue().value;
+        }
+        return balance;
     }
     
     @PreDestroy
@@ -218,16 +259,7 @@ public class WalletService {
         });
     }
     
-    public List<TransactionOutput> getOutputs(Address p2shAddress) {
-        List<TransactionOutput> retVal = new ArrayList<>();
-        List<TransactionOutput> all = wallet.getWatchedOutputs(true);
-        for(TransactionOutput to:all) {
-            if(to.getAddressFromP2SH(appConfig.getNetworkParameters()).equals(p2shAddress)) {
-                retVal.add(to);
-            }
-        }
-        return retVal;
-    }
+    
 
     public int refundLockTime() {
         final int locktime = appConfig.lockTime();

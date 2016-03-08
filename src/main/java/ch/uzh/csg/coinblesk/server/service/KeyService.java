@@ -7,17 +7,14 @@ package ch.uzh.csg.coinblesk.server.service;
 
 import ch.uzh.csg.coinblesk.server.dao.KeyDAO;
 import ch.uzh.csg.coinblesk.server.dao.RefundDAO;
-import ch.uzh.csg.coinblesk.server.dao.ReplayProtectionDAO;
 import ch.uzh.csg.coinblesk.server.entity.Keys;
 import ch.uzh.csg.coinblesk.server.entity.Refund;
-import ch.uzh.csg.coinblesk.server.entity.ReplayProtection;
 import com.coinblesk.util.Pair;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import javax.transaction.Transactional;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
@@ -26,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  *
@@ -42,27 +40,24 @@ public class KeyService {
     @Autowired
     private RefundDAO refundDAO;
     
-    @Autowired
-    private ReplayProtectionDAO replayProtectionDAO;
-    
-    @Transactional
+    @Transactional(readOnly = true)
     public Keys getByClientPublicKey(final String clientPublicKey) {
         final byte[] clientPublicKeyRaw = Base64.getDecoder().decode(clientPublicKey);
         return getByClientPublicKey(clientPublicKeyRaw);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public Keys getByClientPublicKey(final byte[] clientPublicKeyRaw) {
         return clientKeyDAO.findByClientPublicKey(clientPublicKeyRaw);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<ECKey> getPublicECKeysByClientPublicKey(final String clientPublicKey) {
         final byte[] clientPublicKeyRaw = Base64.getDecoder().decode(clientPublicKey);
         return getPublicECKeysByClientPublicKey(clientPublicKeyRaw);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<ECKey> getPublicECKeysByClientPublicKey(final byte[] clientPublicKeyRaw) {
         final Keys keys = clientKeyDAO.findByClientPublicKey(clientPublicKeyRaw);
         final List<ECKey> retVal = new ArrayList<>(2);
@@ -71,13 +66,13 @@ public class KeyService {
         return retVal;
     }
     
-    @Transactional
+    @Transactional(readOnly = true)
     public List<ECKey> getECKeysByClientPublicKey(final String clientPublicKey) {
         final byte[] clientPublicKeyRaw = Base64.getDecoder().decode(clientPublicKey);
         return getECKeysByClientPublicKey(clientPublicKeyRaw);
     }
     
-    @Transactional
+    @Transactional(readOnly = true)
     public List<ECKey> getECKeysByClientPublicKey(final byte[] clientPublicKeyRaw) {
         final Keys keys = clientKeyDAO.findByClientPublicKey(clientPublicKeyRaw);
         if(keys == null) {
@@ -89,7 +84,7 @@ public class KeyService {
         return retVal;
     }
 
-    @Transactional
+    @Transactional(readOnly = false)
     public Pair<Boolean, Keys> storeKeysAndAddress(final byte[] clientPublicKey, final Address p2shAdderss,
             final byte[] serverPublicKey, final byte[] serverPrivateKey) {
         if (clientPublicKey == null || p2shAdderss == null || serverPublicKey == null || serverPrivateKey == null ) {
@@ -114,7 +109,7 @@ public class KeyService {
         return new Pair<>(true, clientKey);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<List<ECKey>> all() {
         final List<Keys> all = clientKeyDAO.findAll();
         final List<List<ECKey>> retVal = new ArrayList<>();
@@ -127,7 +122,7 @@ public class KeyService {
         return retVal;
     }
     
-    @Transactional
+    @Transactional(readOnly = false)
     public void addRefundTransaction(byte[] clientPublicKey, byte[] refundTransaction) {
        Refund refund = new Refund();
        refund.clientPublicKey(clientPublicKey);
@@ -136,7 +131,7 @@ public class KeyService {
        refundDAO.save(refund);
     }
     
-    @Transactional
+    @Transactional(readOnly = true)
     public List<Transaction> findRefundTransaction(NetworkParameters params, byte[] clientPublicKey) {
        List<Refund> refunds = refundDAO.findByClientPublicKey(clientPublicKey);
        List<Transaction> retVal = new ArrayList<>(refunds.size());
@@ -146,24 +141,8 @@ public class KeyService {
        return retVal;
     }
     
-    @Transactional
+    @Transactional(readOnly = true)
     public boolean containsP2SH(Address p2shAddress) {
         return clientKeyDAO.containsP2SH(p2shAddress.getHash160());
     }
-    
-    @Transactional
-    public boolean checkReplayAttack(byte[] clientPublicKey, String endpoint, Date currentDate) {
-        ReplayProtection seen = replayProtectionDAO.findByClientPublicKeyDate(clientPublicKey, endpoint, currentDate);
-        if(seen != null) {
-            return false;
-        }
-        //TODO: clean old entries, eg. two days old
-        ReplayProtection newEntry = new ReplayProtection()
-                .clientPublicKey(clientPublicKey)
-                .endpoint(endpoint)
-                .seenDate(currentDate);
-        replayProtectionDAO.save(newEntry);
-        return true;
-    }
-    
 }

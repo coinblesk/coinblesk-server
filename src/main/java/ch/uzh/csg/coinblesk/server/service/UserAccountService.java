@@ -13,10 +13,10 @@ import com.coinblesk.json.UserAccountTO;
 import com.coinblesk.util.Pair;
 import java.util.Date;
 import java.util.UUID;
-import javax.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  *
@@ -37,18 +37,18 @@ public class UserAccountService {
     @Autowired
     private PasswordEncoder passwordEncoder;
     
-    @Transactional
+    @Transactional(readOnly = true)
     public UserAccount getByEmail(String email) {
         return userAccountDao.getByAttribute("email", email);
     }
     
     //TODO: only used for testing. remove if possible
-    @Transactional
+    @Transactional(readOnly = false)
     public void save(UserAccount userAccount) {
         userAccountDao.save(userAccount);
     }
     
-    @Transactional
+    @Transactional(readOnly = false)
     public Pair<UserAccountStatusTO, UserAccount> create(final UserAccountTO userAccountTO) {
         final String email = userAccountTO.email();
         if(email == null){
@@ -81,7 +81,7 @@ public class UserAccountService {
         return new Pair(new UserAccountStatusTO().setSuccess(), userAccount);
     }
 
-    @Transactional
+    @Transactional(readOnly = false)
     public UserAccountStatusTO activate(String email, String token) {
         final UserAccount found = userAccountDao.getByAttribute("email", email);
         if(found == null) {
@@ -103,7 +103,7 @@ public class UserAccountService {
         return new UserAccountStatusTO().setSuccess();
     }
 
-    @Transactional
+    @Transactional(readOnly = false)
     public UserAccountStatusTO delete(String email) {
         final int result = userAccountDao.remove(email);
         if(result == 0) {
@@ -115,7 +115,7 @@ public class UserAccountService {
         return new UserAccountStatusTO().setSuccess();
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public UserAccountTO get(String email) {
         final UserAccount userAccount = userAccountDao.getByAttribute("email", email);
         if(userAccount == null) {
@@ -127,7 +127,7 @@ public class UserAccountService {
     }
     
     //for debugging
-    @Transactional
+    @Transactional(readOnly = true)
     public String getToken(String email) {
         final UserAccount userAccount = userAccountDao.getByAttribute("email", email);
         if(userAccount == null) {

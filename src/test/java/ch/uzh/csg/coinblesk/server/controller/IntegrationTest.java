@@ -282,22 +282,23 @@ public class IntegrationTest {
         SerializeUtils.sign(prepareHalfSignTO, new ECKey());
         PrepareHalfSignTO status = prepareServerCallOutput(prepareHalfSignTO);
         Assert.assertFalse(status.isSuccess());
-        Assert.assertEquals(Type.SIGNATURE_ERROR, status.type());
+        Assert.assertEquals(Type.JSON_SIGNATURE_ERROR, status.type());
     }
     
     @Test
     @DatabaseTearDown(value={"classpath:DbUnitFiles/emptyDB.xml"}, type = DatabaseOperation.DELETE_ALL)
-    public void testReplayAttack() throws Exception {
+    public void testCache() throws Exception {
         Client client = new Client(appConfig.getNetworkParameters(), mockMvc);
         sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
         Coin amountToRequest = Coin.valueOf(9876);
         Date now = new Date();
-        PrepareHalfSignTO status = prepareServerCall(amountToRequest, client, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
-        Assert.assertTrue(status.isSuccess());
+        PrepareHalfSignTO status1 = prepareServerCall(amountToRequest, client, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
+        Assert.assertTrue(status1.isSuccess());
         
-        status = prepareServerCall(amountToRequest, client, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
-        Assert.assertFalse(status.isSuccess());
-        Assert.assertEquals(Type.REPLAY_ATTACK, status.type());
+        PrepareHalfSignTO status2 = prepareServerCall(amountToRequest, client, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
+        Assert.assertTrue(status2.isSuccess());
+        
+        Assert.assertEquals(SerializeUtils.GSON.toJson(status1), SerializeUtils.GSON.toJson(status2));
     }
     
     @Test
@@ -545,7 +546,8 @@ public class IntegrationTest {
         //first get the inputs
         List<TransactionInput> preBuiltInupts = BitcoinUtils.convertPointsToInputs(
                 appConfig.getNetworkParameters(), refundMerchantOutpoints, merchant.redeemScript());
-        List<TransactionOutput> merchantWalletOutputs = walletService.getOutputs(merchant.p2shAddress());
+        List<TransactionOutput> merchantWalletOutputs = walletService.getOutputs(
+                appConfig.getNetworkParameters(), merchant.p2shAddress());
         //add/remove pending, approved, remove burned
         Transaction unsignedRefundMerchant = BitcoinUtils.generateUnsignedRefundTx(
                 appConfig.getNetworkParameters(), merchantWalletOutputs, preBuiltInupts,
@@ -668,7 +670,7 @@ public class IntegrationTest {
                 .clientPublicKey(client.getPubKey())
                 .p2shAddressTo(to.toString())
                 .messageSig(clientSig)
-                .currentDate(date.getTime());
+                .currentDate(date == null?0:date.getTime());
         if(prepareHalfSignTO.messageSig() == null) {
             SerializeUtils.sign(prepareHalfSignTO, client);
         }

@@ -196,7 +196,7 @@ public class GenericEndpointTest {
 
     @Test
     @DatabaseTearDown(value = {"classpath:DbUnitFiles/emptyDB.xml"}, type = DatabaseOperation.DELETE_ALL)
-    public void testReplayAttack() throws Exception {
+    public void testCache() throws Exception {
         Client client = new Client(params, mockMvc);
         Transaction t = sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
         Coin amountToRequest = Coin.valueOf(9876);
@@ -206,12 +206,11 @@ public class GenericEndpointTest {
         PrepareHalfSignTO statusPrepare1 = prepareServerCall(amountToRequest, client, merchantAddress, null, now);
         Assert.assertTrue(statusPrepare1.isSuccess());
         //this is caching, so no reply attack        
-        //PrepareHalfSignTO statusPrepare2 = prepareServerCall(amountToRequest, client, merchantAddress, null, now);
-        //Assert.assertFalse(statusPrepare2.isSuccess());
-        //Assert.assertEquals(Type.REPLAY_ATTACK, statusPrepare2.type());
+        PrepareHalfSignTO statusPrepare2 = prepareServerCall(amountToRequest, client, merchantAddress, null, now);
+        Assert.assertTrue(statusPrepare2.isSuccess());
+        Assert.assertEquals(SerializeUtils.GSON.toJson(statusPrepare1), SerializeUtils.GSON.toJson(statusPrepare2));
         // test /refund-p2sh
         List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(statusPrepare1.signatures());
-        
         Transaction txClient = BitcoinUtils.createTx(
                 params, t.getOutputs(), client.p2shAddress(), merchantAddress,amountToRequest.value);
         RefundInput refundInput = createInputForRefund(
@@ -219,16 +218,16 @@ public class GenericEndpointTest {
         RefundP2shTO statusRefund1 = refundServerCall(mockMvc, client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), now);
         Assert.assertTrue(statusRefund1.isSuccess());
         RefundP2shTO statusRefund2 = refundServerCall(mockMvc, client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), now);
-        Assert.assertFalse(statusRefund2.isSuccess());
-        Assert.assertEquals(Type.REPLAY_ATTACK, statusRefund2.type());
+        Assert.assertTrue(statusRefund2.isSuccess());
+        Assert.assertEquals(SerializeUtils.GSON.toJson(statusRefund1), SerializeUtils.GSON.toJson(statusRefund2));
         // test /complete-sign
         Transaction tx = createTx(client, merchantAddress, amountToRequest, serverSigs, t.getOutputs());
         CompleteSignTO statusSign1 = completeSignServerCall(mockMvc,client.ecKey(), merchantAddress, tx, now);
         Assert.assertTrue(statusSign1.isSuccess());
         Assert.assertEquals(Type.SUCCESS, statusSign1.type());
         CompleteSignTO statusSign2 = completeSignServerCall(mockMvc,client.ecKey(), merchantAddress, tx, now);
-        Assert.assertFalse(statusSign2.isSuccess());
-        Assert.assertEquals(Type.REPLAY_ATTACK, statusSign2.type());
+        Assert.assertTrue(statusSign2.isSuccess());
+        Assert.assertEquals(SerializeUtils.GSON.toJson(statusSign1), SerializeUtils.GSON.toJson(statusSign2));
     }
     
     static CompleteSignTO completeSignServerCall(

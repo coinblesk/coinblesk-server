@@ -314,8 +314,9 @@ public class CompleteSignTest {
         Assert.assertTrue(statusRefundTwice.isSuccess());
         Transaction fullTxTwice = refundInput.fullTx();
 
+        //since this is the old full tx, we will get true as we already marked it as valid
         CompleteSignTO completStatusTwice = GenericEndpointTest.completeSignServerCall(mockMvc, client.ecKey(), merchant.p2shAddress(), fullTxTwice, new Date());
-        Assert.assertFalse(completStatusTwice.isSuccess());
-        Assert.assertEquals(Type.INVALID_TX, completStatusTwice.type());
+        Assert.assertTrue(completStatusTwice.isSuccess());
+        Assert.assertEquals(Type.SUCCESS, completStatusTwice.type());
     }
 }
