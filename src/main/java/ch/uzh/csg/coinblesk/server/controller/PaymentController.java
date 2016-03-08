@@ -143,7 +143,7 @@ public class PaymentController {
             final List<ECKey> keys = keyService.getPublicECKeysByClientPublicKey(keyTO.publicKey());
             final Script script = ScriptBuilder.createP2SHOutputScript(2, keys);
             final Address p2shAddressFrom = script.getToAddress(params);
-            List<TransactionOutput> outputs = walletService.getOutputs(params, p2shAddressFrom);
+            List<TransactionOutput> outputs = walletService.unspentOutputs(params, p2shAddressFrom);
             LOG.debug("{Prepare} nr. of outputs from network {} for {}. Full list: {}", outputs.size(), "tdb", outputs);
             long total = 0;
             for(TransactionOutput transactionOutput:outputs) {
@@ -173,12 +173,22 @@ public class PaymentController {
             final NetworkParameters params = appConfig.getNetworkParameters();
             final ECKey serverKey = keys.get(1);
             final ECKey clientKey = keys.get(0);
+            final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
             //this is how the client sees the tx
             final Transaction refundTransaction = new Transaction(params, refundTO.refundTransaction());
             //TODO: check client setting for locktime
             List<TransactionSignature> clientSigs = SerializeUtils.deserializeSignatures(refundTO.clientSignatures());
+            
+            //now we can check the client sigs
+            if(!SerializeUtils.verifyTxSignatures(refundTransaction, clientSigs, redeemScript, clientKey)) {
+                LOG.debug("{Refund} signature mismatch for tx {} with sigs {}", refundTransaction, clientSigs);
+                return new RefundTO().type(Type.SIGNATURE_ERROR);
+            } else {
+                LOG.debug("{Refund} signature good! for tx {} with sigs", refundTransaction, clientSigs);
+            }
+            
             Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
-            final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
+            
             List<TransactionSignature> serverSigs = BitcoinUtils.partiallySign(refundTransaction, redeemScript, serverKey);
             boolean clientFirst = BitcoinUtils.clientFirst(keys, clientKey);
             BitcoinUtils.applySignatures(refundTransaction, redeemScript, clientSigs, serverSigs, clientFirst);
@@ -240,7 +250,7 @@ public class PaymentController {
             }
 
             //get all outputs from the BT network
-            List<TransactionOutput> outputs = walletService.getOutputs(params, p2shAddressFrom);
+            List<TransactionOutput> outputs = walletService.unspentOutputs(params, p2shAddressFrom);
             LOG.debug("{Prepare} nr. of outputs from network {} for {}. Full list: {}", outputs.size(), clientId, outputs);
             //in addition, get the outputs from previous TX, possibly not yet published in the BT network
             
@@ -343,7 +353,7 @@ public class PaymentController {
             
             //now get all the output we want the refund, for client this will be one entry, for merchant this
             //will return multiple entries
-            List<TransactionOutput> clientWalletOutputs = walletService.getOutputs(params, p2shAddress);
+            List<TransactionOutput> clientWalletOutputs = walletService.unspentOutputs(params, p2shAddress);
             LOG.debug("{RefundP2SH} nr. of outputs from network {} for {}. Full list {}", clientWalletOutputs.size(), clientId, clientWalletOutputs);
             //add/remove pending 
             

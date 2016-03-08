@@ -167,23 +167,27 @@ public class WalletService {
     
     @Transactional(readOnly = true)
     public Map<Sha256Hash, Transaction> unspentTransactions(NetworkParameters params) {
+        wallet.getBalance();
         Map<Sha256Hash, Transaction> copy = new HashMap<>(wallet.getTransactionPool(WalletTransaction.Pool.UNSPENT));
         //also add approved Tx
+        for(Transaction t:copy.values()) {
+            LOG.debug("unspent tx: {}", t);
+        }
         List<Transaction> approvedTx = transactionService.approvedTx(params);
         for(Transaction t:approvedTx) {
+            LOG.debug("adding approved tx, which can be used for spending: {}", t);
             copy.put(t.getHash(), t);
         }
         return copy;
     }
     
     @Transactional(readOnly = true)
-    public List<TransactionOutput> getOutputs(NetworkParameters params, Address p2shAddress) {
+    public List<TransactionOutput> unspentOutputs(NetworkParameters params, Address p2shAddress) {
         List<TransactionOutput> retVal = new ArrayList<>();
         List<TransactionOutPoint> spent = new ArrayList<>();
         
         for(Transaction t:transactionService.approvedTx(params)) {
             for(TransactionInput to:t.getInputs()) {
-                System.out.println("add outpoint: "+to.getOutpoint());
                 spent.add(to.getOutpoint());
             }
         }
@@ -192,41 +196,21 @@ public class WalletService {
         for(Transaction t:unspent.values()) {
             for(TransactionOutput out:t.getOutputs()) {
                 if(p2shAddress.equals(out.getAddressFromP2SH(appConfig.getNetworkParameters()))) {
-                    if(!spent.contains(out.getOutPointFor())) {
-                        System.out.println("add output: "+out);
+                    if(!spent.contains(out.getOutPointFor()) && out.isAvailableForSpending()) {
+                        LOG.debug("this txout is unspent: {}", out);
                         retVal.add(out);
                     } else {
-                        System.out.println("no add output: "+out);
+                        LOG.debug("this txout is spent!: {}", out);
                     }
                 }
             }
         }
         return retVal;
-        /*List<TransactionOutput> retVal = new ArrayList<>();
-        List<TransactionOutput> all = wallet.getWatchedOutputs(true);
-        //add our approved tx as well
-        for(Transaction t:transactionService.approvedTx(params)) {
-            all.addAll(t.getOutputs());
-        }
-        for(TransactionOutput to:all) {
-            if(to.isAvailableForSpending()) {
-                if(p2shAddress.equals(to.getAddressFromP2SH(appConfig.getNetworkParameters()))) {
-                    if(!retVal.contains(to)) {
-                        retVal.add(to);
-                    }
-                }
-            }
-        }
-        //now remove those approvedTx that we spent
-        //TODO: this is a bit inefficient
-        
-        
-        return retVal;*/
     }
     
     public long balance(NetworkParameters params, Address p2shAddress) {
         long balance = 0;
-        for(TransactionOutput transactionOutput:getOutputs(params, p2shAddress)) {
+        for(TransactionOutput transactionOutput:unspentOutputs(params, p2shAddress)) {
             balance += transactionOutput.getValue().value;
         }
         return balance;

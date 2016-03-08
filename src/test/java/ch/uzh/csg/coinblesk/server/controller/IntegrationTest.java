@@ -59,6 +59,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.json.GsonHttpMessageConverter;
 import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestExecutionListeners;
@@ -436,19 +438,29 @@ public class IntegrationTest {
         
         //register client
         KeyTO keyTO = new KeyTO().publicKey(client.getPubKey());
-        RestTemplate restTemplate = new RestTemplate();
+        RestTemplate restTemplate = createRest();
         KeyTO result = restTemplate.postForObject(uri, keyTO, KeyTO.class);
         ECKey serverPub = ECKey.fromPublicOnly(result.publicKey());
         Client clientFull = new Client(appConfig.getNetworkParameters(), client, serverPub);
         //register merchant
         keyTO = new KeyTO().publicKey(merchant.getPubKey());
-        restTemplate = new RestTemplate();
+        restTemplate = createRest();
         result = restTemplate.postForObject(uri, keyTO, KeyTO.class);
         serverPub = ECKey.fromPublicOnly(result.publicKey());
         Client merchantFull = new Client(appConfig.getNetworkParameters(), merchant, serverPub);
         
         System.out.println("client p2sh: "+clientFull.p2shAddress());
         System.out.println("merchant p2sh: "+merchantFull.p2shAddress());
+    }
+
+    private RestTemplate createRest() {
+        RestTemplate restTemplate = new RestTemplate();
+        GsonHttpMessageConverter gsonHttpMessageConverter = new GsonHttpMessageConverter();
+        gsonHttpMessageConverter.setGson(SerializeUtils.GSON);
+        List<HttpMessageConverter<?>> msgConvert = new ArrayList<>();
+        msgConvert.add(gsonHttpMessageConverter);
+        restTemplate.setMessageConverters(msgConvert);
+        return restTemplate;
     }
     
     private ECKey getKey(String name) throws IOException {
@@ -546,7 +558,7 @@ public class IntegrationTest {
         //first get the inputs
         List<TransactionInput> preBuiltInupts = BitcoinUtils.convertPointsToInputs(
                 appConfig.getNetworkParameters(), refundMerchantOutpoints, merchant.redeemScript());
-        List<TransactionOutput> merchantWalletOutputs = walletService.getOutputs(
+        List<TransactionOutput> merchantWalletOutputs = walletService.unspentOutputs(
                 appConfig.getNetworkParameters(), merchant.p2shAddress());
         //add/remove pending, approved, remove burned
         Transaction unsignedRefundMerchant = BitcoinUtils.generateUnsignedRefundTx(
