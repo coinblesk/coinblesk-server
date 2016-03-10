@@ -15,6 +15,7 @@ import com.coinblesk.json.BalanceTO;
 import com.coinblesk.json.BaseTO;
 import com.coinblesk.json.CompleteSignTO;
 import com.coinblesk.json.KeyTO;
+import com.coinblesk.json.PrepareFullTxTO;
 import com.coinblesk.json.PrepareHalfSignTO;
 import com.coinblesk.json.RefundP2shTO;
 import com.coinblesk.json.RefundTO;
@@ -84,6 +85,7 @@ public class PaymentController {
     private KeyService keyService;
     
     private static final Map<String, PrepareHalfSignTO> CACHE_PREPARE = Collections.synchronizedMap(new LruCache<>(1000));
+    private static final Map<String, PrepareFullTxTO> CACHE_PREPARE_FULL = Collections.synchronizedMap(new LruCache<>(1000));
     private static final Map<String, RefundP2shTO> CACHE_REFUND = Collections.synchronizedMap(new LruCache<>(1000));
     private static final Map<String, CompleteSignTO> CACHE_COMPLETE = Collections.synchronizedMap(new LruCache<>(1000));
 
@@ -209,6 +211,64 @@ public class PaymentController {
                     .message(e.getMessage());
         }
     }
+    
+    @RequestMapping(value = {"/prepare-fulltx", "/t"}, method = RequestMethod.POST,
+            consumes = "application/json; charset=UTF-8",
+            produces = "application/json; charset=UTF-8")
+    @ResponseBody
+    public PrepareFullTxTO prepareFullTx(@RequestBody PrepareFullTxTO input) {
+        
+        final String clientId = SerializeUtils.bytesToHex(input.clientPublicKey());
+        LOG.debug("{Prepare} sign half for {}", clientId);
+        try {
+            PrepareFullTxTO errorOrCache = checkInput(input, CACHE_PREPARE_FULL);
+            if(errorOrCache != null) {
+                LOG.debug("{Prepare} input error/caching {} for {}", errorOrCache.type(), clientId);
+                return errorOrCache;
+            }
+            final List<ECKey> keys = keyService.getECKeysByClientPublicKey(input.clientPublicKey());
+            if (keys == null || keys.size() != 2) {
+                LOG.debug("{Prepare} keys not found for {}", clientId);
+                return new PrepareFullTxTO().type(Type.KEYS_NOT_FOUND);
+            }
+            
+            final NetworkParameters params = appConfig.getNetworkParameters();
+            final ECKey serverKey = keys.get(1);
+            final Script p2SHOutputScript = ScriptBuilder.createP2SHOutputScript(2, keys);
+            final Address p2shAddressFrom = p2SHOutputScript.getToAddress(params);
+            //this should never happen, check anyway
+            if (!keyService.containsP2SH(p2shAddressFrom)) {
+                LOG.debug("{Prepare} unknow address for {}", clientId);
+                return new PrepareFullTxTO().type(Type.ADDRESS_UNKNOWN);
+            }
+            
+            final Transaction tx = new Transaction(params, input.unsignedTransaction());
+            LOG.debug("{Prepare} used tx {}: {}", clientId, tx);
+            
+            List<Pair<TransactionOutPoint, Integer>> burned = transactionService.burnOutputFromNewTransaction(
+                    params, input.clientPublicKey(), tx.getInputs());
+            walletService.addWatchingOutpointsForRemoval(burned);
+
+            //Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
+            final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
+            //sign the tx with the server keys
+            List<TransactionSignature> serverTxSigs = BitcoinUtils.partiallySign(tx, redeemScript, serverKey);
+            
+            PrepareFullTxTO output = new PrepareFullTxTO().type(Type.SUCCESS)
+                    .unsignedTransaction(tx.unsafeBitcoinSerialize())
+                    .signatures(SerializeUtils.serializeSignatures(serverTxSigs));
+            
+            final String key = createKey(input);
+            CACHE_PREPARE_FULL.put(key, output);
+            return output;
+
+        } catch (Exception e) {
+            LOG.error("{Prepare} Register keys error: " + clientId, e);
+            return new PrepareFullTxTO()
+                    .type(Type.SERVER_ERROR)
+                    .message(e.getMessage());
+        }
+    }
 
     @RequestMapping(value = {"/prepare", "/p"}, method = RequestMethod.POST,
             consumes = "application/json; charset=UTF-8",
@@ -288,12 +348,11 @@ public class PaymentController {
                 bloomFilter.insert(output.unsafeBitcoinSerialize());
             }
             
-            //TODO: repeating the same values does not burn it twice
             List<Pair<TransactionOutPoint, Integer>> burned = transactionService.burnOutputFromNewTransaction(
                     params, input.clientPublicKey(), tx.getInputs());
             walletService.addWatchingOutpointsForRemoval(burned);
 
-            Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
+            //Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
             final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
             //sign the tx with the server keys
             List<TransactionSignature> serverTxSigs = BitcoinUtils.partiallySign(tx, redeemScript, serverKey);
@@ -314,6 +373,8 @@ public class PaymentController {
                     .message(e.getMessage());
         }
     }
+    
+    
     
     @RequestMapping(value = {"/refund-p2sh", "/f"}, method = RequestMethod.POST,
             consumes = "application/json; charset=UTF-8",
@@ -618,5 +679,5 @@ public class PaymentController {
                 }
             }
         }
-    }
+    } 
 }
