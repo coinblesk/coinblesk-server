@@ -18,6 +18,7 @@ import com.coinblesk.json.Type;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
+import com.coinblesk.util.SimpleBloomFilter;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.google.common.io.Files;
 import java.io.File;
@@ -27,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import org.bitcoinj.core.BloomFilter;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
@@ -270,14 +270,14 @@ public class RefundTest {
         //add more funding to have more than 1 input to test bloomfilter
         Transaction t = PrepareTest.sendFakeCoins(params,
                 Coin.valueOf(222222), client.p2shAddress(), walletService.blockChain(), clientAppKit.chain());
-
+        
         RefundP2shTO input = GenericEndpointTest.refundServerCallInput(
                 client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), new Date());
 
         //empty bloomfilter
-        BloomFilter bf = new BloomFilter(2, 0.001, 42L);
-        bf.insert(t.getOutput(0).unsafeBitcoinSerialize());
-        input.bloomFilter(bf.unsafeBitcoinSerialize());
+        SimpleBloomFilter<byte[]> bf = new SimpleBloomFilter(0.001, 2);
+        bf.add(t.getOutput(0).getOutPointFor().unsafeBitcoinSerialize());
+        input.bloomFilter(bf.encode());
         SerializeUtils.sign(input, client.ecKey());
         RefundP2shTO output = GenericEndpointTest.refundServerCallOutput(mockMvc, input);
         Assert.assertEquals(Type.SIGNATURE_ERROR, output.type());
@@ -295,8 +295,8 @@ public class RefundTest {
         RefundP2shTO input = GenericEndpointTest.refundServerCallInput(
                 client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), new Date());
 
-        BloomFilter bf = new BloomFilter(2, 0.001, 42L);
-        input.bloomFilter(bf.unsafeBitcoinSerialize());
+        SimpleBloomFilter<byte[]> bf = new SimpleBloomFilter<>(0.001, 2);
+        input.bloomFilter(bf.encode());
         SerializeUtils.sign(input, client.ecKey());
         RefundP2shTO output = GenericEndpointTest.refundServerCallOutput(mockMvc, input);
         Assert.assertTrue(output.isSuccess());
@@ -340,9 +340,9 @@ public class RefundTest {
 
         RefundP2shTO input = GenericEndpointTest.refundServerCallInput(
                 client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), new Date());
-        BloomFilter bf = new BloomFilter(1, 0.001, 42);
-        bf.insert(t.getOutput(0).unsafeBitcoinSerialize());
-        input.bloomFilter(bf.unsafeBitcoinSerialize());
+        SimpleBloomFilter<byte[]> bf = new SimpleBloomFilter<>(0.001, 1);
+        bf.add(t.getOutput(0).getOutPointFor().unsafeBitcoinSerialize());
+        input.bloomFilter(bf.encode());
         SerializeUtils.sign(input, client.ecKey());
         RefundP2shTO output = GenericEndpointTest.refundServerCallOutput(mockMvc, input);
         Assert.assertTrue(output.isSuccess());

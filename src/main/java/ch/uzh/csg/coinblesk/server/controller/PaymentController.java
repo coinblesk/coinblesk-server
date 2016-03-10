@@ -23,6 +23,7 @@ import com.coinblesk.json.Type;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
+import com.coinblesk.util.SimpleBloomFilter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -37,7 +38,6 @@ import java.util.concurrent.ExecutionException;
 import javax.annotation.Nullable;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
-import org.bitcoinj.core.BloomFilter;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
@@ -343,9 +343,9 @@ public class PaymentController {
             
             LOG.debug("{Prepare} used tx {}: {}", clientId, tx);
             
-            BloomFilter bloomFilter = new BloomFilter(outputs.size(), 0.001, 42);
+            SimpleBloomFilter<byte[]> bloomFilter = new SimpleBloomFilter(0.001, outputs.size());
             for(TransactionOutput output: outputs) {
-                bloomFilter.insert(output.unsafeBitcoinSerialize());
+                bloomFilter.add(output.getOutPointFor().unsafeBitcoinSerialize());
             }
             
             List<Pair<TransactionOutPoint, Integer>> burned = transactionService.burnOutputFromNewTransaction(
@@ -359,7 +359,7 @@ public class PaymentController {
             
             PrepareHalfSignTO output = new PrepareHalfSignTO().type(filtered ? Type.SUCCESS_FILTERED : Type.SUCCESS)
                     .unsignedTransaction(tx.unsafeBitcoinSerialize())
-                    .bloomFilter(bloomFilter.unsafeBitcoinSerialize())
+                    .bloomFilter(bloomFilter.encode())
                     .signatures(SerializeUtils.serializeSignatures(serverTxSigs));
             
             final String key = createKey(input);
@@ -586,7 +586,7 @@ public class PaymentController {
     public static List<TransactionOutput> filter(NetworkParameters params, List<TransactionOutput> outputs, @Nullable byte[] rawBloomFilter) {
         final List<TransactionOutput> filteredOutputs = new ArrayList<>(outputs.size());    
         if(rawBloomFilter != null) {
-            BloomFilter bloomFilter = new BloomFilter(params, rawBloomFilter);
+            SimpleBloomFilter<byte[]> bloomFilter = new SimpleBloomFilter(rawBloomFilter);
             for(TransactionOutput output: outputs) {
                 if(bloomFilter.contains(output.getOutPointFor().unsafeBitcoinSerialize())) {
                     filteredOutputs.add(output);
