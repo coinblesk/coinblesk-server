@@ -6,6 +6,7 @@
 package ch.uzh.csg.coinblesk.server.controller;
 
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
+import ch.uzh.csg.coinblesk.server.dao.TxDAO;
 import ch.uzh.csg.coinblesk.server.entity.Keys;
 import ch.uzh.csg.coinblesk.server.service.KeyService;
 import ch.uzh.csg.coinblesk.server.service.TransactionService;
@@ -616,4 +617,78 @@ public class PaymentController {
             }
         }
     }
+
+
+
+    /* SIGN ENDPOINT CODE STARTS HERE */
+    @RequestMapping(value = {"/sign", "/s"}, method = RequestMethod.POST,
+            consumes = "application/json; charset=UTF-8",
+            produces = "application/json; charset=UTF-8")
+    @ResponseBody
+    public RefundTO sign(@RequestBody RefundTO refundTO) {
+        LOG.debug("Sign for {}", SerializeUtils.bytesToHex(refundTO.clientPublicKey()));
+        try {
+            final List<ECKey> keys = keyService.getECKeysByClientPublicKey(refundTO.clientPublicKey());
+            if (keys == null || keys.size() != 2) {
+                return new RefundTO().type(Type.KEYS_NOT_FOUND);
+            }
+
+            final ECKey serverKey = keys.get(1);
+            final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
+            final Transaction refundTransaction = new Transaction(appConfig.getNetworkParameters(), refundTO.refundTransaction());
+
+            final List<TransactionSignature> serverSigs = BitcoinUtils.partiallySign(refundTransaction, redeemScript, serverKey);
+            refundTO.serverSignatures(SerializeUtils.serializeSignatures(serverSigs));
+
+            final byte[] serializedTransaction = refundTransaction.unsafeBitcoinSerialize();
+
+            if(refundTransaction.isTimeLocked()){
+                keyService.addRefundTransaction(refundTO.clientPublicKey(), serializedTransaction);
+            } else {
+                keyService.addTransaction(refundTO.clientPublicKey(), serializedTransaction);
+            }
+
+            return new RefundTO()
+                    .setSuccess()
+                    .serverSignatures(SerializeUtils.serializeSignatures(serverSigs));
+        } catch (Exception e) {
+            LOG.error("Sign keys error", e);
+            return new RefundTO()
+                    .type(Type.SERVER_ERROR)
+                    .message(e.getMessage());
+        }
+    }
+
+    @RequestMapping(value = {"/verify", "/v"}, method = RequestMethod.POST,
+            consumes = "application/json; charset=UTF-8",
+            produces = "application/json; charset=UTF-8")
+    @ResponseBody
+    public CompleteSignTO verify(@RequestBody CompleteSignTO input) {
+        final String clientId = SerializeUtils.bytesToHex(input.clientPublicKey());
+        LOG.debug("{verify} {}", clientId);
+        try {
+            final Transaction fullTx = new Transaction(appConfig.getNetworkParameters(), input.fullSignedTransaction());
+            LOG.debug("{verify} client {} received {}", clientId, fullTx);
+
+            //ok, refunds are locked or no refund found
+            broadcast(fullTx, clientId);
+
+            if(keyService.isTransactionInstant(input.clientPublicKey(),fullTx)) {
+                LOG.debug("{verify} instant payment OK for {}", clientId);
+                CompleteSignTO output = new CompleteSignTO().setSuccess();
+                return output;
+            } else {
+                LOG.debug("{verify} instant payment NOT OK for {}", clientId);
+                CompleteSignTO output = new CompleteSignTO().type(Type.NO_INSTANT_PAYMENT);
+                return output;
+            }
+
+        } catch (Exception e) {
+            LOG.error("{verify} register keys error: "+clientId, e);
+            return new CompleteSignTO()
+                    .type(Type.SERVER_ERROR)
+                    .message(e.getMessage());
+        }
+    }
+    /* SIGN ENDPOINT CODE ENDS HERE */
 }

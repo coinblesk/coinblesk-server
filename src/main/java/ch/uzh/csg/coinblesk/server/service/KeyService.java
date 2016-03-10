@@ -5,20 +5,22 @@
  */
 package ch.uzh.csg.coinblesk.server.service;
 
+import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import ch.uzh.csg.coinblesk.server.dao.KeyDAO;
 import ch.uzh.csg.coinblesk.server.dao.RefundDAO;
+import ch.uzh.csg.coinblesk.server.dao.TxDAO;
 import ch.uzh.csg.coinblesk.server.entity.Keys;
 import ch.uzh.csg.coinblesk.server.entity.Refund;
+import ch.uzh.csg.coinblesk.server.entity.Tx;
 import com.coinblesk.util.Pair;
+
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Transaction;
+
+import org.bitcoinj.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,20 +28,24 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- *
  * @author Thomas Bocek
  */
 @Service
 public class KeyService {
 
     private final static Logger LOG = LoggerFactory.getLogger(KeyService.class);
+    @Autowired
+    private AppConfig appConfig;
 
     @Autowired
     private KeyDAO clientKeyDAO;
-    
+
     @Autowired
     private RefundDAO refundDAO;
-    
+
+    @Autowired
+    private TxDAO txDAO;
+
     @Transactional(readOnly = true)
     public Keys getByClientPublicKey(final String clientPublicKey) {
         final byte[] clientPublicKeyRaw = Base64.getDecoder().decode(clientPublicKey);
@@ -65,17 +71,17 @@ public class KeyService {
         retVal.add(ECKey.fromPublicOnly(keys.serverPublicKey()));
         return retVal;
     }
-    
+
     @Transactional(readOnly = true)
     public List<ECKey> getECKeysByClientPublicKey(final String clientPublicKey) {
         final byte[] clientPublicKeyRaw = Base64.getDecoder().decode(clientPublicKey);
         return getECKeysByClientPublicKey(clientPublicKeyRaw);
     }
-    
+
     @Transactional(readOnly = true)
     public List<ECKey> getECKeysByClientPublicKey(final byte[] clientPublicKeyRaw) {
         final Keys keys = clientKeyDAO.findByClientPublicKey(clientPublicKeyRaw);
-        if(keys == null) {
+        if (keys == null) {
             return Collections.emptyList();
         }
         final List<ECKey> retVal = new ArrayList<>(2);
@@ -86,11 +92,11 @@ public class KeyService {
 
     @Transactional(readOnly = false)
     public Pair<Boolean, Keys> storeKeysAndAddress(final byte[] clientPublicKey, final Address p2shAdderss,
-            final byte[] serverPublicKey, final byte[] serverPrivateKey) {
-        if (clientPublicKey == null || p2shAdderss == null || serverPublicKey == null || serverPrivateKey == null ) {
+                                                   final byte[] serverPublicKey, final byte[] serverPrivateKey) {
+        if (clientPublicKey == null || p2shAdderss == null || serverPublicKey == null || serverPrivateKey == null) {
             throw new IllegalArgumentException("null not excpected here");
         }
-        
+
         byte[] p2shHash = p2shAdderss.getHash160();
 
         final Keys clientKey = new Keys()
@@ -121,28 +127,80 @@ public class KeyService {
         }
         return retVal;
     }
-    
+
     @Transactional(readOnly = false)
     public void addRefundTransaction(byte[] clientPublicKey, byte[] refundTransaction) {
-       Refund refund = new Refund();
-       refund.clientPublicKey(clientPublicKey);
-       refund.refundTx(refundTransaction);
-       refund.creationDate(new Date());
-       refundDAO.save(refund);
+        Refund refund = new Refund();
+        refund.clientPublicKey(clientPublicKey);
+        refund.refundTx(refundTransaction);
+        refund.creationDate(new Date());
+        refundDAO.save(refund);
     }
-    
+
     @Transactional(readOnly = true)
     public List<Transaction> findRefundTransaction(NetworkParameters params, byte[] clientPublicKey) {
-       List<Refund> refunds = refundDAO.findByClientPublicKey(clientPublicKey);
-       List<Transaction> retVal = new ArrayList<>(refunds.size());
-       for(Refund refund:refunds) {
-           retVal.add(new Transaction(params, refund.refundTx()));
-       }
-       return retVal;
+        List<Refund> refunds = refundDAO.findByClientPublicKey(clientPublicKey);
+        List<Transaction> retVal = new ArrayList<>(refunds.size());
+        for (Refund refund : refunds) {
+            retVal.add(new Transaction(params, refund.refundTx()));
+        }
+        return retVal;
     }
-    
+
     @Transactional(readOnly = true)
     public boolean containsP2SH(Address p2shAddress) {
         return clientKeyDAO.containsP2SH(p2shAddress.getHash160());
     }
+
+
+    /* SIGN ENDPOINT CODE STARTS HERE */
+    @Transactional(readOnly = false)
+    public void addTransaction(byte[] clientPublicKey, byte[] serializedTransaction) {
+        Tx transaction = new Tx();
+        transaction.clientPublicKey(clientPublicKey);
+        transaction.tx(serializedTransaction);
+        transaction.creationDate(new Date());
+        txDAO.save(transaction);
+    }
+
+    private final static long LOCK_THRESHOLD_MILLIS = 1000 * 60 * 60 * 4;
+
+    @Transactional(readOnly = true)
+    public boolean isTransactionInstant(byte[] clientPublicKey, Transaction fullTx) {
+        final List<TransactionInput> relevantInputs = fullTx.getInputs();
+        final List<Tx> clientTransactions = txDAO.findByClientPublicKey(clientPublicKey);
+        final List<Refund> clientRefundTransactions = refundDAO.findByClientPublicKey(clientPublicKey);
+
+        // check double signing
+        int signedInputCounter = 0;
+        for (Tx clientTransaction : clientTransactions) {
+            for (TransactionInput transactionInput : relevantInputs) {
+                final NetworkParameters params = appConfig.getNetworkParameters();
+                final Transaction storedTransaction = new Transaction(params, clientTransaction.tx());
+                if (storedTransaction.getInputs().contains(transactionInput)) {
+                    signedInputCounter++;
+                }
+            }
+        }
+
+        //check refund
+        for (Refund clientRefundTransaction : clientRefundTransactions) {
+            for (TransactionInput transactionInput : relevantInputs) {
+                final NetworkParameters params = appConfig.getNetworkParameters();
+                final Transaction storedRefundTransaction = new Transaction(params, clientRefundTransaction.refundTx());
+                if (storedRefundTransaction.getInputs().contains(transactionInput)) {
+                    long lockTime = storedRefundTransaction.getLockTime() * 1000;
+                    long currentTime = System.currentTimeMillis();
+                    if (lockTime > currentTime + LOCK_THRESHOLD_MILLIS) {
+                        continue;
+                    } else {
+                        signedInputCounter++;
+                    }
+                }
+            }
+        }
+
+        return relevantInputs.size() == signedInputCounter;
+    }
+    /* SIGN ENDPOINT CODE ENDS HERE */
 }
