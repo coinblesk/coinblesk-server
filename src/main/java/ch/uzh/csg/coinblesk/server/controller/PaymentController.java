@@ -23,6 +23,7 @@ import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
@@ -257,9 +258,8 @@ public class PaymentController {
             //outputs.addAll(transactionService.approvedOutputs(params, p2shAddressFrom));
             //LOG.debug("{Prepare} nr. of outputs after approved {} for {}. Full list: {}", outputs.size(), clientId, outputs);
             
-            //List<TransactionOutPoint> to = transactionService.burnedOutpoints(params, prepareSignTO.clientPublicKey());
-            //these are 100% spent, as we have done a /complete-sign
-            List<TransactionOutPoint> to = transactionService.spentOutputs(params, p2shAddressFrom);
+            //removed burned outputs
+            //List<TransactionOutPoint> to = transactionService.burnedOutpoints(params, input.clientPublicKey());
 
             //bloom filter is optianal, if not provided all found outputs are used
             boolean filtered = false;
@@ -268,7 +268,7 @@ public class PaymentController {
                 filtered = !filteredOutputs.equals(outputs);
                 outputs = filteredOutputs;
             } else {
-                removeBurnedOutputs(outputs, to);
+                //removeBurnedOutputs(outputs, to);
             }
             LOG.debug("{Prepare} nr. of outputs after bured outputs {} for {}. Full list {}", outputs.size(), clientId, outputs);
             
@@ -527,8 +527,11 @@ public class PaymentController {
         if(rawBloomFilter != null) {
             BloomFilter bloomFilter = new BloomFilter(params, rawBloomFilter);
             for(TransactionOutput output: outputs) {
-                if(bloomFilter.contains(output.unsafeBitcoinSerialize())) {
+                if(bloomFilter.contains(output.getOutPointFor().unsafeBitcoinSerialize())) {
                     filteredOutputs.add(output);
+                    LOG.debug("bloomfilter adding output with outpoint: {}, {}", output, output.getOutPointFor());
+                } else {
+                    LOG.debug("no bloomfilter match for output with outpoint: {}, {}", output, output.getOutPointFor());
                 }
             }
             return filteredOutputs;

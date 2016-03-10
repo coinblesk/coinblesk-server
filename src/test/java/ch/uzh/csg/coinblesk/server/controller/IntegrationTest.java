@@ -392,7 +392,7 @@ public class IntegrationTest {
         Date now = new Date();
         PrepareHalfSignTO prepareHalfSignTO = prepareServerCallInput(Coin.valueOf(9876), client.ecKey(), new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
         BloomFilter bf = new BloomFilter(2, 0.001, 42L);
-        bf.insert(t1.getOutput(0).unsafeBitcoinSerialize());
+        bf.insert(t1.getOutput(0).getOutPointFor().unsafeBitcoinSerialize());
         prepareHalfSignTO.bloomFilter(bf.unsafeBitcoinSerialize());
         SerializeUtils.sign(prepareHalfSignTO, client.ecKey());
         PrepareHalfSignTO status = prepareServerCallOutput(prepareHalfSignTO);
@@ -421,8 +421,8 @@ public class IntegrationTest {
         Date now = new Date();
         PrepareHalfSignTO prepareHalfSignTO = prepareServerCallInput(Coin.valueOf(9876), client.ecKey(), new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
         BloomFilter bf = new BloomFilter(2, 0.001, 42L);
-        bf.insert(t1.getOutput(0).unsafeBitcoinSerialize());
-        bf.insert(t2.getOutput(0).unsafeBitcoinSerialize());
+        bf.insert(t1.getOutput(0).getOutPointFor().unsafeBitcoinSerialize());
+        bf.insert(t2.getOutput(0).getOutPointFor().unsafeBitcoinSerialize());
         prepareHalfSignTO.bloomFilter(bf.unsafeBitcoinSerialize());
         SerializeUtils.sign(prepareHalfSignTO, client.ecKey());
         PrepareHalfSignTO status = prepareServerCallOutput(prepareHalfSignTO);

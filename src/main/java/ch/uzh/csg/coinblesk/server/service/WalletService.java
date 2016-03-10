@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import org.bitcoinj.core.AbstractWalletEventListener;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.DownloadProgressTracker;
@@ -127,6 +128,14 @@ public class WalletService {
         //TODO: add wallet listener, and remove burnedoutputs when confirmed tx 
         // has those outputs (maintenance)
         //also remove the approved tx, once we see them in the blockchain (maintenance)
+        wallet.addEventListener(new AbstractWalletEventListener() {
+            @Override
+            public void onTransactionConfidenceChanged(Wallet wallet, Transaction tx) {
+                if(tx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf()) {
+                    transactionService.removeApproved(tx);
+                }
+            }
+        });
 
     }
     
@@ -165,46 +174,72 @@ public class WalletService {
         return true;*/
     }
     
+    /**
+     * The unspent tx also contains spentOutputs, where the approved tx should mark the unspent as spent!
+     * @param params
+     * @return 
+     */
     @Transactional(readOnly = true)
     public Map<Sha256Hash, Transaction> unspentTransactions(NetworkParameters params) {
-        wallet.getBalance();
         Map<Sha256Hash, Transaction> copy = new HashMap<>(wallet.getTransactionPool(WalletTransaction.Pool.UNSPENT));
+        Map<Sha256Hash, Transaction> copy2 = new HashMap<>(copy);
         //also add approved Tx
         for(Transaction t:copy.values()) {
-            LOG.debug("unspent tx: {}", t);
+            if(t.getConfidence().getDepthInBlocks() < appConfig.getMinConf()) {
+                LOG.debug("not enough confirmations for {}", t.getHash());
+                copy2.remove(t.getHash());
+            }
         }
+        
+        for(Transaction t:copy2.values()) {
+            LOG.debug("unspent tx from Network: {}", t.getHash());
+        }
+        
         List<Transaction> approvedTx = transactionService.approvedTx(params);
         for(Transaction t:approvedTx) {
             LOG.debug("adding approved tx, which can be used for spending: {}", t);
-            copy.put(t.getHash(), t);
+            copy2.put(t.getHash(), t);
         }
-        return copy;
+        return copy2;
     }
     
     @Transactional(readOnly = true)
     public List<TransactionOutput> unspentOutputs(NetworkParameters params, Address p2shAddress) {
         List<TransactionOutput> retVal = new ArrayList<>();
-        List<TransactionOutPoint> spent = new ArrayList<>();
-        
-        for(Transaction t:transactionService.approvedTx(params)) {
-            for(TransactionInput to:t.getInputs()) {
-                spent.add(to.getOutpoint());
-            }
-        }
         
         Map<Sha256Hash, Transaction> unspent = unspentTransactions(params);
+        
+        for(Transaction t:unspent.values()) {
+            for(TransactionInput in:t.getInputs()) {
+                TransactionOutPoint point = in.getOutpoint();
+                Transaction parent = unspent.get(point.getHash());
+                if(parent != null) {
+                    TransactionOutput spent = parent.getOutput(point.getIndex());
+                    if(spent.isAvailableForSpending()) {
+                        LOG.debug("mark as spent: {}", spent);
+                        spent.markAsSpent(in);
+                    }
+                }
+            }            
+        }
+        
+        
         for(Transaction t:unspent.values()) {
             for(TransactionOutput out:t.getOutputs()) {
                 if(p2shAddress.equals(out.getAddressFromP2SH(appConfig.getNetworkParameters()))) {
-                    if(!spent.contains(out.getOutPointFor()) && out.isAvailableForSpending()) {
-                        LOG.debug("this txout is unspent: {}", out);
+                    if(out.isAvailableForSpending()) {
+                        //now check if not spent
                         retVal.add(out);
+                        LOG.debug("this txout is unspent : {}, point: {}, spent {}", out, out.getOutPointFor());
                     } else {
-                        LOG.debug("this txout is spent!: {}", out);
+                        LOG.debug("this txout is spent!: {}, point: {}out.getOutPointFor()", out, out.getOutPointFor());
                     }
                 }
             }
         }
+        
+        
+        
         return retVal;
     }
     
