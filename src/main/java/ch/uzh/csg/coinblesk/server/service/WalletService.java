@@ -179,7 +179,7 @@ public class WalletService {
      * @return 
      */
     @Transactional(readOnly = true)
-    public Map<Sha256Hash, Transaction> unspentTransactions(NetworkParameters params) {
+    public Map<Sha256Hash, Transaction> verifiedTransactions(NetworkParameters params) {
         Map<Sha256Hash, Transaction> copy = new HashMap<>(wallet.getTransactionPool(WalletTransaction.Pool.UNSPENT));
         Map<Sha256Hash, Transaction> copy2 = new HashMap<>(copy);
         //also add approved Tx
@@ -203,10 +203,10 @@ public class WalletService {
     }
     
     @Transactional(readOnly = true)
-    public List<TransactionOutput> unspentOutputs(NetworkParameters params, Address p2shAddress) {
+    public List<TransactionOutput> verifiedOutputs(NetworkParameters params, Address p2shAddress) {
         List<TransactionOutput> retVal = new ArrayList<>();
         
-        Map<Sha256Hash, Transaction> unspent = unspentTransactions(params);
+        Map<Sha256Hash, Transaction> unspent = verifiedTransactions(params);
         
         for(Transaction t:unspent.values()) {
             for(TransactionInput in:t.getInputs()) {
@@ -244,7 +244,7 @@ public class WalletService {
     
     public long balance(NetworkParameters params, Address p2shAddress) {
         long balance = 0;
-        for(TransactionOutput transactionOutput:unspentOutputs(params, p2shAddress)) {
+        for(TransactionOutput transactionOutput:verifiedOutputs(params, p2shAddress)) {
             balance += transactionOutput.getValue().value;
         }
         return balance;

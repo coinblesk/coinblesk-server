@@ -5,10 +5,13 @@
  */
 package ch.uzh.csg.coinblesk.server.service;
 
+import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import ch.uzh.csg.coinblesk.server.dao.KeyDAO;
 import ch.uzh.csg.coinblesk.server.dao.RefundDAO;
+import ch.uzh.csg.coinblesk.server.dao.TxDAO;
 import ch.uzh.csg.coinblesk.server.entity.Keys;
 import ch.uzh.csg.coinblesk.server.entity.Refund;
+import ch.uzh.csg.coinblesk.server.entity.Tx;
 import com.coinblesk.util.Pair;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -19,6 +22,10 @@ import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionInput;
+import org.bitcoinj.core.TransactionOutPoint;
+import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.script.Script;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,12 +40,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class KeyService {
 
     private final static Logger LOG = LoggerFactory.getLogger(KeyService.class);
+    
+    @Autowired
+    private AppConfig appConfig;
 
     @Autowired
     private KeyDAO clientKeyDAO;
     
     @Autowired
     private RefundDAO refundDAO;
+    
+    @Autowired
+    private TxDAO txDAO;
     
     @Transactional(readOnly = true)
     public Keys getByClientPublicKey(final String clientPublicKey) {
@@ -145,4 +158,84 @@ public class KeyService {
     public boolean containsP2SH(Address p2shAddress) {
         return clientKeyDAO.containsP2SH(p2shAddress.getHash160());
     }
+    
+    /* SIGN ENDPOINT CODE STARTS HERE */
+    @Transactional(readOnly = false)
+    public void addTransaction(byte[] clientPublicKey, byte[] serializedTransaction) {
+        Tx transaction = new Tx();
+        transaction.clientPublicKey(clientPublicKey);
+        transaction.tx(serializedTransaction);
+        transaction.creationDate(new Date());
+        txDAO.save(transaction);
+    }
+    
+    private final static long LOCK_THRESHOLD_MILLIS = 1000 * 60 * 60 * 4;
+    
+    @Transactional(readOnly = true)
+    public List<TransactionOutPoint> burnedOutpoints(byte[] clientPublicKey) {
+        final List<TransactionOutPoint> relevantOutpoints = new ArrayList<>();
+        final List<Tx> clientTransactions = txDAO.findByClientPublicKey(clientPublicKey);
+        for (Tx clientTransaction : clientTransactions) {
+            final NetworkParameters params = appConfig.getNetworkParameters();
+            final Transaction storedTransaction = new Transaction(params, clientTransaction.tx());
+            for(TransactionInput ti:storedTransaction.getInputs()) {
+                relevantOutpoints.add(ti.getOutpoint());
+            }
+        }
+        return relevantOutpoints;
+    }
+    
+
+    @Transactional(readOnly = true)
+    public boolean isTransactionInstant(byte[] clientPublicKey, Script redeemScript, Transaction fullTx) {
+        if (fullTx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf()) {
+            return true;
+        } else {
+            final List<TransactionInput> relevantInputs = fullTx.getInputs();
+
+            final List<Tx> clientTransactions = txDAO.findByClientPublicKey(clientPublicKey);
+
+            // check double signing
+            int signedInputCounter = 0;
+            for (Tx clientTransaction : clientTransactions) {
+                int relevantInputCounter = 0;
+                for (TransactionInput relevantTransactionInput : relevantInputs) {
+                    final NetworkParameters params = appConfig.getNetworkParameters();
+                    final Transaction storedTransaction = new Transaction(params, clientTransaction.tx());
+                    int storedInputCounter = 0;
+                    for (TransactionInput storedTransactionInput : storedTransaction.getInputs()) {
+                        if (storedTransactionInput.getOutpoint().toString().equals(relevantTransactionInput.getOutpoint().toString())) {
+                            if (!storedTransaction.hashForSignature(storedInputCounter, redeemScript, Transaction.SigHash.ALL, false).equals(fullTx.hashForSignature(relevantInputCounter, redeemScript, Transaction.SigHash.ALL, false))) {
+                                long lockTime = storedTransaction.getLockTime() * 1000;
+                                long currentTime = System.currentTimeMillis();
+                                if (lockTime > currentTime + LOCK_THRESHOLD_MILLIS) {
+                                    continue;
+                                } else {
+                                    signedInputCounter++;
+                                }
+                            }
+                        }
+                        storedInputCounter++;
+                    }
+                    relevantInputCounter++;
+                }
+            }
+
+            boolean areParentsInstant = false;
+            for (TransactionInput relevantTransactionInput : relevantInputs) {
+                TransactionOutput transactionOutput = relevantTransactionInput.getOutpoint().getConnectedOutput();
+                Transaction parentTransaction = transactionOutput.getParentTransaction();
+                if (isTransactionInstant(clientPublicKey, redeemScript, parentTransaction)) {
+                    areParentsInstant = true;
+                } else {
+                    areParentsInstant = false;
+                    break;
+                }
+            }
+            LOG.debug("areParentsInstant {}", areParentsInstant);
+
+            return signedInputCounter == 0 && areParentsInstant;
+        }
+    }
+    /* SIGN ENDPOINT CODE ENDS HERE */
 }

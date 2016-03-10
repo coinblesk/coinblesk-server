@@ -557,7 +557,7 @@ public class IntegrationTest {
         //first get the inputs
         List<TransactionInput> preBuiltInupts = BitcoinUtils.convertPointsToInputs(
                 appConfig.getNetworkParameters(), refundMerchantOutpoints, merchant.redeemScript());
-        List<TransactionOutput> merchantWalletOutputs = walletService.unspentOutputs(
+        List<TransactionOutput> merchantWalletOutputs = walletService.verifiedOutputs(
                 appConfig.getNetworkParameters(), merchant.p2shAddress());
         //add/remove pending, approved, remove burned
         Transaction unsignedRefundMerchant = BitcoinUtils.generateUnsignedRefundTx(
