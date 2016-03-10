@@ -7,13 +7,13 @@ package ch.uzh.csg.coinblesk.server.service;
 
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import com.coinblesk.bitcoin.BitcoinNet;
+import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -35,7 +35,6 @@ import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Wallet;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
@@ -143,7 +142,7 @@ public class WalletService {
         final List<List<ECKey>> all = keyService.all();
         final List<Script> scripts = new ArrayList<>();
         for(List<ECKey> keys:all) {
-            final Script script = ScriptBuilder.createP2SHOutputScript(2, keys);
+            final Script script = BitcoinUtils.createP2SHOutputScript(2, keys);
             scripts.add(script);
         }
         wallet.addWatchedScripts(scripts);

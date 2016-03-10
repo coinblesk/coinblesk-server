@@ -50,7 +50,6 @@ import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.testing.FakeTxBuilder;
 import org.junit.Assert;
@@ -70,8 +69,6 @@ import org.springframework.test.context.transaction.TransactionalTestExecutionLi
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -134,7 +131,7 @@ public class IntegrationTest {
         final List<ECKey> keys = new ArrayList<>();
         keys.add(ecKeyClient);
         keys.add(ECKey.fromPublicOnly(status.publicKey()));
-        final Script script = ScriptBuilder.createP2SHOutputScript(2, keys);
+        final Script script = BitcoinUtils.createP2SHOutputScript(2, keys);
         sendFakeCoins(Coin.MICROCOIN, script.getToAddress(appConfig.getNetworkParameters()));
 
         res = mockMvc.perform(get("/p/b").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
@@ -158,7 +155,7 @@ public class IntegrationTest {
         final List<ECKey> keys = new ArrayList<>();
         keys.add(ecKeyClient);
         keys.add(ECKey.fromPublicOnly(status.publicKey()));
-        final Script redeemScript = ScriptBuilder.createP2SHOutputScript(2, keys);
+        final Script redeemScript = BitcoinUtils.createP2SHOutputScript(2, keys);
         Transaction tx = FakeTxBuilder.createFakeTx(appConfig.getNetworkParameters(), Coin.COIN, redeemScript.getToAddress(appConfig.getNetworkParameters()));
         Assert.assertTrue(tx.getOutputs().get(0).getScriptPubKey().isPayToScriptHash());
         Assert.assertTrue(tx.getOutputs().get(1).getScriptPubKey().isSentToAddress());
@@ -174,6 +171,8 @@ public class IntegrationTest {
         rto.clientSignatures(SerializeUtils.serializeSignatures(tss));
         res = mockMvc.perform(post("/p/r").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(rto))).andExpect(status().isOk()).andReturn();
         RefundTO refundRet = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), RefundTO.class);
+        System.out.println(refundRet.type());
+               
         Assert.assertTrue(refundRet.isSuccess());
         Transaction fullRefund = new Transaction(appConfig.getNetworkParameters(), refundRet.refundTransaction());
         //todo test tx
@@ -704,7 +703,7 @@ public class IntegrationTest {
         final List<ECKey> keys = new ArrayList<>();
         keys.add(ecKeyClient);
         keys.add(ecKeyServer);
-        final Script redeemScript = ScriptBuilder.createP2SHOutputScript(2, keys);
+        final Script redeemScript = BitcoinUtils.createP2SHOutputScript(2, keys);
         return redeemScript;
     }
 
@@ -712,7 +711,7 @@ public class IntegrationTest {
         final List<ECKey> keys = new ArrayList<>();
         keys.add(ecKeyClient);
         keys.add(ecKeyServer);
-        final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
+        final Script redeemScript = BitcoinUtils.createRedeemScript(2, keys);
         return redeemScript;
     }
 

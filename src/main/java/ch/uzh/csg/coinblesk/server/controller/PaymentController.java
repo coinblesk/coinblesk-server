@@ -49,7 +49,6 @@ import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -112,7 +111,7 @@ public class PaymentController {
             keys.add(ECKey.fromPublicOnly(clientPublicKey));
             keys.add(serverEcKey);
             //2-of-2 multisig
-            final Script script = ScriptBuilder.createP2SHOutputScript(2, keys);
+            final Script script = BitcoinUtils.createP2SHOutputScript(2, keys);
             final Address p2shAddressClient = script.getToAddress(params);
 
             final Pair<Boolean, Keys> retVal = keyService.storeKeysAndAddress(clientPublicKey,
@@ -144,7 +143,7 @@ public class PaymentController {
         try {
             final NetworkParameters params = appConfig.getNetworkParameters();
             final List<ECKey> keys = keyService.getPublicECKeysByClientPublicKey(keyTO.publicKey());
-            final Script script = ScriptBuilder.createP2SHOutputScript(2, keys);
+            final Script script = BitcoinUtils.createP2SHOutputScript(2, keys);
             final Address p2shAddressFrom = script.getToAddress(params);
             List<TransactionOutput> outputs = walletService.unspentOutputs(params, p2shAddressFrom);
             LOG.debug("{Prepare} nr. of outputs from network {} for {}. Full list: {}", outputs.size(), "tdb", outputs);
@@ -176,7 +175,7 @@ public class PaymentController {
             final NetworkParameters params = appConfig.getNetworkParameters();
             final ECKey serverKey = keys.get(1);
             final ECKey clientKey = keys.get(0);
-            final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
+            final Script redeemScript = BitcoinUtils.createRedeemScript(2, keys);
             //this is how the client sees the tx
             final Transaction refundTransaction = new Transaction(params, refundTO.refundTransaction());
             //TODO: check client setting for locktime
@@ -234,7 +233,7 @@ public class PaymentController {
             
             final NetworkParameters params = appConfig.getNetworkParameters();
             final ECKey serverKey = keys.get(1);
-            final Script p2SHOutputScript = ScriptBuilder.createP2SHOutputScript(2, keys);
+            final Script p2SHOutputScript = BitcoinUtils.createP2SHOutputScript(2, keys);
             final Address p2shAddressFrom = p2SHOutputScript.getToAddress(params);
             //this should never happen, check anyway
             if (!keyService.containsP2SH(p2shAddressFrom)) {
@@ -249,8 +248,8 @@ public class PaymentController {
                     params, input.clientPublicKey(), tx.getInputs());
             walletService.addWatchingOutpointsForRemoval(burned);
 
-            //Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
-            final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
+            Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
+            final Script redeemScript = BitcoinUtils.createRedeemScript(2, keys);
             //sign the tx with the server keys
             List<TransactionSignature> serverTxSigs = BitcoinUtils.partiallySign(tx, redeemScript, serverKey);
             
@@ -292,7 +291,7 @@ public class PaymentController {
             
             final NetworkParameters params = appConfig.getNetworkParameters();
             final ECKey serverKey = keys.get(1);
-            final Script p2SHOutputScript = ScriptBuilder.createP2SHOutputScript(2, keys);
+            final Script p2SHOutputScript = BitcoinUtils.createP2SHOutputScript(2, keys);
             final Address p2shAddressFrom = p2SHOutputScript.getToAddress(params);
             //this should never happen, check anyway
             if (!keyService.containsP2SH(p2shAddressFrom)) {
@@ -352,8 +351,8 @@ public class PaymentController {
                     params, input.clientPublicKey(), tx.getInputs());
             walletService.addWatchingOutpointsForRemoval(burned);
 
-            //Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
-            final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
+            Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
+            final Script redeemScript = BitcoinUtils.createRedeemScript(2, keys);
             //sign the tx with the server keys
             List<TransactionSignature> serverTxSigs = BitcoinUtils.partiallySign(tx, redeemScript, serverKey);
             
@@ -400,10 +399,10 @@ public class PaymentController {
             
             final ECKey clientKey = keys.get(0);
             final ECKey serverKey = keys.get(1);
-            final Script serverClientRedeemScript = ScriptBuilder.createP2SHOutputScript(2, keys);
+            final Script serverClientRedeemScript = BitcoinUtils.createP2SHOutputScript(2, keys);
             
             Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
-            final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
+            final Script redeemScript = BitcoinUtils.createRedeemScript(2, keys);
             final Address p2shAddress = serverClientRedeemScript.getToAddress(params);
             
             //we now get from the client the outpoints for the refund tx (including hash)
@@ -504,7 +503,7 @@ public class PaymentController {
             
             final NetworkParameters params = appConfig.getNetworkParameters();
             
-            final Script serverClientRedeemScript = ScriptBuilder.createP2SHOutputScript(2, keys);
+            final Script serverClientRedeemScript = BitcoinUtils.createP2SHOutputScript(2, keys);
             final Address p2shAddressFrom = serverClientRedeemScript.getToAddress(params);
            
             final Address p2shAddressTo = new Address(params, input.p2shAddressTo());

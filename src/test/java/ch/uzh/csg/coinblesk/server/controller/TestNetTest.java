@@ -16,6 +16,7 @@ import com.coinblesk.json.KeyTO;
 import com.coinblesk.json.PrepareHalfSignTO;
 import com.coinblesk.json.RefundP2shTO;
 import com.coinblesk.json.TxSig;
+import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
@@ -39,7 +40,6 @@ import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.testing.FakeTxBuilder;
 import org.junit.Before;
@@ -241,7 +241,7 @@ public class TestNetTest {
         final List<ECKey> keys = new ArrayList<>();
         keys.add(ecKeyClient);
         keys.add(ecKeyServer);
-        final Script redeemScript = ScriptBuilder.createP2SHOutputScript(2, keys);
+        final Script redeemScript = BitcoinUtils.createP2SHOutputScript(2, keys);
         return redeemScript;
     }
 
@@ -249,7 +249,7 @@ public class TestNetTest {
         final List<ECKey> keys = new ArrayList<>();
         keys.add(ecKeyClient);
         keys.add(ecKeyServer);
-        final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
+        final Script redeemScript = BitcoinUtils.createRedeemScript(2, keys);
         return redeemScript;
     }
 
