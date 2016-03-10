@@ -6,7 +6,6 @@
 package ch.uzh.csg.coinblesk.server.controller;
 
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
-import ch.uzh.csg.coinblesk.server.dao.TxDAO;
 import ch.uzh.csg.coinblesk.server.entity.Keys;
 import ch.uzh.csg.coinblesk.server.service.KeyService;
 import ch.uzh.csg.coinblesk.server.service.TransactionService;
@@ -506,21 +505,17 @@ public class PaymentController {
         }
     }
 
-    private void broadcast(final Transaction fullTx, final String clientId) {
+    private Transaction broadcast(final Transaction fullTx, final String clientId) {
         //broadcast immediately
         final TransactionBroadcast broadcast = walletService.peerGroup().broadcastTransaction(fullTx);
-        broadcast.future().addListener(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Transaction tx = broadcast.future().get();
-                    LOG.debug("{CompleteSign} tx {} broadcasted for {}", tx, clientId);
-                } catch (InterruptedException | ExecutionException ex) {
-                    LOG.error("{CompleteSign} tx {} NOT broadcasted for {}", fullTx, clientId);
-                    LOG.error("{CompleteSign} broadcast error", ex);
-                }
-            }
-        }, Threading.USER_THREAD);
+        try {
+            return broadcast.future().get();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
     
     public static List<TransactionOutput> filter(NetworkParameters params, List<TransactionOutput> outputs, @Nullable byte[] rawBloomFilter) {
@@ -641,12 +636,7 @@ public class PaymentController {
             refundTO.serverSignatures(SerializeUtils.serializeSignatures(serverSigs));
 
             final byte[] serializedTransaction = refundTransaction.unsafeBitcoinSerialize();
-
-            if(refundTransaction.isTimeLocked()){
-                keyService.addRefundTransaction(refundTO.clientPublicKey(), serializedTransaction);
-            } else {
-                keyService.addTransaction(refundTO.clientPublicKey(), serializedTransaction);
-            }
+            keyService.addTransaction(refundTO.clientPublicKey(), serializedTransaction);
 
             return new RefundTO()
                     .setSuccess()
@@ -667,13 +657,19 @@ public class PaymentController {
         final String clientId = SerializeUtils.bytesToHex(input.clientPublicKey());
         LOG.debug("{verify} {}", clientId);
         try {
+            final List<ECKey> keys = keyService.getECKeysByClientPublicKey(input.clientPublicKey());
+            if (keys == null || keys.size() != 2) {
+                return new CompleteSignTO().type(Type.KEYS_NOT_FOUND);
+            }
+            final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
+
             final Transaction fullTx = new Transaction(appConfig.getNetworkParameters(), input.fullSignedTransaction());
             LOG.debug("{verify} client {} received {}", clientId, fullTx);
 
             //ok, refunds are locked or no refund found
-            broadcast(fullTx, clientId);
+            final Transaction connectedFullTx = broadcast(fullTx, clientId);
 
-            if(keyService.isTransactionInstant(input.clientPublicKey(),fullTx)) {
+            if(keyService.isTransactionInstant(input.clientPublicKey(), redeemScript, connectedFullTx)) {
                 LOG.debug("{verify} instant payment OK for {}", clientId);
                 CompleteSignTO output = new CompleteSignTO().setSuccess();
                 return output;

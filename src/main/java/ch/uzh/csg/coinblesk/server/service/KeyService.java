@@ -20,7 +20,9 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
+import com.coinblesk.util.SerializeUtils;
 import org.bitcoinj.core.*;
+import org.bitcoinj.script.Script;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -166,41 +168,55 @@ public class KeyService {
     private final static long LOCK_THRESHOLD_MILLIS = 1000 * 60 * 60 * 4;
 
     @Transactional(readOnly = true)
-    public boolean isTransactionInstant(byte[] clientPublicKey, Transaction fullTx) {
-        final List<TransactionInput> relevantInputs = fullTx.getInputs();
-        final List<Tx> clientTransactions = txDAO.findByClientPublicKey(clientPublicKey);
-        final List<Refund> clientRefundTransactions = refundDAO.findByClientPublicKey(clientPublicKey);
+    public boolean isTransactionInstant(byte[] clientPublicKey, Script redeemScript, Transaction fullTx) {
+        if (fullTx.hasConfidence() && !fullTx.isPending()) {
+            return true;
+        } else {
+            final List<TransactionInput> relevantInputs = fullTx.getInputs();
 
-        // check double signing
-        int signedInputCounter = 0;
-        for (Tx clientTransaction : clientTransactions) {
-            for (TransactionInput transactionInput : relevantInputs) {
-                final NetworkParameters params = appConfig.getNetworkParameters();
-                final Transaction storedTransaction = new Transaction(params, clientTransaction.tx());
-                if (storedTransaction.getInputs().contains(transactionInput)) {
-                    signedInputCounter++;
-                }
-            }
-        }
+            final List<Tx> clientTransactions = txDAO.findByClientPublicKey(clientPublicKey);
 
-        //check refund
-        for (Refund clientRefundTransaction : clientRefundTransactions) {
-            for (TransactionInput transactionInput : relevantInputs) {
-                final NetworkParameters params = appConfig.getNetworkParameters();
-                final Transaction storedRefundTransaction = new Transaction(params, clientRefundTransaction.refundTx());
-                if (storedRefundTransaction.getInputs().contains(transactionInput)) {
-                    long lockTime = storedRefundTransaction.getLockTime() * 1000;
-                    long currentTime = System.currentTimeMillis();
-                    if (lockTime > currentTime + LOCK_THRESHOLD_MILLIS) {
-                        continue;
-                    } else {
-                        signedInputCounter++;
+            // check double signing
+            int signedInputCounter = 0;
+            for (Tx clientTransaction : clientTransactions) {
+                int relevantInputCounter = 0;
+                for (TransactionInput relevantTransactionInput : relevantInputs) {
+                    final NetworkParameters params = appConfig.getNetworkParameters();
+                    final Transaction storedTransaction = new Transaction(params, clientTransaction.tx());
+                    int storedInputCounter = 0;
+                    for (TransactionInput storedTransactionInput : storedTransaction.getInputs()) {
+                        if (storedTransactionInput.getOutpoint().toString().equals(relevantTransactionInput.getOutpoint().toString())) {
+                            if (!storedTransaction.hashForSignature(storedInputCounter, redeemScript, Transaction.SigHash.ALL, false).equals(fullTx.hashForSignature(relevantInputCounter, redeemScript, Transaction.SigHash.ALL, false))) {
+                                long lockTime = storedTransaction.getLockTime() * 1000;
+                                long currentTime = System.currentTimeMillis();
+                                if (lockTime > currentTime + LOCK_THRESHOLD_MILLIS) {
+                                    continue;
+                                } else {
+                                    signedInputCounter++;
+                                }
+                            }
+                        }
+                        storedInputCounter++;
                     }
+                    relevantInputCounter++;
                 }
             }
-        }
 
-        return relevantInputs.size() == signedInputCounter;
+            boolean areParentsInstant = false;
+            for (TransactionInput relevantTransactionInput : relevantInputs) {
+                TransactionOutput transactionOutput = relevantTransactionInput.getOutpoint().getConnectedOutput();
+                Transaction parentTransaction = transactionOutput.getParentTransaction();
+                if (isTransactionInstant(clientPublicKey, redeemScript, parentTransaction)) {
+                    areParentsInstant = true;
+                } else {
+                    areParentsInstant = false;
+                    break;
+                }
+            }
+            LOG.debug("areParentsInstant {}", areParentsInstant);
+
+            return signedInputCounter == 0 && areParentsInstant;
+        }
     }
     /* SIGN ENDPOINT CODE ENDS HERE */
 }
