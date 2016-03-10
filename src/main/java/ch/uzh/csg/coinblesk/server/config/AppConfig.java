@@ -2,11 +2,11 @@ package ch.uzh.csg.coinblesk.server.config;
 
 import ch.uzh.csg.coinblesk.server.utils.CoinUtils;
 import com.coinblesk.bitcoin.BitcoinNet;
+import com.coinblesk.util.Currency;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 
-import com.coinblesk.customserialization.Currency;
 import org.bitcoinj.core.NetworkParameters;
 
 

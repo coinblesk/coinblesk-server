@@ -14,9 +14,10 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.coinblesk.responseobject.ExchangeRateTransferObject;
-import com.coinblesk.responseobject.TransferObject;
+
 import ch.uzh.csg.coinblesk.server.service.ForexExchangeRateService;
+import com.coinblesk.json.ExchangeRateTO;
+import com.coinblesk.json.Type;
 
 /**
  * Controller for client http requests regarding Transactions between two
@@ -24,7 +25,7 @@ import ch.uzh.csg.coinblesk.server.service.ForexExchangeRateService;
  * 
  */
 @RestController
-@RequestMapping("/wallet")
+@RequestMapping({"/wallet", "/w"})
 public class BitcoinWalletController {
     private static Logger LOGGER = LoggerFactory.getLogger(BitcoinWalletController.class);
     
@@ -37,26 +38,21 @@ public class BitcoinWalletController {
      * 
      * @return CustomResponseObject with exchangeRate BTC/CHF as a String
      */
-    @RequestMapping(value = "/exchangeRate/{symbol}", method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
+    @RequestMapping(value = {"/exchangeRate/{symbol}" , "/x/{symbol}"}, 
+            method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
     @ResponseBody
-    public ResponseEntity<ExchangeRateTransferObject> getExchangeRate(@PathVariable(value="symbol") String symbol) {
+    public ResponseEntity<ExchangeRateTO> getExchangeRate(@PathVariable(value="symbol") String symbol) {
         LOGGER.debug("Received exchange rate request for currency {}", symbol);
-        ExchangeRateTransferObject transferObject = new ExchangeRateTransferObject();
+        ExchangeRateTO transferObject = new ExchangeRateTO();
         try {
             BigDecimal exchangeRate = forexExchangeRateService.getExchangeRate(symbol);
             transferObject.setExchangeRate(forexExchangeRateService.getCurrency(), exchangeRate.toString());
-            transferObject.setSuccessful(true);
+            transferObject.setSuccess();
+            return new ResponseEntity<>(transferObject, HttpStatus.OK);
         } catch (Exception e) {
-            transferObject.setSuccessful(false);
-            transferObject.setMessage(e.getMessage());
+            transferObject.type(Type.SERVER_ERROR);
+            transferObject.message(e.getMessage());
+            return new ResponseEntity<>(transferObject, HttpStatus.BAD_REQUEST);
         }
-        return createResponse(transferObject);
     }
-   
-   private <T extends TransferObject> ResponseEntity<T> createResponse(T response) {
-       HttpStatus status = response.isSuccessful() ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
-       return new ResponseEntity<T>(response, status);
-   }
-   
-   //TODO: info endpoint
 }
