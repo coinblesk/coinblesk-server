@@ -16,11 +16,14 @@ import com.coinblesk.json.VerifyTO;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import java.util.Collections;
 import java.util.Iterator;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Coin;
@@ -32,8 +35,11 @@ import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.core.Wallet;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -247,7 +253,7 @@ public class PaymentFullTxController {
             //ok, refunds are locked or no refund found
             fullTx.getConfidence().setSource(TransactionConfidence.Source.SELF);
             final Transaction connectedFullTx = walletService.receivePending(fullTx);
-            broadcastBlocking(fullTx, clientId);
+            broadcastBlocking(fullTx);
             
             
             LOG.debug("{verify:{}} broadcast done {}", (System.currentTimeMillis() - start), clientId);
@@ -272,9 +278,28 @@ public class PaymentFullTxController {
 
     /* SIGN ENDPOINT CODE ENDS HERE */
 
-    private void broadcastBlocking(final Transaction fullTx, final String clientId) {
+    private void broadcastBlocking(final Transaction fullTx) {
         //broadcast immediately
         final TransactionBroadcast broadcast = walletService.peerGroup().broadcastTransaction(fullTx);
+        Futures.addCallback(broadcast.future(), new FutureCallback<Transaction>() {
+            @Override
+            public void onSuccess(Transaction transaction) {
+                LOG.debug("success, transaction is out {}", fullTx.getHash());
+            }
+
+            @Override
+            public void onFailure(Throwable throwable) {
+                LOG.error("failed, transaction is out " + fullTx.getHash(), throwable);
+                try {
+                    Thread.sleep(60 *1000);
+                    broadcastBlocking(fullTx);
+                } catch (InterruptedException ex) {
+                    LOG.debug("don't wait for tx {}", fullTx.getHash());
+                }
+                
+            }
+        });
+        
     }
     
     private static boolean checkBurnedOutpoints(List<TransactionOutPoint> to, List<Pair<TransactionOutPoint, Coin>> refundClientPoints) {

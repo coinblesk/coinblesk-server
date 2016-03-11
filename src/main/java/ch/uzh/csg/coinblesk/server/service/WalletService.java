@@ -318,7 +318,7 @@ public class WalletService {
     }
 
     public Transaction receivePending(Transaction fullTx) {
-        wallet.receivePending(fullTx, null);
+        wallet.receivePending(fullTx, null, false);
         return wallet.getTransaction(fullTx.getHash());
     }
 
