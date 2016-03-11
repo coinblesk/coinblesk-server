@@ -17,10 +17,13 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
@@ -193,18 +196,56 @@ public class KeyService {
     
     @Transactional(readOnly = false)
     public boolean isTransactionInstant(byte[] clientPublicKey, Script redeemScript, Transaction fullTx) {
+        //check if the funding (inputs) of fullTx are timelocked, so only for the 
+        
+        //here we get all signed, but we need only refund tx
+        //TODO: store it better
+        /*final List<Tx> clientTransactions = txDAO.findByClientPublicKey(clientPublicKey);
+        Map<Sha256Hash, Transaction> refunds = new HashMap<>();
+        for(Tx t:clientTransactions) {
+           final Transaction storedTransaction = new Transaction(
+                   appConfig.getNetworkParameters(), t.tx());
+           if(storedTransaction.isTimeLocked()) {
+               refunds.put(storedTransaction.getHash(), storedTransaction);
+           }
+        }
+        
+        //if no refund, locktime is forever
+        long lockTime = 0;
+        for(TransactionInput input: fullTx.getInputs()) {
+            TransactionOutPoint point = input.getOutpoint();
+            Transaction refund = refunds.get(point.getHash());
+            if(refund != null) {
+                //get the highest locktime, this will be the one that we need to check
+                if(refund.getLockTime() > lockTime) {
+                    lockTime = refund.getLockTime();
+                    LOG.debug("locktime {} for {}", lockTime, refund.getHash());
+                }
+            } else {
+                //we are good, if at least one input is not timelocked, so the client cannot spend it!
+                lockTime = 0;
+                break;
+            }
+        }
+        
+        //if locktime is smaller plus 4 hours, we cannot make an instant tx 
+        if (lockTime > 0 && (lockTime * 1000) + LOCK_THRESHOLD_MILLIS > (System.currentTimeMillis())) {
+            LOG.debug("there is a refund soon to be expired, cannot be for instant: {}", fullTx.getHash());
+            return false;
+        }*/
+            
         return isTransactionInstant(clientPublicKey, redeemScript, fullTx, null);
     }
 
     private boolean isTransactionInstant(byte[] clientPublicKey, Script redeemScript, Transaction fullTx, Transaction requester) {
-        
+        long currentTime = System.currentTimeMillis();
         //fullTx can be null, we did not find a parent!
         if (fullTx == null) {
             LOG.debug("we did not find a parent transaction for {}", requester);
             return false;
         }
         
-        //check if already approved, TODO: we still need to check the refund TX
+        //check if already approved
         List<Transaction> approved = transactionService.approvedTx2(appConfig.getNetworkParameters(), clientPublicKey);
         for(Transaction tx:approved) {
             if(tx.getHash().equals(fullTx.getHash())) {
@@ -230,15 +271,15 @@ public class KeyService {
                     int storedInputCounter = 0;
                     for (TransactionInput storedTransactionInput : storedTransaction.getInputs()) {
                         if (storedTransactionInput.getOutpoint().toString().equals(relevantTransactionInput.getOutpoint().toString())) {
-                            if (!storedTransaction.hashForSignature(storedInputCounter, redeemScript, Transaction.SigHash.ALL, false).equals(fullTx.hashForSignature(relevantInputCounter, redeemScript, Transaction.SigHash.ALL, false))) {
+                            if (!storedTransaction.hashForSignature(storedInputCounter, redeemScript, Transaction.SigHash.ALL, false)
+                                    .equals(fullTx.hashForSignature(relevantInputCounter, redeemScript, Transaction.SigHash.ALL, false))) {
                                 long lockTime = storedTransaction.getLockTime() * 1000;
-                                long currentTime = System.currentTimeMillis();
-                                //TODO: this does not work, need to rethink
-                                /*if (lockTime > currentTime + LOCK_THRESHOLD_MILLIS) {
+                                
+                                if (lockTime > currentTime + LOCK_THRESHOLD_MILLIS) {
                                     continue;
                                 } else {
                                     signedInputCounter++;
-                                }*/
+                                }
                             }
                         }
                         storedInputCounter++;
@@ -257,6 +298,7 @@ public class KeyService {
                     transactionOutput = walletService.findOutputFor(relevantTransactionInput);
                     LOG.debug("This input is not connected! {}", relevantTransactionInput);
                     if(transactionOutput == null) {
+                        LOG.debug("This input is still not connected! {}", relevantTransactionInput);
                         areParentsInstant = false;
                     break;
                     }
