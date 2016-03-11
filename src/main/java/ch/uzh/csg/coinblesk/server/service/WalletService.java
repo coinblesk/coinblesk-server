@@ -316,4 +316,17 @@ public class WalletService {
     public PeerGroup peerGroup() {
         return peerGroup;
     }
+
+    public Transaction receivePending(Transaction fullTx) {
+        wallet.receivePending(fullTx, null);
+        return wallet.getTransaction(fullTx.getHash());
+    }
+
+    public TransactionOutput findOutputFor(TransactionInput input) {
+        Transaction tx = wallet.getTransaction(input.getOutpoint().getHash());
+        if(tx == null) {
+            return null;
+        }
+        return tx.getOutput(input.getOutpoint().getIndex());
+    }
 }

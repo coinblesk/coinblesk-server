@@ -28,6 +28,7 @@ import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBroadcast;
+import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
@@ -242,8 +243,14 @@ public class PaymentFullTxController {
                     .fullSignedTransaction());
             LOG.debug("{verify:{}} client {} received {}", (System.currentTimeMillis() - start), clientId, fullTx);
 
+            
             //ok, refunds are locked or no refund found
-            final Transaction connectedFullTx = broadcastBlocking(fullTx, clientId);
+            fullTx.getConfidence().setSource(TransactionConfidence.Source.SELF);
+            final Transaction connectedFullTx = walletService.receivePending(fullTx);
+            broadcastBlocking(fullTx, clientId);
+            
+            
+            LOG.debug("{verify:{}} broadcast done {}", (System.currentTimeMillis() - start), clientId);
             
             if (keyService.isTransactionInstant(input.clientPublicKey(), redeemScript, connectedFullTx)) {
                 LOG.debug("{verify:{}} instant payment OK for {}", (System.currentTimeMillis() - start), clientId);
@@ -265,17 +272,9 @@ public class PaymentFullTxController {
 
     /* SIGN ENDPOINT CODE ENDS HERE */
 
-    private Transaction broadcastBlocking(final Transaction fullTx, final String clientId) {
+    private void broadcastBlocking(final Transaction fullTx, final String clientId) {
         //broadcast immediately
         final TransactionBroadcast broadcast = walletService.peerGroup().broadcastTransaction(fullTx);
-        try {
-            return broadcast.future().get();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        }
-        return null;
     }
     
     private static boolean checkBurnedOutpoints(List<TransactionOutPoint> to, List<Pair<TransactionOutPoint, Coin>> refundClientPoints) {

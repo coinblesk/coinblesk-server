@@ -54,6 +54,9 @@ public class KeyService {
     private TxDAO txDAO;
     
     @Autowired
+    private WalletService walletService;
+    
+    @Autowired
     private TransactionService transactionService;
     
     @Transactional(readOnly = true)
@@ -188,7 +191,7 @@ public class KeyService {
         return relevantOutpoints;
     }
     
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = false)
     public boolean isTransactionInstant(byte[] clientPublicKey, Script redeemScript, Transaction fullTx) {
         return isTransactionInstant(clientPublicKey, redeemScript, fullTx, null);
     }
@@ -231,11 +234,11 @@ public class KeyService {
                                 long lockTime = storedTransaction.getLockTime() * 1000;
                                 long currentTime = System.currentTimeMillis();
                                 //TODO: this does not work, need to rethink
-                                if (lockTime > currentTime + LOCK_THRESHOLD_MILLIS) {
+                                /*if (lockTime > currentTime + LOCK_THRESHOLD_MILLIS) {
                                     continue;
                                 } else {
                                     signedInputCounter++;
-                                }
+                                }*/
                             }
                         }
                         storedInputCounter++;
@@ -247,9 +250,16 @@ public class KeyService {
             boolean areParentsInstant = false;
             for (TransactionInput relevantTransactionInput : relevantInputs) {
                 TransactionOutput transactionOutput = relevantTransactionInput.getOutpoint().getConnectedOutput();
-                //output may not be connected, it may be null
+                //input may not be connected, it may be null
                 if(transactionOutput == null) {
+                    //TODO, figure out, why fullTx may not be connected, it is called after
+                    //walletService.receivePending(fullTx);
+                    transactionOutput = walletService.findOutputFor(relevantTransactionInput);
                     LOG.debug("This input is not connected! {}", relevantTransactionInput);
+                    if(transactionOutput == null) {
+                        areParentsInstant = false;
+                    break;
+                    }
                 }
                 Transaction parentTransaction = transactionOutput.getParentTransaction();
                 if (isTransactionInstant(clientPublicKey, redeemScript, parentTransaction, fullTx)) {
