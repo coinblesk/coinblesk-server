@@ -53,6 +53,9 @@ public class KeyService {
     @Autowired
     private TxDAO txDAO;
     
+    @Autowired
+    private TransactionService transactionService;
+    
     @Transactional(readOnly = true)
     public Keys getByClientPublicKey(final String clientPublicKey) {
         final byte[] clientPublicKeyRaw = Base64.getDecoder().decode(clientPublicKey);
@@ -185,10 +188,29 @@ public class KeyService {
         return relevantOutpoints;
     }
     
-
     @Transactional(readOnly = true)
     public boolean isTransactionInstant(byte[] clientPublicKey, Script redeemScript, Transaction fullTx) {
+        return isTransactionInstant(clientPublicKey, redeemScript, fullTx, null);
+    }
+
+    private boolean isTransactionInstant(byte[] clientPublicKey, Script redeemScript, Transaction fullTx, Transaction requester) {
+        
+        //fullTx can be null, we did not find a parent!
+        if (fullTx == null) {
+            LOG.debug("we did not find a parent transaction for {}", requester);
+            return false;
+        }
+        
+        //check if already approved, TODO: we still need to check the refund TX
+        List<Transaction> approved = transactionService.approvedTx2(appConfig.getNetworkParameters(), clientPublicKey);
+        for(Transaction tx:approved) {
+            if(tx.getHash().equals(fullTx.getHash())) {
+                return true;
+            }
+        }
+        
         if (fullTx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf()) {
+            LOG.debug("The confidence of tx {} is good: {}", fullTx.getHash(), fullTx.getConfidence().getDepthInBlocks());
             return true;
         } else {
             final List<TransactionInput> relevantInputs = fullTx.getInputs();
@@ -208,6 +230,7 @@ public class KeyService {
                             if (!storedTransaction.hashForSignature(storedInputCounter, redeemScript, Transaction.SigHash.ALL, false).equals(fullTx.hashForSignature(relevantInputCounter, redeemScript, Transaction.SigHash.ALL, false))) {
                                 long lockTime = storedTransaction.getLockTime() * 1000;
                                 long currentTime = System.currentTimeMillis();
+                                //TODO: this does not work, need to rethink
                                 if (lockTime > currentTime + LOCK_THRESHOLD_MILLIS) {
                                     continue;
                                 } else {
@@ -224,8 +247,12 @@ public class KeyService {
             boolean areParentsInstant = false;
             for (TransactionInput relevantTransactionInput : relevantInputs) {
                 TransactionOutput transactionOutput = relevantTransactionInput.getOutpoint().getConnectedOutput();
+                //output may not be connected, it may be null
+                if(transactionOutput == null) {
+                    LOG.debug("This input is not connected! {}", relevantTransactionInput);
+                }
                 Transaction parentTransaction = transactionOutput.getParentTransaction();
-                if (isTransactionInstant(clientPublicKey, redeemScript, parentTransaction)) {
+                if (isTransactionInstant(clientPublicKey, redeemScript, parentTransaction, fullTx)) {
                     areParentsInstant = true;
                 } else {
                     areParentsInstant = false;
@@ -234,7 +261,11 @@ public class KeyService {
             }
             LOG.debug("areParentsInstant {}", areParentsInstant);
 
-            return signedInputCounter == 0 && areParentsInstant;
+            boolean isApproved = signedInputCounter == 0 && areParentsInstant;
+            if(isApproved) {
+                transactionService.approveTx2(fullTx, clientPublicKey, clientPublicKey);
+            }
+            return isApproved;
         }
     }
     /* SIGN ENDPOINT CODE ENDS HERE */

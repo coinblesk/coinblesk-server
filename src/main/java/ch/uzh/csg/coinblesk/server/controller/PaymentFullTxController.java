@@ -228,6 +228,7 @@ public class PaymentFullTxController {
             produces = "application/json; charset=UTF-8")
     @ResponseBody
     public VerifyTO verify(@RequestBody VerifyTO input) {
+        final long start = System.currentTimeMillis();
         final String clientId = SerializeUtils.bytesToHex(input.clientPublicKey());
         LOG.debug("{verify} {}", clientId);
         try {
@@ -239,17 +240,17 @@ public class PaymentFullTxController {
 
             final Transaction fullTx = new Transaction(appConfig.getNetworkParameters(), input
                     .fullSignedTransaction());
-            LOG.debug("{verify} client {} received {}", clientId, fullTx);
+            LOG.debug("{verify:{}} client {} received {}", (System.currentTimeMillis() - start), clientId, fullTx);
 
             //ok, refunds are locked or no refund found
             final Transaction connectedFullTx = broadcastBlocking(fullTx, clientId);
-
+            
             if (keyService.isTransactionInstant(input.clientPublicKey(), redeemScript, connectedFullTx)) {
-                LOG.debug("{verify} instant payment OK for {}", clientId);
+                LOG.debug("{verify:{}} instant payment OK for {}", (System.currentTimeMillis() - start), clientId);
                 VerifyTO output = new VerifyTO().setSuccess();
                 return output;
             } else {
-                LOG.debug("{verify} instant payment NOT OK for {}", clientId);
+                LOG.debug("{verify:{}} instant payment NOT OK for {}", (System.currentTimeMillis() - start), clientId);
                 VerifyTO output = new VerifyTO().type(Type.NO_INSTANT_PAYMENT);
                 return output;
             }

@@ -128,7 +128,7 @@ public class TransactionService {
             }
     }
     
-    private void approveTx(Transaction fullTx, Address p2shAddressFrom, Address p2shAddressTo) {
+    public void approveTx(Transaction fullTx, Address p2shAddressFrom, Address p2shAddressTo) {
         ApprovedTx approvedTx = new ApprovedTx()
                 .txHash(fullTx.getHash().getBytes())
                 .tx(fullTx.unsafeBitcoinSerialize())
@@ -136,6 +136,26 @@ public class TransactionService {
                 .addressTo(p2shAddressTo.getHash160())
                 .creationDate(new Date());
         approvedTxDAO.save(approvedTx);
+    }
+    
+    public void approveTx2(Transaction fullTx, byte[] clientPubKey, byte[] merchantPubKey) {
+        ApprovedTx approvedTx = new ApprovedTx()
+                .txHash(fullTx.getHash().getBytes())
+                .tx(fullTx.unsafeBitcoinSerialize())
+                .addressFrom(clientPubKey)
+                .addressTo(merchantPubKey)
+                .creationDate(new Date());
+        approvedTxDAO.save(approvedTx);
+    }
+    
+    public List<Transaction> approvedTx2(NetworkParameters params, byte[] pubKey) {
+        List<ApprovedTx> approved = approvedTxDAO.findByAddress(pubKey);
+        List<Transaction> retVal = new ArrayList<>(approved.size());
+        for(ApprovedTx approvedTx:approved) {
+            Transaction tx = new Transaction(params, approvedTx.tx());
+            retVal.add(tx);
+        }
+        return retVal;
     }
     
     @Transactional(readOnly = false)
