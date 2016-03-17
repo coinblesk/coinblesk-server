@@ -1,15 +1,17 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package ch.uzh.csg.coinblesk.server.entity;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.Set;
+
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -17,6 +19,7 @@ import javax.persistence.Index;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
@@ -50,6 +53,11 @@ public class UserAccount implements Serializable {
     private BigDecimal balance;
     @Column(name = "EMAIL_TOKEN", nullable = true)
     private String emailToken;
+    @ElementCollection(targetClass=UserRole.class, fetch=FetchType.EAGER)
+    @Enumerated(EnumType.STRING)
+    @CollectionTable(name="USER_ROLES", indexes = {@Index(name = "USER_ROLES_INDEX", columnList = "USER_ACCOUNT_ID"), @Index(name="user_role_unique", unique=true, columnList="user_account_id,user_role")})
+    @Column(name="USER_ROLE")
+    private Set<UserRole> userRoles;
     @Column(name = "VERSION", nullable = false)
     private byte version;
     
@@ -124,7 +132,16 @@ public class UserAccount implements Serializable {
         this.emailToken = emailToken;
         return this;
     }
-
+    
+    public Set<UserRole> getUserRoles() {
+    	return userRoles;
+    }
+    
+    public UserAccount setUserRoles(Set<UserRole> userRoles) {
+    	this.userRoles = userRoles;
+    	return this;
+    }
+    
     public byte getVersion() {
         return version;
     }
@@ -151,6 +168,8 @@ public class UserAccount implements Serializable {
         sb.append(getBalance());
         sb.append(", emailToken: ");
         sb.append(getEmailToken());
+        sb.append(", userRoles: ");
+        userRoles.forEach(r -> sb.append(r.name()).append(";"));
         sb.append(", version: ");
         sb.append(getVersion());
         return sb.toString();
@@ -178,15 +197,21 @@ public class UserAccount implements Serializable {
                 .append(isDeleted(), other.isDeleted())
                 .append(getCreationDate(), other.getCreationDate())
                 .append(getBalance(), other.getBalance())
+                .append(getUserRoles(), other.getUserRoles())
                 .append(getVersion(), other.getVersion()).isEquals();
     }
 
     @Override
     public int hashCode() {
-        return new HashCodeBuilder(31, 59).append(getId())
-                .append(getUsername()).append(getPassword())
+        return new HashCodeBuilder(31, 59)
+        		.append(getId())
+                .append(getUsername())
+                .append(getPassword())
                 .append(getEmail())
-                .append(getCreationDate()).append(isDeleted())
-                .append(getBalance()).append(getVersion()).toHashCode();
+                .append(getCreationDate())
+                .append(isDeleted())
+                .append(getBalance())
+                .append(getUserRoles())
+                .append(getVersion()).toHashCode();
     }
 }
