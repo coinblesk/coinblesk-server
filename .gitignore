@@ -57,6 +57,7 @@ src/main/webapp/WEB-INF/
 .nb-gradle-properties
 .gradle
 build/
+bin/
 
 # Ignore Gradle GUI config
 gradle-app.setting
