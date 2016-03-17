@@ -11,7 +11,7 @@ remotes {
         knownHosts = allowAnyHosts
     }
     prod {
-        host = 'N/A'
+        host = 'bitcoin3.csg.uzh.ch'
         user = System.properties['user.name']
         //ecdsa-sha2-nistp521 not working, probably old jsch version, using rsa
         identity = file("${System.properties['user.home']}/.ssh/id_rsa")

@@ -7,6 +7,7 @@ package ch.uzh.csg.coinblesk.server.service;
 
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import com.coinblesk.bitcoin.BitcoinNet;
+import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import java.io.File;
 import java.io.IOException;
@@ -18,9 +19,9 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import org.bitcoinj.core.AbstractWalletEventListener;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.BlockChain;
-import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.DownloadProgressTracker;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
@@ -28,23 +29,22 @@ import org.bitcoinj.core.PeerAddress;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Wallet;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
 import org.bitcoinj.store.UnreadableWalletException;
-import org.bitcoinj.wallet.CoinSelection;
-import org.bitcoinj.wallet.CoinSelector;
 import org.bitcoinj.wallet.WalletTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  *
@@ -127,6 +127,14 @@ public class WalletService {
         //TODO: add wallet listener, and remove burnedoutputs when confirmed tx 
         // has those outputs (maintenance)
         //also remove the approved tx, once we see them in the blockchain (maintenance)
+        wallet.addEventListener(new AbstractWalletEventListener() {
+            @Override
+            public void onTransactionConfidenceChanged(Wallet wallet, Transaction tx) {
+                if(tx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf()) {
+                    transactionService.removeApproved(tx);
+                }
+            }
+        });
 
     }
     
@@ -134,7 +142,7 @@ public class WalletService {
         final List<List<ECKey>> all = keyService.all();
         final List<Script> scripts = new ArrayList<>();
         for(List<ECKey> keys:all) {
-            final Script script = ScriptBuilder.createP2SHOutputScript(2, keys);
+            final Script script = BitcoinUtils.createP2SHOutputScript(2, keys);
             scripts.add(script);
         }
         wallet.addWatchedScripts(scripts);
@@ -144,27 +152,6 @@ public class WalletService {
         return blockChain;
     }
     
-    public Coin balance(final Script script) {
-        return wallet.getBalance(new CoinSelector() {
-            @Override
-            public CoinSelection select(Coin target, List<TransactionOutput> candidates) {
-                Coin coin = Coin.ZERO;
-                final List<TransactionOutput> list = new ArrayList<>();
-                for(TransactionOutput transactionOutput:candidates) {
-                    if(transactionOutput.getParentTransaction().getConfidence().getDepthInBlocks() < appConfig.getMinConf()) {
-                        continue;
-                    }
-                    if(!transactionOutput.getScriptPubKey().equals(script)) {
-                        continue;
-                    }
-                    list.add(transactionOutput);
-                    coin = coin.add(transactionOutput.getValue());
-                }
-                return new CoinSelection(coin, list);
-            }
-        });
-    }
-    
     public void addWatching(Script script) {
         List<Script> list = new ArrayList<>(1);
         list.add(script);
@@ -172,13 +159,95 @@ public class WalletService {
        
     }
     
-    public Map<Sha256Hash, Transaction> unspentTransactions(NetworkParameters params) {
-         Map<Sha256Hash, Transaction> copy = new HashMap<>(wallet.getTransactionPool(WalletTransaction.Pool.UNSPENT));
-         //also add approved Tx
-         for(Transaction t:transactionService.approvedTx(params)) {
-             copy.put(t.getHash(), t);
-         }
-         return copy;
+    public boolean connectBorken(Transaction fullTx, NetworkParameters params) {
+        wallet.commitTx(fullTx);
+        return true;
+        /*Map<Sha256Hash, Transaction> orig = wallet.getTransactionPool(WalletTransaction.Pool.UNSPENT);
+        for(TransactionInput input:fullTx.getInputs()) {
+            TransactionInput.ConnectionResult result = input.connect(
+                    orig, TransactionInput.ConnectMode.DISCONNECT_ON_CONFLICT);
+            if(result != TransactionInput.ConnectionResult.SUCCESS) {
+                return false;
+            }
+        }
+        return true;*/
+    }
+    
+    /**
+     * The unspent tx also contains spentOutputs, where the approved tx should mark the unspent as spent!
+     * @param params
+     * @return 
+     */
+    @Transactional(readOnly = true)
+    public Map<Sha256Hash, Transaction> verifiedTransactions(NetworkParameters params) {
+        Map<Sha256Hash, Transaction> copy = new HashMap<>(wallet.getTransactionPool(WalletTransaction.Pool.UNSPENT));
+        Map<Sha256Hash, Transaction> copy2 = new HashMap<>(copy);
+        //also add approved Tx
+        for(Transaction t:copy.values()) {
+            if(t.getConfidence().getDepthInBlocks() < appConfig.getMinConf()) {
+                LOG.debug("not enough confirmations for {}", t.getHash());
+                copy2.remove(t.getHash());
+            }
+        }
+        
+        for(Transaction t:copy2.values()) {
+            LOG.debug("unspent tx from Network: {}", t.getHash());
+        }
+        
+        List<Transaction> approvedTx = transactionService.approvedTx(params);
+        for(Transaction t:approvedTx) {
+            LOG.debug("adding approved tx, which can be used for spending: {}", t);
+            copy2.put(t.getHash(), t);
+        }
+        return copy2;
+    }
+    
+    @Transactional(readOnly = true)
+    public List<TransactionOutput> verifiedOutputs(NetworkParameters params, Address p2shAddress) {
+        List<TransactionOutput> retVal = new ArrayList<>();
+        
+        Map<Sha256Hash, Transaction> unspent = verifiedTransactions(params);
+        
+        for(Transaction t:unspent.values()) {
+            for(TransactionInput in:t.getInputs()) {
+                TransactionOutPoint point = in.getOutpoint();
+                Transaction parent = unspent.get(point.getHash());
+                if(parent != null) {
+                    TransactionOutput spent = parent.getOutput(point.getIndex());
+                    if(spent.isAvailableForSpending()) {
+                        LOG.debug("mark as spent: {}", spent);
+                        spent.markAsSpent(in);
+                    }
+                }
+            }            
+        }
+        
+        
+        for(Transaction t:unspent.values()) {
+            for(TransactionOutput out:t.getOutputs()) {
+                if(p2shAddress.equals(out.getAddressFromP2SH(appConfig.getNetworkParameters()))) {
+                    if(out.isAvailableForSpending()) {
+                        //now check if not spent
+                        retVal.add(out);
+                        LOG.debug("this txout is unspent : {}, point: {}, spent {}", out, out.getOutPointFor());
+                    } else {
+                        LOG.debug("this txout is spent!: {}, point: {}out.getOutPointFor()", out, out.getOutPointFor());
+                    }
+                }
+            }
+        }
+        
+        
+        
+        return retVal;
+    }
+    
+    public long balance(NetworkParameters params, Address p2shAddress) {
+        long balance = 0;
+        for(TransactionOutput transactionOutput:verifiedOutputs(params, p2shAddress)) {
+            balance += transactionOutput.getValue().value;
+        }
+        return balance;
     }
     
     @PreDestroy
@@ -218,16 +287,7 @@ public class WalletService {
         });
     }
     
-    public List<TransactionOutput> getOutputs(Address p2shAddress) {
-        List<TransactionOutput> retVal = new ArrayList<>();
-        List<TransactionOutput> all = wallet.getWatchedOutputs(true);
-        for(TransactionOutput to:all) {
-            if(to.getAddressFromP2SH(appConfig.getNetworkParameters()).equals(p2shAddress)) {
-                retVal.add(to);
-            }
-        }
-        return retVal;
-    }
+    
 
     public int refundLockTime() {
         final int locktime = appConfig.lockTime();
@@ -255,5 +315,18 @@ public class WalletService {
 
     public PeerGroup peerGroup() {
         return peerGroup;
+    }
+
+    public Transaction receivePending(Transaction fullTx) {
+        wallet.receivePending(fullTx, null, false);
+        return wallet.getTransaction(fullTx.getHash());
+    }
+
+    public TransactionOutput findOutputFor(TransactionInput input) {
+        Transaction tx = wallet.getTransaction(input.getOutpoint().getHash());
+        if(tx == null) {
+            return null;
+        }
+        return tx.getOutput(input.getOutpoint().getIndex());
     }
 }

@@ -5,20 +5,14 @@
  */
 package ch.uzh.csg.coinblesk.server.service;
 
-import ch.uzh.csg.coinblesk.server.controller.PaymentController;
 import ch.uzh.csg.coinblesk.server.dao.ApprovedTxDAO;
 import ch.uzh.csg.coinblesk.server.dao.BurnedOutputDAO;
 import ch.uzh.csg.coinblesk.server.entity.ApprovedTx;
 import ch.uzh.csg.coinblesk.server.entity.BurnedOutput;
-import com.coinblesk.json.CompleteSignTO;
-import com.coinblesk.json.Type;
 import com.coinblesk.util.Pair;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import javax.transaction.Transactional;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
@@ -29,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  *
@@ -45,7 +40,7 @@ public class TransactionService {
     @Autowired
     private BurnedOutputDAO burnedOutputDAO;
     
-    @Transactional
+    @Transactional(readOnly = true)
     public List<TransactionOutput> approvedOutputs(NetworkParameters params, Address p2shAddress) {
         List<ApprovedTx> approved = approvedTxDAO.findByAddress(p2shAddress.getHash160());
         List<TransactionOutput> retVal = new ArrayList<>();
@@ -61,7 +56,7 @@ public class TransactionService {
         return retVal;
     }
     
-    @Transactional
+    @Transactional(readOnly = true)
     public List<TransactionOutPoint> spentOutputs(NetworkParameters params, Address p2shAddress) {
         List<ApprovedTx> approved = approvedTxDAO.findByAddress(p2shAddress.getHash160());
         List<TransactionOutPoint> retVal = new ArrayList<>();
@@ -75,7 +70,7 @@ public class TransactionService {
         return retVal;
     }
     
-    @Transactional
+    @Transactional(readOnly = false)
     public List<Pair<TransactionOutPoint, Integer>> burnOutputFromNewTransaction(
             NetworkParameters params, byte[] clientPublicKey, List<TransactionInput> inputsFromNewTransaction) {
         final List<Pair<TransactionOutPoint, Integer>> retVal = new ArrayList<>(2 * inputsFromNewTransaction.size());
@@ -101,7 +96,7 @@ public class TransactionService {
     
     
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<TransactionOutPoint> burnedOutpoints(NetworkParameters params, byte[] clientPublicKey) {
         final List<TransactionOutPoint> retVal = new ArrayList<>();
         List<BurnedOutput> burnedOutputs = burnedOutputDAO.findByClientKey(clientPublicKey);
@@ -111,7 +106,7 @@ public class TransactionService {
         return retVal;
     }
     
-    @Transactional
+    @Transactional(readOnly = false)
     public boolean checkInstantTx(NetworkParameters params, Transaction fullTx, 
             byte[] clientPublicKey, Address p2shAddressFrom, Address p2shAddressTo) {
          List<Pair<TransactionOutPoint, Integer>> outpoints = burnOutputFromNewTransaction(
@@ -133,7 +128,7 @@ public class TransactionService {
             }
     }
     
-    private void approveTx(Transaction fullTx, Address p2shAddressFrom, Address p2shAddressTo) {
+    public void approveTx(Transaction fullTx, Address p2shAddressFrom, Address p2shAddressTo) {
         ApprovedTx approvedTx = new ApprovedTx()
                 .txHash(fullTx.getHash().getBytes())
                 .tx(fullTx.unsafeBitcoinSerialize())
@@ -143,7 +138,27 @@ public class TransactionService {
         approvedTxDAO.save(approvedTx);
     }
     
-    @Transactional
+    public void approveTx2(Transaction fullTx, byte[] clientPubKey, byte[] merchantPubKey) {
+        ApprovedTx approvedTx = new ApprovedTx()
+                .txHash(fullTx.getHash().getBytes())
+                .tx(fullTx.unsafeBitcoinSerialize())
+                .addressFrom(clientPubKey)
+                .addressTo(merchantPubKey)
+                .creationDate(new Date());
+        approvedTxDAO.save(approvedTx);
+    }
+    
+    public List<Transaction> approvedTx2(NetworkParameters params, byte[] pubKey) {
+        List<ApprovedTx> approved = approvedTxDAO.findByAddress(pubKey);
+        List<Transaction> retVal = new ArrayList<>(approved.size());
+        for(ApprovedTx approvedTx:approved) {
+            Transaction tx = new Transaction(params, approvedTx.tx());
+            retVal.add(tx);
+        }
+        return retVal;
+    }
+    
+    @Transactional(readOnly = false)
     public void removeConfirmedBurnedOutput(List<TransactionInput> inputsFromConfirmedTransaction) {
         for(TransactionInput transactionInput:inputsFromConfirmedTransaction) {
             byte[] outpoints = transactionInput.getOutpoint().bitcoinSerialize();
@@ -151,17 +166,17 @@ public class TransactionService {
         }         
     }
     
-    @Transactional
+    @Transactional(readOnly = false)
     public int removeAllBurnedOutput() {
         return burnedOutputDAO.removeAll();
     }
 
-    @Transactional
+    @Transactional(readOnly = false)
     public void removeApproved(Transaction approved) {
         approvedTxDAO.remove(approved.getHash().getBytes());
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<Transaction> approvedTx(NetworkParameters params) {
         List<ApprovedTx> approved = approvedTxDAO.findAll();
         List<Transaction> retVal = new ArrayList<>(approved.size());

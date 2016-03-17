@@ -21,6 +21,7 @@ import com.coinblesk.json.Type;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
+import com.coinblesk.util.SimpleBloomFilter;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseOperation;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
@@ -39,7 +40,6 @@ import java.util.List;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.BlockChain;
-import org.bitcoinj.core.BloomFilter;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.PrunedException;
@@ -50,7 +50,6 @@ import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.testing.FakeTxBuilder;
 import org.junit.Assert;
@@ -59,6 +58,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.json.GsonHttpMessageConverter;
 import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestExecutionListeners;
@@ -68,8 +69,6 @@ import org.springframework.test.context.transaction.TransactionalTestExecutionLi
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -132,7 +131,7 @@ public class IntegrationTest {
         final List<ECKey> keys = new ArrayList<>();
         keys.add(ecKeyClient);
         keys.add(ECKey.fromPublicOnly(status.publicKey()));
-        final Script script = ScriptBuilder.createP2SHOutputScript(2, keys);
+        final Script script = BitcoinUtils.createP2SHOutputScript(2, keys);
         sendFakeCoins(Coin.MICROCOIN, script.getToAddress(appConfig.getNetworkParameters()));
 
         res = mockMvc.perform(get("/p/b").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
@@ -156,7 +155,7 @@ public class IntegrationTest {
         final List<ECKey> keys = new ArrayList<>();
         keys.add(ecKeyClient);
         keys.add(ECKey.fromPublicOnly(status.publicKey()));
-        final Script redeemScript = ScriptBuilder.createP2SHOutputScript(2, keys);
+        final Script redeemScript = BitcoinUtils.createP2SHOutputScript(2, keys);
         Transaction tx = FakeTxBuilder.createFakeTx(appConfig.getNetworkParameters(), Coin.COIN, redeemScript.getToAddress(appConfig.getNetworkParameters()));
         Assert.assertTrue(tx.getOutputs().get(0).getScriptPubKey().isPayToScriptHash());
         Assert.assertTrue(tx.getOutputs().get(1).getScriptPubKey().isSentToAddress());
@@ -172,6 +171,8 @@ public class IntegrationTest {
         rto.clientSignatures(SerializeUtils.serializeSignatures(tss));
         res = mockMvc.perform(post("/p/r").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(rto))).andExpect(status().isOk()).andReturn();
         RefundTO refundRet = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), RefundTO.class);
+        System.out.println(refundRet.type());
+               
         Assert.assertTrue(refundRet.isSuccess());
         Transaction fullRefund = new Transaction(appConfig.getNetworkParameters(), refundRet.refundTransaction());
         //todo test tx
@@ -282,22 +283,23 @@ public class IntegrationTest {
         SerializeUtils.sign(prepareHalfSignTO, new ECKey());
         PrepareHalfSignTO status = prepareServerCallOutput(prepareHalfSignTO);
         Assert.assertFalse(status.isSuccess());
-        Assert.assertEquals(Type.SIGNATURE_ERROR, status.type());
+        Assert.assertEquals(Type.JSON_SIGNATURE_ERROR, status.type());
     }
     
     @Test
     @DatabaseTearDown(value={"classpath:DbUnitFiles/emptyDB.xml"}, type = DatabaseOperation.DELETE_ALL)
-    public void testReplayAttack() throws Exception {
+    public void testCache() throws Exception {
         Client client = new Client(appConfig.getNetworkParameters(), mockMvc);
         sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
         Coin amountToRequest = Coin.valueOf(9876);
         Date now = new Date();
-        PrepareHalfSignTO status = prepareServerCall(amountToRequest, client, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
-        Assert.assertTrue(status.isSuccess());
+        PrepareHalfSignTO status1 = prepareServerCall(amountToRequest, client, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
+        Assert.assertTrue(status1.isSuccess());
         
-        status = prepareServerCall(amountToRequest, client, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
-        Assert.assertFalse(status.isSuccess());
-        Assert.assertEquals(Type.REPLAY_ATTACK, status.type());
+        PrepareHalfSignTO status2 = prepareServerCall(amountToRequest, client, new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
+        Assert.assertTrue(status2.isSuccess());
+        
+        Assert.assertEquals(SerializeUtils.GSON.toJson(status1), SerializeUtils.GSON.toJson(status2));
     }
     
     @Test
@@ -388,9 +390,9 @@ public class IntegrationTest {
         sendFakeCoins(Coin.valueOf(234560), client.p2shAddress());
         Date now = new Date();
         PrepareHalfSignTO prepareHalfSignTO = prepareServerCallInput(Coin.valueOf(9876), client.ecKey(), new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
-        BloomFilter bf = new BloomFilter(2, 0.001, 42L);
-        bf.insert(t1.getOutput(0).unsafeBitcoinSerialize());
-        prepareHalfSignTO.bloomFilter(bf.unsafeBitcoinSerialize());
+        SimpleBloomFilter<byte[]> bf = new SimpleBloomFilter<>(0.001, 2);
+        bf.add(t1.getOutput(0).getOutPointFor().unsafeBitcoinSerialize());
+        prepareHalfSignTO.bloomFilter(bf.encode());
         SerializeUtils.sign(prepareHalfSignTO, client.ecKey());
         PrepareHalfSignTO status = prepareServerCallOutput(prepareHalfSignTO);
         Assert.assertEquals(Type.SUCCESS_FILTERED, status.type());
@@ -402,8 +404,8 @@ public class IntegrationTest {
         Client client = new Client(appConfig.getNetworkParameters(), mockMvc);
         Date now = new Date();
         PrepareHalfSignTO prepareHalfSignTO = prepareServerCallInput(Coin.valueOf(9876), client.ecKey(), new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
-        BloomFilter bf = new BloomFilter(2, 0.001, 42L);
-        prepareHalfSignTO.bloomFilter(bf.unsafeBitcoinSerialize());
+        SimpleBloomFilter<byte[]> bf = new SimpleBloomFilter<>(0.001, 2);
+        prepareHalfSignTO.bloomFilter(bf.encode());
         SerializeUtils.sign(prepareHalfSignTO, client.ecKey());
         PrepareHalfSignTO status = prepareServerCallOutput(prepareHalfSignTO);
         Assert.assertEquals(Type.NOT_ENOUGH_COINS, status.type());
@@ -417,10 +419,10 @@ public class IntegrationTest {
         Transaction t2 = sendFakeCoins(Coin.valueOf(234560), client.p2shAddress());
         Date now = new Date();
         PrepareHalfSignTO prepareHalfSignTO = prepareServerCallInput(Coin.valueOf(9876), client.ecKey(), new ECKey().toAddress(appConfig.getNetworkParameters()), null, now);
-        BloomFilter bf = new BloomFilter(2, 0.001, 42L);
-        bf.insert(t1.getOutput(0).unsafeBitcoinSerialize());
-        bf.insert(t2.getOutput(0).unsafeBitcoinSerialize());
-        prepareHalfSignTO.bloomFilter(bf.unsafeBitcoinSerialize());
+        SimpleBloomFilter<byte[]> bf = new SimpleBloomFilter<>(0.001, 2);
+        bf.add(t1.getOutput(0).getOutPointFor().unsafeBitcoinSerialize());
+        bf.add(t2.getOutput(0).getOutPointFor().unsafeBitcoinSerialize());
+        prepareHalfSignTO.bloomFilter(bf.encode());
         SerializeUtils.sign(prepareHalfSignTO, client.ecKey());
         PrepareHalfSignTO status = prepareServerCallOutput(prepareHalfSignTO);
         Assert.assertEquals(Type.SUCCESS, status.type());
@@ -435,19 +437,29 @@ public class IntegrationTest {
         
         //register client
         KeyTO keyTO = new KeyTO().publicKey(client.getPubKey());
-        RestTemplate restTemplate = new RestTemplate();
+        RestTemplate restTemplate = createRest();
         KeyTO result = restTemplate.postForObject(uri, keyTO, KeyTO.class);
         ECKey serverPub = ECKey.fromPublicOnly(result.publicKey());
         Client clientFull = new Client(appConfig.getNetworkParameters(), client, serverPub);
         //register merchant
         keyTO = new KeyTO().publicKey(merchant.getPubKey());
-        restTemplate = new RestTemplate();
+        restTemplate = createRest();
         result = restTemplate.postForObject(uri, keyTO, KeyTO.class);
         serverPub = ECKey.fromPublicOnly(result.publicKey());
         Client merchantFull = new Client(appConfig.getNetworkParameters(), merchant, serverPub);
         
         System.out.println("client p2sh: "+clientFull.p2shAddress());
         System.out.println("merchant p2sh: "+merchantFull.p2shAddress());
+    }
+
+    private RestTemplate createRest() {
+        RestTemplate restTemplate = new RestTemplate();
+        GsonHttpMessageConverter gsonHttpMessageConverter = new GsonHttpMessageConverter();
+        gsonHttpMessageConverter.setGson(SerializeUtils.GSON);
+        List<HttpMessageConverter<?>> msgConvert = new ArrayList<>();
+        msgConvert.add(gsonHttpMessageConverter);
+        restTemplate.setMessageConverters(msgConvert);
+        return restTemplate;
     }
     
     private ECKey getKey(String name) throws IOException {
@@ -545,7 +557,8 @@ public class IntegrationTest {
         //first get the inputs
         List<TransactionInput> preBuiltInupts = BitcoinUtils.convertPointsToInputs(
                 appConfig.getNetworkParameters(), refundMerchantOutpoints, merchant.redeemScript());
-        List<TransactionOutput> merchantWalletOutputs = walletService.getOutputs(merchant.p2shAddress());
+        List<TransactionOutput> merchantWalletOutputs = walletService.verifiedOutputs(
+                appConfig.getNetworkParameters(), merchant.p2shAddress());
         //add/remove pending, approved, remove burned
         Transaction unsignedRefundMerchant = BitcoinUtils.generateUnsignedRefundTx(
                 appConfig.getNetworkParameters(), merchantWalletOutputs, preBuiltInupts,
@@ -598,8 +611,8 @@ public class IntegrationTest {
         //*************************
 
         //*****CHECKS********
-        Assert.assertEquals(108574, balanceServerCall(client)); //check balance on Client
-        Assert.assertEquals(9876, balanceServerCall(merchant)); //check balance on Merchant
+        Assert.assertEquals(108574, balanceServerCall(mockMvc, client)); //check balance on Client
+        Assert.assertEquals(9876, balanceServerCall(mockMvc, merchant)); //check balance on Merchant
     }
 
     final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
@@ -614,7 +627,7 @@ public class IntegrationTest {
         return new String(hexChars);
     }
 
-    private long balanceServerCall(Client client) throws Exception {
+    public static long balanceServerCall(MockMvc mockMvc, Client client) throws Exception {
         KeyTO keyTO = new KeyTO().publicKey(client.ecKey().getPubKey());
         MvcResult res = mockMvc.perform(get("/p/b").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
         BalanceTO balance = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), BalanceTO.class);
@@ -668,7 +681,7 @@ public class IntegrationTest {
                 .clientPublicKey(client.getPubKey())
                 .p2shAddressTo(to.toString())
                 .messageSig(clientSig)
-                .currentDate(date.getTime());
+                .currentDate(date == null?0:date.getTime());
         if(prepareHalfSignTO.messageSig() == null) {
             SerializeUtils.sign(prepareHalfSignTO, client);
         }
@@ -690,7 +703,7 @@ public class IntegrationTest {
         final List<ECKey> keys = new ArrayList<>();
         keys.add(ecKeyClient);
         keys.add(ecKeyServer);
-        final Script redeemScript = ScriptBuilder.createP2SHOutputScript(2, keys);
+        final Script redeemScript = BitcoinUtils.createP2SHOutputScript(2, keys);
         return redeemScript;
     }
 
@@ -698,7 +711,7 @@ public class IntegrationTest {
         final List<ECKey> keys = new ArrayList<>();
         keys.add(ecKeyClient);
         keys.add(ecKeyServer);
-        final Script redeemScript = ScriptBuilder.createRedeemScript(2, keys);
+        final Script redeemScript = BitcoinUtils.createRedeemScript(2, keys);
         return redeemScript;
     }
 

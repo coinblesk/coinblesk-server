@@ -15,7 +15,6 @@ import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -74,7 +73,7 @@ public class Client {
         final List<ECKey> keys = new ArrayList<>();
         keys.add(ecKeyClient);
         keys.add(ecKeyServer);
-        return ScriptBuilder.createP2SHOutputScript(2, keys);
+        return BitcoinUtils.createP2SHOutputScript(2, keys);
     }
     
     public boolean clientFirst() {
@@ -90,7 +89,7 @@ public class Client {
         keys.add(ecKeyClient);
         keys.add(ecKeyServer);
         Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
-        return ScriptBuilder.createRedeemScript(2, keys);
+        return BitcoinUtils.createRedeemScript(2, keys);
     }
     
     private ECKey register(ECKey ecKeyClient, MockMvc mockMvc) throws Exception {
