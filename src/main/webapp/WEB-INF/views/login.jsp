@@ -1,32 +1,25 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<html>
-<head></head>
-<body>
-   <h1>Login</h1>
-   <c:url value="/login" var="loginUrl"/>
-<form action="${loginUrl}" method="post">       
-    <c:if test="${param.error != null}">        
-        <p>
-            Invalid username and password.
-        </p>
-    </c:if>
-    <c:if test="${param.logout != null}">       
-        <p>
-            You have been logged out.
-        </p>
-    </c:if>
-    <p>
-        <label for="username">Username</label>
-        <input type="text" id="username" name="username"/>	
-    </p>
-    <p>
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password"/>	
-    </p>
-    <input type="hidden"                        
-        name="${_csrf.parameterName}"
-        value="${_csrf.token}"/>
-    <button type="submit" class="btn">Log in</button>
-</form>
-</body>
-</html>
+<%@ taglib prefix="t" tagdir="/WEB-INF/tags" %>
+
+<t:genericpage>
+	<jsp:body>
+		
+		<form class="form-signin" action="login" method="post">
+	      <h2 class="form-signin-heading">Please sign in</h2>
+	      <c:if test="${param.error != null}"> 
+            <div class="alert alert-danger" role="alert">Invalid username and password.</div>
+	      </c:if>
+	      <c:if test="${param.logout != null}">       
+            <div class="alert alert-success" role="alert">You have been logged out.</div>
+          </c:if>
+	      
+	      <label for="inputUsername" class="sr-only">Username</label>
+	      <input type="text" id="inputUsername" name="username" class="form-control" placeholder="Username" required autofocus />
+	      <label for="inputPassword" class="sr-only">Password</label>
+	      <input type="password" id="inputPassword" name="password" class="form-control" placeholder="Password" required />
+	      <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+	      <button class="btn btn-lg btn-primary btn-block" type="submit">Log in</button>
+	    </form>
+
+	</jsp:body>
+</t:genericpage>
