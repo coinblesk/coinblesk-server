@@ -2,6 +2,7 @@
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 context.xml
 *.iml
+
 # User-specific stuff:
 .idea
 .idea/workspace.xml
@@ -48,8 +49,7 @@ fabric.properties
 .project
 .settings/
 target/
-src/main/webapp/WEB-INF/
-/target/
+
 /target/
 /.nb-gradle/
 /build/

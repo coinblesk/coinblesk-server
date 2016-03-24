@@ -1,8 +1,9 @@
 body {
-  padding-top: 40px;
+  padding-top: 60px;
   padding-bottom: 40px;
-  background-color: #eee;
+  background-color: #fff;
 }
+
 
 .form-signin {
   max-width: 330px;
@@ -35,4 +36,19 @@ body {
 
 .form-signin input {
   margin-bottom: 10px;
+}
+
+
+.main {
+  background-color: #fff;
+  border-left: 1px solid #ddd;
+  border-right: 1px solid #ddd;
+  border-bottom: 1px solid #ddd;
+  padding: 20px;
+}
+@media (min-width: 768px) {
+  .main {
+    padding-right: 40px;
+    padding-left: 40px;
+  }
 }
