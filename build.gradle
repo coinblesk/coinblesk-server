@@ -26,9 +26,9 @@ war {
 }
 
 repositories {
-    mavenLocal()
     mavenCentral()
-    maven {url 'http://tomp2p.net/dev/mvn'}
+    // maven {url 'http://tomp2p.net/dev/mvn'}
+    mavenLocal()
 }
 
 dependencies {
@@ -39,7 +39,8 @@ dependencies {
     
     providedCompile 'javax.servlet:javax.servlet-api:3.1.0'
     compile 'javax.transaction:javax.transaction-api:1.2'
-    //compile 'javax.servlet:jstl:1.2'
+    compile 'javax.servlet:jstl:1.2'
+    providedCompile 'javax.servlet.jsp:javax.servlet.jsp-api:2.3.1'
     compile 'com.sun.mail:javax.mail:1.5.5'
     
     compile "org.springframework:spring-context:${springVersion}"
@@ -51,7 +52,11 @@ dependencies {
     compile "org.springframework:spring-context-support:${springVersion}"
     compile "org.springframework.security:spring-security-web:${springSecurityVersion}"
     compile "org.springframework.security:spring-security-config:${springSecurityVersion}"
+    compile "org.springframework.security:spring-security-taglibs:${springSecurityVersion}"
+    
     //compile "org.springframework.data:spring-data-jpa:1.9.2.RELEASE"
+    
+    
     
     compile "org.hibernate:hibernate-core:${hibernateVersion}"
     compile "org.hibernate:hibernate-entitymanager:${hibernateVersion}"
@@ -74,6 +79,8 @@ dependencies {
     compile 'org.slf4j:slf4j-api:1.7.18'
     compile 'com.coinblesk:coinblesk-shared-resources:1.4.18'
     compile 'com.madgag.spongycastle:core:1.54.0.0'
+    
+    
 
     testCompile ('junit:junit:4.12') {
         exclude module : 'hamcrest'
@@ -88,3 +95,4 @@ dependencies {
     testCompile 'org.hsqldb:hsqldb:2.3.3'
     testCompile 'com.jayway.jsonpath:json-path:2.1.0'
 }
+
