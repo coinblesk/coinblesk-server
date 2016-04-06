@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.coinblesk.server.controller;
 
 import com.coinblesk.server.config.AppConfig;
@@ -116,10 +111,10 @@ public class CompleteSignTest {
             public void shutdown() {
             }
 
-            @Override
-            public InetSocketAddress[] getPeers(long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {
-                return new InetSocketAddress[0];
-            }
+			@Override
+			public InetSocketAddress[] getPeers(long services, long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {
+				return new InetSocketAddress[0];
+			}
         });
         clientAppKit.setBlockingStartup(false);
         clientAppKit.startAsync().awaitRunning();
