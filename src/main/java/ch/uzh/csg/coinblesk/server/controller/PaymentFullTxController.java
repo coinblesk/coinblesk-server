@@ -5,25 +5,12 @@
  */
 package ch.uzh.csg.coinblesk.server.controller;
 
-import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import static ch.uzh.csg.coinblesk.server.controller.PaymentController.filter;
-import ch.uzh.csg.coinblesk.server.service.KeyService;
-import ch.uzh.csg.coinblesk.server.service.TransactionService;
-import ch.uzh.csg.coinblesk.server.service.WalletService;
-import com.coinblesk.json.SignTO;
-import com.coinblesk.json.Type;
-import com.coinblesk.json.VerifyTO;
-import com.coinblesk.util.BitcoinUtils;
-import com.coinblesk.util.Pair;
-import com.coinblesk.util.SerializeUtils;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
+
 import java.util.Collections;
 import java.util.Iterator;
-
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.logging.Level;
+
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Coin;
@@ -35,11 +22,8 @@ import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.Wallet;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +32,20 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.coinblesk.json.SignTO;
+import com.coinblesk.json.Type;
+import com.coinblesk.json.VerifyTO;
+import com.coinblesk.util.BitcoinUtils;
+import com.coinblesk.util.Pair;
+import com.coinblesk.util.SerializeUtils;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+
+import ch.uzh.csg.coinblesk.server.config.AppConfig;
+import ch.uzh.csg.coinblesk.server.service.KeyService;
+import ch.uzh.csg.coinblesk.server.service.TransactionService;
+import ch.uzh.csg.coinblesk.server.service.WalletService;
 
 /**
  *
@@ -110,7 +108,7 @@ public class PaymentFullTxController {
                 final Coin amountToSpend = Coin.valueOf(input.amountToSpend());
                 final Address p2shAddressTo;
                 try {
-                    p2shAddressTo = new Address(params, input.p2shAddressTo());
+                	p2shAddressTo = Address.fromBase58(params, input.p2shAddressTo());
                 } catch (AddressFormatException e) {
                     LOG.debug("{sign} empty address for");
                     return new SignTO().type(Type.ADDRESS_EMPTY).message(e.getMessage());
