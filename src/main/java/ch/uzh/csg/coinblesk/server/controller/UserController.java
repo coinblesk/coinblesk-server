@@ -8,6 +8,7 @@ package ch.uzh.csg.coinblesk.server.controller;
 import ch.uzh.csg.coinblesk.server.config.AdminEmail;
 import ch.uzh.csg.coinblesk.server.entity.UserAccount;
 import ch.uzh.csg.coinblesk.server.service.UserAccountService;
+import ch.uzh.csg.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.json.Type;
 import com.coinblesk.json.UserAccountStatusTO;
 import com.coinblesk.json.UserAccountTO;
@@ -33,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping(value = {"/user", "/u"})
+@ApiVersion({"v1", ""})
 public class UserController {
     
     private final static Logger LOG = LoggerFactory.getLogger(UserController.class);

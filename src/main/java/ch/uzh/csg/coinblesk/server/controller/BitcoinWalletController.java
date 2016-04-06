@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 
 import ch.uzh.csg.coinblesk.server.service.ForexExchangeRateService;
+import ch.uzh.csg.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.json.ExchangeRateTO;
 import com.coinblesk.json.Type;
 
@@ -26,6 +27,7 @@ import com.coinblesk.json.Type;
  */
 @RestController
 @RequestMapping({"/wallet", "/w"})
+@ApiVersion({"v1", ""})
 public class BitcoinWalletController {
     private static Logger LOGGER = LoggerFactory.getLogger(BitcoinWalletController.class);
     
