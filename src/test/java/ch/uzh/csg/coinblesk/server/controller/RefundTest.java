@@ -1,26 +1,8 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package ch.uzh.csg.coinblesk.server.controller;
 
-import ch.uzh.csg.coinblesk.server.config.AppConfig;
-import ch.uzh.csg.coinblesk.server.config.BeanConfig;
-import ch.uzh.csg.coinblesk.server.config.SecurityConfig;
 import static ch.uzh.csg.coinblesk.server.controller.GenericEndpointTest.createInputForRefund;
 import static ch.uzh.csg.coinblesk.server.controller.IntegrationTest.sendFakeBroadcast;
-import ch.uzh.csg.coinblesk.server.service.WalletService;
-import ch.uzh.csg.coinblesk.server.utilTest.TestBean;
-import com.coinblesk.json.PrepareHalfSignTO;
-import com.coinblesk.json.RefundP2shTO;
-import com.coinblesk.json.Type;
-import com.coinblesk.util.BitcoinUtils;
-import com.coinblesk.util.Pair;
-import com.coinblesk.util.SerializeUtils;
-import com.coinblesk.util.SimpleBloomFilter;
-import com.github.springtestdbunit.DbUnitTestExecutionListener;
-import com.google.common.io.Files;
+
 import java.io.File;
 import java.io.FilenameFilter;
 import java.net.InetSocketAddress;
@@ -28,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
@@ -55,6 +38,22 @@ import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+
+import com.coinblesk.json.PrepareHalfSignTO;
+import com.coinblesk.json.RefundP2shTO;
+import com.coinblesk.json.Type;
+import com.coinblesk.util.BitcoinUtils;
+import com.coinblesk.util.Pair;
+import com.coinblesk.util.SerializeUtils;
+import com.coinblesk.util.SimpleBloomFilter;
+import com.github.springtestdbunit.DbUnitTestExecutionListener;
+import com.google.common.io.Files;
+
+import ch.uzh.csg.coinblesk.server.config.AppConfig;
+import ch.uzh.csg.coinblesk.server.config.BeanConfig;
+import ch.uzh.csg.coinblesk.server.config.SecurityConfig;
+import ch.uzh.csg.coinblesk.server.service.WalletService;
+import ch.uzh.csg.coinblesk.server.utilTest.TestBean;
 
 //http://www.soroushjp.com/2014/12/20/bitcoin-multisig-the-hard-way-understanding-raw-multisignature-bitcoin-transactions/
 /**
@@ -119,10 +118,11 @@ public class RefundTest {
             public void shutdown() {
             }
 
-            @Override
-            public InetSocketAddress[] getPeers(long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {
-                return new InetSocketAddress[0];
-            }
+			@Override
+			public InetSocketAddress[] getPeers(long services, long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {
+				return new InetSocketAddress[0];
+			}
+            
         });
         clientAppKit.setBlockingStartup(false);
         clientAppKit.startAsync().awaitRunning();
