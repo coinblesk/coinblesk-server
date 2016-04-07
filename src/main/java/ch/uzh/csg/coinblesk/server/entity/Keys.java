@@ -7,6 +7,7 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Index;
 import javax.persistence.OneToMany;
@@ -20,7 +21,7 @@ public class Keys implements Serializable {
     private static final long serialVersionUID = -7496348013847426913L;
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy=GenerationType.SEQUENCE)
     private long id;
     
     @Column(name = "CLIENT_PUBLIC_KEY", updatable = false, length=255)
