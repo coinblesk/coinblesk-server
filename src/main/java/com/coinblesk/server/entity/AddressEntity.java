@@ -1,24 +1,29 @@
 package com.coinblesk.server.entity;
 
+import static javax.persistence.InheritanceType.TABLE_PER_CLASS;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.Inheritance;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.Table;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
-import static javax.persistence.InheritanceType.TABLE_PER_CLASS;
-
-@Entity(name = "addresses")
+@Entity(name = "ADDRESSES")
+@Table(indexes = {
+	    @Index(name = "ADDRESS_HASH_INDEX", columnList = "addressHash", unique = true)})
 @Inheritance(strategy=TABLE_PER_CLASS)
 public class AddressEntity {
 	
 	@Id
-	@GeneratedValue
+	@GeneratedValue(strategy=GenerationType.SEQUENCE)
 	private long id;
 	
 	@ManyToOne
@@ -28,10 +33,10 @@ public class AddressEntity {
 	@Column(nullable = false, updatable = false)
 	private long timeCreated;
 	
-	@Column(nullable = false, updatable = false, length=255)
+	@Column(nullable = false, unique=true, updatable = false, length=255)
 	private byte[] addressHash;
 	
-	@Column(nullable = false, updatable = false, length=1024)
+	@Column(nullable = false, updatable = false, length=4096)
 	private byte[] redeemScript;
 	
 	public long getId() {
@@ -89,11 +94,11 @@ public class AddressEntity {
 			return true;
 		}
 		
-		if (!(object instanceof TimeLockedAddressEntity)) {
+		if (!(object instanceof AddressEntity)) {
 			return false;
 		}
 		
-		final TimeLockedAddressEntity other = (TimeLockedAddressEntity) object;
+		final AddressEntity other = (AddressEntity) object;
 		return new EqualsBuilder()
 				.append(id, other.getId())
 				.append(addressHash, other.getAddressHash())

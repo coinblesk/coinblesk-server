@@ -88,7 +88,7 @@ public class KeyServiceTest {
 
     
     @Test
-	@DatabaseSetup("classpath:DbUnitFiles/clientKey.xml")
+	@DatabaseSetup("classpath:DbUnitFiles/keys.xml")
 	@DatabaseTearDown("classpath:DbUnitFiles/emptyAddresses.xml")
 	public void testGetTimeLockedAddress_EmptyResult() {
 		long lockTime = 123456;
@@ -104,7 +104,7 @@ public class KeyServiceTest {
 	}
 
 	@Test
-    @DatabaseSetup("classpath:DbUnitFiles/clientKey.xml")
+    @DatabaseSetup("classpath:DbUnitFiles/keys.xml")
     @DatabaseTearDown("classpath:DbUnitFiles/emptyAddresses.xml")
     public void testStoreAndGetTimeLockedAddress() {
     	long lockTime = 123456;
@@ -125,7 +125,7 @@ public class KeyServiceTest {
     }
 
     @Test
-    @DatabaseSetup("classpath:DbUnitFiles/clientKey.xml")
+    @DatabaseSetup("classpath:DbUnitFiles/keys.xml")
     @DatabaseTearDown("classpath:DbUnitFiles/emptyAddresses.xml")
     public void testStoreAndGetTimeLockedAddresses() {
     	ECKey clientKey = KeyTestUtil.ALICE_CLIENT;

@@ -9,7 +9,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.bitcoinj.core.Utils;
 
 @Entity
-@Table(name="TimeLockedAddresses")
+@Table(name="TIME_LOCKED_ADDRESSES")
 public class TimeLockedAddressEntity extends AddressEntity {
 	
 	@Column(nullable = false, updatable = false)

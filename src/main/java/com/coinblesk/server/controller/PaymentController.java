@@ -56,6 +56,7 @@ import com.coinblesk.json.Type;
 import com.coinblesk.json.VerifyTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.entity.Keys;
+import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.service.KeyService;
 import com.coinblesk.server.service.TransactionService;
 import com.coinblesk.server.service.WalletService;
@@ -102,41 +103,70 @@ public class PaymentController {
     		consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
     @ResponseBody
-    public TimeLockedAddressTO createAddress(@RequestBody KeyTO keyTO) {
+    public TimeLockedAddressTO createTimeLockedAddress(@RequestBody KeyTO keyTO) {
     	try {
+    		LOG.debug("{createTimeLockedAddress} - clientPubKey={}", Utils.HEX.encode(keyTO.publicKey()));
     		final NetworkParameters params = appConfig.getNetworkParameters();
     		final byte[] clientPubKey = keyTO.publicKey();
-    		final ECKey clientKey = ECKey.fromPublicOnly(clientPubKey);
+    		final ECKey clientKey = ECKey.fromPublicOnly(clientPubKey); // make sure it is an ECKey
     		
-    		final Keys keys = keyService.getByClientPublicKey(clientKey.getPubKey());
-    		if (keys == null || keys.serverPrivateKey() == null || keys.serverPublicKey() == null) {
-    			LOG.warn("{createAddress} - keys not found for clientPubKey={}", clientKey.getPublicKeyAsHex());
-    			return new TimeLockedAddressTO()
-    					.type(Type.KEYS_NOT_FOUND);
+    		final Keys keys = getKeysOrCreate(clientKey.getPubKey());
+    		if (keys == null || keys.serverPrivateKey() == null || keys.serverPublicKey() == null || keys.clientPublicKey() == null) {
+    			LOG.error("{createTimeLockedAddress} - keys not found for clientPubKey={}", clientKey.getPublicKeyAsHex());
+    			return new TimeLockedAddressTO().type(Type.KEYS_NOT_FOUND);
     		}
     		final ECKey serverKey = ECKey.fromPublicOnly(keys.serverPublicKey());
     		// TODO: lock time relative to blockchain height/time?
             final long lockTime = Utils.currentTimeSeconds();
             final TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), serverKey.getPubKey(), lockTime);
-            keyService.storeTimeLockedAddress(keys, address);
-            LOG.debug("{createAddress} - new address created: {}", address.toStringDetailed(params));
+            
+            TimeLockedAddressEntity checkExists = keyService.getTimeLockedAddressByAddressHash(address.getAddressHash());
+            if (checkExists == null) {
+                keyService.storeTimeLockedAddress(keys, address);
+                walletService.addWatching(address.createRedeemScript());
+                LOG.debug("{createTimeLockedAddress} - new address created: {}", address.toStringDetailed(params));
+            } else {
+                LOG.warn("{createTimeLockedAddress} - address does already exist (probably due to multiple requests in a short time): {}", 
+                		address.toStringDetailed(params));
+            }
             
             TimeLockedAddressTO addressTO = new TimeLockedAddressTO();
             addressTO.timeLockedAddress(address);
             addressTO.setSuccess();
             // TODO: sign response?
             
-            LOG.info("{createAddress} - new address created: {}", address);
+            LOG.info("{createTimeLockedAddress} - new address created: {}", address);
     		return addressTO;
     	} catch (Exception e) {
-    		LOG.error("{createAddress} - error: ", e);
+    		LOG.error("{createTimeLockedAddress} - error: ", e);
     		return new TimeLockedAddressTO()
     				.type(Type.SERVER_ERROR)
     				.message(e.getMessage());
     	}
     }
-
-
+    
+    /**
+     * @param clientPubKey 
+     * @return the keys for the given client public key. new key is created and added if not in DB yet.
+     */
+    private Keys getKeysOrCreate(final byte[] clientPubKey) {
+    	Keys keys = keyService.getByClientPublicKey(clientPubKey);
+    	if (keys != null) {
+    		return keys;
+    	}
+    	
+    	ECKey serverKey = new ECKey();
+    	// TODO: should not be required to add an address!
+    	Address p2pkh = ECKey.fromPublicOnly(clientPubKey).toAddress(appConfig.getNetworkParameters());
+    	keyService.storeKeysAndAddress(clientPubKey, p2pkh, serverKey.getPubKey(), serverKey.getPrivKeyBytes());
+    	
+    	Keys createdKeys = keyService.getByClientPublicKey(clientPubKey);
+    	LOG.info("{createTimeLockedAddress} - created new serverKey - serverPubKey={}, clientPubKey={}", 
+    			Utils.HEX.encode(createdKeys.serverPublicKey()), Utils.HEX.encode(createdKeys.clientPublicKey()));
+    	
+    	return createdKeys;
+    }
+    
     /**
      * Input is the KeyTO with the client public key. The server will create for this client public key its
      * own server keypair and return the server public key, or indicate an error in KeyTO (or via status

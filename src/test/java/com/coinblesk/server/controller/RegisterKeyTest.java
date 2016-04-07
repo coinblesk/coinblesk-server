@@ -102,37 +102,9 @@ public class RegisterKeyTest {
         Assert.assertNotNull(status.publicKey());
     }
     
-    @Test
-    @DatabaseSetup("classpath:DbUnitFiles/clientKey.xml")
-    @DatabaseTearDown("classpath:DbUnitFiles/emptyAddresses.xml")
-    public void testCreateAddress() throws Exception {
-    	mockMvc
-    		.perform(post("/payment/createTimeLockedAddress").secure(true))
-    		.andExpect(status().is4xxClientError());
-    	
-        ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
-		ECKey serverKey = KeyTestUtil.ALICE_SERVER; // key is already stored in DB
-        
-        KeyTO keyTO = new KeyTO().publicKey(clientKey.getPubKey());
-        String jsonKeyTO = SerializeUtils.GSON.toJson(keyTO);
-        
-        MvcResult res = mockMvc
-        					.perform(post("/payment/createTimeLockedAddress").secure(true).contentType(MediaType.APPLICATION_JSON).content(jsonKeyTO))
-        					.andExpect(status().isOk())
-        					.andReturn();
-        TimeLockedAddressTO response = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), TimeLockedAddressTO.class);
-        assertTrue(response.isSuccess());
-    	TimeLockedAddress addressResponse = response.timeLockedAddress();
-    	assertNotNull(addressResponse);
-    	assertNotNull(addressResponse.getAddressHash());
-    	assertArrayEquals(addressResponse.getUserPubKey(), clientKey.getPubKey());
-    	assertArrayEquals(addressResponse.getServicePubKey(), serverKey.getPubKey());
-    	assertTrue(addressResponse.getLockTime() > 0);
-    }
-    
     public static class KeyTestUtil {
     	/**
-    	 * Keys correspond to the keys in the clientKey.xml dataset.
+    	 * Keys correspond to the keys in the keys.xml dataset.
     	 */
     	public static final ECKey ALICE_CLIENT = ECKey.fromPrivate(Sha256Hash.hash("alice-client".getBytes()));
     	public static final ECKey ALICE_SERVER = ECKey.fromPrivate(Sha256Hash.hash("alice-server".getBytes()));
