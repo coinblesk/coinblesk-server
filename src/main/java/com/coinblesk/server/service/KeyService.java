@@ -16,13 +16,16 @@
 
 package com.coinblesk.server.service;
 
+import com.coinblesk.bitcoin.TimeLockedAddress;
+import com.coinblesk.server.dao.AddressDAO;
 import com.coinblesk.server.dao.KeyDAO;
 import com.coinblesk.server.entity.Keys;
+import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.util.Pair;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -31,12 +34,16 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  *
  * @author Thomas Bocek
+ * @author Andreas Albrecht
  */
 @Service
 public class KeyService {
 
     @Autowired
     private KeyDAO clientKeyDAO;
+    
+    @Autowired
+    private AddressDAO addressDAO;
     
     @Transactional(readOnly = true)
     public Keys getByClientPublicKey(final byte[] clientPublicKey) {
@@ -97,5 +104,44 @@ public class KeyService {
             retVal.add(keys);
         }
         return retVal;
+    }
+    
+    @Transactional(readOnly = false)
+	public TimeLockedAddressEntity storeTimeLockedAddress(Keys keys, TimeLockedAddress address) {
+		if (address == null || keys == null) {
+			throw new IllegalArgumentException("Address/keys must not be null");
+		}
+		if (keys.serverPrivateKey() == null || keys.serverPublicKey() == null || 
+				keys.clientPublicKey() == null) {
+			throw new IllegalArgumentException("Keys must not be null.");
+		}
+		if (address.getAddressHash() == null) {
+			throw new IllegalArgumentException("AddressHash must not be null");
+		}
+		
+		TimeLockedAddressEntity addressEntity = new TimeLockedAddressEntity();
+		addressEntity
+				.setLockTime(address.getLockTime())
+				.setAddressHash(address.getAddressHash())
+				.setRedeemScript(address.createRedeemScript().getProgram())
+				.setTimeCreated(System.currentTimeMillis()/1000L)
+				.setKeys(keys);
+		
+		TimeLockedAddressEntity result = addressDAO.save(addressEntity);
+		return result;
+	}
+    
+    public TimeLockedAddressEntity getTimeLockedAddressByAddressHash(byte[] addressHash) {
+    	if (addressHash == null) {
+    		throw new IllegalArgumentException("addressHash must not be null.");
+    	}
+    	return addressDAO.findTimeLockedAddressByAddressHash(addressHash);
+    }
+    
+    public List<TimeLockedAddressEntity> getTimeLockedAddressesByClientPublicKey(byte[] publicKey) {
+    	if (publicKey == null || publicKey.length <= 0) {
+    		throw new IllegalArgumentException("publicKey must not be null");
+    	}
+    	return addressDAO.findTimeLockedAddressesByClientPublicKey(publicKey);
     }
 }

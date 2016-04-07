@@ -15,34 +15,14 @@
  */
 package com.coinblesk.server.controller;
 
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.entity.Keys;
-import com.coinblesk.server.service.KeyService;
-import com.coinblesk.server.service.TransactionService;
-import com.coinblesk.server.service.WalletService;
-import com.coinblesk.server.utils.ApiVersion;
-import com.coinblesk.json.BalanceTO;
-import com.coinblesk.json.BaseTO;
-import com.coinblesk.json.KeyTO;
-import com.coinblesk.json.RefundTO;
-import com.coinblesk.json.SignTO;
-import com.coinblesk.json.Type;
-import com.coinblesk.json.VerifyTO;
-import com.coinblesk.util.BitcoinUtils;
-import com.coinblesk.util.CoinbleskException;
-import com.coinblesk.util.InsuffientFunds;
-import com.coinblesk.util.Pair;
-import com.coinblesk.util.SerializeUtils;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
-
 import java.util.List;
 import java.util.Set;
+
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Coin;
@@ -51,9 +31,9 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBroadcast;
 import org.bitcoinj.core.TransactionConfidence;
-import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
 import org.slf4j.Logger;
@@ -65,10 +45,34 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.coinblesk.bitcoin.TimeLockedAddress;
+import com.coinblesk.json.BalanceTO;
+import com.coinblesk.json.BaseTO;
+import com.coinblesk.json.KeyTO;
+import com.coinblesk.json.RefundTO;
+import com.coinblesk.json.SignTO;
+import com.coinblesk.json.TimeLockedAddressTO;
+import com.coinblesk.json.Type;
+import com.coinblesk.json.VerifyTO;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.entity.Keys;
+import com.coinblesk.server.service.KeyService;
+import com.coinblesk.server.service.TransactionService;
+import com.coinblesk.server.service.WalletService;
+import com.coinblesk.server.utils.ApiVersion;
+import com.coinblesk.util.BitcoinUtils;
+import com.coinblesk.util.CoinbleskException;
+import com.coinblesk.util.InsuffientFunds;
+import com.coinblesk.util.Pair;
+import com.coinblesk.util.SerializeUtils;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+
 /**
  *
  * @author Alessandro Di Carli
  * @author Thomas Bocek
+ * @author Andreas Albrecht
  *
  */
 @RestController
@@ -90,6 +94,48 @@ public class PaymentController {
 
     @Autowired
     private TransactionService txService;
+    
+    
+    @RequestMapping(
+    		value = {"/createTimeLockedAddress"},
+    		method = RequestMethod.POST,
+    		consumes = "application/json; charset=UTF-8",
+            produces = "application/json; charset=UTF-8")
+    @ResponseBody
+    public TimeLockedAddressTO createAddress(@RequestBody KeyTO keyTO) {
+    	try {
+    		final NetworkParameters params = appConfig.getNetworkParameters();
+    		final byte[] clientPubKey = keyTO.publicKey();
+    		final ECKey clientKey = ECKey.fromPublicOnly(clientPubKey);
+    		
+    		final Keys keys = keyService.getByClientPublicKey(clientKey.getPubKey());
+    		if (keys == null || keys.serverPrivateKey() == null || keys.serverPublicKey() == null) {
+    			LOG.warn("{createAddress} - keys not found for clientPubKey={}", clientKey.getPublicKeyAsHex());
+    			return new TimeLockedAddressTO()
+    					.type(Type.KEYS_NOT_FOUND);
+    		}
+    		final ECKey serverKey = ECKey.fromPublicOnly(keys.serverPublicKey());
+    		// TODO: lock time relative to blockchain height/time?
+            final long lockTime = Utils.currentTimeSeconds();
+            final TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), serverKey.getPubKey(), lockTime);
+            keyService.storeTimeLockedAddress(keys, address);
+            LOG.debug("{createAddress} - new address created: {}", address.toStringDetailed(params));
+            
+            TimeLockedAddressTO addressTO = new TimeLockedAddressTO();
+            addressTO.timeLockedAddress(address);
+            addressTO.setSuccess();
+            // TODO: sign response?
+            
+            LOG.info("{createAddress} - new address created: {}", address);
+    		return addressTO;
+    	} catch (Exception e) {
+    		LOG.error("{createAddress} - error: ", e);
+    		return new TimeLockedAddressTO()
+    				.type(Type.SERVER_ERROR)
+    				.message(e.getMessage());
+    	}
+    }
+
 
     /**
      * Input is the KeyTO with the client public key. The server will create for this client public key its

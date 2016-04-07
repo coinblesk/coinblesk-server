@@ -17,8 +17,9 @@ package com.coinblesk.server.service;
 
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.entity.Keys;
-import com.github.springtestdbunit.DbUnitTestExecutionListener;
+import static org.junit.Assert.assertTrue;
 import java.util.List;
+
 import org.bitcoinj.core.ECKey;
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,6 +35,7 @@ import org.springframework.test.context.web.WebAppConfiguration;
 /**
  *
  * @author Thomas Bocek
+ * @author Andreas Albrecht
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @TestExecutionListeners(
@@ -84,4 +86,66 @@ public class KeyServiceTest {
         Assert.assertArrayEquals(list.get(1).getPubKey(), ecKeyServer.getPubKey());
     }
 
+    
+    @Test
+	@DatabaseSetup("classpath:DbUnitFiles/clientKey.xml")
+	@DatabaseTearDown("classpath:DbUnitFiles/emptyAddresses.xml")
+	public void testGetTimeLockedAddress_EmptyResult() {
+		long lockTime = 123456;
+		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
+		
+		Keys keys = keyService.getByClientPublicKey(clientKey.getPubKey());
+		
+		TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), keys.serverPublicKey(), lockTime, appConfig.getNetworkParameters());
+		// do not store -> empty result
+		
+		TimeLockedAddressEntity fromDB  = keyService.getTimeLockedAddressByAddressHash(address.getAddressHash());
+		assertNull(fromDB);
+	}
+
+	@Test
+    @DatabaseSetup("classpath:DbUnitFiles/clientKey.xml")
+    @DatabaseTearDown("classpath:DbUnitFiles/emptyAddresses.xml")
+    public void testStoreAndGetTimeLockedAddress() {
+    	long lockTime = 123456;
+    	ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
+    	
+    	Keys keys = keyService.getByClientPublicKey(clientKey.getPubKey());
+    	
+    	TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), keys.serverPublicKey(), lockTime, appConfig.getNetworkParameters());
+    	TimeLockedAddressEntity intoDB = keyService.storeTimeLockedAddress(keys, address);
+    	assertNotNull(intoDB);
+    	
+    	TimeLockedAddressEntity fromDB  = keyService.getTimeLockedAddressByAddressHash(address.getAddressHash());
+    	assertNotNull(fromDB);
+    	assertEquals(intoDB, fromDB);
+    	
+    	keys = keyService.getByClientPublicKey(clientKey.getPubKey());
+    	assertTrue(keys.addresses().contains(fromDB));
+    }
+
+    @Test
+    @DatabaseSetup("classpath:DbUnitFiles/clientKey.xml")
+    @DatabaseTearDown("classpath:DbUnitFiles/emptyAddresses.xml")
+    public void testStoreAndGetTimeLockedAddresses() {
+    	ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
+    	
+    	Keys keys = keyService.getByClientPublicKey(clientKey.getPubKey());
+    	
+    	TimeLockedAddress address_1 = new TimeLockedAddress(clientKey.getPubKey(), keys.serverPublicKey(), 42, appConfig.getNetworkParameters());
+    	TimeLockedAddress address_2 = new TimeLockedAddress(clientKey.getPubKey(), keys.serverPublicKey(), 4242, appConfig.getNetworkParameters());
+    	TimeLockedAddressEntity addressEntity_1 = keyService.storeTimeLockedAddress(keys, address_1);
+		assertNotNull( addressEntity_1 );
+    	TimeLockedAddressEntity addressEntity_2 = keyService.storeTimeLockedAddress(keys, address_2);
+		assertNotNull( addressEntity_2 );
+    	
+    	List<TimeLockedAddressEntity> fromDB  = keyService.getTimeLockedAddressesByClientPublicKey(clientKey.getPubKey());
+    	assertNotNull(fromDB);
+    	assertTrue(fromDB.size() == 2);
+    	assertTrue(fromDB.contains(addressEntity_1));
+    	assertTrue(fromDB.contains(addressEntity_2));
+    	
+    	keys = keyService.getByClientPublicKey(clientKey.getPubKey());
+    	assertTrue(keys.addresses().containsAll(fromDB));
+    }
 }
