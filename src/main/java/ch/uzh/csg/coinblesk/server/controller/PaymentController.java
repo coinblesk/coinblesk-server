@@ -1,40 +1,17 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package ch.uzh.csg.coinblesk.server.controller;
 
-import ch.uzh.csg.coinblesk.server.config.AppConfig;
-import ch.uzh.csg.coinblesk.server.entity.Keys;
-import ch.uzh.csg.coinblesk.server.service.KeyService;
-import ch.uzh.csg.coinblesk.server.service.TransactionService;
-import ch.uzh.csg.coinblesk.server.service.WalletService;
-import ch.uzh.csg.coinblesk.server.utils.LruCache;
-import com.coinblesk.json.BalanceTO;
-import com.coinblesk.json.BaseTO;
-import com.coinblesk.json.CompleteSignTO;
-import com.coinblesk.json.KeyTO;
-import com.coinblesk.json.PrepareFullTxTO;
-import com.coinblesk.json.PrepareHalfSignTO;
-import com.coinblesk.json.RefundP2shTO;
-import com.coinblesk.json.RefundTO;
-import com.coinblesk.json.Type;
-import com.coinblesk.util.BitcoinUtils;
-import com.coinblesk.util.Pair;
-import com.coinblesk.util.SerializeUtils;
-import com.coinblesk.util.SimpleBloomFilter;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
-
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+
 import javax.annotation.Nullable;
+
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Coin;
@@ -58,9 +35,33 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.coinblesk.bitcoin.TimeLockedAddress;
+import com.coinblesk.json.BalanceTO;
+import com.coinblesk.json.BaseTO;
+import com.coinblesk.json.CompleteSignTO;
+import com.coinblesk.json.KeyTO;
+import com.coinblesk.json.PrepareFullTxTO;
+import com.coinblesk.json.PrepareHalfSignTO;
+import com.coinblesk.json.RefundP2shTO;
+import com.coinblesk.json.RefundTO;
+import com.coinblesk.json.TimeLockedAddressTO;
+import com.coinblesk.json.Type;
+import com.coinblesk.util.BitcoinUtils;
+import com.coinblesk.util.Pair;
+import com.coinblesk.util.SerializeUtils;
+import com.coinblesk.util.SimpleBloomFilter;
+
+import ch.uzh.csg.coinblesk.server.config.AppConfig;
+import ch.uzh.csg.coinblesk.server.entity.Keys;
+import ch.uzh.csg.coinblesk.server.service.KeyService;
+import ch.uzh.csg.coinblesk.server.service.TransactionService;
+import ch.uzh.csg.coinblesk.server.service.WalletService;
+import ch.uzh.csg.coinblesk.server.utils.LruCache;
+
 /**
  *
  * @author Alessandro Di Carli
+ * @author Andreas Albrecht
  * @author Thomas Bocek
  *
  */
@@ -87,6 +88,47 @@ public class PaymentController {
     private static final Map<String, RefundP2shTO> CACHE_REFUND = Collections.synchronizedMap(new LruCache<>(1000));
     private static final Map<String, CompleteSignTO> CACHE_COMPLETE = Collections.synchronizedMap(new LruCache<>(1000));
 
+    
+    @RequestMapping(
+    		value = {"/createTimeLockedAddress"},
+    		method = RequestMethod.POST,
+    		consumes = "application/json; charset=UTF-8",
+            produces = "application/json; charset=UTF-8")
+    @ResponseBody
+    public TimeLockedAddressTO createAddress(@RequestBody KeyTO keyTO) {
+    	try {
+    		final NetworkParameters params = appConfig.getNetworkParameters();
+    		final byte[] clientPubKey = keyTO.publicKey();
+    		final ECKey clientKey = ECKey.fromPublicOnly(clientPubKey);
+    		
+    		final Keys keys = keyService.getByClientPublicKey(clientKey.getPubKey());
+    		if (keys == null || keys.serverPrivateKey() == null || keys.serverPublicKey() == null) {
+    			LOG.warn("{createAddress} - keys not found for clientPubKey={}", clientKey.getPublicKeyAsHex());
+    			return new TimeLockedAddressTO()
+    					.type(Type.KEYS_NOT_FOUND);
+    		}
+    		final ECKey serverKey = ECKey.fromPublicOnly(keys.serverPublicKey());
+    		// TODO: lock time relative to blockchain height/time?
+            final long lockTime = walletService.refundLockTime();
+            final TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), serverKey.getPubKey(), lockTime, params);
+            keyService.storeTimeLockedAddress(keys, address);
+            LOG.debug("{createAddress} - new address created: {}", address.toStringDetailed());
+            
+            TimeLockedAddressTO addressTO = new TimeLockedAddressTO();
+            addressTO.timeLockedAddress(address);
+            addressTO.setSuccess();
+            // TODO: sign response?
+            
+            LOG.info("{createAddress} - new address created: {}", address);
+    		return addressTO;
+    	} catch (Exception e) {
+    		LOG.error("{createAddress} - error: ", e);
+    		return new TimeLockedAddressTO()
+    				.type(Type.SERVER_ERROR)
+    				.message(e.getMessage());
+    	}
+    }
+    
     /**
      * Input is the KeyTO with the client public key. The server will create for
      * this client public key its own server keypair and return the server

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dataset>
+    <!-- 
+    Sample Keys dataset:
+    client/server keys are derived as follows: 
+    ECKey client = ECKey(sha256({name}-client))
+    ECKey server = ECKey(sha256({name}-server))
+    where {name} is alice, bob, carol or dave
+    -->
+    <!-- alice, priv: b1Ck6m+gdqNPJEtpGROucZxYoo2yHSRDhwmNvHfEn0I= -->
+    <KEYS id="1" 
+        client_public_key="AmoQhz3L9dunYVQiVTiCWHL7o7yDdTNN0aQgfrEztlOc" 
+        server_Public_Key="AjP7wrpBPPossSbYB4ZjGe4ZpRz3Kr3fAPAClzg8FYmU" 
+        server_Private_Key="/+6WJBc+HSya01khUoEUG1q//R31SSeUfOkd4rBnx4U=" 
+        p2sh_hash="72VFVhR82hpUzNR9XfvJe6dr45Y=" />
+        
+    <!-- bob, priv: qCh0zk/I9Rhc/OwWADp8B+Ws0Iz1Wy1R+8qCNgMsP28= -->
+    <KEYS id="2" 
+        client_public_key="A/dxX1XqAb4G9uZfkeZAVleRwcPjjPK/FSZrKXStGQa3" 
+        server_Public_Key="A2Yeqlov8bWqRwUB+IWR4s/TXkdsWUnkg3b0WLPbsZWR" 
+        server_Private_Key="Rv/aqT7lVXL2E5QOQB9h0tM9azaAQNMc7Uv9Pon8U84=" 
+        p2sh_hash="9WXVzpto4Q/kFYqpmTqSM6ZMjJE=" />
+    
+    <!-- carol, priv: 4L29mPuTfiXiK2ZwB2Rw7Rp1o+iQn0UF2oekuXUs558= -->
+    <KEYS id="3" 
+        client_public_key="AhEnNuvQS8lkw9gyf8iM1PKWGBYHHru00q7AaLmj/Ygk" 
+        server_Public_Key="AjFNi21eQrZjz1WlbnngajehZ6l0s5bXTVHjJlQSp+N8" 
+        server_Private_Key="I6LXXXYIKrcWxmz1ybXtILUtA252nzUa5wqiz19PSBI=" 
+        p2sh_hash="pZVfpUGZhn9bv9ak81Fz7Taboko=" />
+    
+    <!-- dave, priv: Ms90WRusTazMLU8MiAn35LwRxah/2oTKVzitCf4UQ/s= -->    
+    <KEYS id="4" 
+        client_public_key="A6xckMjwCOIfd3pjtuXheADR4X8xgLFJoSJf2yhWrQ1A" 
+        server_Public_Key="AgkiJVvnb9rL4OYFVSwEc+5g34rQhuhJsK/wrCoeO477" 
+        server_Private_Key="O8MWQA8Cwzb6KHDyFEX3JRIRQUQn8uWk87Y224m1+tU=" 
+        p2sh_hash="MN9T/f87ZN9igaX6m/lHBphtaEo=" />
+
+</dataset>

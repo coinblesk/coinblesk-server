@@ -5,26 +5,14 @@
  */
 package ch.uzh.csg.coinblesk.server.controller;
 
-import ch.uzh.csg.coinblesk.server.config.AppConfig;
-import ch.uzh.csg.coinblesk.server.config.BeanConfig;
-import ch.uzh.csg.coinblesk.server.config.SecurityConfig;
-import ch.uzh.csg.coinblesk.server.service.WalletService;
-import ch.uzh.csg.coinblesk.server.utilTest.TestBean;
-import com.coinblesk.json.CompleteSignTO;
-import com.coinblesk.json.PrepareHalfSignTO;
-import com.coinblesk.json.RefundP2shTO;
-import com.coinblesk.json.TxSig;
-import com.coinblesk.json.Type;
-import com.coinblesk.util.BitcoinUtils;
-import com.coinblesk.util.Pair;
-import com.coinblesk.util.SerializeUtils;
-import com.github.springtestdbunit.DbUnitTestExecutionListener;
-import com.github.springtestdbunit.annotation.DatabaseOperation;
-import com.github.springtestdbunit.annotation.DatabaseTearDown;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import java.io.UnsupportedEncodingException;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.BlockChain;
@@ -39,7 +27,6 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.testing.FakeTxBuilder;
-import org.bitcoinj.uri.BitcoinURIParseException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -55,10 +42,26 @@ import org.springframework.test.context.transaction.TransactionalTestExecutionLi
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+
+import com.coinblesk.json.CompleteSignTO;
+import com.coinblesk.json.PrepareHalfSignTO;
+import com.coinblesk.json.RefundP2shTO;
+import com.coinblesk.json.TxSig;
+import com.coinblesk.json.Type;
+import com.coinblesk.util.BitcoinUtils;
+import com.coinblesk.util.Pair;
+import com.coinblesk.util.SerializeUtils;
+import com.github.springtestdbunit.DbUnitTestExecutionListener;
+import com.github.springtestdbunit.annotation.DatabaseOperation;
+import com.github.springtestdbunit.annotation.DatabaseTearDown;
+
+import ch.uzh.csg.coinblesk.server.config.AppConfig;
+import ch.uzh.csg.coinblesk.server.config.BeanConfig;
+import ch.uzh.csg.coinblesk.server.config.SecurityConfig;
+import ch.uzh.csg.coinblesk.server.service.WalletService;
+import ch.uzh.csg.coinblesk.server.utilTest.TestBean;
 
 //http://www.soroushjp.com/2014/12/20/bitcoin-multisig-the-hard-way-understanding-raw-multisignature-bitcoin-transactions/
 /**

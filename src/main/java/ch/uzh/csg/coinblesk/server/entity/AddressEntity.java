@@ -1,0 +1,112 @@
+package ch.uzh.csg.coinblesk.server.entity;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Inheritance;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+
+import static javax.persistence.InheritanceType.TABLE_PER_CLASS;
+
+@Entity(name = "addresses")
+@Inheritance(strategy=TABLE_PER_CLASS)
+public class AddressEntity {
+	
+	@Id
+	@GeneratedValue
+	private long id;
+	
+	@ManyToOne
+    @JoinColumn(name="keys_fk")
+	private Keys keys;
+	
+	@Column(nullable = false, updatable = false)
+	private long timeCreated;
+	
+	@Column(nullable = false, updatable = false, length=255)
+	private byte[] addressHash;
+	
+	@Column(nullable = false, updatable = false, length=1024)
+	private byte[] redeemScript;
+	
+	public long getId() {
+		return id;
+	}
+	
+	public AddressEntity setId(long id) {
+		this.setId(id);
+		return this;
+	}
+	
+	public Keys getKeys() {
+		return keys;
+	}
+	
+	public AddressEntity setKeys(Keys keys) {
+		this.keys = keys;
+		return this;
+	}
+	
+	public long getTimeCreated() {
+		return timeCreated;
+	}
+	
+	public AddressEntity setTimeCreated(long timeCreatedSeconds) {
+		this.timeCreated = timeCreatedSeconds;
+		return this;
+	}
+	
+	public byte[] getAddressHash() {
+		return addressHash;
+	}
+	
+	public AddressEntity setAddressHash(byte[] addressHash) {
+		this.addressHash = addressHash;
+		return this;
+	}
+	
+	public byte[] getRedeemScript() {
+		return redeemScript;
+	}
+	
+	public AddressEntity setRedeemScript(byte[] redeemScript) {
+		this.redeemScript = redeemScript;
+		return this;
+	}
+	
+	@Override 
+	public boolean equals(Object object) {
+		if (object == null) {
+			return false;
+		}
+		
+		if (object == this) {
+			return true;
+		}
+		
+		if (!(object instanceof TimeLockedAddressEntity)) {
+			return false;
+		}
+		
+		final TimeLockedAddressEntity other = (TimeLockedAddressEntity) object;
+		return new EqualsBuilder()
+				.append(id, other.getId())
+				.append(addressHash, other.getAddressHash())
+				.append(redeemScript, other.getRedeemScript())
+				.isEquals();
+	}
+	
+	@Override
+	public int hashCode() {
+	     return new HashCodeBuilder()
+	    		 .append(id)
+	    		 .append(addressHash)
+	    		 .append(redeemScript)
+	    		 .toHashCode();
+	}
+}

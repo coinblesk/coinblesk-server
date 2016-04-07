@@ -1,29 +1,14 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package ch.uzh.csg.coinblesk.server.service;
 
-import ch.uzh.csg.coinblesk.server.config.AppConfig;
-import ch.uzh.csg.coinblesk.server.dao.KeyDAO;
-import ch.uzh.csg.coinblesk.server.dao.RefundDAO;
-import ch.uzh.csg.coinblesk.server.dao.TxDAO;
-import ch.uzh.csg.coinblesk.server.entity.Keys;
-import ch.uzh.csg.coinblesk.server.entity.Refund;
-import ch.uzh.csg.coinblesk.server.entity.Tx;
-import com.coinblesk.util.Pair;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
@@ -35,9 +20,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.coinblesk.bitcoin.TimeLockedAddress;
+import com.coinblesk.util.Pair;
+
+import ch.uzh.csg.coinblesk.server.config.AppConfig;
+import ch.uzh.csg.coinblesk.server.dao.AddressDAO;
+import ch.uzh.csg.coinblesk.server.dao.KeyDAO;
+import ch.uzh.csg.coinblesk.server.dao.RefundDAO;
+import ch.uzh.csg.coinblesk.server.dao.TxDAO;
+import ch.uzh.csg.coinblesk.server.entity.Keys;
+import ch.uzh.csg.coinblesk.server.entity.Refund;
+import ch.uzh.csg.coinblesk.server.entity.TimeLockedAddressEntity;
+import ch.uzh.csg.coinblesk.server.entity.Tx;
+
 /**
- *
  * @author Thomas Bocek
+ * @author Andreas Albrecht
  */
 @Service
 public class KeyService {
@@ -51,10 +49,13 @@ public class KeyService {
     private KeyDAO clientKeyDAO;
     
     @Autowired
-    private RefundDAO refundDAO;
+    private AddressDAO addressDAO;
     
     @Autowired
     private TxDAO txDAO;
+    
+    @Autowired
+    private RefundDAO refundDAO;
     
     @Autowired
     private WalletService walletService;
@@ -130,8 +131,49 @@ public class KeyService {
         clientKeyDAO.save(clientKey);
         return new Pair<>(true, clientKey);
     }
+    
+    /* SIGN ENDPOINT CODE ENDS HERE */
+	
+    @Transactional(readOnly = false)
+	public TimeLockedAddressEntity storeTimeLockedAddress(Keys keys, TimeLockedAddress address) {
+		if (address == null || keys == null) {
+			throw new IllegalArgumentException("Address/keys must not be null");
+		}
+		if (keys.serverPrivateKey() == null || keys.serverPublicKey() == null || 
+				keys.clientPublicKey() == null) {
+			throw new IllegalArgumentException("Keys must not be null.");
+		}
+		if (address.getAddressHash() == null) {
+			throw new IllegalArgumentException("AddressHash must not be null");
+		}
+		
+		TimeLockedAddressEntity addressEntity = new TimeLockedAddressEntity();
+		addressEntity
+				.setLockTime(address.getLockTime())
+				.setAddressHash(address.getAddressHash())
+				.setRedeemScript(address.createRedeemScript().getProgram())
+				.setTimeCreated(System.currentTimeMillis()/1000L)
+				.setKeys(keys);
+		
+		TimeLockedAddressEntity result = addressDAO.save(addressEntity);
+		return result;
+	}
+    
+    public TimeLockedAddressEntity getTimeLockedAddressByAddressHash(byte[] addressHash) {
+    	if (addressHash == null) {
+    		throw new IllegalArgumentException("addressHash must not be null.");
+    	}
+    	return addressDAO.findTimeLockedAddressByAddressHash(addressHash);
+    }
+    
+    public List<TimeLockedAddressEntity> getTimeLockedAddressesByClientPublicKey(byte[] publicKey) {
+    	if (publicKey == null || publicKey.length <= 0) {
+    		throw new IllegalArgumentException("publicKey must not be null");
+    	}
+    	return addressDAO.findTimeLockedAddressesByClientPublicKey(publicKey);
+    }
 
-    @Transactional(readOnly = true)
+	@Transactional(readOnly = true)
     public List<List<ECKey>> all() {
         final List<Keys> all = clientKeyDAO.findAll();
         final List<List<ECKey>> retVal = new ArrayList<>();

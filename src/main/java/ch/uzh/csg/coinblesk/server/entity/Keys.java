@@ -1,11 +1,15 @@
 package ch.uzh.csg.coinblesk.server.entity;
 
 import java.io.Serializable;
+import java.util.Set;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Index;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 @Entity(name = "KEYS")
@@ -16,6 +20,9 @@ public class Keys implements Serializable {
     private static final long serialVersionUID = -7496348013847426913L;
 
     @Id
+    @GeneratedValue
+    private long id;
+    
     @Column(name = "CLIENT_PUBLIC_KEY", updatable = false, length=255)
     private byte[] clientPublicKey;
     
@@ -27,6 +34,9 @@ public class Keys implements Serializable {
     
     @Column(name = "SERVER_PRIVATE_KEY", unique=true, nullable = false, updatable = false, length=255)
     private byte[] serverPrivateKey;
+    
+    @OneToMany(mappedBy="keys", fetch = FetchType.EAGER)
+    private Set<AddressEntity> addresses; 
     
     public byte[] clientPublicKey() {
         return clientPublicKey;
@@ -62,5 +72,14 @@ public class Keys implements Serializable {
     public Keys serverPrivateKey(byte[] serverPrivateKey) {
         this.serverPrivateKey = serverPrivateKey;
         return this;
+    }
+    
+    public Set<AddressEntity> addresses() {
+    	return addresses;
+    }
+    
+    public Keys addresses(Set<AddressEntity> addresses) {
+    	this.addresses = addresses;
+    	return this;
     }
 }
