@@ -1,12 +1,8 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package ch.uzh.csg.coinblesk.server.controller;
 
 import ch.uzh.csg.coinblesk.server.config.AdminEmail;
 import ch.uzh.csg.coinblesk.server.service.UserAccountService;
+import ch.uzh.csg.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.json.Type;
 import com.coinblesk.json.UserAccountStatusTO;
 import com.coinblesk.json.UserAccountTO;
@@ -25,7 +21,8 @@ import org.springframework.web.bind.annotation.RestController;
  * @author draft
  */
 @RestController
-@RequestMapping(value = {"/user/a", "user/auth", "u/auth", "/u/a"})
+@RequestMapping(value = {"/user/a", "/user/auth", "/u/auth", "/u/a"})
+@ApiVersion({"v1", ""})
 public class UserControllerAuthenticated {
     
     private final static Logger LOG = LoggerFactory.getLogger(UserControllerAuthenticated.class);

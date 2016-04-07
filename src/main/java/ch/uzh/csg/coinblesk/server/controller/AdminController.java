@@ -1,5 +1,6 @@
 package ch.uzh.csg.coinblesk.server.controller;
 
+import ch.uzh.csg.coinblesk.server.utils.ApiVersion;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -19,11 +20,10 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
-import ch.uzh.csg.coinblesk.server.service.TransactionService;
-
 
 @Controller
 @RequestMapping(value = {"/admin", "/a"})
+@ApiVersion({"v1", ""})
 public class AdminController {
     
     private static org.slf4j.Logger LOG = LoggerFactory.getLogger(AdminController.class);
@@ -31,9 +31,6 @@ public class AdminController {
     @Autowired
     ServletContext context;
     
-    @Autowired
-    private TransactionService transactionService;
-        
     @RequestMapping(method=RequestMethod.GET)
     public ModelAndView overview() {
     	Map<String, Object> model = new HashMap<>();
@@ -76,11 +73,5 @@ public class AdminController {
         } catch (IOException ex) {
            return "no manifest found";
         }
-    }
-    
-    @RequestMapping(value = {"/remove-burned", "/r"}, method = RequestMethod.GET)
-    @ResponseBody
-    public String removeBurned() {
-        return "removed: " + transactionService.removeAllBurnedOutput();
     }
 }
