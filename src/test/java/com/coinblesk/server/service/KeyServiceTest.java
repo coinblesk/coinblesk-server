@@ -15,9 +15,16 @@
  */
 package com.coinblesk.server.service;
 
+import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.server.config.BeanConfig;
+import com.coinblesk.server.controller.RegisterKeyTest.KeyTestUtil;
 import com.coinblesk.server.entity.Keys;
-import static org.junit.Assert.assertTrue;
+import com.coinblesk.server.entity.TimeLockedAddressEntity;
+import com.github.springtestdbunit.annotation.DatabaseSetup;
+import com.github.springtestdbunit.annotation.DatabaseTearDown;
+
+import static org.junit.Assert.*;
+
 import java.util.List;
 
 import org.bitcoinj.core.ECKey;
@@ -90,13 +97,14 @@ public class KeyServiceTest {
     @Test
 	@DatabaseSetup("classpath:DbUnitFiles/keys.xml")
 	@DatabaseTearDown("classpath:DbUnitFiles/emptyAddresses.xml")
+    @DatabaseTearDown("classpath:DbUnitFiles/emptyKeys.xml")
 	public void testGetTimeLockedAddress_EmptyResult() {
 		long lockTime = 123456;
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 		
 		Keys keys = keyService.getByClientPublicKey(clientKey.getPubKey());
 		
-		TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), keys.serverPublicKey(), lockTime, appConfig.getNetworkParameters());
+		TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), keys.serverPublicKey(), lockTime);
 		// do not store -> empty result
 		
 		TimeLockedAddressEntity fromDB  = keyService.getTimeLockedAddressByAddressHash(address.getAddressHash());
@@ -106,13 +114,14 @@ public class KeyServiceTest {
 	@Test
     @DatabaseSetup("classpath:DbUnitFiles/keys.xml")
     @DatabaseTearDown("classpath:DbUnitFiles/emptyAddresses.xml")
+	@DatabaseTearDown("classpath:DbUnitFiles/emptyKeys.xml")
     public void testStoreAndGetTimeLockedAddress() {
     	long lockTime = 123456;
     	ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
     	
     	Keys keys = keyService.getByClientPublicKey(clientKey.getPubKey());
     	
-    	TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), keys.serverPublicKey(), lockTime, appConfig.getNetworkParameters());
+    	TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), keys.serverPublicKey(), lockTime);
     	TimeLockedAddressEntity intoDB = keyService.storeTimeLockedAddress(keys, address);
     	assertNotNull(intoDB);
     	
@@ -127,13 +136,14 @@ public class KeyServiceTest {
     @Test
     @DatabaseSetup("classpath:DbUnitFiles/keys.xml")
     @DatabaseTearDown("classpath:DbUnitFiles/emptyAddresses.xml")
+    @DatabaseTearDown("classpath:DbUnitFiles/emptyKeys.xml")
     public void testStoreAndGetTimeLockedAddresses() {
     	ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
     	
     	Keys keys = keyService.getByClientPublicKey(clientKey.getPubKey());
     	
-    	TimeLockedAddress address_1 = new TimeLockedAddress(clientKey.getPubKey(), keys.serverPublicKey(), 42, appConfig.getNetworkParameters());
-    	TimeLockedAddress address_2 = new TimeLockedAddress(clientKey.getPubKey(), keys.serverPublicKey(), 4242, appConfig.getNetworkParameters());
+    	TimeLockedAddress address_1 = new TimeLockedAddress(clientKey.getPubKey(), keys.serverPublicKey(), 42);
+    	TimeLockedAddress address_2 = new TimeLockedAddress(clientKey.getPubKey(), keys.serverPublicKey(), 4242);
     	TimeLockedAddressEntity addressEntity_1 = keyService.storeTimeLockedAddress(keys, address_1);
 		assertNotNull( addressEntity_1 );
     	TimeLockedAddressEntity addressEntity_2 = keyService.storeTimeLockedAddress(keys, address_2);

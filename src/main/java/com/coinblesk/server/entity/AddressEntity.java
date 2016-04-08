@@ -1,7 +1,5 @@
 package com.coinblesk.server.entity;
 
-import static javax.persistence.InheritanceType.TABLE_PER_CLASS;
-
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -9,17 +7,21 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Index;
 import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Utils;
 
 @Entity(name = "ADDRESSES")
 @Table(indexes = {
 	    @Index(name = "ADDRESS_HASH_INDEX", columnList = "addressHash", unique = true)})
-@Inheritance(strategy=TABLE_PER_CLASS)
+@Inheritance(strategy=InheritanceType.TABLE_PER_CLASS)
 public class AddressEntity {
 	
 	@Id
@@ -82,6 +84,27 @@ public class AddressEntity {
 	public AddressEntity setRedeemScript(byte[] redeemScript) {
 		this.redeemScript = redeemScript;
 		return this;
+	}
+	
+	public Address toAddress(NetworkParameters params) {
+		return Address.fromP2SHHash(params, addressHash);
+	}
+	
+	public String toString(NetworkParameters params) {
+		StringBuilder sb = new StringBuilder();
+		sb.append(getClass().getSimpleName());
+		sb.append("[Id=").append(id);
+		sb.append(", AddressHash=").append(Utils.HEX.encode(addressHash));
+		if (params != null) {
+			sb.append(", Address=").append(toAddress(params));
+		}
+		sb.append("]");
+		return sb.toString();
+	}
+	
+	@Override
+	public String toString() {
+		return toString(null);
 	}
 	
 	@Override 

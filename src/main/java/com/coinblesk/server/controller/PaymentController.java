@@ -123,7 +123,7 @@ public class PaymentController {
             TimeLockedAddressEntity checkExists = keyService.getTimeLockedAddressByAddressHash(address.getAddressHash());
             if (checkExists == null) {
                 keyService.storeTimeLockedAddress(keys, address);
-                walletService.addWatching(address.createRedeemScript());
+                walletService.addWatching(address.createPubkeyScript());
                 LOG.debug("{createTimeLockedAddress} - new address created: {}", address.toStringDetailed(params));
             } else {
                 LOG.warn("{createTimeLockedAddress} - address does already exist (probably due to multiple requests in a short time): {}", 
@@ -156,9 +156,7 @@ public class PaymentController {
     	}
     	
     	ECKey serverKey = new ECKey();
-    	// TODO: should not be required to add an address!
-    	Address p2pkh = ECKey.fromPublicOnly(clientPubKey).toAddress(appConfig.getNetworkParameters());
-    	keyService.storeKeysAndAddress(clientPubKey, p2pkh, serverKey.getPubKey(), serverKey.getPrivKeyBytes());
+    	keyService.storeKeys(clientPubKey, serverKey.getPubKey(), serverKey.getPrivKeyBytes());
     	
     	Keys createdKeys = keyService.getByClientPublicKey(clientPubKey);
     	LOG.info("{createTimeLockedAddress} - created new serverKey - serverPubKey={}, clientPubKey={}", 

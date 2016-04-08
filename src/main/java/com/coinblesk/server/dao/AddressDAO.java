@@ -12,6 +12,7 @@ import javax.persistence.criteria.Root;
 
 import org.springframework.stereotype.Repository;
 
+import com.coinblesk.server.entity.AddressEntity;
 import com.coinblesk.server.entity.Keys;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 
@@ -25,6 +26,7 @@ public class AddressDAO {
         return em.merge(enity);
     }
 
+	// TODO: make generic --> AddressEntity instead of timelockedaddressentity.
 	public TimeLockedAddressEntity findTimeLockedAddressByAddressHash(byte[] addressHash) {
 		final CriteriaBuilder cb = em.getCriteriaBuilder();
         final CriteriaQuery<TimeLockedAddressEntity> query = cb.createQuery(TimeLockedAddressEntity.class);
@@ -43,6 +45,16 @@ public class AddressDAO {
         
         List<TimeLockedAddressEntity> result = em.createQuery(query).getResultList();
 		return result;
+	}
+	
+	public AddressEntity findAddressByAddressHash(byte[] addressHash160) {
+		final CriteriaBuilder cb = em.getCriteriaBuilder();
+        final CriteriaQuery<AddressEntity> query = cb.createQuery(AddressEntity.class);
+        final Root<AddressEntity> from = query.from(AddressEntity.class);
+        final Predicate condition = cb.equal(from.get("addressHash"), addressHash160);
+        final CriteriaQuery<AddressEntity> select = query.select(from).where(condition);
+        final AddressEntity result = DAOUtils.getSingleResultOrNull(em.createQuery(select));
+        return result;
 	}
 
 }

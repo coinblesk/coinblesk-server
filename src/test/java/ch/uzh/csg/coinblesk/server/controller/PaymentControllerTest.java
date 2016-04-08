@@ -26,17 +26,17 @@ import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.json.KeyTO;
 import com.coinblesk.json.TimeLockedAddressTO;
 import com.coinblesk.json.Type;
+import com.coinblesk.server.config.BeanConfig;
+import com.coinblesk.server.config.SecurityConfig;
+import com.coinblesk.server.controller.RegisterKeyTest.KeyTestUtil;
+import com.coinblesk.server.entity.Keys;
+import com.coinblesk.server.service.KeyService;
+import com.coinblesk.server.utilTest.TestBean;
 import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
 
-import ch.uzh.csg.coinblesk.server.config.BeanConfig;
-import ch.uzh.csg.coinblesk.server.config.SecurityConfig;
-import ch.uzh.csg.coinblesk.server.controller.KeyTest.KeyTestUtil;
-import ch.uzh.csg.coinblesk.server.entity.Keys;
-import ch.uzh.csg.coinblesk.server.service.KeyService;
-import ch.uzh.csg.coinblesk.server.utilTest.TestBean;
 
 /**
  * 
