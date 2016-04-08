@@ -1,7 +1,9 @@
 package ch.uzh.csg.coinblesk.server.entity;
 
 import java.io.Serializable;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -13,9 +15,13 @@ import javax.persistence.Index;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.NetworkParameters;
+
+
 @Entity(name = "KEYS")
 @Table(indexes = {
-    @Index(name = "P2SH_HASH_INDEX", columnList = "P2SH_HASH")})
+    @Index(name = "CLIENT_PUB_KEY_INDEX", columnList = "CLIENT_PUBLIC_KEY", unique=true)})
 public class Keys implements Serializable {
 
     private static final long serialVersionUID = -7496348013847426913L;
@@ -24,11 +30,8 @@ public class Keys implements Serializable {
     @GeneratedValue(strategy=GenerationType.SEQUENCE)
     private long id;
     
-    @Column(name = "CLIENT_PUBLIC_KEY", updatable = false, length=255)
+    @Column(name = "CLIENT_PUBLIC_KEY", unique=true, nullable=false, updatable = false, length=255)
     private byte[] clientPublicKey;
-    
-    @Column(name = "P2SH_HASH", unique=true, nullable = false, updatable = false, length=255)
-    private byte[] p2shHash;
     
     @Column(name = "SERVER_PUBLIC_KEY", unique=true, nullable = false, updatable = false, length=255)
     private byte[] serverPublicKey;
@@ -36,8 +39,11 @@ public class Keys implements Serializable {
     @Column(name = "SERVER_PRIVATE_KEY", unique=true, nullable = false, updatable = false, length=255)
     private byte[] serverPrivateKey;
     
+    @Column(name = "TIME_CREATED", updatable = false)
+	private long timeCreated;
+    
     @OneToMany(mappedBy="keys", fetch = FetchType.EAGER)
-    private Set<AddressEntity> addresses; 
+    private List<AddressEntity> addresses; 
     
     public byte[] clientPublicKey() {
         return clientPublicKey;
@@ -45,15 +51,6 @@ public class Keys implements Serializable {
     
     public Keys clientPublicKey(byte[] clientPublicKey) {
         this.clientPublicKey = clientPublicKey;
-        return this;
-    }
-    
-    public byte[] p2shHash() {
-        return p2shHash;
-    }
-    
-    public Keys p2shHash(byte[] p2shHash) {
-        this.p2shHash = p2shHash;
         return this;
     }
     
@@ -75,12 +72,30 @@ public class Keys implements Serializable {
         return this;
     }
     
-    public Set<AddressEntity> addresses() {
-    	return addresses;
+    public long timeCreated() {
+    	return timeCreated;
     }
     
-    public Keys addresses(Set<AddressEntity> addresses) {
-    	this.addresses = addresses;
+    public Keys timeCreated(long timeCreatedSeconds) {
+    	this.timeCreated = timeCreatedSeconds;
     	return this;
     }
+
+	public List<AddressEntity> addresses() {
+		return addresses;
+	}
+    
+	public Keys addresses(List<AddressEntity> addresses) {
+		this.addresses = addresses;
+		return this;
+	}
+	
+	public List<Address> btcAddresses(NetworkParameters params) {
+		List<Address> addressList = new ArrayList<>(addresses.size());
+		for (AddressEntity e : addresses) {
+			addressList.add(e.toAddress(params));
+		}
+		// make explicit that this list is not stored in DB!
+		return Collections.unmodifiableList(addressList);
+	}
 }

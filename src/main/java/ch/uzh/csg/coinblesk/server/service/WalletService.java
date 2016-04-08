@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -173,73 +174,80 @@ public class WalletService {
     public Map<Sha256Hash, Transaction> verifiedTransactions(NetworkParameters params) {
         Map<Sha256Hash, Transaction> copy = new HashMap<>(wallet.getTransactionPool(WalletTransaction.Pool.UNSPENT));
         Map<Sha256Hash, Transaction> copy2 = new HashMap<>(copy);
-        //also add approved Tx
-        for(Transaction t:copy.values()) {
-            if(t.getConfidence().getDepthInBlocks() < appConfig.getMinConf()) {
-                LOG.debug("not enough confirmations for {}", t.getHash());
-                copy2.remove(t.getHash());
-            }
-        }
+        // remove unconfirmed
+		for (Transaction t : copy.values()) {
+			if (t.getConfidence().getDepthInBlocks() < appConfig.getMinConf()) {
+				LOG.debug("not enough confirmations for {}", t.getHash());
+				copy2.remove(t.getHash());
+			}
+		}
         
-        for(Transaction t:copy2.values()) {
-            LOG.debug("unspent tx from Network: {}", t.getHash());
-        }
-        
-        List<Transaction> approvedTx = transactionService.approvedTx(params);
-        for(Transaction t:approvedTx) {
-            LOG.debug("adding approved tx, which can be used for spending: {}", t);
-            copy2.put(t.getHash(), t);
-        }
+		for (Transaction t : copy2.values()) {
+			LOG.debug("unspent tx from Network: {}", t.getHash());
+		}
+		
+		//also add approved Tx
+		List<Transaction> approvedTx = transactionService.approvedTx(params);
+		for (Transaction t : approvedTx) {
+			LOG.debug("adding approved tx, which can be used for spending: {}", t);
+			copy2.put(t.getHash(), t);
+		}
         return copy2;
     }
     
     @Transactional(readOnly = true)
-    public List<TransactionOutput> verifiedOutputs(NetworkParameters params, Address p2shAddress) {
-        List<TransactionOutput> retVal = new ArrayList<>();
+    public List<TransactionOutput> verifiedOutputs(NetworkParameters params, Collection<Address> p2shAddresses) {
+        List<TransactionOutput> verifiedOutputs = new ArrayList<>();
         
         Map<Sha256Hash, Transaction> unspent = verifiedTransactions(params);
         
-        for(Transaction t:unspent.values()) {
-            for(TransactionInput in:t.getInputs()) {
-                TransactionOutPoint point = in.getOutpoint();
-                Transaction parent = unspent.get(point.getHash());
-                if(parent != null) {
-                    TransactionOutput spent = parent.getOutput(point.getIndex());
-                    if(spent.isAvailableForSpending()) {
-                        LOG.debug("mark as spent: {}", spent);
-                        spent.markAsSpent(in);
-                    }
-                }
-            }            
-        }
+        // mark as spent: previous transactions of e.g. approved tx.
+		for (Transaction t : unspent.values()) {
+			for (TransactionInput in : t.getInputs()) {
+				TransactionOutPoint point = in.getOutpoint();
+				Transaction parent = unspent.get(point.getHash());
+				if (parent != null) {
+					TransactionOutput spent = parent.getOutput(point.getIndex());
+					if (spent.isAvailableForSpending()) {
+						LOG.debug("mark as spent: {}", spent);
+						spent.markAsSpent(in);
+					}
+				}
+			}
+		}
         
-        
-        for(Transaction t:unspent.values()) {
-            for(TransactionOutput out:t.getOutputs()) {
-                if(p2shAddress.equals(out.getAddressFromP2SH(appConfig.getNetworkParameters()))) {
-                    if(out.isAvailableForSpending()) {
-                        //now check if not spent
-                        retVal.add(out);
-                        LOG.debug("this txout is unspent : {}, point: {}, spent {}", out, out.getOutPointFor());
-                    } else {
-                        LOG.debug("this txout is spent!: {}, point: {}out.getOutPointFor()", out, out.getOutPointFor());
-                    }
-                }
-            }
-        }
-        
-        
-        
-        return retVal;
+		// filter: only consider unspent for given address list.
+		for (Transaction t : unspent.values()) {
+			for (TransactionOutput out : t.getOutputs()) {
+				Address outAddress = out.getAddressFromP2SH(params);
+				if (p2shAddresses.contains(outAddress)) {
+					if (out.isAvailableForSpending()) {
+						// now check if not spent
+						verifiedOutputs.add(out);
+						LOG.debug("this txout is unspent: {}, point: {}", out, out.getOutPointFor());
+					} else {
+						LOG.debug("this txout is spent: {}, point: {}", out, out.getOutPointFor());
+					}
+				}
+			}
+		}
+        return verifiedOutputs;
     }
     
-    public long balance(NetworkParameters params, Address p2shAddress) {
-        long balance = 0;
-        for(TransactionOutput transactionOutput:verifiedOutputs(params, p2shAddress)) {
-            balance += transactionOutput.getValue().value;
-        }
-        return balance;
+    @Transactional(readOnly = true)
+    public List<TransactionOutput> verifiedOutputs(NetworkParameters params, Address p2shAddress) {
+		List<Address> addressList = new ArrayList<>(1);
+		addressList.add(p2shAddress);
+		return verifiedOutputs(params, addressList);
     }
+    
+	public long balance(NetworkParameters params, Address p2shAddress) {
+		long balance = 0;
+		for (TransactionOutput transactionOutput : verifiedOutputs(params, p2shAddress)) {
+			balance += transactionOutput.getValue().value;
+		}
+		return balance;
+	}
     
     @PreDestroy
     public void shutdown() {

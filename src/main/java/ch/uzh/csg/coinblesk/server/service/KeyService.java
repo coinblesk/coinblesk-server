@@ -13,6 +13,7 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.script.Script;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +29,7 @@ import ch.uzh.csg.coinblesk.server.dao.AddressDAO;
 import ch.uzh.csg.coinblesk.server.dao.KeyDAO;
 import ch.uzh.csg.coinblesk.server.dao.RefundDAO;
 import ch.uzh.csg.coinblesk.server.dao.TxDAO;
+import ch.uzh.csg.coinblesk.server.entity.AddressEntity;
 import ch.uzh.csg.coinblesk.server.entity.Keys;
 import ch.uzh.csg.coinblesk.server.entity.Refund;
 import ch.uzh.csg.coinblesk.server.entity.TimeLockedAddressEntity;
@@ -108,17 +110,14 @@ public class KeyService {
     }
 
     @Transactional(readOnly = false)
-    public Pair<Boolean, Keys> storeKeysAndAddress(final byte[] clientPublicKey, final Address p2shAdderss,
-            final byte[] serverPublicKey, final byte[] serverPrivateKey) {
-        if (clientPublicKey == null || p2shAdderss == null || serverPublicKey == null || serverPrivateKey == null ) {
+    public Pair<Boolean, Keys> storeKeys(final byte[] clientPublicKey, final byte[] serverPublicKey, final byte[] serverPrivateKey) {
+        if (clientPublicKey == null || serverPublicKey == null || serverPrivateKey == null ) {
             throw new IllegalArgumentException("null not excpected here");
         }
-        
-        byte[] p2shHash = p2shAdderss.getHash160();
 
         final Keys clientKey = new Keys()
+        		.timeCreated(Utils.currentTimeSeconds())
                 .clientPublicKey(clientPublicKey)
-                .p2shHash(p2shHash)
                 .serverPrivateKey(serverPrivateKey)
                 .serverPublicKey(serverPublicKey);
 
@@ -128,8 +127,8 @@ public class KeyService {
             return new Pair<>(false, keys);
         }
 
-        clientKeyDAO.save(clientKey);
-        return new Pair<>(true, clientKey);
+        final Keys storedKeys = clientKeyDAO.save(clientKey);
+        return new Pair<>(true, storedKeys);
     }
     
     /* SIGN ENDPOINT CODE ENDS HERE */
@@ -152,10 +151,21 @@ public class KeyService {
 				.setLockTime(address.getLockTime())
 				.setAddressHash(address.getAddressHash())
 				.setRedeemScript(address.createRedeemScript().getProgram())
-				.setTimeCreated(System.currentTimeMillis()/1000L)
+				.setTimeCreated(Utils.currentTimeSeconds())
 				.setKeys(keys);
 		
 		TimeLockedAddressEntity result = addressDAO.save(addressEntity);
+		return result;
+	}
+    
+	@Transactional(readOnly = false)
+	public AddressEntity storeAddress(final Keys keys, final byte[] addressHash160, byte[] redeemScript) {
+		final AddressEntity addressEntity = new AddressEntity()
+				.setTimeCreated(Utils.currentTimeSeconds())
+				.setKeys(keys)
+				.setAddressHash(addressHash160)
+				.setRedeemScript(redeemScript);
+		AddressEntity result = addressDAO.save(addressEntity);
 		return result;
 	}
     
@@ -363,4 +373,13 @@ public class KeyService {
         }
     }
     /* SIGN ENDPOINT CODE ENDS HERE */
+
+	public byte[] getRedeemScriptByAddressHash(byte[] addressHash) {
+		if (addressHash == null) {
+			throw new IllegalArgumentException("addressHash must not be null.");
+		}
+		AddressEntity address = addressDAO.findAddressByAddressHash(addressHash);
+		byte[] data = address != null ? address.getRedeemScript() : null;
+		return data;
+	}
 }

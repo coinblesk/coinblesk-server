@@ -57,6 +57,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
+import ch.uzh.csg.coinblesk.server.entity.AddressEntity;
 import ch.uzh.csg.coinblesk.server.entity.Keys;
 import ch.uzh.csg.coinblesk.server.entity.TimeLockedAddressEntity;
 import ch.uzh.csg.coinblesk.server.service.KeyService;
@@ -118,16 +119,16 @@ public class PaymentController {
     		final ECKey serverKey = ECKey.fromPublicOnly(keys.serverPublicKey());
     		// TODO: lock time relative to blockchain height/time?
             final long lockTime = walletService.refundLockTime();
-            final TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), serverKey.getPubKey(), lockTime, params);
+            final TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), serverKey.getPubKey(), lockTime);
             
             TimeLockedAddressEntity checkExists = keyService.getTimeLockedAddressByAddressHash(address.getAddressHash());
             if (checkExists == null) {
                 keyService.storeTimeLockedAddress(keys, address);
-                walletService.addWatching(address.createRedeemScript());
-                LOG.debug("{createTimeLockedAddress} - new address created: {}", address.toStringDetailed());
+                walletService.addWatching(address.createPubkeyScript());
+                LOG.debug("{createTimeLockedAddress} - new address created: {}", address.toStringDetailed(params));
             } else {
                 LOG.warn("{createTimeLockedAddress} - address does already exist (probably due to multiple requests in a short time): {}", 
-                		address.toStringDetailed());
+                		address.toStringDetailed(params));
             }
             
             TimeLockedAddressTO addressTO = new TimeLockedAddressTO();
@@ -156,9 +157,7 @@ public class PaymentController {
     	}
     	
     	ECKey serverKey = new ECKey();
-    	// TODO: should not be required to add an address!
-    	Address p2pkh = ECKey.fromPublicOnly(clientPubKey).toAddress(appConfig.getNetworkParameters());
-    	keyService.storeKeysAndAddress(clientPubKey, p2pkh, serverKey.getPubKey(), serverKey.getPrivKeyBytes());
+    	keyService.storeKeys(clientPubKey, serverKey.getPubKey(), serverKey.getPrivKeyBytes());
     	
     	Keys createdKeys = keyService.getByClientPublicKey(clientPubKey);
     	LOG.info("{createTimeLockedAddress} - created new serverKey - serverPubKey={}, clientPubKey={}", 
@@ -189,17 +188,22 @@ public class PaymentController {
             final List<ECKey> keys = new ArrayList<>(2);
             keys.add(ECKey.fromPublicOnly(clientPublicKey));
             keys.add(serverEcKey);
-            //2-of-2 multisig
-            final Script script = BitcoinUtils.createP2SHOutputScript(2, keys);
-            final Address p2shAddressClient = script.getToAddress(params);
+            // create 2-of-2 multisig address
+            final Script redeemScript = BitcoinUtils.createRedeemScript(2, keys);
+            final Script outputScript = BitcoinUtils.createP2SHOutputScript(redeemScript);
+            final Address p2shAddressClient = outputScript.getToAddress(params);
 
-            final Pair<Boolean, Keys> retVal = keyService.storeKeysAndAddress(clientPublicKey,
-                    p2shAddressClient, serverEcKey.getPubKey(),
-                    serverEcKey.getPrivKeyBytes());
+            final Pair<Boolean, Keys> retVal = keyService.storeKeys(
+            		clientPublicKey, serverEcKey.getPubKey(), serverEcKey.getPrivKeyBytes());
+            
             final KeyTO serverKeyTO = new KeyTO();
             if (retVal.element0()) {
+            	AddressEntity storedAddress = keyService.storeAddress(
+            			retVal.element1(), p2shAddressClient.getHash160(), redeemScript.getProgram());
                 serverKeyTO.publicKey(serverEcKey.getPubKey());
-                walletService.addWatching(script);
+                walletService.addWatching(outputScript);
+                LOG.info("{keyExchange} - created new keys for clientPubKey={}, address: {}", 
+                		Utils.HEX.encode(clientPublicKey), storedAddress.toString(params));
                 return serverKeyTO.setSuccess();
             } else {
                 serverKeyTO.publicKey(retVal.element1().serverPublicKey());
@@ -327,7 +331,7 @@ public class PaymentController {
                 final Coin amountToSpend = Coin.valueOf(input.amountToSpend());
                 final Address p2shAddressTo;
                 try {
-                    p2shAddressTo = new Address(params, input.p2shAddressTo());
+                    p2shAddressTo = Address.fromBase58(params, input.p2shAddressTo());
                 } catch (AddressFormatException e) {
                     LOG.debug("{sign} empty address for");
                     return new SignTO().type(Type.ADDRESS_EMPTY).message(e.getMessage());
