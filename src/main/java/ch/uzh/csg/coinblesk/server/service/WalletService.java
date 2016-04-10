@@ -26,6 +26,7 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
 import org.bitcoinj.net.discovery.DnsDiscovery;
@@ -269,7 +270,8 @@ public class WalletService {
         }
         try {
             if(wallet != null) {
-                wallet.shutdownAutosaveAndWait();
+            	// TODO: the method name is misleading, it stops auto-save, but does not save.
+            	wallet.shutdownAutosaveAndWait();
                 wallet = null;
             }
         } catch (Exception e) {
@@ -286,8 +288,6 @@ public class WalletService {
         });
     }
     
-    
-
     public int refundLockTime() {
         final int locktime = appConfig.lockTime();
         final int lockPrecision = appConfig.lockPrecision();

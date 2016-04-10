@@ -39,7 +39,7 @@ public class Keys implements Serializable {
     @Column(name = "SERVER_PRIVATE_KEY", unique=true, nullable = false, updatable = false, length=255)
     private byte[] serverPrivateKey;
     
-    @Column(name = "TIME_CREATED", updatable = false)
+    @Column(name = "TIME_CREATED", updatable = false, nullable = false)
 	private long timeCreated;
     
     @OneToMany(mappedBy="keys", fetch = FetchType.EAGER)
