@@ -1,5 +1,7 @@
 package com.coinblesk.server.entity;
 
+import java.util.Comparator;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -136,5 +138,13 @@ public class AddressEntity {
 	    		 .append(addressHash)
 	    		 .append(redeemScript)
 	    		 .toHashCode();
+	}
+	
+	public static class TimeCreatedComparator implements Comparator<AddressEntity> {
+		@Override
+		public int compare(AddressEntity lhs, AddressEntity rhs) {
+			return Long.compare(lhs.getTimeCreated(), rhs.getTimeCreated());
+		}
+		
 	}
 }

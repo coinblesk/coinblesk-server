@@ -31,6 +31,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBroadcast;
 import org.bitcoinj.core.TransactionConfidence;
+import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Utils;
@@ -52,6 +53,7 @@ import com.coinblesk.json.KeyTO;
 import com.coinblesk.json.RefundTO;
 import com.coinblesk.json.SignTO;
 import com.coinblesk.json.TimeLockedAddressTO;
+import com.coinblesk.json.TxSig;
 import com.coinblesk.json.Type;
 import com.coinblesk.json.VerifyTO;
 import com.coinblesk.server.config.AppConfig;
@@ -105,22 +107,23 @@ public class PaymentController {
     @ResponseBody
     public TimeLockedAddressTO createTimeLockedAddress(@RequestBody KeyTO keyTO) {
     	try {
-    		LOG.debug("{createTimeLockedAddress} - clientPubKey={}", Utils.HEX.encode(keyTO.publicKey()));
+    		// TODO: check input? (signature, pubKey ...)
+    		
     		final NetworkParameters params = appConfig.getNetworkParameters();
-    		final byte[] clientPubKey = keyTO.publicKey();
-    		final ECKey clientKey = ECKey.fromPublicOnly(clientPubKey); // make sure it is an ECKey
+    		final ECKey clientKey = ECKey.fromPublicOnly(keyTO.publicKey()); // make sure pubKey is an ECKey
+    		final String clientPubKeyHex = clientKey.getPublicKeyAsHex();
+    		LOG.debug("{createTimeLockedAddress} - clientPubKey={}", clientPubKeyHex);
     		
     		final Keys keys = getKeysOrCreate(clientKey.getPubKey());
-    		if (keys == null || keys.serverPrivateKey() == null || keys.serverPublicKey() == null || keys.clientPublicKey() == null) {
-    			LOG.error("{createTimeLockedAddress} - keys not found for clientPubKey={}", clientKey.getPublicKeyAsHex());
-    			return new TimeLockedAddressTO().type(Type.KEYS_NOT_FOUND);
-    		}
-    		final ECKey serverKey = ECKey.fromPublicOnly(keys.serverPublicKey());
-    		// TODO: lock time relative to blockchain height/time?
-            final long lockTime = Utils.currentTimeSeconds();
+			if (keys == null) {
+				LOG.error("{createTimeLockedAddress} - keys not found for clientPubKey={} (could not create keys)", clientPubKeyHex);
+				return new TimeLockedAddressTO().type(Type.KEYS_NOT_FOUND);
+			}
+    		final ECKey serverKey = ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey());
+            final long lockTime = createNewLockTime();
             final TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), serverKey.getPubKey(), lockTime);
             
-            TimeLockedAddressEntity checkExists = keyService.getTimeLockedAddressByAddressHash(address.getAddressHash());
+            final TimeLockedAddressEntity checkExists = keyService.getTimeLockedAddressByAddressHash(address.getAddressHash());
             if (checkExists == null) {
                 keyService.storeTimeLockedAddress(keys, address);
                 walletService.addWatching(address.createPubkeyScript());
@@ -130,13 +133,13 @@ public class PaymentController {
                 		address.toStringDetailed(params));
             }
             
-            TimeLockedAddressTO addressTO = new TimeLockedAddressTO();
-            addressTO.timeLockedAddress(address);
-            addressTO.setSuccess();
-            // TODO: sign response?
-            
-            LOG.info("{createTimeLockedAddress} - new address created: {}", address);
+            TimeLockedAddressTO addressTO = new TimeLockedAddressTO()
+            		.timeLockedAddress(address)
+            		.setSuccess();
+            SerializeUtils.sign(addressTO, serverKey);
+            LOG.info("{createTimeLockedAddress} - time locked address: {}, clientPubKey={}", address, clientPubKeyHex);
     		return addressTO;
+    		
     	} catch (Exception e) {
     		LOG.error("{createTimeLockedAddress} - error: ", e);
     		return new TimeLockedAddressTO()
@@ -150,7 +153,7 @@ public class PaymentController {
      * @return the keys for the given client public key. new key is created and added if not in DB yet.
      */
     private Keys getKeysOrCreate(final byte[] clientPubKey) {
-    	Keys keys = keyService.getByClientPublicKey(clientPubKey);
+    	final Keys keys = keyService.getByClientPublicKey(clientPubKey);
     	if (keys != null) {
     		return keys;
     	}
@@ -158,14 +161,102 @@ public class PaymentController {
     	ECKey serverKey = new ECKey();
     	keyService.storeKeys(clientPubKey, serverKey.getPubKey(), serverKey.getPrivKeyBytes());
     	
-    	Keys createdKeys = keyService.getByClientPublicKey(clientPubKey);
+    	final Keys createdKeys = keyService.getByClientPublicKey(clientPubKey);
     	LOG.info("{createTimeLockedAddress} - created new serverKey - serverPubKey={}, clientPubKey={}", 
     			Utils.HEX.encode(createdKeys.serverPublicKey()), Utils.HEX.encode(createdKeys.clientPublicKey()));
     	
     	return createdKeys;
     }
     
-    /**
+    private long createNewLockTime() {
+    	// move lock time span to appConfig.
+    	return Utils.currentTimeSeconds() + 60*60*24*30;
+    }
+    
+    @RequestMapping(value = {"/signtx", "/stx"}, 
+			method = RequestMethod.POST,
+	        consumes = "application/json; charset=UTF-8",
+	        produces = "application/json; charset=UTF-8")
+	@ApiVersion("v3")
+	@ResponseBody
+	public SignTO signTx(@RequestBody SignTO request) {
+		try {
+			LOG.info("{signTx} - sign request from clientPubKey={}", Utils.HEX.encode(request.clientPublicKey()));
+			final NetworkParameters params = appConfig.getNetworkParameters();
+	        final Keys keys = keyService.getByClientPublicKey(request.clientPublicKey());
+	        if (keys == null || 
+	        		keys.serverPrivateKey() == null || keys.serverPublicKey() == null || 
+	        		keys.clientPublicKey() == null) {
+	        	return new SignTO()
+	        			.type(Type.KEYS_NOT_FOUND);
+	        }
+			if (keys.addresses().isEmpty()) {
+				return new SignTO()
+						.type(Type.ADDRESS_EMPTY)
+						.message("No address created yet.");
+			}
+	        
+	        final ECKey clientKey = ECKey.fromPublicOnly(keys.clientPublicKey());
+	        final ECKey serverKey = ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey());
+	        final List<Address> addresses = keys.btcAddresses(params);
+	        final List<TransactionSignature> clientSignatures;
+	        final Transaction transaction;
+	        
+	        /*
+	         * Got a transaction in the request - sign the tx inputs
+	         */
+			if (request.transaction() != null) {
+				clientSignatures = null;
+				transaction = new Transaction(params, request.transaction());
+				LOG.debug("{signTx} got transaction from input: \n{}", transaction.toString());
+			} else {
+				return new SignTO().type(Type.INPUT_MISMATCH);
+			}
+			
+			
+			// for each input, search corresponding redeemData (looking up in DB for address hash in the output)
+	        List<TransactionInput> txInputs = transaction.getInputs();
+	        List<byte[]> redeemScriptsForInputs = new ArrayList<>(txInputs.size());
+	        for (int inputIndex = 0; inputIndex < txInputs.size(); ++inputIndex) {
+				TransactionInput txIn = txInputs.get(inputIndex);
+				// get it from the wallet service because Tx may not be connected if received over the network.
+				TransactionOutput txOutput = walletService.findOutputFor(txIn);
+				byte[] redeemScriptBytes = null;
+				if (txOutput != null) {
+					byte[] addressHashFrom = txOutput.getScriptPubKey().getPubKeyHash();
+					redeemScriptBytes = keyService.getRedeemScriptByAddressHash(addressHashFrom);
+					if (redeemScriptBytes == null) {
+						LOG.warn("Redeem script not found for address: {}", Address.fromP2SHHash(params, addressHashFrom));
+					}
+				} else {
+					// may happen if Tx contains inputs of other transactions
+					// not related to coinblesk (unknown tx outputs).
+					LOG.warn("Transaction output for tx input not found. {}", txIn.toString());
+					redeemScriptBytes = new byte[0];
+				}
+				redeemScriptsForInputs.add(redeemScriptBytes);
+				LOG.debug("redeemScript for input {}: {} - {}", inputIndex, txIn, new Script(redeemScriptBytes));
+	        }
+			
+			
+			final List<TransactionSignature> serverSigs = BitcoinUtils.partiallySign(transaction, redeemScriptsForInputs, serverKey);
+			final List<TxSig> txSigs = SerializeUtils.serializeSignatures(serverSigs);
+	        final byte[] serializedTransaction = transaction.unsafeBitcoinSerialize();
+	        keyService.addTransaction(clientKey.getPubKey(), serializedTransaction);
+	        
+	        return new SignTO()
+	                .setSuccess()
+	                .serverSignatures(txSigs);
+	        
+		} catch (Exception e) {
+			LOG.error("{signTx} - Sign keys error", e);
+	        return new SignTO()
+	                .type(Type.SERVER_ERROR)
+	                .message(e.getMessage());
+		}
+	}
+
+	/**
      * Input is the KeyTO with the client public key. The server will create for this client public key its
      * own server keypair and return the server public key, or indicate an error in KeyTO (or via status
      * code). Make sure to check for isSuccess(). Internally the server will hash the client public key with

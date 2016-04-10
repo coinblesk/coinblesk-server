@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
+import com.coinblesk.json.BaseTO;
 import com.coinblesk.json.KeyTO;
 import com.coinblesk.json.TimeLockedAddressTO;
 import com.coinblesk.json.Type;
@@ -72,12 +73,12 @@ public class PaymentControllerTest {
          mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();   
     }
     
-    @Test
-    public void testCreateTimeLockedAddress_NoContent() throws Exception {
-    	mockMvc
-		.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).secure(true))
-		.andExpect(status().is4xxClientError());
-    }
+	@Test
+	public void testCreateTimeLockedAddress_NoContent() throws Exception {
+		mockMvc
+			.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).secure(true))
+			.andExpect(status().is4xxClientError());
+	}
     
     @Test
     public void testCreateTimeLockedAddress_NewAddress_ClientUnknown() throws Exception {
@@ -91,9 +92,9 @@ public class PaymentControllerTest {
         					.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).secure(true).contentType(MediaType.APPLICATION_JSON).content(jsonKeyTO))
         					.andExpect(status().isOk())
         					.andReturn();
-        TimeLockedAddressTO response = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), TimeLockedAddressTO.class);
-        assertTrue(response.isSuccess());
-    	TimeLockedAddress addressResponse = response.timeLockedAddress();
+        TimeLockedAddressTO responseTO = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), TimeLockedAddressTO.class);
+        assertTrue(responseTO.isSuccess());
+    	TimeLockedAddress addressResponse = responseTO.timeLockedAddress();
     	assertNotNull(addressResponse);
     	assertNotNull(addressResponse.getAddressHash());
     	assertNotNull(addressResponse.getUserPubKey());
@@ -110,6 +111,9 @@ public class PaymentControllerTest {
     	assertNotNull(keys.serverPublicKey());
     	assertTrue(keys.addresses().size() == 1);
     	assertArrayEquals(keys.addresses().iterator().next().getAddressHash(), addressResponse.getAddressHash());
+    	
+    	// check sig ok
+    	assertServerSig(responseTO, keys);
     }
     
     @Test
@@ -127,9 +131,9 @@ public class PaymentControllerTest {
         					.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).secure(true).contentType(MediaType.APPLICATION_JSON).content(jsonKeyTO))
         					.andExpect(status().isOk())
         					.andReturn();
-        TimeLockedAddressTO response = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), TimeLockedAddressTO.class);
-        assertTrue(response.isSuccess());
-    	TimeLockedAddress addressResponse = response.timeLockedAddress();
+        TimeLockedAddressTO responseTO = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), TimeLockedAddressTO.class);
+        assertTrue(responseTO.isSuccess());
+    	TimeLockedAddress addressResponse = responseTO.timeLockedAddress();
     	assertNotNull(addressResponse);
     	assertNotNull(addressResponse.getAddressHash());
     	assertNotNull(addressResponse.getUserPubKey());
@@ -137,6 +141,9 @@ public class PaymentControllerTest {
     	assertArrayEquals(addressResponse.getUserPubKey(), clientKey.getPubKey());
     	assertArrayEquals(addressResponse.getServicePubKey(), serverKey.getPubKey());
     	assertTrue(addressResponse.getLockTime() > 0);
+    	
+    	// check sig ok
+    	assertVerifySig(responseTO, serverKey);
     }
     
     @Test
@@ -168,4 +175,15 @@ public class PaymentControllerTest {
         assertEquals(response.type(), Type.SERVER_ERROR);
     	assertNull(response.timeLockedAddress());
     }
+
+	private static <K extends BaseTO<?>> boolean assertServerSig(K k, Keys keys) {
+		ECKey eckey = ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey());
+		return assertVerifySig(k, eckey);
+	}
+
+	private static <K extends BaseTO<?>> boolean assertVerifySig(K k, ECKey key) {
+		boolean result = SerializeUtils.verifySig(k, key);
+		assertTrue(result);
+		return result;
+	}
 }
