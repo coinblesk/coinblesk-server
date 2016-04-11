@@ -32,6 +32,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 /**
  *
@@ -42,7 +43,7 @@ import org.springframework.web.context.WebApplicationContext;
     DbUnitTestExecutionListener.class})
 @ContextConfiguration(classes = {TestBean.class, BeanConfig.class, SecurityConfig.class})
 @WebAppConfiguration
-public class KeyTest {
+public class RegisterKeyTest {
     
     @Autowired
     private WebApplicationContext webAppContext;

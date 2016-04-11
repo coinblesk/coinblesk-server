@@ -8,53 +8,40 @@ package ch.uzh.csg.coinblesk.server.controller;
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import ch.uzh.csg.coinblesk.server.entity.Keys;
 import ch.uzh.csg.coinblesk.server.service.KeyService;
-import ch.uzh.csg.coinblesk.server.service.TransactionService;
 import ch.uzh.csg.coinblesk.server.service.WalletService;
 import ch.uzh.csg.coinblesk.server.utils.ApiVersion;
-import ch.uzh.csg.coinblesk.server.utils.LruCache;
 import com.coinblesk.json.BalanceTO;
 import com.coinblesk.json.BaseTO;
-import com.coinblesk.json.CompleteSignTO;
 import com.coinblesk.json.KeyTO;
-import com.coinblesk.json.PrepareFullTxTO;
-import com.coinblesk.json.PrepareHalfSignTO;
-import com.coinblesk.json.RefundP2shTO;
 import com.coinblesk.json.RefundTO;
 import com.coinblesk.json.SignTO;
 import com.coinblesk.json.Type;
 import com.coinblesk.json.VerifyTO;
 import com.coinblesk.util.BitcoinUtils;
+import com.coinblesk.util.CoinbleskException;
+import com.coinblesk.util.InsuffientFunds;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
-import com.coinblesk.util.SimpleBloomFilter;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
 
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import javax.annotation.Nullable;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBroadcast;
 import org.bitcoinj.core.TransactionConfidence;
-import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
-import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,18 +69,10 @@ public class PaymentController {
 
     @Autowired
     private WalletService walletService;
-
-    @Autowired
-    private TransactionService transactionService;
     
     @Autowired
     private KeyService keyService;
-    
-    private static final Map<String, PrepareHalfSignTO> CACHE_PREPARE = Collections.synchronizedMap(new LruCache<>(1000));
-    private static final Map<String, PrepareFullTxTO> CACHE_PREPARE_FULL = Collections.synchronizedMap(new LruCache<>(1000));
-    private static final Map<String, RefundP2shTO> CACHE_REFUND = Collections.synchronizedMap(new LruCache<>(1000));
-    private static final Map<String, CompleteSignTO> CACHE_COMPLETE = Collections.synchronizedMap(new LruCache<>(1000));
-
+  
     /**
      * Input is the KeyTO with the client public key. The server will create for
      * this client public key its own server keypair and return the server
@@ -110,6 +89,7 @@ public class PaymentController {
     public KeyTO keyExchange(@RequestBody KeyTO keyTO) {
         LOG.debug("Register clientHash for {}", SerializeUtils.bytesToHex(keyTO.publicKey()));
         try {
+            //no input checking as input may not be signed
             final NetworkParameters params = appConfig.getNetworkParameters();
             final byte[] clientPublicKey = keyTO.publicKey();
             final ECKey serverEcKey = new ECKey();
@@ -144,9 +124,13 @@ public class PaymentController {
             consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
     @ResponseBody
-    public BalanceTO balance(@RequestBody KeyTO keyTO) {
+    public BalanceTO balance(@RequestBody BalanceTO keyTO) {
         LOG.debug("Balance clientHash for {}", SerializeUtils.bytesToHex(keyTO.publicKey()));
         try {
+            final BalanceTO error = checkInput(keyTO); 
+            if(error != null) {
+                return error;
+            }
             final NetworkParameters params = appConfig.getNetworkParameters();
             final List<ECKey> keys = keyService.getPublicECKeysByClientPublicKey(keyTO.publicKey());
             final Script script = BitcoinUtils.createP2SHOutputScript(2, keys);
@@ -174,6 +158,10 @@ public class PaymentController {
     public RefundTO refund(@RequestBody RefundTO refundTO) {
         LOG.debug("Refund for {}", SerializeUtils.bytesToHex(refundTO.clientPublicKey()));
         try {
+            final RefundTO error = checkInput(refundTO); 
+            if(error != null) {
+                return error;
+            }
             final List<ECKey> keys = keyService.getECKeysByClientPublicKey(refundTO.clientPublicKey());
             if (keys == null || keys.size() != 2) {
                 return new RefundTO().type(Type.KEYS_NOT_FOUND);
@@ -225,6 +213,10 @@ public class PaymentController {
     public SignTO sign(@RequestBody SignTO input) {
         LOG.debug("Sign for {}", SerializeUtils.bytesToHex(input.clientPublicKey()));
         try {
+            final SignTO error = checkInput(input); 
+            if(error != null) {
+                return error;
+            }
             final NetworkParameters params = appConfig.getNetworkParameters();
             final List<ECKey> keys = keyService.getECKeysByClientPublicKey(input.clientPublicKey());
             if (keys == null || keys.size() != 2) {
@@ -232,26 +224,22 @@ public class PaymentController {
             }
 
             final ECKey serverKey = keys.get(1);
-            final ECKey clientKey = keys.get(0);
             final Script redeemScript = BitcoinUtils.createRedeemScript(2, keys);
             final Script p2SHOutputScript = BitcoinUtils.createP2SHOutputScript(2, keys);
             Collections.sort(keys,ECKey.PUBKEY_COMPARATOR);
             final Address p2shAddressFrom = p2SHOutputScript.getToAddress(params);
             
-
-            final List<TransactionSignature> clientSignatures;
             final Transaction transaction;
-            //choice 1
+            //choice 1 - full tx, without sigs
             if (input.transaction() != null) {
-                clientSignatures = null;
                 LOG.debug("{sign} got transaction from input");
                 transaction = new Transaction(appConfig.getNetworkParameters(), input.transaction());
             } 
 
-            //choice 2
-            else if (input.amountToSpend() != 0 && input.p2shAddressTo() != null) {
-                clientSignatures = null;
-                final Coin amountToSpend = Coin.valueOf(input.amountToSpend());
+            //choice 2 - send outpoints, coins, where to send btc to, and amount
+            else if (input.outpointsCoinPair() != null && input.p2shAddressTo()!= null &&
+                    input.amountToSpend() != 0) {
+                //having the coins and the output allows us to create the tx without looking into our wallet
                 final Address p2shAddressTo;
                 try {
                     p2shAddressTo = new Address(params, input.p2shAddressTo());
@@ -259,106 +247,32 @@ public class PaymentController {
                     LOG.debug("{sign} empty address for");
                     return new SignTO().type(Type.ADDRESS_EMPTY).message(e.getMessage());
                 }
-
-                //get all outputs from the BT network
-                List<TransactionOutput> outputs = walletService.verifiedOutputs(params, p2shAddressFrom);
-                LOG.debug("{sign} nr. of outputs from network {}. Full list: {}", outputs.size(), outputs);
-
-                //bloom filter is optianal, if not provided all found outputs are used
-                if (input.bloomFilter() != null) {
-                    outputs = filter(params, outputs, input.bloomFilter());
-                }
-                LOG.debug("{sign} nr. of outputs after bured outputs {}. Full list {}", outputs.size(),
-                        outputs);
-
-                transaction = BitcoinUtils.createTx(
-                        params, outputs, p2shAddressFrom,
-                        p2shAddressTo, amountToSpend.value);
-
-                if (transaction == null) {
-                    LOG.debug("{sign} not enough coins for");
+                
+                //we now get from the client the outpoints for the refund tx (including hash)
+                final List<Pair<TransactionOutPoint, Coin>> refundClientPoints = SerializeUtils
+                        .deserializeOutPointsCoin(
+                                params, input.outpointsCoinPair());
+               
+                try {
+                    transaction = BitcoinUtils.createTx(params, refundClientPoints, redeemScript, p2shAddressFrom,
+                        p2shAddressTo, input.amountToSpend());
+                } catch (CoinbleskException e) {
+                    LOG.warn("{sign} could not create tx", e);
+                    return new SignTO().type(Type.SERVER_ERROR).message(e.getMessage());
+                } catch (InsuffientFunds e) {
+                    LOG.debug("{sign} not enough coins or amount too small");
                     return new SignTO().type(Type.NOT_ENOUGH_COINS);
                 }
             } 
-
-            //choice 3
-            else if (input.refundClientOutpointsCoinPair() != null && input.refundSignaturesClient() != null) {
-                
-                
-                //we now get from the client the outpoints for the refund tx (including hash)
-                List<Pair<TransactionOutPoint, Coin>> refundClientPoints = SerializeUtils
-                        .deserializeOutPointsCoin(
-                                params, input.refundClientOutpointsCoinPair());
-               
-
-                //now get all the output we want the refund, for client this will be one entry, for merchant this
-                //will return multiple entries
-                List<TransactionOutput> clientWalletOutputs = walletService.verifiedOutputs(params,
-                        p2shAddressFrom);
-                LOG.debug("{sign} nr. of outputs from network {}. Full list {}",
-                        clientWalletOutputs.size(), clientWalletOutputs);
-                //add/remove pending 
-
-                
-                //remove pending/burned outputs
-                //remove burned outputs, either we do it ourselfs, or the client can provide an optional bloomfilter
-                //if not we can check the burned output which will be the ones used for the refund
-                List<TransactionOutPoint> to = keyService.burnedOutpoints(clientKey.getPubKey());
-                if (input.bloomFilter() != null) {
-                    clientWalletOutputs = filter(params, clientWalletOutputs, input.bloomFilter());
-                } else {
-                    removeBurnedOutputs(clientWalletOutputs, to);
-                }
-                LOG.debug("{sign} nr. of outputs after bured outputs {}. Full list {}",
-                        clientWalletOutputs.size(), clientWalletOutputs);
-
-                //the outpoints need to point to the original tx
-                if (checkBurnedOutpoints(to, refundClientPoints)) {
-                    return new SignTO().type(Type.BURNED_OUTPUTS);
-                }
-
-                List<TransactionInput> preBuiltInupts = BitcoinUtils.convertPointsToInputs(params,
-                        refundClientPoints, redeemScript);
-
-                LOG.debug("{sign} going for the following outputs in {} and outpoints {}",
-                        clientWalletOutputs, preBuiltInupts);
-
-                transaction = BitcoinUtils.generateUnsignedRefundTx(
-                        params, clientWalletOutputs, preBuiltInupts,
-                        clientKey.toAddress(params), redeemScript, walletService.refundLockTime());
-
-                if (transaction == null) {
-                    LOG.debug("{sign} not enough coins");
-                    return new SignTO().type(Type.NOT_ENOUGH_COINS);
-                }
-
-                if(input.refundSignaturesClient() != null) {
-                    //Client refund sigs are here, we can do a full refund
-                    clientSignatures = SerializeUtils.deserializeSignatures(input
-                        .refundSignaturesClient());                    
-                    //now we can check the client sigs
-                    if (!SerializeUtils.verifyTxSignatures(transaction, clientSignatures, redeemScript,
-                            clientKey)) {
-                        LOG.debug("{sign} signature mismatch with sigs {}", clientSignatures);
-                        return new SignTO().type(Type.SIGNATURE_ERROR);
-                    }
-                    //now we could fully sign it and store it!
-                } else {
-                    clientSignatures = null;
-                }
-            } else {
+            
+            //wrong choice
+            else {
                 return new SignTO().type(Type.INPUT_MISMATCH);
             }
             
             final List<TransactionSignature> serverSigs = BitcoinUtils
                     .partiallySign(transaction, redeemScript, serverKey);
             
-            //only for choice, we have now a fully signed refund in for the client
-            if(clientSignatures!= null && serverSigs!=null) {
-                boolean clientFirst = BitcoinUtils.clientFirst(keys, clientKey);
-                BitcoinUtils.applySignatures(transaction, redeemScript, clientSignatures, serverSigs, clientFirst);
-            }
-
             final byte[] serializedTransaction = transaction.unsafeBitcoinSerialize();
             keyService.addTransaction(input.clientPublicKey(), serializedTransaction);
 
@@ -381,9 +295,13 @@ public class PaymentController {
     @ResponseBody
     public VerifyTO verify(@RequestBody VerifyTO input) {
         final long start = System.currentTimeMillis();
-        final String clientId = SerializeUtils.bytesToHex(input.clientPublicKey());
-        LOG.debug("{verify} {}", clientId);
+        LOG.debug("{verify} start");
         try {
+            final VerifyTO error = checkInput(input); 
+            if(error != null) {
+                return error;
+            }
+            final String clientId = SerializeUtils.bytesToHex(input.clientPublicKey());
             final List<ECKey> keys = keyService.getECKeysByClientPublicKey(input.clientPublicKey());
             if (keys == null || keys.size() != 2) {
                 return new VerifyTO().type(Type.KEYS_NOT_FOUND);
@@ -398,7 +316,7 @@ public class PaymentController {
             //ok, refunds are locked or no refund found
             fullTx.getConfidence().setSource(TransactionConfidence.Source.SELF);
             final Transaction connectedFullTx = walletService.receivePending(fullTx);
-            broadcastBlocking(fullTx);
+            broadcast(fullTx);
             
             
             LOG.debug("{verify:{}} broadcast done {}", (System.currentTimeMillis() - start), clientId);
@@ -414,16 +332,14 @@ public class PaymentController {
             }
 
         } catch (Exception e) {
-            LOG.error("{verify} register keys error: " + clientId, e);
+            LOG.error("{verify} register keys error: ", e);
             return new VerifyTO()
                     .type(Type.SERVER_ERROR)
                     .message(e.getMessage());
         }
     }
 
-    /* SIGN ENDPOINT CODE ENDS HERE */
-
-    private void broadcastBlocking(final Transaction fullTx) {
+    private void broadcast(final Transaction fullTx) {
         //broadcast immediately
         final TransactionBroadcast broadcast = walletService.peerGroup().broadcastTransaction(fullTx);
         Futures.addCallback(broadcast.future(), new FutureCallback<Transaction>() {
@@ -437,7 +353,7 @@ public class PaymentController {
                 LOG.error("failed, transaction is out " + fullTx.getHash(), throwable);
                 try {
                     Thread.sleep(60 *1000);
-                    broadcastBlocking(fullTx);
+                    broadcast(fullTx);
                 } catch (InterruptedException ex) {
                     LOG.debug("don't wait for tx {}", fullTx.getHash());
                 }
@@ -445,68 +361,6 @@ public class PaymentController {
             }
         });
         
-    }
-    
-    private static boolean checkBurnedOutpoints(List<TransactionOutPoint> to, List<Pair<TransactionOutPoint, Coin>> refundClientPoints) {
-        //sanity check: client cannot give us burned outpoints
-        for (TransactionOutPoint t : to) {
-            for (Pair<TransactionOutPoint,Coin> p : refundClientPoints) {
-                if (t.equals(p.element0())) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    
-    private static void removeBurnedOutputs(List<TransactionOutput> clientWalletOutputs, List<TransactionOutPoint> to) {
-        for(Iterator<TransactionOutput> i=clientWalletOutputs.iterator();i.hasNext();) {
-            TransactionOutput output = i.next();
-            for(TransactionOutPoint t:to) {
-                if(output.getParentTransaction() == null) {
-                    throw new IllegalStateException("cannot handle detached transaction outputs");
-                }
-                if(t.getHash().equals(output.getParentTransaction().getHash()) &&
-                        output.getIndex() == t.getIndex()) {
-                    i.remove();
-                    break;
-                }
-            }
-        }
-    } 
-
-    private void broadcast(final Transaction fullTx, final String clientId) {
-        //broadcast immediately
-        final TransactionBroadcast broadcast = walletService.peerGroup().broadcastTransaction(fullTx);
-        broadcast.future().addListener(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Transaction tx = broadcast.future().get();
-                    LOG.debug("{CompleteSign} tx {} broadcasted for {}", tx, clientId);
-                } catch (InterruptedException | ExecutionException ex) {
-                    LOG.error("{CompleteSign} tx {} NOT broadcasted for {}", fullTx, clientId);
-                    LOG.error("{CompleteSign} broadcast error", ex);
-                }
-            }
-        }, Threading.USER_THREAD);
-    }
-    
-    public static List<TransactionOutput> filter(NetworkParameters params, List<TransactionOutput> outputs, @Nullable byte[] rawBloomFilter) {
-        final List<TransactionOutput> filteredOutputs = new ArrayList<>(outputs.size());    
-        if(rawBloomFilter != null) {
-            SimpleBloomFilter<byte[]> bloomFilter = new SimpleBloomFilter(rawBloomFilter);
-            for(TransactionOutput output: outputs) {
-                if(bloomFilter.contains(output.getOutPointFor().unsafeBitcoinSerialize())) {
-                    filteredOutputs.add(output);
-                    LOG.debug("bloomfilter adding output with outpoint: {}, {}", output, output.getOutPointFor());
-                } else {
-                    LOG.debug("no bloomfilter match for output with outpoint: {}, {}", output, output.getOutPointFor());
-                }
-            }
-            return filteredOutputs;
-        }
-        return outputs;
     }
     
     private static <K extends BaseTO> K newInstance(K k, Type returnType) {
@@ -520,34 +374,24 @@ public class PaymentController {
         return null;
     }
     
-    private static <K extends BaseTO> String createKey(K input) {
-        return SerializeUtils.bytesToHexFull(input.clientPublicKey()) + input.currentDate();
-    }
-    
-    private static <K extends BaseTO> K checkInput(K input, Map<String, K> CACHE) {
-        final String key = createKey(input);
-        final K baseTo = CACHE.get(key);
-        if(baseTo != null) {
-            return baseTo;
-        }
+    private static <K extends BaseTO> K checkInput(final K input) {
         
         if (!input.isInputSet()) {
             return newInstance(input, Type.INPUT_MISMATCH);
         }
 
         //chekc if the client sent us a time which is way too old (1 day)
-        Calendar fromClient = Calendar.getInstance();
+        final Calendar fromClient = Calendar.getInstance();
         fromClient.setTime(new Date(input.currentDate()));
 
-        Calendar fromServerDayBefore = Calendar.getInstance();
+        final Calendar fromServerDayBefore = Calendar.getInstance();
         fromServerDayBefore.add(Calendar.DAY_OF_YEAR, -1);
 
         if (fromClient.before(fromServerDayBefore)) {
             return newInstance(input, Type.TIME_MISMATCH);
-
         }
 
-        Calendar fromServerDayAfter = Calendar.getInstance();
+        final Calendar fromServerDayAfter = Calendar.getInstance();
         fromServerDayAfter.add(Calendar.DAY_OF_YEAR, 1);
 
         if (fromClient.after(fromServerDayAfter)) {

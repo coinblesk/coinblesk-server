@@ -8,14 +8,9 @@ package ch.uzh.csg.coinblesk.server.controller;
 import ch.uzh.csg.coinblesk.server.config.AppConfig;
 import ch.uzh.csg.coinblesk.server.config.BeanConfig;
 import ch.uzh.csg.coinblesk.server.config.SecurityConfig;
-import static ch.uzh.csg.coinblesk.server.controller.GenericEndpointTest.createInputForRefund;
-import static ch.uzh.csg.coinblesk.server.controller.IntegrationTest.balanceServerCall;
-import static ch.uzh.csg.coinblesk.server.controller.IntegrationTest.sendFakeBroadcast;
 import ch.uzh.csg.coinblesk.server.service.WalletService;
 import ch.uzh.csg.coinblesk.server.utilTest.TestBean;
-import com.coinblesk.json.CompleteSignTO;
-import com.coinblesk.json.PrepareHalfSignTO;
-import com.coinblesk.json.RefundP2shTO;
+
 import com.coinblesk.json.Type;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
@@ -64,7 +59,7 @@ import org.springframework.web.context.WebApplicationContext;
  * @author Thomas Bocek
  * @author Raphael Voellmy
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+/*@RunWith(SpringJUnit4ClassRunner.class)
 @TestExecutionListeners(
             {DependencyInjectionTestExecutionListener.class, TransactionalTestExecutionListener.class,
                 DbUnitTestExecutionListener.class})
@@ -323,3 +318,4 @@ public class CompleteSignTest {
         Assert.assertEquals(Type.SUCCESS, completStatusTwice.type());
     }
 }
+*/

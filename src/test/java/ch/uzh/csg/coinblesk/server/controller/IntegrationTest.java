@@ -11,10 +11,7 @@ import ch.uzh.csg.coinblesk.server.config.SecurityConfig;
 import ch.uzh.csg.coinblesk.server.service.WalletService;
 import ch.uzh.csg.coinblesk.server.utilTest.TestBean;
 import com.coinblesk.json.BalanceTO;
-import com.coinblesk.json.CompleteSignTO;
 import com.coinblesk.json.KeyTO;
-import com.coinblesk.json.PrepareHalfSignTO;
-import com.coinblesk.json.RefundP2shTO;
 import com.coinblesk.json.RefundTO;
 import com.coinblesk.json.TxSig;
 import com.coinblesk.json.Type;
@@ -81,7 +78,7 @@ import org.springframework.web.client.RestTemplate;
  *
  * @author draft
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+/*@RunWith(SpringJUnit4ClassRunner.class)
 @TestExecutionListeners({DependencyInjectionTestExecutionListener.class, TransactionalTestExecutionListener.class,
     DbUnitTestExecutionListener.class})
 @ContextConfiguration(classes = {TestBean.class, BeanConfig.class, SecurityConfig.class})
@@ -735,3 +732,4 @@ public class IntegrationTest {
 
     
 }
+*/

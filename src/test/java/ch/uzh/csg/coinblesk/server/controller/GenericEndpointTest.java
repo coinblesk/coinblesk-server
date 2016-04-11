@@ -10,11 +10,11 @@ import ch.uzh.csg.coinblesk.server.config.BeanConfig;
 import ch.uzh.csg.coinblesk.server.config.SecurityConfig;
 import ch.uzh.csg.coinblesk.server.service.WalletService;
 import ch.uzh.csg.coinblesk.server.utilTest.TestBean;
-import com.coinblesk.json.CompleteSignTO;
-import com.coinblesk.json.PrepareHalfSignTO;
-import com.coinblesk.json.RefundP2shTO;
+import com.coinblesk.json.RefundTO;
+import com.coinblesk.json.SignTO;
 import com.coinblesk.json.TxSig;
 import com.coinblesk.json.Type;
+import com.coinblesk.json.VerifyTO;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
@@ -22,6 +22,7 @@ import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseOperation;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -102,19 +103,22 @@ public class GenericEndpointTest {
     @Test
     public void testOldTime() throws Exception {
         Client client = new Client(params, mockMvc);
-        sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
+        Transaction t = sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
         Coin amountToRequest = Coin.valueOf(9876);
         Date now = new Date(1);
+        Address merchantAddress = new ECKey().toAddress(params);
+        Transaction tx = BitcoinUtils.createTx(params, t.getOutputs(), client.p2shAddress(), 
+                merchantAddress, amountToRequest.getValue());
         // test /prepare
-        PrepareHalfSignTO statusPrepare = prepareServerCall(amountToRequest, client, new ECKey().toAddress(params), null, now);
+        SignTO statusPrepare = signServerCall(tx, client, null, now);
         Assert.assertFalse(statusPrepare.isSuccess());
         Assert.assertEquals(Type.TIME_MISMATCH, statusPrepare.type());
         // test /refund-p2sh
-        RefundP2shTO statusRefund = refundServerCall(mockMvc, client.ecKey(), Collections.emptyList(), Collections.emptyList(), now);
+        RefundTO statusRefund = refundServerCall(mockMvc, client.ecKey(), Collections.emptyList(), Collections.emptyList(), now);
         Assert.assertFalse(statusRefund.isSuccess());
         Assert.assertEquals(Type.TIME_MISMATCH, statusRefund.type());
         // test /complete-sign
-        CompleteSignTO statusSign = completeSignServerCall(mockMvc,client.ecKey(), client.p2shAddress(), new Transaction(params), now);
+        VerifyTO statusSign = verifyServerCall(mockMvc,client.ecKey(), client.p2shAddress(), new Transaction(params), now);
         Assert.assertFalse(statusSign.isSuccess());
         Assert.assertEquals(Type.TIME_MISMATCH, statusSign.type());
 
@@ -123,19 +127,22 @@ public class GenericEndpointTest {
     @Test
     public void testNewTime() throws Exception {
         Client client = new Client(params, mockMvc);
-        sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
+        Transaction t = sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
         Coin amountToRequest = Coin.valueOf(9876);
         Date now = new Date(Long.MAX_VALUE / 2);
+        Address merchantAddress = new ECKey().toAddress(params);
+        Transaction tx = BitcoinUtils.createTx(params, t.getOutputs(), client.p2shAddress(), 
+                merchantAddress, amountToRequest.getValue());
         // test /prepare
-        PrepareHalfSignTO status = prepareServerCall(amountToRequest, client, new ECKey().toAddress(params), null, now);
+        SignTO status = signServerCall(tx, client, null, now);
         Assert.assertFalse(status.isSuccess());
         Assert.assertEquals(Type.TIME_MISMATCH, status.type());
         // test /refund-p2sh
-        RefundP2shTO statusRefund = refundServerCall(mockMvc, client.ecKey(), Collections.emptyList(), Collections.emptyList(), now);
+        RefundTO statusRefund = refundServerCall(mockMvc, client.ecKey(), Collections.emptyList(), Collections.emptyList(), now);
         Assert.assertFalse(statusRefund.isSuccess());
         Assert.assertEquals(Type.TIME_MISMATCH, statusRefund.type());
         // test /complete-sign
-        CompleteSignTO statusSign = completeSignServerCall(mockMvc,client.ecKey(), client.p2shAddress(), new Transaction(params), now);
+        VerifyTO statusSign = verifyServerCall(mockMvc,client.ecKey(), client.p2shAddress(), new Transaction(params), now);
         Assert.assertFalse(statusSign.isSuccess());
         Assert.assertEquals(Type.TIME_MISMATCH, statusSign.type());
     }
@@ -143,25 +150,28 @@ public class GenericEndpointTest {
     @Test
     public void testWrongSignature() throws Exception {
         Client client = new Client(params, mockMvc);
-        sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
+        Transaction t = sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
         Coin amountToRequest = Coin.valueOf(9876);
         Date now = new Date();
+        Address merchantAddress = new ECKey().toAddress(params);
+        Transaction tx = BitcoinUtils.createTx(params, t.getOutputs(), client.p2shAddress(), 
+                merchantAddress, amountToRequest.getValue());
         // test /prepare
-        PrepareHalfSignTO prepareHalfSignTO = prepareServerCallInput(amountToRequest, client.ecKey(), new ECKey().toAddress(params), null, now);
+        SignTO prepareHalfSignTO = signServerCallInput(tx, client.ecKey(), null, now);
         SerializeUtils.sign(prepareHalfSignTO, new ECKey());
-        PrepareHalfSignTO statusPrepare = prepareServerCallOutput(prepareHalfSignTO);
+        SignTO statusPrepare = signServerCallOutput(prepareHalfSignTO);
         Assert.assertFalse(statusPrepare.isSuccess());
         Assert.assertEquals(Type.JSON_SIGNATURE_ERROR, statusPrepare.type());
         // test /refund-p2sh
-        RefundP2shTO refundP2shTO = refundServerCallInput(client.ecKey(),Collections.emptyList(), Collections.emptyList(), now);
+        RefundTO refundP2shTO = refundServerCallInput(client.ecKey(),Collections.emptyList(), Collections.emptyList(), now);
         SerializeUtils.sign(refundP2shTO, new ECKey());
-        RefundP2shTO statusRefund = refundServerCallOutput(mockMvc, refundP2shTO);
+        RefundTO statusRefund = refundServerCallOutput(mockMvc, refundP2shTO);
         Assert.assertFalse(statusRefund.isSuccess());
         Assert.assertEquals(Type.JSON_SIGNATURE_ERROR, statusRefund.type());
         // test /complete-sign
-        CompleteSignTO completeSignTO = completeSignServerCallInput(client.ecKey(), client.p2shAddress(), new Transaction(params), now);
+        VerifyTO completeSignTO = verifyServerCallInput(client.ecKey(), client.p2shAddress(), new Transaction(params), now);
         SerializeUtils.sign(completeSignTO, new ECKey());
-        CompleteSignTO statusSign = completeSignServerCallOutput(mockMvc,completeSignTO);
+        VerifyTO statusSign = verifyServerCallOutput(mockMvc,completeSignTO);
         Assert.assertFalse(statusSign.isSuccess());
         Assert.assertEquals(Type.JSON_SIGNATURE_ERROR, statusSign.type());
         
@@ -170,26 +180,29 @@ public class GenericEndpointTest {
     @Test
     public void testNotRegistered() throws Exception {
         Client client = new Client(params, mockMvc);
-        sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
+        Transaction t = sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
         Coin amountToRequest = Coin.valueOf(9876);
         Date now = new Date();
-        ECKey key = new ECKey();
+        Address merchantAddress = new ECKey().toAddress(params);
+        Transaction tx = BitcoinUtils.createTx(params, t.getOutputs(), client.p2shAddress(), 
+                merchantAddress, amountToRequest.getValue());
         // test /prepare
-        PrepareHalfSignTO prepareHalfSignTO = prepareServerCallInput(amountToRequest, key, new ECKey().toAddress(params), null, now);
+        ECKey key = new ECKey();
+        SignTO prepareHalfSignTO = signServerCallInput(tx, key, null, now);
         SerializeUtils.sign(prepareHalfSignTO, key);
-        PrepareHalfSignTO status = prepareServerCallOutput(prepareHalfSignTO);
+        SignTO status = signServerCallOutput(prepareHalfSignTO);
         Assert.assertFalse(status.isSuccess());
         Assert.assertEquals(Type.KEYS_NOT_FOUND, status.type());
         // test /refund-p2sh
-        RefundP2shTO refundP2shTO = refundServerCallInput(key, Collections.emptyList(), Collections.emptyList(), now);
+        RefundTO refundP2shTO = refundServerCallInput(key, Collections.emptyList(), Collections.emptyList(), now);
         SerializeUtils.sign(refundP2shTO, key);
-        RefundP2shTO statusRefund = refundServerCallOutput(mockMvc, refundP2shTO);
+        RefundTO statusRefund = refundServerCallOutput(mockMvc, refundP2shTO);
         Assert.assertFalse(statusRefund.isSuccess());
         Assert.assertEquals(Type.KEYS_NOT_FOUND, statusRefund.type());
         // test /complete-sign
-        CompleteSignTO completeSignTO = completeSignServerCallInput(key, client.p2shAddress(), new Transaction(params), now);
+        VerifyTO completeSignTO = verifyServerCallInput(key, client.p2shAddress(), new Transaction(params), now);
         SerializeUtils.sign(completeSignTO, key);
-        CompleteSignTO statusSign = completeSignServerCallOutput(mockMvc,completeSignTO);
+        VerifyTO statusSign = verifyServerCallOutput(mockMvc,completeSignTO);
         Assert.assertFalse(statusSign.isSuccess());
         Assert.assertEquals(Type.KEYS_NOT_FOUND, statusSign.type());
     }
@@ -202,17 +215,31 @@ public class GenericEndpointTest {
         Coin amountToRequest = Coin.valueOf(9876);
         Date now = new Date();
         Address merchantAddress = new ECKey().toAddress(params);
+        
+        Transaction tx = BitcoinUtils.createTx(params, t.getOutputs(), client.p2shAddress(), 
+                merchantAddress, amountToRequest.getValue());
         // test /prepare
-        PrepareHalfSignTO statusPrepare1 = prepareServerCall(amountToRequest, client, merchantAddress, null, now);
+        SignTO statusPrepare1 = signServerCall(tx, client, null, now);
         Assert.assertTrue(statusPrepare1.isSuccess());
-        //this is caching, so no reply attack        
-        PrepareHalfSignTO statusPrepare2 = prepareServerCall(amountToRequest, client, merchantAddress, null, now);
+        // again -> results in same output        
+        SignTO statusPrepare2 = signServerCall(tx, client, null, now);
         Assert.assertTrue(statusPrepare2.isSuccess());
         Assert.assertEquals(SerializeUtils.GSON.toJson(statusPrepare1), SerializeUtils.GSON.toJson(statusPrepare2));
+        // option 2
+        List<Pair<byte[], Long>> outpointCoinPair1 = convert(t.getOutputs());
+        SignTO statusPrepare3 = signServerCall(outpointCoinPair1, merchantAddress, amountToRequest.getValue(), client, null, now);
+        Assert.assertTrue(statusPrepare3.isSuccess());
+        // again -> results in same output
+        List<Pair<byte[], Long>> outpointCoinPair2 = convert(t.getOutputs());
+        SignTO statusPrepare4 = signServerCall(outpointCoinPair2, merchantAddress, amountToRequest.getValue(), client, null, now);
+        Assert.assertTrue(statusPrepare4.isSuccess());
+        Assert.assertEquals(SerializeUtils.GSON.toJson(statusPrepare3), SerializeUtils.GSON.toJson(statusPrepare4));
         // test /refund-p2sh
-        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(statusPrepare1.signatures());
+        
+        /*List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(statusPrepare1.signatures());
         Transaction txClient = BitcoinUtils.createTx(
                 params, t.getOutputs(), client.p2shAddress(), merchantAddress,amountToRequest.value);
+        
         RefundInput refundInput = createInputForRefund(
                       params, client, merchantAddress, serverSigs, walletService.refundLockTime(), txClient);
         RefundP2shTO statusRefund1 = refundServerCall(mockMvc, client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), now);
@@ -221,26 +248,34 @@ public class GenericEndpointTest {
         Assert.assertTrue(statusRefund2.isSuccess());
         Assert.assertEquals(SerializeUtils.GSON.toJson(statusRefund1), SerializeUtils.GSON.toJson(statusRefund2));
         // test /complete-sign
-        Transaction tx = createTx(client, merchantAddress, amountToRequest, serverSigs, t.getOutputs());
+        /*Transaction tx = createTx(client, merchantAddress, amountToRequest, serverSigs, t.getOutputs());
         CompleteSignTO statusSign1 = completeSignServerCall(mockMvc,client.ecKey(), merchantAddress, tx, now);
         Assert.assertTrue(statusSign1.isSuccess());
         Assert.assertEquals(Type.SUCCESS, statusSign1.type());
         CompleteSignTO statusSign2 = completeSignServerCall(mockMvc,client.ecKey(), merchantAddress, tx, now);
         Assert.assertTrue(statusSign2.isSuccess());
-        Assert.assertEquals(SerializeUtils.GSON.toJson(statusSign1), SerializeUtils.GSON.toJson(statusSign2));
+        Assert.assertEquals(SerializeUtils.GSON.toJson(statusSign1), SerializeUtils.GSON.toJson(statusSign2));*/
     }
     
-    static CompleteSignTO completeSignServerCall(
+    /*private Transaction createTx() {
+        Transaction txClient = BitcoinUtils.createTx(params,outputs, p2shAddressFrom, p2shAddressTo,
+                amount);
+        List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(txClient, client.redeemScript(), client.ecKey());
+        BitcoinUtils.applySignatures(txClient, client.redeemScript(), clientSigs, serverSigs, client.clientFirst());
+        return txClient;
+    }*/
+    
+    static VerifyTO verifyServerCall(
            MockMvc mockMvc,  ECKey client, Address p2shAddressTo, Transaction fullTx, Date now) throws UnsupportedEncodingException, Exception {
-        CompleteSignTO cs = completeSignServerCallInput(client, p2shAddressTo, fullTx, now);
-        return completeSignServerCallOutput(mockMvc, cs);
+        VerifyTO cs = verifyServerCallInput(client, p2shAddressTo, fullTx, now);
+        return verifyServerCallOutput(mockMvc, cs);
     }
 
-    static CompleteSignTO completeSignServerCallInput(
+    static VerifyTO verifyServerCallInput(
             ECKey client, Address p2shAddressTo, Transaction fullTx, Date now) throws UnsupportedEncodingException, Exception {
-        CompleteSignTO cs = new CompleteSignTO()
+        VerifyTO cs = new VerifyTO()
                 .clientPublicKey(client.getPubKey())
-                .p2shAddressTo(p2shAddressTo.toString())
+                //.p2shAddressTo(p2shAddressTo.toString())
                 .fullSignedTransaction(fullTx.unsafeBitcoinSerialize())
                 .currentDate(now.getTime());
         if (cs.messageSig() == null) {
@@ -249,24 +284,24 @@ public class GenericEndpointTest {
         return cs;
     }
     
-    static CompleteSignTO completeSignServerCallOutput(MockMvc mockMvc, CompleteSignTO cs) throws Exception {
-        MvcResult res = mockMvc.perform(post("/p/s").secure(true).
+    static VerifyTO verifyServerCallOutput(MockMvc mockMvc, VerifyTO cs) throws Exception {
+        MvcResult res = mockMvc.perform(post("/v2/p/v").secure(true).
                 contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(cs))).andExpect(status().isOk()).andReturn();
-        return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), CompleteSignTO.class);
+        return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), VerifyTO.class);
     }
     
-    static RefundP2shTO refundServerCall(MockMvc mockMvc, ECKey client, List<Pair<TransactionOutPoint, Coin>> refundClientOutpoints,
+    static RefundTO refundServerCall(MockMvc mockMvc, ECKey client, List<Pair<TransactionOutPoint, Coin>> refundClientOutpoints,
             List<TransactionSignature> partiallySignedRefundClient, Date date) throws Exception {
-        RefundP2shTO refundP2shTO = refundServerCallInput(client, refundClientOutpoints, partiallySignedRefundClient, date);
+        RefundTO refundP2shTO = refundServerCallInput(client, refundClientOutpoints, partiallySignedRefundClient, date);
         return refundServerCallOutput(mockMvc, refundP2shTO);
     }
 
-    static RefundP2shTO refundServerCallInput(ECKey client, List<Pair<TransactionOutPoint, Coin>> refundClientOutpoints,
+    static RefundTO refundServerCallInput(ECKey client, List<Pair<TransactionOutPoint, Coin>> refundClientOutpoints,
             List<TransactionSignature> partiallySignedRefundClient, Date date) throws Exception {
-        RefundP2shTO refundP2shTO = new RefundP2shTO();
+        RefundTO refundP2shTO = new RefundTO();
         refundP2shTO.clientPublicKey(client.getPubKey());
-        refundP2shTO.refundClientOutpointsCoinPair(SerializeUtils.serializeOutPointsCoin(refundClientOutpoints));
-        refundP2shTO.refundSignaturesClient(SerializeUtils.serializeSignatures(partiallySignedRefundClient));
+        //refundP2shTO.refundClientOutpointsCoinPair(SerializeUtils.serializeOutPointsCoin(refundClientOutpoints));
+        //refundP2shTO.refundSignaturesClient(SerializeUtils.serializeSignatures(partiallySignedRefundClient));
         refundP2shTO.currentDate(date.getTime());
         if (refundP2shTO.messageSig() == null) {
             SerializeUtils.sign(refundP2shTO, client);
@@ -274,22 +309,40 @@ public class GenericEndpointTest {
         return refundP2shTO;
     }
     
-    static RefundP2shTO refundServerCallOutput(MockMvc mockMvc, RefundP2shTO refundP2shTO) throws Exception {
-        MvcResult res = mockMvc.perform(post("/p/f").secure(true).
+    static RefundTO refundServerCallOutput(MockMvc mockMvc, RefundTO refundP2shTO) throws Exception {
+        MvcResult res = mockMvc.perform(post("/p/r").secure(true).
                 contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(refundP2shTO))).andExpect(status().isOk()).andReturn();
-        return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), RefundP2shTO.class);
+        return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), RefundTO.class);
+    }
+    
+    private SignTO signServerCall(List<Pair<byte[], Long>> outpointCoinPair, Address to, long amount, Client client, TxSig clientSig, Date date) throws Exception {
+        SignTO prepareHalfSignTO = signServerCallInput(outpointCoinPair, to, amount, client.ecKey(), clientSig, date);
+        return signServerCallOutput(prepareHalfSignTO);
     }
 
-    private PrepareHalfSignTO prepareServerCall(Coin amountToRequest, Client client, Address to, TxSig clientSig, Date date) throws Exception {
-        PrepareHalfSignTO prepareHalfSignTO = prepareServerCallInput(amountToRequest, client.ecKey(), to, clientSig, date);
-        return prepareServerCallOutput(prepareHalfSignTO);
-    }
-
-    private PrepareHalfSignTO prepareServerCallInput(Coin amountToRequest, ECKey client, Address to, TxSig clientSig, Date date) throws Exception {
-        PrepareHalfSignTO prepareHalfSignTO = new PrepareHalfSignTO()
-                .amountToSpend(amountToRequest.longValue())
-                .clientPublicKey(client.getPubKey())
+    private SignTO signServerCallInput(List<Pair<byte[], Long>> outpointCoinPair, Address to, long amount, ECKey client, TxSig clientSig, Date date) throws Exception {
+        SignTO prepareHalfSignTO = new SignTO()
+                .outpointsCoinPair(outpointCoinPair)
+                .amountToSpend(amount)
                 .p2shAddressTo(to.toString())
+                .clientPublicKey(client.getPubKey())
+                .messageSig(clientSig)
+                .currentDate(date.getTime());
+        if (prepareHalfSignTO.messageSig() == null) {
+            SerializeUtils.sign(prepareHalfSignTO, client);
+        }
+        return prepareHalfSignTO;
+    }
+
+    private SignTO signServerCall(Transaction tx, Client client, TxSig clientSig, Date date) throws Exception {
+        SignTO prepareHalfSignTO = signServerCallInput(tx, client.ecKey(), clientSig, date);
+        return signServerCallOutput(prepareHalfSignTO);
+    }
+
+    private SignTO signServerCallInput(Transaction tx, ECKey client, TxSig clientSig, Date date) throws Exception {
+        SignTO prepareHalfSignTO = new SignTO()
+                .transaction(tx.unsafeBitcoinSerialize())
+                .clientPublicKey(client.getPubKey())
                 .messageSig(clientSig)
                 .currentDate(date.getTime());
         if (prepareHalfSignTO.messageSig() == null) {
@@ -298,10 +351,10 @@ public class GenericEndpointTest {
         return prepareHalfSignTO;
     }
     
-    private PrepareHalfSignTO prepareServerCallOutput(PrepareHalfSignTO prepareHalfSignTO) throws Exception {
-        MvcResult res = mockMvc.perform(post("/p/p").secure(true).
+    private SignTO signServerCallOutput(SignTO prepareHalfSignTO) throws Exception {
+        MvcResult res = mockMvc.perform(post("/v2/p/s").secure(true).
                 contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(prepareHalfSignTO))).andExpect(status().isOk()).andReturn();
-        return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), PrepareHalfSignTO.class);
+        return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), SignTO.class);
     }
 
     private Transaction sendFakeCoins(Coin amount, Address to) throws VerificationException, PrunedException, BlockStoreException, InterruptedException {
@@ -313,7 +366,7 @@ public class GenericEndpointTest {
         return tx;
     }
     
-    private Transaction createTx(Client client, Address p2shAddress, Coin amountToRequest, List<TransactionSignature> serverSigs, 
+    /*private Transaction createTx(Client client, Address p2shAddress, Coin amountToRequest, List<TransactionSignature> serverSigs, 
             List<TransactionOutput> clientWalletOutputs) {
         Transaction txClient = BitcoinUtils.createTx(params,
                 clientWalletOutputs, client.p2shAddress(), p2shAddress,
@@ -321,13 +374,13 @@ public class GenericEndpointTest {
         List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(txClient, client.redeemScript(), client.ecKey());
         BitcoinUtils.applySignatures(txClient, client.redeemScript(), clientSigs, serverSigs, client.clientFirst());
         return txClient;
-    }
+    }*/
     
     /*Transaction txClient = BitcoinUtils.createTx(params,
                 clientWalletOutputs, client.p2shAddress(), p2shAddress,
                 amountToRequest.value);*/
 
-    static RefundInput createInputForRefund(NetworkParameters params,
+    /*static RefundInput createInputForRefund(NetworkParameters params,
             Client client, Address p2shAddressTo, List<TransactionSignature> serverSigs, 
             int lockTime, Transaction txClient, TransactionOutput... outputs) {
         
@@ -377,5 +430,13 @@ public class GenericEndpointTest {
                 .clientSinatures(partiallySignedRefundClient)
                 .fullTx(txClient);
         
+    }*/
+
+    private List<Pair<byte[], Long>> convert(List<TransactionOutput> outputs) {
+        List<Pair<byte[], Long>> retVal = new ArrayList<>(outputs.size());
+        for(TransactionOutput output: outputs) {
+            retVal.add(new Pair<>(output.getOutPointFor().unsafeBitcoinSerialize(), output.getValue().getValue()));
+        }
+        return retVal;
     }
 }
