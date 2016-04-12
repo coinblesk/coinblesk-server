@@ -14,7 +14,6 @@
   <!-- Levels: OFF, ERROR, WARN, INFO, DEBUG, TRACE and ALL.  -->
   
   <logger name="com.coinblesk" level="ALL"/> 
-  <logger name="ch.uzh.csg" level="ALL"/>
   <logger name="org.springframework" level="DEBUG"/>
    
   <root level="WARN">
