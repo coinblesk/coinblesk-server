@@ -46,7 +46,7 @@ import java.util.Set;
  *
  */
 @Service
-final public class ForexExchangeRateService {
+final public class ForexService {
 
     //18min
     public final static int CACHING_TIME_RATE_MILLIS = 18 * 60 * 1000;
@@ -97,7 +97,6 @@ final public class ForexExchangeRateService {
             final StringBuffer response = doHttpRequest(url);
             // gets actual exchange rate out of Json Object and saves it to last.
             final Gson gson = new Gson();
-            System.out.println("json"+response.toString());
             if(unknowRates.size() > 1) {
                 final RootMulti root = gson.fromJson(response.toString(), RootMulti.class);
                 for (RootMulti.Query.Results.Rate rate : root.query.results.rate) {
@@ -196,10 +195,10 @@ final public class ForexExchangeRateService {
     final static public class ForexTask {
 
         @Autowired
-        private ForexExchangeRateService service;
+        private ForexService service;
 
         //call every 6 minutes
-        @Scheduled(fixedRate = ForexExchangeRateService.CACHING_TIME_RATE_MILLIS / 3)
+        @Scheduled(fixedRate = ForexService.CACHING_TIME_RATE_MILLIS / 3)
         public void doTask() throws Exception {
             Set<String> set = service.exchangeRatesSymbolCache.asMap().keySet();
             service.getExchangeRates(set.toArray(new String[set.size()]));

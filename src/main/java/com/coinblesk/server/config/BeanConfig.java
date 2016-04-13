@@ -24,7 +24,7 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
-import com.coinblesk.server.service.ForexExchangeRateService;
+import com.coinblesk.server.service.ForexService;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.mail.PasswordAuthentication;
@@ -54,8 +54,8 @@ public class BeanConfig
     }
     
     @Bean
-    public static ForexExchangeRateService.ForexTask forexTask() {
-    	return new ForexExchangeRateService.ForexTask();
+    public static ForexService.ForexTask forexTask() {
+    	return new ForexService.ForexTask();
     }
     
     @Bean

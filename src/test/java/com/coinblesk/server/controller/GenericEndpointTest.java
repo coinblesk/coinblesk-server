@@ -39,6 +39,7 @@ import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.TransactionSignature;
+import org.bitcoinj.script.Script;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.testing.FakeTxBuilder;
 import org.bitcoinj.uri.BitcoinURIParseException;
@@ -209,7 +210,7 @@ public class GenericEndpointTest {
     }
 
     @Test
-    @DatabaseTearDown(value = {"classpath:DbUnitFiles/emptyDB.xml"}, type = DatabaseOperation.DELETE_ALL)
+    @DatabaseTearDown(value = {"EmptyDB.xml"}, type = DatabaseOperation.DELETE_ALL)
     public void testCache() throws Exception {
         Client client = new Client(params, mockMvc);
         Transaction t = sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
@@ -235,7 +236,30 @@ public class GenericEndpointTest {
         SignTO statusPrepare4 = signServerCall(outpointCoinPair2, merchantAddress, amountToRequest.getValue(), client, null, now);
         Assert.assertTrue(statusPrepare4.isSuccess());
         Assert.assertEquals(SerializeUtils.GSON.toJson(statusPrepare3), SerializeUtils.GSON.toJson(statusPrepare4));
+        //now we have the sigs and we can fully sign the tx
+        Transaction transaction = BitcoinUtils.createTx(params, convert2(t.getOutputs()), client.redeemScript(),
+                            client.p2shAddress(),
+                            merchantAddress, amountToRequest.getValue());
+        List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(transaction, client.redeemScript(), client.ecKey());
+        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(statusPrepare4.serverSignatures());
+        BitcoinUtils.applySignatures(transaction, client.redeemScript(), 
+                clientSigs, serverSigs, true);
+        Coin fee = transaction.getFee();
+        int len = transaction.unsafeBitcoinSerialize().length;
+        System.out.println("tx len: "+len);
+        Assert.assertEquals(10,fee.getValue() / len);
+        
+        
+        //final Script redeemScript = BitcoinUtils.createRedeemScript(2, keys);
+        //final Script p2SHOutputScript = BitcoinUtils.createP2SHOutputScript(2, keys);
+        //Collections.sort(keys, ECKey.PUBKEY_COMPARATOR);
+        //final Address p2shAddressFrom = p2SHOutputScript.getToAddress(params);
+        
+        
+        
         // test /refund-p2sh
+        
+        
         
         /*List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(statusPrepare1.signatures());
         Transaction txClient = BitcoinUtils.createTx(
@@ -433,10 +457,18 @@ public class GenericEndpointTest {
         
     }*/
 
-    private List<Pair<byte[], Long>> convert(List<TransactionOutput> outputs) {
+    private static List<Pair<byte[], Long>> convert(List<TransactionOutput> outputs) {
         List<Pair<byte[], Long>> retVal = new ArrayList<>(outputs.size());
         for(TransactionOutput output: outputs) {
             retVal.add(new Pair<>(output.getOutPointFor().unsafeBitcoinSerialize(), output.getValue().getValue()));
+        }
+        return retVal;
+    }
+    
+    private static List<Pair<TransactionOutPoint, Coin>> convert2(List<TransactionOutput> outputs) {
+        List<Pair<TransactionOutPoint, Coin>> retVal = new ArrayList<>(outputs.size());
+        for(TransactionOutput output: outputs) {
+            retVal.add(new Pair<>(output.getOutPointFor(), output.getValue()));
         }
         return retVal;
     }

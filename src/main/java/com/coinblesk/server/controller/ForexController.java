@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.coinblesk.server.service.ForexExchangeRateService;
+import com.coinblesk.server.service.ForexService;
 import com.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.json.ExchangeRateTO;
 import com.coinblesk.json.Type;
@@ -39,22 +39,32 @@ import java.util.regex.Pattern;
  *
  */
 @RestController
-@RequestMapping({"/wallet", "/w"})
+// -> /wallet and /w is for v1 only and should not be used anymore
+@RequestMapping({"/wallet", "/w", "/forex", "/x"})
 @ApiVersion({"v1", ""})
-public class BitcoinWalletController {
+public class ForexController {
 
-    private static final Logger LOG = LoggerFactory.getLogger(BitcoinWalletController.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ForexController.class);
 
     @Autowired
-    private ForexExchangeRateService forexExchangeRateService;
+    private ForexService forexExchangeRateService;
+    
+    @RequestMapping(value = {"/exchangeRate/{symbol}", "/x/{symbol}"},
+            method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
+    @ResponseBody
+    public ResponseEntity<ExchangeRateTO> forexExchangeRate(@PathVariable(value = "symbol") String symbol) {
+        return forexExchangeRate(symbol, "USD");
+    }
+            
 
     /**
      * Returns up to date exchangerate BTC/CHF
      *
      * @return CustomResponseObject with exchangeRate BTC/CHF as a String
      */
-    @RequestMapping(value = {"/exchangeRate/{from}{to}", "/x/{from}{to}"},
+    @RequestMapping(value = {"/rate/{from}-{to}", "/r/{from}-{to}"},
             method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
+    @ApiVersion({"v2"})
     @ResponseBody
     public ResponseEntity<ExchangeRateTO> forexExchangeRate(@PathVariable(value = "from") String from,
             @PathVariable(value = "to") String to) {

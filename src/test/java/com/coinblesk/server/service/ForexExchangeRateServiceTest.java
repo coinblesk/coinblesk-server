@@ -34,7 +34,7 @@ import java.util.Map;
 public class ForexExchangeRateServiceTest {
 
     @Autowired
-    private ForexExchangeRateService forexExchangeRateService;
+    private ForexService forexExchangeRateService;
 
     @Test
     public void testForex() throws Exception {
