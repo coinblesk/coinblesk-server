@@ -188,8 +188,32 @@ public class PaymentController {
             final ECKey clientKey = keys.get(0);
             final Script redeemScript = BitcoinUtils.createRedeemScript(2, keys);
             //this is how the client sees the tx
-            final Transaction refundTransaction = new Transaction(params, refundTO.refundTransaction());
-            //TODO: check client setting for locktime
+            final Transaction refundTransaction;
+            
+            //choice 1 - full refund tx
+            if (refundTO.refundTransaction() != null) {
+                    refundTransaction = new Transaction(params, refundTO.refundTransaction());
+            } 
+            //choice 2 - send outpoints, coins, where to send btc to, and amount
+            else if (refundTO.outpointsCoinPair() != null && refundTO.lockTime() > 0 &&
+                    refundTO.refundSendTo() != null) {
+                final List<Pair<TransactionOutPoint, Coin>> refundClientPoints = SerializeUtils
+                        .deserializeOutPointsCoin(
+                                params, refundTO.outpointsCoinPair());
+                try {
+                    Address refundSendTo = new Address(params, refundTO.refundSendTo());
+                    refundTransaction = BitcoinUtils.createRefundTx(params, refundClientPoints, redeemScript,
+                            refundSendTo, refundTO.lockTime());
+                } catch (AddressFormatException e) {
+                    LOG.debug("{refund}:{} empty address for", (System.currentTimeMillis() - start));
+                    return new RefundTO().type(Type.ADDRESS_EMPTY).message(e.getMessage());
+                }
+            }
+            //wrong choice
+            else {
+                return new RefundTO().type(Type.INPUT_MISMATCH);
+            }
+            
             List<TransactionSignature> clientSigs = SerializeUtils.deserializeSignatures(refundTO
                     .clientSignatures());
 
@@ -200,6 +224,8 @@ public class PaymentController {
             } else {
                 LOG.debug("{refund} signature good! for tx {} with sigs", refundTransaction, clientSigs);
             }
+            //also check the server sigs, that the reedemscript has our public key
+            
 
             Collections.sort(keys, ECKey.PUBKEY_COMPARATOR);
 
@@ -255,35 +281,26 @@ public class PaymentController {
             if (input.transaction() != null) {
                 LOG.debug("{sign}:{} got transaction from input", (System.currentTimeMillis() - start));
                 transaction = new Transaction(appConfig.getNetworkParameters(), input.transaction());
-            } //choice 2 - send outpoints, coins, where to send btc to, and amount
+            } 
+            //choice 2 - send outpoints, coins, where to send btc to, and amount
             else if (input.outpointsCoinPair() != null && input.p2shAddressTo() != null
                     && input.amountToSpend() != 0) {
                 //having the coins and the output allows us to create the tx without looking into our wallet
-                final Address p2shAddressTo;
                 try {
-                    p2shAddressTo = new Address(params, input.p2shAddressTo());
+                    transaction = createTx(params, input.p2shAddressTo(), p2shAddressFrom, input.outpointsCoinPair(), 
+                            input.amountToSpend(), redeemScript);
                 } catch (AddressFormatException e) {
                     LOG.debug("{sign}:{} empty address for", (System.currentTimeMillis() - start));
                     return new SignTO().type(Type.ADDRESS_EMPTY).message(e.getMessage());
-                }
-
-                //we now get from the client the outpoints for the refund tx (including hash)
-                final List<Pair<TransactionOutPoint, Coin>> refundClientPoints = SerializeUtils
-                        .deserializeOutPointsCoin(
-                                params, input.outpointsCoinPair());
-
-                try {
-                    transaction = BitcoinUtils.createTx(params, refundClientPoints, redeemScript,
-                            p2shAddressFrom,
-                            p2shAddressTo, input.amountToSpend());
-                } catch (CoinbleskException e) {
+                }  catch (CoinbleskException e) {
                     LOG.warn("{sign} could not create tx", e);
                     return new SignTO().type(Type.SERVER_ERROR).message(e.getMessage());
                 } catch (InsuffientFunds e) {
                     LOG.debug("{sign} not enough coins or amount too small");
                     return new SignTO().type(Type.NOT_ENOUGH_COINS);
                 }
-            } //wrong choice
+            } 
+            //wrong choice
             else {
                 return new SignTO().type(Type.INPUT_MISMATCH);
             }
@@ -319,15 +336,70 @@ public class PaymentController {
             if (error != null) {
                 return error;
             }
+            final NetworkParameters params = appConfig.getNetworkParameters();
             final String clientId = SerializeUtils.bytesToHex(input.clientPublicKey());
             final List<ECKey> keys = keyService.getECKeysByClientPublicKey(input.clientPublicKey());
             if (keys == null || keys.size() != 2) {
                 return new VerifyTO().type(Type.KEYS_NOT_FOUND);
             }
+            final ECKey clientKey = keys.get(0);
+            final ECKey serverKey = keys.get(1);
             final Script redeemScript = BitcoinUtils.createRedeemScript(2, keys);
-
-            final Transaction fullTx = new Transaction(appConfig.getNetworkParameters(), input
-                    .fullSignedTransaction());
+            final Script p2SHOutputScript = BitcoinUtils.createP2SHOutputScript(2, keys);
+            Collections.sort(keys, ECKey.PUBKEY_COMPARATOR);
+            final Address p2shAddressFrom = p2SHOutputScript.getToAddress(params);
+            
+            final Transaction fullTx;
+            //choice 1 - full tx
+            if (input.transaction() != null) {
+                LOG.debug("{verif}:{} got transaction from input", (System.currentTimeMillis() - start));
+                fullTx = new Transaction(appConfig.getNetworkParameters(), input.transaction());
+                //TODO: verify that this was sent from us
+            }
+            //choice 2 - send outpoints, coins, where to send btc to, and amount
+            else if (input.outpointsCoinPair() != null && input.p2shAddressTo() != null
+                    && input.amountToSpend() != 0 && input.clientSignatures() != null &&
+                    input.serverSignatures() != null) {
+                try {
+                    fullTx = createTx(params, input.p2shAddressTo(), p2shAddressFrom, input.outpointsCoinPair(), 
+                            input.amountToSpend(), redeemScript);
+                    List<TransactionSignature> clientSigs = SerializeUtils.deserializeSignatures(
+                            input.clientSignatures());
+                    List<TransactionSignature> severSigs = SerializeUtils.deserializeSignatures(
+                            input.serverSignatures());
+                    BitcoinUtils.applySignatures(fullTx, redeemScript, clientSigs, severSigs, true);
+                    
+                    if (!SerializeUtils.verifyTxSignatures(fullTx, clientSigs, redeemScript, clientKey)) {
+                        LOG.debug("{verif} signature mismatch for client-sigs tx {} with sigs {}", fullTx, clientSigs);
+                        return new VerifyTO().type(Type.SIGNATURE_ERROR);
+                    } else {
+                        LOG.debug("{verif} signature good! for client-sigs tx {} with sigs", fullTx, clientSigs);
+                    }
+                    
+                    if (!SerializeUtils.verifyTxSignatures(fullTx, severSigs, redeemScript, serverKey)) {
+                        LOG.debug("{verif} signature mismatch for server-sigs tx {} with sigs {}", fullTx, severSigs);
+                        return new VerifyTO().type(Type.SIGNATURE_ERROR);
+                    } else {
+                        LOG.debug("{verif} signature good! for server-sigs tx {} with sigs", fullTx, clientSigs);
+                    }
+                    
+                } catch (AddressFormatException e) {
+                    LOG.debug("{verif}:{} empty address for", (System.currentTimeMillis() - start));
+                    return new VerifyTO().type(Type.ADDRESS_EMPTY).message(e.getMessage());
+                }  catch (CoinbleskException e) {
+                    LOG.warn("{verif} could not create tx", e);
+                    return new VerifyTO().type(Type.SERVER_ERROR).message(e.getMessage());
+                } catch (InsuffientFunds e) {
+                    LOG.debug("{verif} not enough coins or amount too small");
+                    return new VerifyTO().type(Type.NOT_ENOUGH_COINS);
+                }
+            }
+            //wrong choice
+            else {
+                return new VerifyTO().type(Type.INPUT_MISMATCH);
+            }
+            
+            
             LOG.debug("{verif}:{} client {} received {}", (System.currentTimeMillis() - start), clientId,
                     fullTx);
 
@@ -422,5 +494,18 @@ public class PaymentController {
 
         }
         return null;
+    }
+
+    private static Transaction createTx(NetworkParameters params, String p2shAddressTo, Address p2shAddressFrom,
+            List<Pair<byte[], Long>> outpointsCoinPair, long amountToSpend, Script redeemScript) 
+            throws AddressFormatException, CoinbleskException, InsuffientFunds {
+        final Address p2shAddressTo1 = new Address(params, p2shAddressTo);
+
+        //we now get from the client the outpoints for the refund tx (including hash)
+        final List<Pair<TransactionOutPoint, Coin>> refundClientPoints = SerializeUtils
+                .deserializeOutPointsCoin(params, outpointsCoinPair);
+
+        return BitcoinUtils.createTx(params, refundClientPoints, redeemScript,
+                    p2shAddressFrom, p2shAddressTo1, amountToSpend);
     }
 }

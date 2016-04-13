@@ -36,14 +36,12 @@ public class ApprovedTxDAO {
     @PersistenceContext()
     private EntityManager em;
 
-    public List<ApprovedTx> findByAddress(final byte[] address) {
+    public List<ApprovedTx> findByAddress(final byte[] pubKey) {
         final CriteriaBuilder cb = em.getCriteriaBuilder();
         final CriteriaQuery<ApprovedTx> query = cb.createQuery(ApprovedTx.class);
         final Root<ApprovedTx> from = query.from(ApprovedTx.class);
-        final Predicate condition1 = cb.equal(from.get("addressTo"), address);
-        final Predicate condition2 = cb.equal(from.get("addressFrom"), address);
-        final Predicate conditionOr = cb.or(condition1, condition2);
-        CriteriaQuery<ApprovedTx> select = query.select(from).where(conditionOr);
+        final Predicate condition = cb.equal(from.get("clientPublicKey"), pubKey);
+        CriteriaQuery<ApprovedTx> select = query.select(from).where(condition);
         return em.createQuery(select).getResultList();
     }
 

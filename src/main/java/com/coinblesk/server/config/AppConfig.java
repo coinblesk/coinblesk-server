@@ -17,7 +17,6 @@ package com.coinblesk.server.config;
 
 import com.coinblesk.server.utils.CoinUtils;
 import com.coinblesk.bitcoin.BitcoinNet;
-import com.coinblesk.util.Currency;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
@@ -46,9 +45,6 @@ public class AppConfig {
     @Value("${bitcoin.net:unittest}")
     private String bitcoinNet;
 
-    @Value("${exchangerates.currency:CHF}")
-    private Currency currency;
-
     @Value("${bitcoin.minconf:0}")
     private int minConf;
 
@@ -72,10 +68,6 @@ public class AppConfig {
 
     public NetworkParameters getNetworkParameters() {
         return CoinUtils.getNetworkParams(BitcoinNet.of(bitcoinNet));
-    }
-
-    public Currency getCurrency() {
-        return currency;
     }
 
     public int getMinConf() {
