@@ -399,6 +399,8 @@ public class PaymentController {
                 return new VerifyTO().type(Type.INPUT_MISMATCH);
             }
             
+            final VerifyTO output = new VerifyTO();
+            output.transaction(fullTx.unsafeBitcoinSerialize());
             
             LOG.debug("{verif}:{} client {} received {}", (System.currentTimeMillis() - start), clientId,
                     fullTx);
@@ -409,8 +411,7 @@ public class PaymentController {
             broadcast(fullTx);
 
             LOG.debug("{verif}:{} broadcast done {}", (System.currentTimeMillis() - start), clientId);
-            final VerifyTO output = new VerifyTO();
-            output.fullTx(fullTx.unsafeBitcoinSerialize());
+            
             if (txService.isTransactionInstant(input.clientPublicKey(), redeemScript, connectedFullTx)) {
                 LOG.debug("{verif}:{} instant payment OK for {}", (System.currentTimeMillis() - start),
                         clientId);
