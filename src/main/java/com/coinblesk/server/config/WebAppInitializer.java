@@ -30,7 +30,7 @@ public class WebAppInitializer implements WebApplicationInitializer {
     public void onStartup(ServletContext container) {
         // Create the 'root' Spring application context
         AnnotationConfigWebApplicationContext rootContext = new AnnotationConfigWebApplicationContext();
-        rootContext.setConfigLocation("ch.uzh.csg.coinblesk.server.config");
+        rootContext.setConfigLocation("com.coinblesk.server.config");
         // Manage the lifecycle of the root application context
         container.addListener(new ContextLoaderListener(rootContext));
 
