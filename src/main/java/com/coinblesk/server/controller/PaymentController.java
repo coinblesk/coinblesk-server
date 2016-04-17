@@ -331,7 +331,7 @@ public class PaymentController {
     public VerifyTO verify(@RequestBody VerifyTO input) {
         final long start = System.currentTimeMillis();
         try {
-            LOG.debug("{verif} for {}", SerializeUtils.bytesToHex(input.clientPublicKey()));
+            LOG.debug("{verify} for {}", SerializeUtils.bytesToHex(input.clientPublicKey()));
             final VerifyTO error = checkInput(input);
             if (error != null) {
                 return error;
@@ -409,17 +409,16 @@ public class PaymentController {
             broadcast(fullTx);
 
             LOG.debug("{verif}:{} broadcast done {}", (System.currentTimeMillis() - start), clientId);
-
+            final VerifyTO output = new VerifyTO();
+            output.fullTx(fullTx.unsafeBitcoinSerialize());
             if (txService.isTransactionInstant(input.clientPublicKey(), redeemScript, connectedFullTx)) {
                 LOG.debug("{verif}:{} instant payment OK for {}", (System.currentTimeMillis() - start),
                         clientId);
-                VerifyTO output = new VerifyTO().setSuccess();
-                return output;
+                return output.setSuccess();
             } else {
                 LOG.debug("{verif}:{} instant payment NOT OK for {}", (System.currentTimeMillis() - start),
                         clientId);
-                VerifyTO output = new VerifyTO().type(Type.NO_INSTANT_PAYMENT);
-                return output;
+                return output.type(Type.NO_INSTANT_PAYMENT);
             }
 
         } catch (Exception e) {

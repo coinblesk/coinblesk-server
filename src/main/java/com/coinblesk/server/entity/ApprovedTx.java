@@ -41,7 +41,8 @@ public class ApprovedTx implements Serializable {
     @Column(name = "TX_HASH", updatable = false, length = 255)
     private byte[] txHash;
 
-    @Column(name = "CLIENT_PUBLIC_KEY", nullable = false, updatable = false, length = 255)
+    //set nullable to true, once DB is clean -- nullable = false,
+    @Column(name = "CLIENT_PUBLIC_KEY",  updatable = false, length = 255)
     private byte[] clientPublicKey;
 
     @Lob
