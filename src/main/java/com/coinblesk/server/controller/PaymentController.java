@@ -304,6 +304,8 @@ public class PaymentController {
             else {
                 return new SignTO().type(Type.INPUT_MISMATCH);
             }
+            
+            //check outpoints are burnt - TODO
 
             final List<TransactionSignature> serverSigs = BitcoinUtils
                     .partiallySign(transaction, redeemScript, serverKey);
@@ -413,6 +415,7 @@ public class PaymentController {
             LOG.debug("{verif}:{} broadcast done {}", (System.currentTimeMillis() - start), clientId);
             
             if (txService.isTransactionInstant(input.clientPublicKey(), redeemScript, connectedFullTx)) {
+                //burn outpoints
                 LOG.debug("{verif}:{} instant payment OK for {}", (System.currentTimeMillis() - start),
                         clientId);
                 return output.setSuccess();
