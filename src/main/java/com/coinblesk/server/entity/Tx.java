@@ -32,9 +32,8 @@ public class Tx implements Serializable {
     private static final long serialVersionUID = -7496348013847426945L;
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "ID", nullable = false)
-    private long id;
+    @Column(name = "TX_HASH", updatable = false, length = 255)
+    private byte[] txHash;
 
     @Column(name = "CLIENT_PUBLIC_KEY", nullable = false, updatable = false, length = 255)
     private byte[] clientPublicKey;
@@ -43,16 +42,19 @@ public class Tx implements Serializable {
     @Column(name = "TX", nullable = false, updatable = false)
     private byte[] tx;
 
+    @Column(name = "CLIENT_PUBLIC_KEY", nullable = false)
+    private boolean approved;
+    
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "CREATION_DATE", nullable = false)
     private Date creationDate;
 
-    public long id() {
-        return id;
+    public byte[] txHash() {
+        return txHash;
     }
 
-    public Tx id(long id) {
-        this.id = id;
+    public Tx txHash(byte[] txHash) {
+        this.txHash = txHash;
         return this;
     }
 
@@ -71,6 +73,15 @@ public class Tx implements Serializable {
 
     public Tx tx(byte[] tx) {
         this.tx = tx;
+        return this;
+    }
+    
+    public boolean approved() {
+        return approved;
+    }
+
+    public Tx approved(boolean approved) {
+        this.approved = approved;
         return this;
     }
 

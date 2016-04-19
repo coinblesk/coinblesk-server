@@ -25,6 +25,7 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 import java.util.List;
+import javax.persistence.criteria.CriteriaDelete;
 
 /**
  *
@@ -36,13 +37,15 @@ public class TxDAO {
 
     @PersistenceContext()
     private EntityManager em;
-
-    public List<Tx> findByClientPublicKey(final byte[] clientPublicKey) {
+    
+    public List<Tx> findByClientPublicKey(final byte[] clientPublicKey, final boolean approved) {
         final CriteriaBuilder cb = em.getCriteriaBuilder();
         final CriteriaQuery<Tx> query = cb.createQuery(Tx.class);
         final Root<Tx> from = query.from(Tx.class);
-        final Predicate condition = cb.equal(from.get("clientPublicKey"), clientPublicKey);
-        CriteriaQuery<Tx> select = query.select(from).where(condition);
+        final Predicate condition1 = cb.equal(from.get("clientPublicKey"), clientPublicKey);
+        final Predicate condition2 = cb.equal(from.get("approved"), approved);
+        final Predicate condition3 = cb.and(condition1, condition2);
+        final CriteriaQuery<Tx> select = query.select(from).where(condition3);
         return em.createQuery(select).getResultList();
     }
 
@@ -54,7 +57,36 @@ public class TxDAO {
         final CriteriaBuilder cb = em.getCriteriaBuilder();
         final CriteriaQuery<Tx> query = cb.createQuery(Tx.class);
         final Root<Tx> from = query.from(Tx.class);
-        CriteriaQuery<Tx> select = query.select(from);
+        final CriteriaQuery<Tx> select = query.select(from);
         return em.createQuery(select).getResultList();
+    }
+    
+    public List<Tx> findAll(final boolean approved) {
+        final CriteriaBuilder cb = em.getCriteriaBuilder();
+        final CriteriaQuery<Tx> query = cb.createQuery(Tx.class);
+        final Root<Tx> from = query.from(Tx.class);
+        final Predicate condition = cb.equal(from.get("approved"), approved);
+        final CriteriaQuery<Tx> select = query.select(from).where(condition);
+        return em.createQuery(select).getResultList();
+    }
+    
+    public int remove(final byte[] txHash) {
+        final CriteriaBuilder cb = em.getCriteriaBuilder();
+        final CriteriaDelete<Tx> delete = cb.createCriteriaDelete(Tx.class);
+        final Root from = delete.from(Tx.class);
+        final Predicate condition = cb.equal(from.get("txHash"), txHash);
+        delete.where(condition);
+        return em.createQuery(delete).executeUpdate();
+    }
+    
+    public int remove(final byte[] txHash, final boolean approved) {
+        final CriteriaBuilder cb = em.getCriteriaBuilder();
+        final CriteriaDelete<Tx> delete = cb.createCriteriaDelete(Tx.class);
+        final Root from = delete.from(Tx.class);
+        final Predicate condition1 = cb.equal(from.get("txHash"), txHash);
+        final Predicate condition2 = cb.equal(from.get("approved"), approved);
+        final Predicate condition3 = cb.and(condition1, condition2);
+        delete.where(condition3);
+        return em.createQuery(delete).executeUpdate();
     }
 }

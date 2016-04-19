@@ -16,9 +16,7 @@
 package com.coinblesk.server.service;
 
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.dao.ApprovedTxDAO;
 import com.coinblesk.server.dao.TxDAO;
-import com.coinblesk.server.entity.ApprovedTx;
 import com.coinblesk.server.entity.Tx;
 import java.util.ArrayList;
 import java.util.Date;
@@ -26,6 +24,7 @@ import java.util.List;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
+import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.script.Script;
 import org.slf4j.Logger;
@@ -42,13 +41,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class TransactionService {
 
     private final static Logger LOG = LoggerFactory.getLogger(TransactionService.class);
-    private final static long LOCK_THRESHOLD_MILLIS = 1000 * 60 * 60 * 4;
+    private final static long LOCK_THRESHOLD_MILLIS = 1000 * 60 * 60 * 4; //4h
 
     @Autowired
     private AppConfig appConfig;
-
-    @Autowired
-    private ApprovedTxDAO approvedTxDAO;
 
     @Autowired
     private TxDAO txDAO;
@@ -56,143 +52,152 @@ public class TransactionService {
     @Autowired
     private WalletService walletService;
 
-    @Transactional(readOnly = false)
-    public void addTransaction(byte[] clientPublicKey, byte[] serializedTransaction) {
-        Tx transaction = new Tx();
-        transaction.clientPublicKey(clientPublicKey);
-        transaction.tx(serializedTransaction);
-        transaction.creationDate(new Date());
-        txDAO.save(transaction);
-    }
-
-    @Transactional(readOnly = false)
-    public boolean isTransactionInstant(byte[] clientPublicKey, Script redeemScript, Transaction fullTx) {
+    public boolean isTransactionInstant(final NetworkParameters params, byte[] clientPublicKey, Script redeemScript, Transaction fullTx) {
         //check if the funding (inputs) of fullTx are timelocked, so only for the 
-        return isTransactionInstant(clientPublicKey, redeemScript, fullTx, null);
+        return isTransactionInstant(params, clientPublicKey, redeemScript, fullTx, null);
     }
 
-    private boolean isTransactionInstant(byte[] clientPublicKey, Script redeemScript, Transaction fullTx,
+    @Transactional(readOnly = true)
+    private boolean isTransactionInstant(final NetworkParameters params, byte[] clientPublicKey, Script redeemScript, Transaction fullTx,
             Transaction requester) {
-        long currentTime = System.currentTimeMillis();
+        
         //fullTx can be null, we did not find a parent!
         if (fullTx == null) {
-            LOG.debug("we did not find a parent transaction for {}", requester);
+            LOG.debug("(instast-check) we did not find a parent transaction for {}", requester);
             return false;
         }
 
         //check if already approved
-        List<Transaction> approved = approvedTx2(appConfig.getNetworkParameters(), clientPublicKey);
+        List<Transaction> approved = listTransactions(params, clientPublicKey, true);
         for (Transaction tx : approved) {
             if (tx.getHash().equals(fullTx.getHash())) {
+                LOG.debug("(instast-check) already approved tx {}", tx.getHash());
                 return true;
             }
         }
 
+        //if we have a tx that is confirmed, we are good to go
         if (fullTx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf()) {
-            LOG.debug("The confidence of tx {} is good: {}", fullTx.getHash(), fullTx.getConfidence()
+            LOG.debug("(instast-check) the confidence of tx {} is good: {}", fullTx.getHash(), fullTx.getConfidence()
                     .getDepthInBlocks());
             return true;
-        } else {
-            final List<TransactionInput> relevantInputs = fullTx.getInputs();
-
-            final List<Tx> clientTransactions = txDAO.findByClientPublicKey(clientPublicKey);
-
-            // check double signing
-            int signedInputCounter = 0;
-            for (Tx clientTransaction : clientTransactions) {
-                int relevantInputCounter = 0;
-                for (TransactionInput relevantTransactionInput : relevantInputs) {
-                    final NetworkParameters params = appConfig.getNetworkParameters();
-                    final Transaction storedTransaction = new Transaction(params, clientTransaction.tx());
-                    int storedInputCounter = 0;
-                    for (TransactionInput storedTransactionInput : storedTransaction.getInputs()) {
-                        if (storedTransactionInput.getOutpoint().toString().equals(relevantTransactionInput
-                                .getOutpoint().toString())) {
-                            if (!storedTransaction.hashForSignature(storedInputCounter, redeemScript,
-                                    Transaction.SigHash.ALL, false)
-                                    .equals(fullTx.hashForSignature(relevantInputCounter, redeemScript,
-                                            Transaction.SigHash.ALL, false))) {
-                                long lockTime = storedTransaction.getLockTime() * 1000;
-
-                                if (lockTime > currentTime + LOCK_THRESHOLD_MILLIS) {
-                                    continue;
-                                } else {
-                                    signedInputCounter++;
-                                }
-                            }
-                        }
-                        storedInputCounter++;
-                    }
-                    relevantInputCounter++;
-                }
-            }
-
-            boolean areParentsInstant = false;
-            for (TransactionInput relevantTransactionInput : relevantInputs) {
-                TransactionOutput transactionOutput = relevantTransactionInput.getOutpoint()
-                        .getConnectedOutput();
-                //input may not be connected, it may be null
-                if (transactionOutput == null) {
-                    //TODO, figure out, why fullTx may not be connected, it is called after
-                    //walletService.receivePending(fullTx);
-                    transactionOutput = walletService.findOutputFor(relevantTransactionInput);
-                    LOG.debug("This input is not connected! {}", relevantTransactionInput);
-                    if (transactionOutput == null) {
-                        LOG.debug("This input is still not connected! {}", relevantTransactionInput);
-                        areParentsInstant = false;
-                        break;
-                    }
-                }
-                Transaction parentTransaction = transactionOutput.getParentTransaction();
-                if (isTransactionInstant(clientPublicKey, redeemScript, parentTransaction, fullTx)) {
-                    areParentsInstant = true;
-                } else {
-                    areParentsInstant = false;
-                    break;
-                }
-            }
-            LOG.debug("areParentsInstant {}", areParentsInstant);
-
-            boolean isApproved = signedInputCounter == 0 && areParentsInstant;
-            if (isApproved) {
-                approveTx2(fullTx, clientPublicKey);
-            }
-            return isApproved;
         }
-    }
+        
+        final List<TransactionInput> inputsToCheck = fullTx.getInputs();
+        final List<Transaction> clientTransactions = listTransactions(params, clientPublicKey, false);
 
-    public void approveTx2(Transaction fullTx, byte[] clientPubKey) {
-        ApprovedTx approvedTx = new ApprovedTx()
-                .txHash(fullTx.getHash().getBytes())
-                .tx(fullTx.unsafeBitcoinSerialize())
-                .clientPublicKey(clientPubKey)
-                .creationDate(new Date());
-        approvedTxDAO.save(approvedTx);
-    }
+        // check double signing
+        final boolean alreadySigned = alreadySigned(params, clientTransactions, inputsToCheck);
 
-    public List<Transaction> approvedTx2(NetworkParameters params, byte[] pubKey) {
-        List<ApprovedTx> approved = approvedTxDAO.findByAddress(pubKey);
-        List<Transaction> retVal = new ArrayList<>(approved.size());
-        for (ApprovedTx approvedTx : approved) {
-            Transaction tx = new Transaction(params, approvedTx.tx());
-            retVal.add(tx);
+        if (alreadySigned) {
+            return false;
         }
-        return retVal;
-    }
 
+        boolean areParentsInstant = false;
+        for (TransactionInput relevantTransactionInput : inputsToCheck) {
+            TransactionOutput transactionOutput = walletService.findOutputFor(relevantTransactionInput);
+            //input may not be connected, it may be null
+            if (transactionOutput == null) {
+                LOG.debug("(instast-check) this input is not connected! {}", relevantTransactionInput);
+                areParentsInstant = false;
+                break;
+            }
+            final Transaction parentTransaction = transactionOutput.getParentTransaction();
+            if (isTransactionInstant(params, clientPublicKey, redeemScript, parentTransaction, fullTx)) {
+                areParentsInstant = true;
+            } else {
+                areParentsInstant = false;
+                break;
+            }
+        }
+        LOG.debug("(instast-check) areParentsInstant {}", areParentsInstant);
+
+        if (areParentsInstant) {
+            addTransaction(clientPublicKey, fullTx.unsafeBitcoinSerialize(), fullTx.getHash().getBytes(), true);
+        }
+        return areParentsInstant;
+        
+    }
+    
+    private boolean alreadySigned(final NetworkParameters params, final List<Transaction> clientTransactions,
+            final List<TransactionInput> inputsToCheck) {
+        // check double signing
+        final long currentTime = System.currentTimeMillis();
+        for (final Transaction storedTransaction : clientTransactions) {
+            final long lockTime = storedTransaction.getLockTime() * 1000;
+            //ignore if we have a locktime in the future
+            if (lockTime > currentTime + LOCK_THRESHOLD_MILLIS) {
+                continue;
+            }
+            for (final TransactionInput relevantTransactionInput : inputsToCheck) {
+                for (final TransactionInput storedTransactionInput : storedTransaction.getInputs()) {
+                    if (storedTransactionInput.getOutpoint().equals(relevantTransactionInput.getOutpoint())) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+    
+    public boolean isBurned(NetworkParameters params, byte[] pubKey, Transaction fullTx) {
+        //check for already approved outpoints, if we have, we won't sign
+        final List<Transaction> approvedTxs = listTransactions(params, pubKey, true);
+        final List<TransactionOutPoint> burned = new ArrayList<>(approvedTxs.size());
+        for (final Transaction approvedTx : approvedTxs) {
+            for (final TransactionInput txInput : approvedTx.getInputs()) {
+                burned.add(txInput.getOutpoint());
+            }
+        }
+        final List<TransactionOutPoint> currents = new ArrayList<>();
+        for (final TransactionInput txInput : fullTx.getInputs()) {
+            currents.add(txInput.getOutpoint());
+        }
+        for (final TransactionOutPoint current : currents) {
+            if (burned.contains(current)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
     @Transactional(readOnly = false)
-    public void removeApproved(Transaction approved) {
-        approvedTxDAO.remove(approved.getHash().getBytes());
+    public void addTransaction(byte[] clientPublicKey, byte[] tx, byte[] txHash, boolean approved) {
+        Tx transaction = new Tx();
+        transaction.clientPublicKey(clientPublicKey);
+        transaction.tx(tx);
+        transaction.txHash(txHash);
+        transaction.creationDate(new Date());
+        transaction.approved(false);
+        txDAO.save(transaction);
+    }
+    
+    @Transactional(readOnly = false)
+    public void removeTransaction(Transaction tx) {
+        txDAO.remove(tx.getHash().getBytes());
     }
 
     @Transactional(readOnly = true)
-    public List<Transaction> approvedTx(NetworkParameters params) {
-        List<ApprovedTx> approved = approvedTxDAO.findAll();
-        List<Transaction> retVal = new ArrayList<>(approved.size());
-        for (ApprovedTx approvedTx : approved) {
-            Transaction tx = new Transaction(params, approvedTx.tx());
+    private List<Transaction> listTransactions(final NetworkParameters params, 
+            final byte[] clientPublicKey, final boolean approved) {
+        final List<Tx> list = txDAO.findByClientPublicKey(clientPublicKey, approved);
+        final List<Transaction> retVal = new ArrayList<>(list.size());
+        for (final Tx enityTx : list) {
+            final Transaction tx = new Transaction(params, enityTx.tx());
             retVal.add(tx);
         }
         return retVal;
     }
+
+    @Transactional(readOnly = true)
+    public List<Transaction> approvedTx(final NetworkParameters params) {
+        final List<Tx> approved = txDAO.findAll(true);
+        final List<Transaction> retVal = new ArrayList<>(approved.size());
+        for (final Tx approvedTx : approved) {
+            final Transaction tx = new Transaction(params, approvedTx.tx());
+            retVal.add(tx);
+        }
+        return retVal;
+    }
+
 }

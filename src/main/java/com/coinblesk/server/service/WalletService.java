@@ -141,7 +141,7 @@ public class WalletService {
             @Override
             public void onTransactionConfidenceChanged(Wallet wallet, Transaction tx) {
                 if (tx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf()) {
-                    transactionService.removeApproved(tx);
+                    transactionService.removeTransaction(tx);
                 }
             }
         });

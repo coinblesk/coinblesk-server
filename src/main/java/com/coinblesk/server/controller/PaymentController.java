@@ -39,8 +39,10 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 
 import java.util.List;
+import java.util.Set;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Coin;
@@ -49,6 +51,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBroadcast;
 import org.bitcoinj.core.TransactionConfidence;
+import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.TransactionSignature;
@@ -74,6 +77,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PaymentController {
 
     private final static Logger LOG = LoggerFactory.getLogger(PaymentController.class);
+    private final static Set<String> CONCURRENCY = Collections.synchronizedSet(new HashSet<>());
 
     @Autowired
     private AppConfig appConfig;
@@ -237,7 +241,7 @@ public class PaymentController {
             //TODO: enable
             //refundTransaction.verify(); make sure those inputs are from the known p2sh address (min conf)
             byte[] refundTx = refundTransaction.unsafeBitcoinSerialize();
-            txService.addTransaction(refundTO.clientPublicKey(), refundTx);
+            txService.addTransaction(refundTO.clientPublicKey(), refundTx, refundTransaction.getHash().getBytes(), false);
             LOG.debug("{refund}:{} done", (System.currentTimeMillis() - start));
             return new RefundTO()
                     .setSuccess()
@@ -258,8 +262,12 @@ public class PaymentController {
     @ResponseBody
     public SignTO sign(@RequestBody SignTO input) {
         final long start = System.currentTimeMillis();
+        final String key = SerializeUtils.bytesToHex(input.clientPublicKey());
         try {
-            LOG.debug("{sign} for {}", SerializeUtils.bytesToHex(input.clientPublicKey()));
+            LOG.debug("{sign} for {}", key);
+            if(!CONCURRENCY.add(key)) {
+                return new SignTO().type(Type.CONCURRENCY_ERROR);
+            }
             final SignTO error = checkInput(input);
             if (error != null) {
                 return error;
@@ -305,13 +313,15 @@ public class PaymentController {
                 return new SignTO().type(Type.INPUT_MISMATCH);
             }
             
-            //check outpoints are burnt - TODO
+            if(txService.isBurned(params, input.clientPublicKey(), transaction)) {
+                return new SignTO().type(Type.BURNED_OUTPUTS);
+            }
 
             final List<TransactionSignature> serverSigs = BitcoinUtils
                     .partiallySign(transaction, redeemScript, serverKey);
 
             final byte[] serializedTransaction = transaction.unsafeBitcoinSerialize();
-            txService.addTransaction(input.clientPublicKey(), serializedTransaction);
+            txService.addTransaction(input.clientPublicKey(), serializedTransaction, transaction.getHash().getBytes(), false);
             LOG.debug("{sign}:{} done", (System.currentTimeMillis() - start));
             return new SignTO()
                     .setSuccess()
@@ -322,6 +332,8 @@ public class PaymentController {
             return new SignTO()
                     .type(Type.SERVER_ERROR)
                     .message(e.getMessage());
+        } finally {
+            CONCURRENCY.remove(key);
         }
     }
 
@@ -332,14 +344,17 @@ public class PaymentController {
     @ResponseBody
     public VerifyTO verify(@RequestBody VerifyTO input) {
         final long start = System.currentTimeMillis();
+        final String key = SerializeUtils.bytesToHex(input.clientPublicKey());
         try {
-            LOG.debug("{verify} for {}", SerializeUtils.bytesToHex(input.clientPublicKey()));
+            LOG.debug("{verify} for {}", key);
+            if(!CONCURRENCY.add(key)) {
+                return new VerifyTO().type(Type.CONCURRENCY_ERROR);
+            }
             final VerifyTO error = checkInput(input);
             if (error != null) {
                 return error;
             }
             final NetworkParameters params = appConfig.getNetworkParameters();
-            final String clientId = SerializeUtils.bytesToHex(input.clientPublicKey());
             final List<ECKey> keys = keyService.getECKeysByClientPublicKey(input.clientPublicKey());
             if (keys == null || keys.size() != 2) {
                 return new VerifyTO().type(Type.KEYS_NOT_FOUND);
@@ -354,7 +369,7 @@ public class PaymentController {
             final Transaction fullTx;
             //choice 1 - full tx
             if (input.transaction() != null) {
-                LOG.debug("{verif}:{} got transaction from input", (System.currentTimeMillis() - start));
+                LOG.debug("{verify}:{} got transaction from input", (System.currentTimeMillis() - start));
                 fullTx = new Transaction(appConfig.getNetworkParameters(), input.transaction());
                 //TODO: verify that this was sent from us
             }
@@ -372,27 +387,27 @@ public class PaymentController {
                     BitcoinUtils.applySignatures(fullTx, redeemScript, clientSigs, severSigs, true);
                     
                     if (!SerializeUtils.verifyTxSignatures(fullTx, clientSigs, redeemScript, clientKey)) {
-                        LOG.debug("{verif} signature mismatch for client-sigs tx {} with sigs {}", fullTx, clientSigs);
+                        LOG.debug("{verify} signature mismatch for client-sigs tx {} with sigs {}", fullTx, clientSigs);
                         return new VerifyTO().type(Type.SIGNATURE_ERROR);
                     } else {
-                        LOG.debug("{verif} signature good! for client-sigs tx {} with sigs", fullTx, clientSigs);
+                        LOG.debug("{verify} signature good! for client-sigs tx {} with sigs", fullTx, clientSigs);
                     }
                     
                     if (!SerializeUtils.verifyTxSignatures(fullTx, severSigs, redeemScript, serverKey)) {
-                        LOG.debug("{verif} signature mismatch for server-sigs tx {} with sigs {}", fullTx, severSigs);
+                        LOG.debug("{verify} signature mismatch for server-sigs tx {} with sigs {}", fullTx, severSigs);
                         return new VerifyTO().type(Type.SIGNATURE_ERROR);
                     } else {
-                        LOG.debug("{verif} signature good! for server-sigs tx {} with sigs", fullTx, clientSigs);
+                        LOG.debug("{verify} signature good! for server-sigs tx {} with sigs", fullTx, clientSigs);
                     }
                     
                 } catch (AddressFormatException e) {
-                    LOG.debug("{verif}:{} empty address for", (System.currentTimeMillis() - start));
+                    LOG.debug("{verify}:{} empty address for", (System.currentTimeMillis() - start));
                     return new VerifyTO().type(Type.ADDRESS_EMPTY).message(e.getMessage());
                 }  catch (CoinbleskException e) {
-                    LOG.warn("{verif} could not create tx", e);
+                    LOG.warn("{verify} could not create tx", e);
                     return new VerifyTO().type(Type.SERVER_ERROR).message(e.getMessage());
                 } catch (InsuffientFunds e) {
-                    LOG.debug("{verif} not enough coins or amount too small");
+                    LOG.debug("{verify} not enough coins or amount too small");
                     return new VerifyTO().type(Type.NOT_ENOUGH_COINS);
                 }
             }
@@ -400,36 +415,35 @@ public class PaymentController {
             else {
                 return new VerifyTO().type(Type.INPUT_MISMATCH);
             }
-            
+                      
             final VerifyTO output = new VerifyTO();
             output.transaction(fullTx.unsafeBitcoinSerialize());
             
-            LOG.debug("{verif}:{} client {} received {}", (System.currentTimeMillis() - start), clientId,
-                    fullTx);
+            LOG.debug("{verify}:{} received {}", (System.currentTimeMillis() - start), fullTx);
 
             //ok, refunds are locked or no refund found
             fullTx.getConfidence().setSource(TransactionConfidence.Source.SELF);
             final Transaction connectedFullTx = walletService.receivePending(fullTx);
             broadcast(fullTx);
 
-            LOG.debug("{verif}:{} broadcast done {}", (System.currentTimeMillis() - start), clientId);
+            LOG.debug("{verify}:{} broadcast done", (System.currentTimeMillis() - start));
             
-            if (txService.isTransactionInstant(input.clientPublicKey(), redeemScript, connectedFullTx)) {
+            if (txService.isTransactionInstant(params, input.clientPublicKey(), redeemScript, connectedFullTx)) {
                 //burn outpoints
-                LOG.debug("{verif}:{} instant payment OK for {}", (System.currentTimeMillis() - start),
-                        clientId);
+                LOG.debug("{verify}:{} instant payment **OK**", (System.currentTimeMillis() - start));
                 return output.setSuccess();
             } else {
-                LOG.debug("{verif}:{} instant payment NOT OK for {}", (System.currentTimeMillis() - start),
-                        clientId);
+                LOG.debug("{verify}:{} instant payment NOTOK", (System.currentTimeMillis() - start));
                 return output.type(Type.NO_INSTANT_PAYMENT);
             }
 
         } catch (Exception e) {
-            LOG.error("{verif} register keys error: ", e);
+            LOG.error("{verify} register keys error: ", e);
             return new VerifyTO()
                     .type(Type.SERVER_ERROR)
                     .message(e.getMessage());
+        } finally {
+            CONCURRENCY.remove(key);
         }
     }
 
