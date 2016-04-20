@@ -302,7 +302,7 @@ public class PaymentController {
                     return new SignTO().type(Type.ADDRESS_EMPTY).message(e.getMessage());
                 }  catch (CoinbleskException e) {
                     LOG.warn("{sign} could not create tx", e);
-                    return new SignTO().type(Type.SERVER_ERROR).message(e.getMessage());
+                    return new SignTO().type(Type.TX_ERROR).message(e.getMessage());
                 } catch (InsuffientFunds e) {
                     LOG.debug("{sign} not enough coins or amount too small");
                     return new SignTO().type(Type.NOT_ENOUGH_COINS);
@@ -312,6 +312,9 @@ public class PaymentController {
             else {
                 return new SignTO().type(Type.INPUT_MISMATCH);
             }
+            
+            //sanity check
+            transaction.verify();
             
             if(txService.isBurned(params, input.clientPublicKey(), transaction)) {
                 return new SignTO().type(Type.BURNED_OUTPUTS);
@@ -325,6 +328,7 @@ public class PaymentController {
             LOG.debug("{sign}:{} done", (System.currentTimeMillis() - start));
             return new SignTO()
                     .setSuccess()
+                    .transaction(serializedTransaction)
                     .serverSignatures(SerializeUtils.serializeSignatures(serverSigs));
 
         } catch (Exception e) {
@@ -415,6 +419,9 @@ public class PaymentController {
             else {
                 return new VerifyTO().type(Type.INPUT_MISMATCH);
             }
+            
+            //sanity check
+            fullTx.verify();
                       
             final VerifyTO output = new VerifyTO();
             output.transaction(fullTx.unsafeBitcoinSerialize());

@@ -17,14 +17,24 @@ package com.coinblesk.server.utilTest;
 
 import com.coinblesk.json.KeyTO;
 import com.coinblesk.util.BitcoinUtils;
+import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Block;
+import org.bitcoinj.core.BlockChain;
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.PrunedException;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.store.BlockStoreException;
+import org.bitcoinj.testing.FakeTxBuilder;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -37,13 +47,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 public class Client {
 
+    
+
     final private ECKey ecKey;
     final private ECKey ecKeyServer;
     final private Script p2shScript;
     final private Script redeemScript;
     final private Address p2shAddress;
+    final private NetworkParameters params;
 
     public Client(NetworkParameters params, MockMvc mockMvc) throws Exception {
+        this.params = params;
         this.ecKey = new ECKey();
         this.ecKeyServer = register(ecKey, mockMvc);
         this.p2shScript = createP2SHScript(ecKey, ecKeyServer);
@@ -52,6 +66,7 @@ public class Client {
     }
 
     public Client(NetworkParameters params, ECKey ecKeyClient, ECKey ecKeyServer) throws Exception {
+        this.params = params;
         this.ecKey = ecKeyClient;
         this.ecKeyServer = ecKeyServer;
         this.p2shScript = createP2SHScript(ecKey, ecKeyServer);
@@ -109,5 +124,32 @@ public class Client {
                 status().isOk()).andReturn();
         KeyTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
         return ECKey.fromPublicOnly(status.publicKey());
+    }
+    
+    public static Transaction sendFakeCoins(NetworkParameters params, Coin amount, Address to, int wait,
+            BlockChain... chains) 
+            throws VerificationException, PrunedException, BlockStoreException, InterruptedException {
+        Transaction tx = FakeTxBuilder.createFakeTx(params, amount, to);
+        for(BlockChain chain:chains) {
+            Block block = FakeTxBuilder.makeSolvedTestBlock(
+                chain.getBlockStore().getChainHead().getHeader(), tx);
+            chain.add(block);
+        }
+        //in case we need to wait for any kind of notification
+        if(wait > 0) {
+            Thread.sleep(wait);
+        }
+        return tx;
+    }
+    
+    public List<Pair<byte[], Long>> outpoints(Transaction funding) {
+        List<Pair<byte[], Long>> retVal = new ArrayList<>(funding.getOutputs().size());
+        for(TransactionOutput output:funding.getOutputs()) {
+            if(p2shAddress.equals(output.getAddressFromP2SH(params))) {
+                retVal.add(new Pair<byte[], Long>(
+                    output.getOutPointFor().unsafeBitcoinSerialize(), output.getValue().getValue()));
+            }
+        }
+        return retVal;
     }
 }
