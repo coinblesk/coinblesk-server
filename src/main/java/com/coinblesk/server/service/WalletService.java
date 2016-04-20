@@ -15,9 +15,6 @@
  */
 package com.coinblesk.server.service;
 
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.bitcoin.BitcoinNet;
-import com.coinblesk.util.BitcoinUtils;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -26,8 +23,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.ECKey;
@@ -38,7 +37,6 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
 import org.bitcoinj.net.discovery.DnsDiscovery;
@@ -54,6 +52,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.coinblesk.bitcoin.BitcoinNet;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.util.BitcoinUtils;
 
 
 /**

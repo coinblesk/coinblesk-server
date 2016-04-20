@@ -26,9 +26,9 @@ war {
 }
 
 repositories {
+    mavenLocal()
     mavenCentral()
     // maven {url 'http://tomp2p.net/dev/mvn'}
-    mavenLocal()
 }
 
 dependencies {
@@ -79,7 +79,7 @@ dependencies {
     compile 'org.slf4j:slf4j-api:1.7.18'
     compile 'com.coinblesk:coinblesk-shared-resources:1.4.18'
     compile 'com.madgag.spongycastle:core:1.54.0.0'
-    
+
     
 
     testCompile ('junit:junit:4.12') {

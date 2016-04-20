@@ -1,4 +1,5 @@
 /*
+ * Copyright 2016 The Coinblesk team and the CSG Group at University of Zurich
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -214,6 +215,7 @@ public class UserAccount implements Serializable {
                 .append(getPassword())
                 .append(getEmail())
                 .append(getCreationDate())
+                .append(isDeleted())
                 .append(getBalance())
                 .append(getUserRoles())
                 .toHashCode();

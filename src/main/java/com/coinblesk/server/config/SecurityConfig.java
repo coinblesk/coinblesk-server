@@ -142,7 +142,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .requireCsrfProtectionMatcher(new CsfrIgnoreRequestMatcher())
                 .and()
                 .authorizeRequests()
-	            .antMatchers(REQUIRE_ADMIN_ROLE).hasRole(UserRole.ADMIN.getRole())
+                .antMatchers(REQUIRE_ADMIN_ROLE).hasRole(UserRole.ADMIN.getRole())
                 .antMatchers(REQUIRE_USER_ROLE).hasRole(UserRole.USER.getRole())
                 .and()
                 .formLogin()
