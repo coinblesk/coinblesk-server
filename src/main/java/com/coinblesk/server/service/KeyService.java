@@ -79,20 +79,20 @@ public class KeyService {
         if (clientPublicKey == null || serverPublicKey == null || serverPrivateKey == null ) {
             throw new IllegalArgumentException("null not excpected here");
         }
+
+        //need to check if it exists here, as not all DBs do that for us
+        final Keys keys = clientKeyDAO.findByClientPublicKey(clientPublicKey);
+        if (keys != null) {
+            return new Pair<>(false, keys);
+        }
         
         final Keys clientKey = new Keys()
                 .clientPublicKey(clientPublicKey)
                 .serverPrivateKey(serverPrivateKey)
                 .serverPublicKey(serverPublicKey);
 
-        //need to check if it exists here, as not all DBs does that for us
-        final Keys keys = clientKeyDAO.findByClientPublicKey(clientPublicKey);
-        if (keys != null) {
-            return new Pair<>(false, keys);
-        }
-
-        clientKeyDAO.save(clientKey);
-        return new Pair<>(true, clientKey);
+        final Keys storedKeys = clientKeyDAO.save(clientKey);
+        return new Pair<>(true, storedKeys);
     }
 
     @Transactional(readOnly = true)

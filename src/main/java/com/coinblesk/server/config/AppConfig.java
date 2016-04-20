@@ -47,13 +47,21 @@ public class AppConfig {
 
     @Value("${bitcoin.minconf:0}")
     private int minConf;
-
-    @Value("${bitcoin.locktime:8}")
-    private int lockTime;
-
-    @Value("${bitcoin.lockPrecision:3}")
-    private int lockPrecision;
-
+    
+ 	/*
+ 	 * The lock time span is the interval in seconds that funds are locked. 
+ 	 * 2592000s = 60*60*24*30s = 30days
+ 	 */
+    @Value("${bitcoin.lockTimeSpan:2592000}") 
+    private long lockTimeSpan;
+    
+    /*
+     * Safety margin for accepting instant payments.
+     * 60*60*4s = 14400s = 4h
+     */
+    @Value("${bitcoin.lockTimePrecision:14400}") //
+    private long lockTimePrecision;
+    
     public FileSystemResource getConfigDir() {
         //improvement: this check needs to be done only at startup
         if (configDir != null && !configDir.exists()) {
@@ -73,12 +81,8 @@ public class AppConfig {
     public int getMinConf() {
         return minConf;
     }
-
-    public int lockTime() {
-        return lockTime;
-    }
-
-    public int lockPrecision() {
-        return lockPrecision;
+    
+    public long getLockTimeSpan() {
+    	return lockTimeSpan;
     }
 }

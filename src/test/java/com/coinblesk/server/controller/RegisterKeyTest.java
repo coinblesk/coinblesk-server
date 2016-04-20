@@ -25,7 +25,6 @@ import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Sha256Hash;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -100,22 +99,5 @@ public class RegisterKeyTest {
         status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
         Assert.assertEquals(true, status.isSuccess());
         Assert.assertNotNull(status.publicKey());
-    }
-    
-    public static class KeyTestUtil {
-    	/**
-    	 * Keys correspond to the keys in the keys.xml dataset.
-    	 */
-    	public static final ECKey ALICE_CLIENT = ECKey.fromPrivate(Sha256Hash.hash("alice-client".getBytes()));
-    	public static final ECKey ALICE_SERVER = ECKey.fromPrivate(Sha256Hash.hash("alice-server".getBytes()));
-    	
-    	public static final ECKey BOB_CLIENT = ECKey.fromPrivate(Sha256Hash.hash("bob-client".getBytes()));
-    	public static final ECKey BOB_SERVER = ECKey.fromPrivate(Sha256Hash.hash("bob-server".getBytes()));
-
-    	public static final ECKey CAROL_CLIENT = ECKey.fromPrivate(Sha256Hash.hash("carol-client".getBytes()));
-    	public static final ECKey CAROL_SERVER = ECKey.fromPrivate(Sha256Hash.hash("carol-server".getBytes()));
-    	
-    	public static final ECKey DAVE_CLIENT = ECKey.fromPrivate(Sha256Hash.hash("dave-client".getBytes()));
-    	public static final ECKey DAVE_SERVER = ECKey.fromPrivate(Sha256Hash.hash("dave-server".getBytes()));
     }
 }

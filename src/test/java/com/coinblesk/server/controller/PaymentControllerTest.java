@@ -1,10 +1,26 @@
-package ch.uzh.csg.coinblesk.server.controller;
+/*
+ * Copyright 2016 The Coinblesk team and the CSG Group at University of Zurich
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ */
+package com.coinblesk.server.controller;
 
 import static org.junit.Assert.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.Utils;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -24,14 +40,13 @@ import org.springframework.web.context.WebApplicationContext;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.json.BaseTO;
-import com.coinblesk.json.KeyTO;
 import com.coinblesk.json.TimeLockedAddressTO;
 import com.coinblesk.json.Type;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
-import com.coinblesk.server.controller.RegisterKeyTest.KeyTestUtil;
 import com.coinblesk.server.entity.Keys;
 import com.coinblesk.server.service.KeyService;
+import com.coinblesk.server.utilTest.KeyTestUtil;
 import com.coinblesk.server.utilTest.TestBean;
 import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
@@ -55,7 +70,7 @@ import com.github.springtestdbunit.annotation.DatabaseTearDown;
 @WebAppConfiguration
 public class PaymentControllerTest {
 	
-	private static final String URL_CREATE_TIME_LOCKED_ADDRESS = "/payment/createTimeLockedAddress";
+	private static final String URL_CREATE_TIME_LOCKED_ADDRESS = "/v3/payment/createTimeLockedAddress";
 	
 	@Autowired
     private WebApplicationContext webAppContext;
@@ -79,20 +94,76 @@ public class PaymentControllerTest {
 			.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).secure(true))
 			.andExpect(status().is4xxClientError());
 	}
-    
-    @Test
+	
+	@Test
+	public void testCreateTimeLockedAddress_EmptyRequest() throws Exception {
+	    TimeLockedAddressTO keyTO = new TimeLockedAddressTO();
+	    String jsonTO = SerializeUtils.GSON.toJson(keyTO);
+	    TimeLockedAddressTO response = performTimeLockedAddressRequest(jsonTO);
+	    assertFalse(response.isSuccess());
+	    assertEquals(response.type(), Type.INPUT_MISMATCH);
+		assertNull(response.timeLockedAddress());
+	}
+	
+	@Test
+	public void testCreateTimeLockedAddress_NoPublicKey() throws Exception {
+		ECKey clientKey = new ECKey();
+	    TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
+	    		.currentDate(System.currentTimeMillis());
+	    SerializeUtils.signJSON(requestTO, clientKey);
+	    String jsonTO = SerializeUtils.GSON.toJson(requestTO);
+	    TimeLockedAddressTO response = performTimeLockedAddressRequest(jsonTO);
+	    assertFalse(response.isSuccess());
+	    assertEquals(response.type(), Type.SERVER_ERROR);
+		assertNull(response.timeLockedAddress());
+	}
+
+	@Test
+	public void testCreateTimeLockedAddress_NoSignature() throws Exception {
+        ECKey clientKey = new ECKey();
+        TimeLockedAddressTO requestTO = createSignedTimeLockedAddressTO(clientKey);
+        requestTO.messageSig(null); // -> Do not sign
+        String jsonTO = SerializeUtils.GSON.toJson(requestTO);
+        TimeLockedAddressTO responseTO = performTimeLockedAddressRequest(jsonTO);
+        assertFalse(responseTO.isSuccess());
+        assertEquals(responseTO.type(), Type.INPUT_MISMATCH);
+	}
+	
+	@Test
+	public void testCreateTimeLockedAddress_WrongSignature() throws Exception {
+        ECKey clientKey = new ECKey();
+        ECKey wrongKey = new ECKey();
+        TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
+        		.currentDate(Utils.currentTimeMillis())
+        		.clientPublicKey(clientKey.getPubKey());
+        SerializeUtils.signJSON(requestTO, wrongKey);
+        String jsonTO = SerializeUtils.GSON.toJson(requestTO);
+        TimeLockedAddressTO responseTO = performTimeLockedAddressRequest(jsonTO);
+        assertFalse(responseTO.isSuccess());
+        assertEquals(responseTO.type(), Type.JSON_SIGNATURE_ERROR);
+	}
+	
+	@Test
+	public void testCreateTimeLockedAddress_WrongECKey() throws Exception {
+		TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
+				.clientPublicKey("helloworld".getBytes())
+				.currentDate(System.currentTimeMillis());
+		SerializeUtils.signJSON(requestTO, new ECKey());
+	    String jsonTO = SerializeUtils.GSON.toJson(requestTO);
+	    TimeLockedAddressTO response = performTimeLockedAddressRequest(jsonTO);
+	    assertFalse(response.isSuccess());
+	    assertEquals(response.type(), Type.SERVER_ERROR);
+		assertNull(response.timeLockedAddress());
+	}
+
+	@Test
     public void testCreateTimeLockedAddress_NewAddress_ClientUnknown() throws Exception {
         ECKey clientKey = new ECKey();
-        assertNull( keyService.getByClientPublicKey(clientKey.getPubKey()) );
+        assertNull( keyService.getByClientPublicKey(clientKey.getPubKey()) ); // not known yet
+        TimeLockedAddressTO requestTO = createSignedTimeLockedAddressTO(clientKey);
+        String jsonTO = SerializeUtils.GSON.toJson(requestTO);
+        TimeLockedAddressTO responseTO = performTimeLockedAddressRequest(jsonTO);
         
-        KeyTO keyTO = new KeyTO().publicKey(clientKey.getPubKey());
-        String jsonKeyTO = SerializeUtils.GSON.toJson(keyTO);
-        
-        MvcResult res = mockMvc
-        					.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).secure(true).contentType(MediaType.APPLICATION_JSON).content(jsonKeyTO))
-        					.andExpect(status().isOk())
-        					.andReturn();
-        TimeLockedAddressTO responseTO = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), TimeLockedAddressTO.class);
         assertTrue(responseTO.isSuccess());
     	TimeLockedAddress addressResponse = responseTO.timeLockedAddress();
     	assertNotNull(addressResponse);
@@ -124,14 +195,10 @@ public class PaymentControllerTest {
         ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 		ECKey serverKey = KeyTestUtil.ALICE_SERVER; // key is already stored in DB
         
-        KeyTO keyTO = new KeyTO().publicKey(clientKey.getPubKey());
-        String jsonKeyTO = SerializeUtils.GSON.toJson(keyTO);
+        TimeLockedAddressTO requestTO = createSignedTimeLockedAddressTO(clientKey);
+        String jsonTO = SerializeUtils.GSON.toJson(requestTO);
+        TimeLockedAddressTO responseTO = performTimeLockedAddressRequest(jsonTO);
         
-        MvcResult res = mockMvc
-        					.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).secure(true).contentType(MediaType.APPLICATION_JSON).content(jsonKeyTO))
-        					.andExpect(status().isOk())
-        					.andReturn();
-        TimeLockedAddressTO responseTO = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), TimeLockedAddressTO.class);
         assertTrue(responseTO.isSuccess());
     	TimeLockedAddress addressResponse = responseTO.timeLockedAddress();
     	assertNotNull(addressResponse);
@@ -146,35 +213,31 @@ public class PaymentControllerTest {
     	assertVerifySig(responseTO, serverKey);
     }
     
-    @Test
-    public void testCreateTimeLockedAddress_WrongECKey() throws Exception {
-        KeyTO keyTO = new KeyTO().publicKey("helloworld".getBytes());
-        String jsonKeyTO = SerializeUtils.GSON.toJson(keyTO);
-        
-        MvcResult res = mockMvc
-        					.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).secure(true).contentType(MediaType.APPLICATION_JSON).content(jsonKeyTO))
-        					.andExpect(status().isOk())
-        					.andReturn();
-        TimeLockedAddressTO response = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), TimeLockedAddressTO.class);
-        assertFalse(response.isSuccess());
-        assertEquals(response.type(), Type.SERVER_ERROR);
-    	assertNull(response.timeLockedAddress());
+    private TimeLockedAddressTO performTimeLockedAddressRequest(String jsonTO) throws Exception {
+    	return performRequest(URL_CREATE_TIME_LOCKED_ADDRESS, jsonTO, TimeLockedAddressTO.class);
     }
     
-    @Test
-    public void testCreateTimeLockedAddress_EmptyRequest() throws Exception {
-        KeyTO keyTO = new KeyTO();
-        String jsonKeyTO = SerializeUtils.GSON.toJson(keyTO);
-        
-        MvcResult res = mockMvc
-        					.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).secure(true).contentType(MediaType.APPLICATION_JSON).content(jsonKeyTO))
-        					.andExpect(status().isOk())
-        					.andReturn();
-        TimeLockedAddressTO response = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), TimeLockedAddressTO.class);
-        assertFalse(response.isSuccess());
-        assertEquals(response.type(), Type.SERVER_ERROR);
-    	assertNull(response.timeLockedAddress());
-    }
+    private <T> T performRequest(String url, String jsonTO, Class<T> responseClass) throws Exception {
+    	final MvcResult res = mockMvc
+				.perform(
+						post(url)
+						.secure(true)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(jsonTO))
+				.andExpect(status().isOk())
+				.andReturn();
+    	final T responseTO = SerializeUtils.GSON.fromJson(
+    			res.getResponse().getContentAsString(), responseClass);
+		return responseTO;
+	}
+
+	private TimeLockedAddressTO createSignedTimeLockedAddressTO(ECKey clientKey) {
+		TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
+	    		.currentDate(Utils.currentTimeMillis())
+	    		.clientPublicKey(clientKey.getPubKey());
+	    SerializeUtils.signJSON(requestTO, clientKey);
+	    return requestTO;
+	}
 
 	private static <K extends BaseTO<?>> boolean assertServerSig(K k, Keys keys) {
 		ECKey eckey = ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey());
@@ -182,7 +245,7 @@ public class PaymentControllerTest {
 	}
 
 	private static <K extends BaseTO<?>> boolean assertVerifySig(K k, ECKey key) {
-		boolean result = SerializeUtils.verifySig(k, key);
+		boolean result = SerializeUtils.verifyJSONSignature(k, key);
 		assertTrue(result);
 		return result;
 	}

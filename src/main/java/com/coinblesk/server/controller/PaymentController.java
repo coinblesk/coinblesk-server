@@ -31,6 +31,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBroadcast;
 import org.bitcoinj.core.TransactionConfidence;
+import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Utils;
@@ -103,44 +104,55 @@ public class PaymentController {
     		method = RequestMethod.POST,
     		consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
+    @ApiVersion("v3")
     @ResponseBody
-    public TimeLockedAddressTO createTimeLockedAddress(@RequestBody KeyTO keyTO) {
+    public TimeLockedAddressTO createTimeLockedAddress(@RequestBody TimeLockedAddressTO input) {
+    	final String tag = "{createTimeLockedAddress}";
+    	final long tsStart = System.currentTimeMillis();
     	try {
-    		// TODO: check input? (signature, pubKey ...)
+    		final TimeLockedAddressTO error = checkInput(input);
+            if (error != null) {
+            	LOG.debug("{} - input error - type={}", tag, error.type().toString());
+                return error;
+            }
     		
     		final NetworkParameters params = appConfig.getNetworkParameters();
-    		final ECKey clientKey = ECKey.fromPublicOnly(keyTO.publicKey()); // make sure pubKey is an ECKey
+    		final ECKey clientKey = ECKey.fromPublicOnly(input.clientPublicKey());
     		final String clientPubKeyHex = clientKey.getPublicKeyAsHex();
-    		LOG.debug("{createTimeLockedAddress} - clientPubKey={}", clientPubKeyHex);
+    		LOG.debug("{} - clientPubKey={}", tag, clientPubKeyHex);
     		
     		final Keys keys = getKeysOrCreate(clientKey.getPubKey());
 			if (keys == null) {
-				LOG.error("{createTimeLockedAddress} - keys not found for clientPubKey={} (could not create keys)", clientPubKeyHex);
+				LOG.error("{} - keys not found for clientPubKey={}", tag, clientPubKeyHex);
 				return new TimeLockedAddressTO().type(Type.KEYS_NOT_FOUND);
 			}
-    		final ECKey serverKey = ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey());
+    		final ECKey serverKey = ECKey.fromPrivateAndPrecalculatedPublic(
+    						keys.serverPrivateKey(), keys.serverPublicKey());
             final long lockTime = createNewLockTime();
-            final TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), serverKey.getPubKey(), lockTime);
+            final TimeLockedAddress address = new TimeLockedAddress(
+            			clientKey.getPubKey(), serverKey.getPubKey(), lockTime);
             
             final TimeLockedAddressEntity checkExists = keyService.getTimeLockedAddressByAddressHash(address.getAddressHash());
             if (checkExists == null) {
                 keyService.storeTimeLockedAddress(keys, address);
                 walletService.addWatching(address.createPubkeyScript());
-                LOG.debug("{createTimeLockedAddress} - new address created: {}", address.toStringDetailed(params));
+                LOG.debug("{} - new address created ({}ms): {}", 
+                		tag, (System.currentTimeMillis()-tsStart), address.toStringDetailed(params));
             } else {
-                LOG.warn("{createTimeLockedAddress} - address does already exist (probably due to multiple requests in a short time): {}", 
-                		address.toStringDetailed(params));
+                LOG.warn("{} - address does already exist (multiple requests in a short time?): {}", 
+                		tag, address.toStringDetailed(params));
             }
             
             TimeLockedAddressTO addressTO = new TimeLockedAddressTO()
             		.timeLockedAddress(address)
             		.setSuccess();
-            SerializeUtils.sign(addressTO, serverKey);
-            LOG.info("{createTimeLockedAddress} - time locked address: {}, clientPubKey={}", address, clientPubKeyHex);
+            SerializeUtils.signJSON(addressTO, serverKey);
+            LOG.info("{} - time locked address: {}, clientPubKey={} ({}ms)", 
+            		tag, address.toString(params), clientPubKeyHex, (System.currentTimeMillis()-tsStart));
     		return addressTO;
     		
     	} catch (Exception e) {
-    		LOG.error("{createTimeLockedAddress} - error: ", e);
+    		LOG.error("{} - error ({}ms): ", tag, (System.currentTimeMillis()-tsStart), e);
     		return new TimeLockedAddressTO()
     				.type(Type.SERVER_ERROR)
     				.message(e.getMessage());
@@ -157,19 +169,18 @@ public class PaymentController {
     		return keys;
     	}
     	
-    	ECKey serverKey = new ECKey();
-    	keyService.storeKeys(clientPubKey, serverKey.getPubKey(), serverKey.getPrivKeyBytes());
+    	final ECKey serverKey = new ECKey();
+    	keyService.storeKeysAndAddress(clientPubKey, serverKey.getPubKey(), serverKey.getPrivKeyBytes());
     	
     	final Keys createdKeys = keyService.getByClientPublicKey(clientPubKey);
-    	LOG.info("{createTimeLockedAddress} - created new serverKey - serverPubKey={}, clientPubKey={}", 
-    			Utils.HEX.encode(createdKeys.serverPublicKey()), Utils.HEX.encode(createdKeys.clientPublicKey()));
+    	LOG.info("{getKeysOrCreate} - created new serverKey - clientPubKey={}, serverPubKey={}, ", 
+    			Utils.HEX.encode(createdKeys.clientPublicKey()), Utils.HEX.encode(createdKeys.serverPublicKey()));
     	
     	return createdKeys;
     }
     
     private long createNewLockTime() {
-    	// move lock time span to appConfig.
-    	return Utils.currentTimeSeconds() + 60*60*24*30;
+    	return Utils.currentTimeSeconds() + appConfig.getLockTimeSpan();
     }
     
     @RequestMapping(value = {"/signtx", "/stx"}, 
@@ -241,7 +252,7 @@ public class PaymentController {
 			final List<TransactionSignature> serverSigs = BitcoinUtils.partiallySign(transaction, redeemScriptsForInputs, serverKey);
 			final List<TxSig> txSigs = SerializeUtils.serializeSignatures(serverSigs);
 	        final byte[] serializedTransaction = transaction.unsafeBitcoinSerialize();
-	        keyService.addTransaction(clientKey.getPubKey(), serializedTransaction);
+	        //keyService.addTransaction(clientKey.getPubKey(), serializedTransaction);
 	        
 	        return new SignTO()
 	                .setSuccess()
@@ -662,7 +673,7 @@ public class PaymentController {
             return newInstance(input, Type.INPUT_MISMATCH);
         }
 
-        //chekc if the client sent us a time which is way too old (1 day)
+        //check if the client sent us a time which is way too old (1 day)
         final Calendar fromClient = Calendar.getInstance();
         fromClient.setTime(new Date(input.currentDate()));
 
