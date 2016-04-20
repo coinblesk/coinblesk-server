@@ -51,7 +51,6 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBroadcast;
 import org.bitcoinj.core.TransactionConfidence;
-import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.TransactionSignature;
@@ -199,8 +198,8 @@ public class PaymentController {
                     refundTransaction = new Transaction(params, refundTO.refundTransaction());
             } 
             //choice 2 - send outpoints, coins, where to send btc to, and amount
-            else if (refundTO.outpointsCoinPair() != null && refundTO.lockTime() > 0 &&
-                    refundTO.refundSendTo() != null) {
+            else if (refundTO.outpointsCoinPair() != null && !refundTO.outpointsCoinPair().isEmpty()
+                    && refundTO.lockTime() > 0 && refundTO.refundSendTo() != null) {
                 final List<Pair<TransactionOutPoint, Coin>> refundClientPoints = SerializeUtils
                         .deserializeOutPointsCoin(
                                 params, refundTO.outpointsCoinPair());
@@ -217,6 +216,9 @@ public class PaymentController {
             else {
                 return new RefundTO().type(Type.INPUT_MISMATCH);
             }
+            
+            //sanity check
+            refundTransaction.verify();
             
             List<TransactionSignature> clientSigs = SerializeUtils.deserializeSignatures(refundTO
                     .clientSignatures());
@@ -291,8 +293,8 @@ public class PaymentController {
                 transaction = new Transaction(appConfig.getNetworkParameters(), input.transaction());
             } 
             //choice 2 - send outpoints, coins, where to send btc to, and amount
-            else if (input.outpointsCoinPair() != null && input.p2shAddressTo() != null
-                    && input.amountToSpend() != 0) {
+            else if (input.outpointsCoinPair() != null && !input.outpointsCoinPair().isEmpty()
+                    && input.p2shAddressTo() != null && input.amountToSpend() != 0) {
                 //having the coins and the output allows us to create the tx without looking into our wallet
                 try {
                     transaction = createTx(params, input.p2shAddressTo(), p2shAddressFrom, input.outpointsCoinPair(), 
@@ -378,9 +380,9 @@ public class PaymentController {
                 //TODO: verify that this was sent from us
             }
             //choice 2 - send outpoints, coins, where to send btc to, and amount
-            else if (input.outpointsCoinPair() != null && input.p2shAddressTo() != null
-                    && input.amountToSpend() != 0 && input.clientSignatures() != null &&
-                    input.serverSignatures() != null) {
+            else if (input.outpointsCoinPair() != null && !input.outpointsCoinPair().isEmpty()
+                    && input.p2shAddressTo() != null && input.amountToSpend() != 0 
+                    && input.clientSignatures() != null && input.serverSignatures() != null) {
                 try {
                     fullTx = createTx(params, input.p2shAddressTo(), p2shAddressFrom, input.outpointsCoinPair(), 
                             input.amountToSpend(), redeemScript);
@@ -513,7 +515,7 @@ public class PaymentController {
             return newInstance(input, Type.TIME_MISMATCH);
         }
 
-        if (!SerializeUtils.verifySig(input, ECKey.fromPublicOnly(input.clientPublicKey()))) {
+        if (!SerializeUtils.verifyJSONSignature(input, ECKey.fromPublicOnly(input.clientPublicKey()))) {
             return newInstance(input, Type.JSON_SIGNATURE_ERROR);
 
         }

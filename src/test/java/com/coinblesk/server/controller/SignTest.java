@@ -68,9 +68,6 @@ import org.springframework.web.context.WebApplicationContext;
 @WebAppConfiguration
 public class SignTest {
 
-    public final static long UNIX_TIME_MONTH = 60 * 60 * 24 * 30;
-    public final static int LOCK_TIME_MONTHS = 3;
-
     @Autowired
     private WebApplicationContext webAppContext;
 
@@ -103,11 +100,11 @@ public class SignTest {
                 walletService.blockChain());
         Coin amountToRequest = Coin.valueOf(9876);
         Date now = new Date();
-        List<Pair<byte[], Long>> outpointCoinPair = client.outpoints(funding);
+        List<Pair<byte[], Long>> outpointCoinPair = client.outpointsRaw(funding);
         SignTO prepareHalfSignTO = ServerCalls.signServerCallInput(outpointCoinPair,
                 new ECKey().toAddress(params), amountToRequest.value, client.ecKey(), now);
         prepareHalfSignTO.p2shAddressTo("1");
-        SerializeUtils.sign(prepareHalfSignTO, client.ecKey());
+        SerializeUtils.signJSON(prepareHalfSignTO, client.ecKey());
         SignTO status = ServerCalls.signServerCallOutput(mockMvc, prepareHalfSignTO);
         Assert.assertFalse(status.isSuccess());
         Assert.assertEquals(Type.ADDRESS_EMPTY, status.type());
@@ -120,7 +117,7 @@ public class SignTest {
                 walletService.blockChain());
         Coin amountToRequest = Coin.valueOf(9876);
         Date now = new Date();
-        SignTO status = ServerCalls.signServerCall(mockMvc, client.outpoints(funding),
+        SignTO status = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
                 new ECKey().toAddress(params), amountToRequest.value, client, now);
 
         Assert.assertFalse(status.isSuccess());
@@ -134,7 +131,7 @@ public class SignTest {
                 walletService.blockChain());
         Coin amountToRequest = Coin.valueOf(100);
         Date now = new Date();
-        SignTO status = ServerCalls.signServerCall(mockMvc, client.outpoints(funding),
+        SignTO status = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
                 new ECKey().toAddress(params), amountToRequest.value, client, now);
         Assert.assertFalse(status.isSuccess());
         Assert.assertEquals(Type.TX_ERROR, status.type());
@@ -151,11 +148,11 @@ public class SignTest {
         Date now = new Date();
         Coin amountToRequest = Coin.valueOf(9876);
 
-        SignTO status = ServerCalls.signServerCall(mockMvc, client.outpoints(funding),
+        SignTO status = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
                 new ECKey().toAddress(params), amountToRequest.value, client, now);
         Assert.assertTrue(status.isSuccess());
         Date now2 = new Date(now.getTime() + 5000L);
-        status = ServerCalls.signServerCall(mockMvc, client.outpoints(funding),
+        status = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
                 new ECKey().toAddress(params), amountToRequest.value, client, now2);
         Assert.assertTrue(status.isSuccess());
     }
@@ -169,7 +166,7 @@ public class SignTest {
         Date now = new Date();
         Coin amountToRequest = Coin.valueOf(9876);
 
-        SignTO status = ServerCalls.signServerCall(mockMvc, client.outpoints(funding),
+        SignTO status = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
                 new ECKey().toAddress(params), amountToRequest.value, client, now);
         Assert.assertTrue(status.isSuccess());
 

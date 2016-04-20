@@ -1,20 +1,35 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Copyright 2016 The Coinblesk team and the CSG Group at University of Zurich
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.coinblesk.server.controller;
 
+import com.coinblesk.json.RefundTO;
+import com.coinblesk.json.SignTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.TestBean;
 import com.coinblesk.json.Type;
+import com.coinblesk.server.utilTest.Client;
+import com.coinblesk.server.utilTest.ServerCalls;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
 import com.coinblesk.util.SimpleBloomFilter;
+import com.coinblesk.util.Triple;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.google.common.io.Files;
 import java.io.File;
@@ -58,16 +73,13 @@ import org.springframework.web.context.WebApplicationContext;
  * @author Thomas Bocek
  * @author Raphael Voellmy
  */
-/*@RunWith(SpringJUnit4ClassRunner.class)
+@RunWith(SpringJUnit4ClassRunner.class)
 @TestExecutionListeners(
             {DependencyInjectionTestExecutionListener.class, TransactionalTestExecutionListener.class,
                 DbUnitTestExecutionListener.class})
 @ContextConfiguration(classes = {TestBean.class, BeanConfig.class, SecurityConfig.class})
 @WebAppConfiguration
 public class RefundTest {
-
-    public final static long UNIX_TIME_MONTH = 60 * 60 * 24 * 30;
-    public final static int LOCK_TIME_MONTHS = 3;
 
     @Autowired
     private WebApplicationContext webAppContext;
@@ -84,17 +96,13 @@ public class RefundTest {
     private static MockMvc mockMvc;
 
     private NetworkParameters params;
-
-    private PrepareHalfSignTO status;
+    
+    private SignTO status;
     private Client client;
     private Client merchant;
-    private Coin amountToRequest = Coin.valueOf(9876);
+    //private Coin amountToRequest = Coin.valueOf(9876);
     private Transaction funding;
-    private int lockTime;
-    private WalletAppKit clientAppKit;
-
-    private final static String TEST_WALLET_PREFIX = "testwallet";
-    private File tmpDir;
+    final private static long LOCK_TIME = System.currentTimeMillis() + (1000 * 60 * 10 * 3);
 
     @Before
     public void setUp() throws Exception {
@@ -108,312 +116,102 @@ public class RefundTest {
         merchant = new Client(appConfig.getNetworkParameters(), mockMvc);
         params = appConfig.getNetworkParameters();
 
-        tmpDir = Files.createTempDir();
-        clientAppKit = new WalletAppKit(params, tmpDir, TEST_WALLET_PREFIX);
-        clientAppKit.setDiscovery(new PeerDiscovery() {
-            @Override
-            public void shutdown() {
-            }
-
-            @Override
-            public InetSocketAddress[] getPeers(long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {
-                return new InetSocketAddress[0];
-            }
-        });
-        clientAppKit.setBlockingStartup(false);
-        clientAppKit.startAsync().awaitRunning();
-        clientAppKit.wallet().addWatchedAddress(client.ecKey().toAddress(params));
-
-        funding = PrepareTest.sendFakeCoins(params,
-                Coin.valueOf(123450), client.p2shAddress(), walletService.blockChain(), clientAppKit.chain());
-        Date now = new Date();
-        status = PrepareTest.prepareServerCall(mockMvc, amountToRequest, client, merchant.p2shAddress(), null,
-                now);
-        lockTime = walletService.refundLockTime();
-
+        funding = Client.sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(), 100,
+                walletService.blockChain(), client.blockChain(), merchant.blockChain());
+        
+        status = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
+                new ECKey().toAddress(params), 9876, client, new Date());
     }
 
     @After
     public void tearDown() {
-        File[] walletFiles = tmpDir.listFiles(new FilenameFilter() {
-            @Override
-            public boolean accept(File dir, String name) {
-                return name.startsWith(TEST_WALLET_PREFIX);
-            }
-
-        });
-        for (File f : walletFiles) {
-            f.delete();
-        }
-        tmpDir.delete();
+        client.deleteWallet();
+        merchant.deleteWallet();
     }
 
-    @Test
-    public void testBurnedOutputs() throws Exception {
-        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.signatures());
-        Transaction txClient = BitcoinUtils.createTx(
-                params, funding.getOutputs(), client.p2shAddress(), merchant.p2shAddress(),
-                amountToRequest.value);
-        RefundInput refundInput = createInputForRefund(
-                params, client, merchant.p2shAddress(), serverSigs, lockTime, txClient);
-        List<Pair<TransactionOutPoint, Coin>> burned = BitcoinUtils.outpointsFromOutputFor(params, funding,
-                client.p2shAddress());
-        RefundP2shTO statusRefund1 = GenericEndpointTest.refundServerCall(mockMvc,
-                client.ecKey(), burned, refundInput.clientSinatures(), new Date());
-        Assert.assertFalse(statusRefund1.isSuccess());
-        Assert.assertEquals(Type.BURNED_OUTPUTS, statusRefund1.type());
-    }
-
+    
     @Test
     public void testSignatureVerification() throws Exception {
-        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.signatures());
+        
         Transaction txClient = BitcoinUtils.createTx(
-                params, funding.getOutputs(), client.p2shAddress(), merchant.p2shAddress(),
-                amountToRequest.value);
-        RefundInput refundInput = createInputForRefund(
-                params, client, merchant.p2shAddress(), serverSigs, lockTime, txClient);
-        RefundP2shTO statusRefund1 = GenericEndpointTest.refundServerCall(mockMvc,
-                client.ecKey(), refundInput.clientOutpoint(), serverSigs, new Date());
-        Assert.assertFalse(statusRefund1.isSuccess());
-        Assert.assertEquals(Type.SIGNATURE_ERROR, statusRefund1.type());
+                params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
+                9876);
+        
+        Triple<RefundTO,Transaction,List<TransactionSignature>> t = 
+                refundServerCall(params, mockMvc, client, txClient, new Date(), LOCK_TIME);
+        Assert.assertTrue(t.element0().isSuccess());
+        
+        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(t.element0().serverSignatures());
+        Assert.assertTrue(SerializeUtils.verifyTxSignatures(t.element1(), serverSigs, client.redeemScript(), client.ecKeyServer()));
+        Assert.assertTrue(SerializeUtils.verifyTxSignatures(t.element1(), t.element2(), client.redeemScript(), client.ecKey()));
     }
 
+    
     @Test
     public void testRefund() throws Exception {
-        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.signatures());
+        //List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.serverSignatures());
         Transaction txClient = BitcoinUtils.createTx(
-                params, funding.getOutputs(), client.p2shAddress(), merchant.p2shAddress(),
-                amountToRequest.value);
-        RefundInput refundInput = createInputForRefund(
-                params, client, merchant.p2shAddress(), serverSigs, lockTime, txClient);
-        RefundP2shTO statusRefund1 = GenericEndpointTest.refundServerCall(mockMvc,
-                client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), new Date());
-
-        Assert.assertTrue(statusRefund1.isSuccess());
-        Transaction refund = new Transaction(params, statusRefund1.fullRefundTransaction());
-        Assert.assertEquals(12, refund.getLockTime());
+                params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
+                9876);
+        
+        Triple<RefundTO,Transaction,List<TransactionSignature>> t = 
+                refundServerCall(params, mockMvc, client, txClient, new Date(), LOCK_TIME);
+        Assert.assertTrue(t.element0().isSuccess());
+        
+        Transaction refund = t.element1();
+        Assert.assertEquals(LOCK_TIME, refund.getLockTime());
         //in unit test we can't wait for locktime, as block includes all tx
-        sendFakeBroadcast(refund, walletService.blockChain(), clientAppKit.chain());
-        Assert.assertEquals(103574, clientAppKit.wallet().getBalance().value);
+        Client.sendFakeBroadcast(params, refund, 200, walletService.blockChain(), client.blockChain(), merchant.blockChain());
+        Assert.assertEquals(234004, client.wallet().getBalance().value);
         //we have not yet sent out the real tx
         Assert.assertEquals(123450, walletService.balance(params, client.p2shAddress()));
-        sendFakeBroadcast(refundInput.fullTx(), walletService.blockChain(), clientAppKit.chain());
-        Assert.assertEquals(108574, walletService.balance(params, client.p2shAddress()));
-
-    }
-
-    @Test
-    public void testRefundIncreasedLocktime() throws Exception {
-        for (int i = 0; i < 6; i++) {
-            PrepareTest.sendFakeCoins(params,
-                    Coin.valueOf(123450), new ECKey().toAddress(params), walletService.blockChain(),
-                    clientAppKit.chain());
-        }
-        lockTime = walletService.refundLockTime();
-        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.signatures());
-        Transaction txClient = BitcoinUtils.createTx(
-                params, funding.getOutputs(), client.p2shAddress(), merchant.p2shAddress(),
-                amountToRequest.value);
-        RefundInput refundInput = createInputForRefund(
-                params, client, merchant.p2shAddress(), serverSigs, lockTime, txClient);
-        RefundP2shTO statusRefund1 = GenericEndpointTest.refundServerCall(mockMvc,
-                client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), new Date());
-
-        Assert.assertTrue(statusRefund1.isSuccess());
-        Transaction refund = new Transaction(params, statusRefund1.fullRefundTransaction());
-        Assert.assertEquals(18, refund.getLockTime());
-        refund.verify();
-        Assert.assertTrue(SerializeUtils.verifyRefund(refund, refundInput.fullTx()));
-        //SerializeUtils.verifyTxSignatures(refund, serverSigs, redeemScript, serverPubKey)
-    }
-
-    @Test
-    public void testRefundTxSigs() throws Exception {
-        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.signatures());
-        Transaction txClient = BitcoinUtils.createTx(
-                params, funding.getOutputs(), client.p2shAddress(), merchant.p2shAddress(),
-                amountToRequest.value);
-        RefundInput refundInput = createInputForRefund(
-                params, client, merchant.p2shAddress(), serverSigs, lockTime, txClient);
-        RefundP2shTO statusRefund1 = GenericEndpointTest.refundServerCall(mockMvc,
-                client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), new Date());
-        Assert.assertTrue(statusRefund1.isSuccess());
-        List<TransactionSignature> merchantSigs = createMerchantInputForRefund(refundInput.merchantOutpoint());
-        RefundP2shTO statusRefund2 = GenericEndpointTest.refundServerCall(mockMvc,
-                merchant.ecKey(), refundInput.merchantOutpoint(), merchantSigs, new Date());
-        Assert.assertTrue(statusRefund2.isSuccess());
-        Transaction fullTx = refundInput.fullTx();
-        Transaction refund1 = new Transaction(params, statusRefund1.fullRefundTransaction());
-        Transaction refund2 = new Transaction(params, statusRefund2.fullRefundTransaction());
-        Assert.assertTrue(SerializeUtils.verifyRefund(refund1, fullTx));
-        Assert.assertTrue(SerializeUtils.verifyRefund(refund2, fullTx));
-        Transaction unsigned = new Transaction(params, status.unsignedTransaction());
-        BitcoinUtils.applySignatures(unsigned, client.redeemScript(), serverSigs, serverSigs, true);
-        Assert.assertFalse(SerializeUtils.verifyRefund(refund2, unsigned));
-        Assert.assertEquals(12, refund1.getLockTime());
-        Assert.assertEquals(12, refund2.getLockTime());
-    }
-
-    @Test
-    public void testRefundWrongBloomFilter() throws Exception {
-        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.signatures());
-        Transaction txClient = BitcoinUtils.createTx(
-                params, funding.getOutputs(), client.p2shAddress(), merchant.p2shAddress(),
-                amountToRequest.value);
-        RefundInput refundInput = createInputForRefund(
-                params, client, merchant.p2shAddress(), serverSigs, lockTime, txClient);
-
-        //add more funding to have more than 1 input to test bloomfilter
-        Transaction t = PrepareTest.sendFakeCoins(params,
-                Coin.valueOf(222222), client.p2shAddress(), walletService.blockChain(), clientAppKit.chain());
-        
-        RefundP2shTO input = GenericEndpointTest.refundServerCallInput(
-                client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), new Date());
-
-        //empty bloomfilter
-        SimpleBloomFilter<byte[]> bf = new SimpleBloomFilter(0.001, 2);
-        bf.add(t.getOutput(0).getOutPointFor().unsafeBitcoinSerialize());
-        input.bloomFilter(bf.encode());
-        SerializeUtils.sign(input, client.ecKey());
-        RefundP2shTO output = GenericEndpointTest.refundServerCallOutput(mockMvc, input);
-        Assert.assertEquals(Type.SIGNATURE_ERROR, output.type());
-    }
-
-    @Test
-    public void testRefundCorrectBloomFilter1() throws Exception {
-        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.signatures());
-        Transaction txClient = BitcoinUtils.createTx(
-                params, funding.getOutputs(), client.p2shAddress(), merchant.p2shAddress(),
-                amountToRequest.value);
-        RefundInput refundInput = createInputForRefund(
-                params, client, merchant.p2shAddress(), serverSigs, lockTime, txClient);
-
-        RefundP2shTO input = GenericEndpointTest.refundServerCallInput(
-                client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), new Date());
-
-        SimpleBloomFilter<byte[]> bf = new SimpleBloomFilter<>(0.001, 2);
-        input.bloomFilter(bf.encode());
-        SerializeUtils.sign(input, client.ecKey());
-        RefundP2shTO output = GenericEndpointTest.refundServerCallOutput(mockMvc, input);
-        Assert.assertTrue(output.isSuccess());
-    }
-
-    @Test
-    public void testRefundTopUpInBetween() throws Exception {
-        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.signatures());
-
-        Transaction txClient = BitcoinUtils.createTx(
-                params, funding.getOutputs(), client.p2shAddress(), merchant.p2shAddress(),
-                amountToRequest.value);
-
-        Transaction t = PrepareTest.sendFakeCoins(params,
-                Coin.valueOf(222222), client.p2shAddress(), walletService.blockChain(), clientAppKit.chain());
-
-        RefundInput refundInput = createInputForRefund(
-                params, client, merchant.p2shAddress(), serverSigs,
-                lockTime, txClient, t.getOutput(0));
-
-        RefundP2shTO input = GenericEndpointTest.refundServerCallInput(
-                client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), new Date());
-        RefundP2shTO output = GenericEndpointTest.refundServerCallOutput(mockMvc, input);
-        Assert.assertTrue(output.isSuccess());
-    }
-
-    @Test
-    public void testRefundCorrectBloomFilter2() throws Exception {
-        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.signatures());
-
-        Transaction txClient = BitcoinUtils.createTx(
-                params, funding.getOutputs(), client.p2shAddress(), merchant.p2shAddress(),
-                amountToRequest.value);
-
-        Transaction t = PrepareTest.sendFakeCoins(params,
-                Coin.valueOf(222222), client.p2shAddress(), walletService.blockChain(), clientAppKit.chain());
-
-        RefundInput refundInput = createInputForRefund(
-                params, client, merchant.p2shAddress(), serverSigs,
-                lockTime, txClient, t.getOutput(0));
-
-        RefundP2shTO input = GenericEndpointTest.refundServerCallInput(
-                client.ecKey(), refundInput.clientOutpoint(), refundInput.clientSinatures(), new Date());
-        SimpleBloomFilter<byte[]> bf = new SimpleBloomFilter<>(0.001, 1);
-        bf.add(t.getOutput(0).getOutPointFor().unsafeBitcoinSerialize());
-        input.bloomFilter(bf.encode());
-        SerializeUtils.sign(input, client.ecKey());
-        RefundP2shTO output = GenericEndpointTest.refundServerCallOutput(mockMvc, input);
-        Assert.assertTrue(output.isSuccess());
-    }
-
-    @Test
-    public void testRefundMissingRedundantOutpoints() throws Exception {
-        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.signatures());
-
-        Transaction txClient = BitcoinUtils.createTx(
-                params, funding.getOutputs(), client.p2shAddress(), merchant.p2shAddress(),
-                amountToRequest.value);
-
-        Transaction t = PrepareTest.sendFakeCoins(params,
-                Coin.valueOf(222222), client.p2shAddress(), walletService.blockChain(), clientAppKit.chain());
-
-        RefundInput refundInput = createInputForRefund(
-                params, client, merchant.p2shAddress(), serverSigs,
-                lockTime, txClient, t.getOutput(0));
-
-        List<Pair<TransactionOutPoint, Coin>> l = new ArrayList<>();
-        l.add(new Pair<>(refundInput.fullTx().getOutput(1).getOutPointFor(), Coin.valueOf(108574)));
-        //
-        RefundP2shTO input = GenericEndpointTest.refundServerCallInput(
-                client.ecKey(), l, refundInput.clientSinatures(), new Date());
-        //we need bf, otherwise the server will know add them
-        RefundP2shTO output = GenericEndpointTest.refundServerCallOutput(mockMvc, input);
-        Assert.assertTrue(output.isSuccess());
-        Transaction refund = new Transaction(params, output.fullRefundTransaction());
-        Assert.assertTrue(SerializeUtils.verifyRefund(refund, refundInput.fullTx(), t));
+        //we already spent the inputs
+        try {
+            Client.sendFakeBroadcast(params, txClient, 200, walletService.blockChain(), client.blockChain(), merchant.blockChain());
+        } catch (IllegalStateException e) {return;}
+        Assert.fail("did not throw exception");
     }
     
     @Test
-    public void testRefundMissingImportantOutpoints() throws Exception {
-        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.signatures());
-
+    public void testRefund2() throws Exception {
+        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.serverSignatures());
         Transaction txClient = BitcoinUtils.createTx(
-                params, funding.getOutputs(), client.p2shAddress(), merchant.p2shAddress(),
-                amountToRequest.value);
-
-        Transaction t = PrepareTest.sendFakeCoins(params,
-                Coin.valueOf(222222), client.p2shAddress(), walletService.blockChain(), clientAppKit.chain());
-
-        RefundInput refundInput = createInputForRefund(
-                params, client, merchant.p2shAddress(), serverSigs,
-                lockTime, txClient, t.getOutput(0));
-
-        List<Pair<TransactionOutPoint, Coin>> l = new ArrayList<>();
-        l.add(new Pair<>(refundInput.fullTx().getOutput(0).getOutPointFor(), Coin.valueOf(222222)));
+                params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
+                9876);
+        List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(txClient, client.redeemScript(), client.ecKey());
+        BitcoinUtils.applySignatures(txClient, client.redeemScript(), clientSigs, serverSigs, true);
         
-        RefundP2shTO input = GenericEndpointTest.refundServerCallInput(
-                client.ecKey(), l, refundInput.clientSinatures(), new Date());
-        //we need bf, otherwise the server will know add them
-        RefundP2shTO output = GenericEndpointTest.refundServerCallOutput(mockMvc, input);
-        Assert.assertFalse(output.isSuccess());
+        Triple<RefundTO,Transaction,List<TransactionSignature>> t = 
+                refundServerCall(params, mockMvc, client, txClient, new Date(), LOCK_TIME);
+        Assert.assertTrue(t.element0().isSuccess());
+        
+        Transaction refund = t.element1();
+        Assert.assertEquals(LOCK_TIME, refund.getLockTime());
+        //in unit test we can't wait for locktime, as block includes all tx
+        //Client.sendFakeBroadcast(params, txClient, 200, walletService.blockChain(), client.blockChain(), merchant.blockChain());
+        //Client.sendFakeBroadcast(params, txClient, 200, client.blockChain());
+        
+        //Assert.assertEquals(111904, client.wallet().getBalance().value);
+        
+        //we have not yet sent out the real tx
+        //TODO: remove non-expired refund
+        
+        //Assert.assertEquals(0, walletService.balance(params, client.p2shAddress()));
+
+        //we already spent the inputs
+        try {
+            Client.sendFakeBroadcast(params, refund, 200, walletService.blockChain(), client.blockChain(), merchant.blockChain());
+        } catch (IllegalStateException e) {return;}
+        Assert.fail("did not throw exception");
     }
 
-    private List<TransactionSignature> createMerchantInputForRefund(
-            List<Pair<TransactionOutPoint, Coin>> refundMerchantOutpoints) {
-        List<TransactionInput> preBuiltInupts = BitcoinUtils.convertPointsToInputs(
-                appConfig.getNetworkParameters(), refundMerchantOutpoints, merchant.redeemScript());
-        List<TransactionOutput> merchantWalletOutputs = walletService.verifiedOutputs(
-                appConfig.getNetworkParameters(), merchant.p2shAddress());
-        //add/remove pending, approved, remove burned
-        Transaction unsignedRefundMerchant = BitcoinUtils.generateUnsignedRefundTx(
-                appConfig.getNetworkParameters(), merchantWalletOutputs, preBuiltInupts,
-                merchant.ecKey().toAddress(appConfig.getNetworkParameters()), merchant.redeemScript(),
-                walletService.refundLockTime());
-        if (unsignedRefundMerchant == null) {
-            throw new RuntimeException("not enough funds");
-        }
-        List<TransactionSignature> partiallySignedRefundMerchant = BitcoinUtils.partiallySign(
-                unsignedRefundMerchant, merchant.redeemScript(), merchant.ecKey());
-        return partiallySignedRefundMerchant;
+    private static Triple<RefundTO,Transaction,List<TransactionSignature>> refundServerCall(NetworkParameters params, MockMvc mockMvc, Client client,
+            Transaction txClient, Date date, long LOCK_TIME) throws Exception {
+        final Transaction txRefund = BitcoinUtils.createRefundTx(params, client.outpoints(txClient), client.redeemScript(),
+                client.ecKey().toAddress(params), LOCK_TIME);
+        final List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(txRefund, client.redeemScript(), client.ecKey());
+        RefundTO refundTO = ServerCalls.refundServerCall(params, mockMvc, client.ecKey(), client.outpoints(txClient),
+                clientSigs, date, LOCK_TIME);
+        return new Triple<>(refundTO, txRefund, clientSigs);
     }
-
 }
-*/
