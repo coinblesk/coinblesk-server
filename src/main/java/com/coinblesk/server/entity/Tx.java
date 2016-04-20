@@ -42,7 +42,7 @@ public class Tx implements Serializable {
     @Column(name = "TX", nullable = false, updatable = false)
     private byte[] tx;
 
-    @Column(name = "CLIENT_PUBLIC_KEY", nullable = false)
+    @Column(name = "APPROVED", nullable = false, updatable = false)
     private boolean approved;
     
     @Temporal(TemporalType.TIMESTAMP)

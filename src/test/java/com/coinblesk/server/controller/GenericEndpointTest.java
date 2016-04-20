@@ -265,7 +265,7 @@ public class GenericEndpointTest {
         Coin fee = transaction.getFee();
         int len = transaction.unsafeBitcoinSerialize().length;
         System.out.println("tx len: " + len);
-        Assert.assertEquals(10, fee.getValue() / len);
+        Assert.assertEquals(5, Math.round(fee.getValue() / (double) len));
         // test /refund
         //create a refund with outpoint.
         TransactionOutput output = transaction.getOutput(1);

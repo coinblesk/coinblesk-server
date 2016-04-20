@@ -40,7 +40,6 @@ import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
-import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Wallet;
 import org.bitcoinj.net.discovery.DnsDiscovery;
@@ -58,7 +57,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  *
- * @author draft
+ * @author Thomas Bocek
  */
 @Service
 public class WalletService {
@@ -169,20 +168,6 @@ public class WalletService {
 
     }
 
-    public boolean connectBorken(Transaction fullTx, NetworkParameters params) {
-        wallet.commitTx(fullTx);
-        return true;
-        /*Map<Sha256Hash, Transaction> orig = wallet.getTransactionPool(WalletTransaction.Pool.UNSPENT);
-        for(TransactionInput input:fullTx.getInputs()) {
-            TransactionInput.ConnectionResult result = input.connect(
-                    orig, TransactionInput.ConnectMode.DISCONNECT_ON_CONFLICT);
-            if(result != TransactionInput.ConnectionResult.SUCCESS) {
-                return false;
-            }
-        }
-        return true;*/
-    }
-
     /**
      * The unspent tx also contains spentOutputs, where the approved tx should mark the unspent as spent!
      *
@@ -219,20 +204,6 @@ public class WalletService {
         List<TransactionOutput> retVal = new ArrayList<>();
 
         Map<Sha256Hash, Transaction> unspent = verifiedTransactions(params);
-
-        for (Transaction t : unspent.values()) {
-            for (TransactionInput in : t.getInputs()) {
-                TransactionOutPoint point = in.getOutpoint();
-                Transaction parent = unspent.get(point.getHash());
-                if (parent != null) {
-                    TransactionOutput spent = parent.getOutput(point.getIndex());
-                    if (spent.isAvailableForSpending()) {
-                        LOG.debug("mark as spent: {}", spent);
-                        spent.markAsSpent(in);
-                    }
-                }
-            }
-        }
 
         for (Transaction t : unspent.values()) {
             for (TransactionOutput out : t.getOutputs()) {
@@ -297,30 +268,6 @@ public class WalletService {
                 shutdown();
             }
         });
-    }
-
-    public int refundLockTime() {
-        final int locktime = appConfig.lockTime();
-        final int lockPrecision = appConfig.lockPrecision();
-        return (((wallet.getLastBlockSeenHeight() + locktime) / lockPrecision) + 1) * lockPrecision;
-    }
-
-    public int refundEarliestLockTime() {
-        final int lockPrecision = appConfig.lockPrecision();
-        return ((wallet.getLastBlockSeenHeight() / lockPrecision) + 2) * lockPrecision;
-    }
-
-    public void addWatchingOutpointsForRemoval(List<Pair<TransactionOutPoint, Integer>> burned) {
-        //TODO: mainteenance during startup        
-        //TODO: maintenance cleanup, add listener and do:
-        //transactionService.removeConfirmedBurnedOutput(inputsFromConfirmedTransaction);
-    }
-
-    public void addWatchingTxForRemoval(Transaction approved) {
-        //TODO: transaction malleability may spam the system
-        //TODO: mainteenance during startup        
-        //TODO: maintenance cleanup, add listener and do:
-        //transactionService.removeApproved(approved);
     }
 
     public PeerGroup peerGroup() {
