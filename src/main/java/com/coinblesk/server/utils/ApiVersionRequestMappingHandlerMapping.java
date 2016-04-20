@@ -32,11 +32,11 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
  * @author Thomas Bocek
  */
 public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandlerMapping {
-
+    
     @Override
     protected RequestMappingInfo getMappingForMethod(Method method, Class<?> handlerType) {
         RequestMappingInfo info = super.getMappingForMethod(method, handlerType);
-        
+
         //no request mapping for this method
         if(info == null) {
             return null;

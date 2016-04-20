@@ -16,7 +16,6 @@
 
 package com.coinblesk.server.config;
 
-import com.coinblesk.server.utils.ApiVersionRequestMappingHandlerMapping;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
@@ -36,16 +35,15 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.JavaMailSender;
 import javax.mail.Session;
 import org.springframework.mail.SimpleMailMessage;
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 @Configuration
 @ComponentScan("com.coinblesk.server")
 @EnableScheduling
 
-public class BeanConfig
-{	
+public class BeanConfig {
+        
     @Autowired 
-    private MailConfig mailConfig;    
+    private MailConfig mailConfig;
 
     //used to resolve @Value
     @Bean
@@ -68,10 +66,7 @@ public class BeanConfig
         return new BCryptPasswordEncoder();
     }
     
-    @Bean
-    public RequestMappingHandlerMapping requestMappingHandlerMapping() {
-        return new ApiVersionRequestMappingHandlerMapping();
-    }
+    
     
     //as seen in: http://stackoverflow.com/questions/22483407/send-emails-with-spring-by-using-java-annotations
     @Bean
