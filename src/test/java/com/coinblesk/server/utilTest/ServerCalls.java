@@ -52,7 +52,7 @@ public class ServerCalls {
                 .serverSignatures(serverSigs)
                 .clientSignatures(clientSigs)
                 .currentDate(date.getTime());
-        SerializeUtils.sign(prepareHalfSignTO, client);
+        SerializeUtils.signJSON(prepareHalfSignTO, client);
         return prepareHalfSignTO;
     }
 
@@ -68,7 +68,7 @@ public class ServerCalls {
                 .clientPublicKey(client.getPubKey())
                 .transaction(fullTx.unsafeBitcoinSerialize())
                 .currentDate(now.getTime());
-        SerializeUtils.sign(cs, client);
+        SerializeUtils.signJSON(cs, client);
         return cs;
     }
 
@@ -97,7 +97,7 @@ public class ServerCalls {
                 .refundSendTo(client.toAddress(params).toString())
                 .lockTime(lockTime)
                 .currentDate(date.getTime());
-        SerializeUtils.sign(refundP2shTO, client);
+        SerializeUtils.signJSON(refundP2shTO, client);
         return refundP2shTO;
     }
 
@@ -122,7 +122,7 @@ public class ServerCalls {
                 .p2shAddressTo(to.toString())
                 .clientPublicKey(client.getPubKey())
                 .currentDate(date.getTime());
-        SerializeUtils.sign(prepareHalfSignTO, client);
+        SerializeUtils.signJSON(prepareHalfSignTO, client);
         return prepareHalfSignTO;
     }
 
@@ -136,7 +136,7 @@ public class ServerCalls {
                 .transaction(tx.unsafeBitcoinSerialize())
                 .clientPublicKey(client.getPubKey())
                 .currentDate(date.getTime());
-        SerializeUtils.sign(prepareHalfSignTO, client);
+        SerializeUtils.signJSON(prepareHalfSignTO, client);
         return prepareHalfSignTO;
     }
 

@@ -19,9 +19,14 @@ import com.coinblesk.json.KeyTO;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
+import com.google.common.io.Files;
+import java.io.File;
+import java.io.FilenameFilter;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.BlockChain;
@@ -30,8 +35,13 @@ import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PrunedException;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.core.Wallet;
+import org.bitcoinj.kits.WalletAppKit;
+import org.bitcoinj.net.discovery.PeerDiscovery;
+import org.bitcoinj.net.discovery.PeerDiscoveryException;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.testing.FakeTxBuilder;
@@ -55,6 +65,8 @@ public class Client {
     final private Script redeemScript;
     final private Address p2shAddress;
     final private NetworkParameters params;
+    final private WalletAppKit clientAppKit;
+    final private File tmpDir;
 
     public Client(NetworkParameters params, MockMvc mockMvc) throws Exception {
         this.params = params;
@@ -63,6 +75,8 @@ public class Client {
         this.p2shScript = createP2SHScript(ecKey, ecKeyServer);
         this.redeemScript = createRedeemScript(ecKey, ecKeyServer);
         this.p2shAddress = p2shScript.getToAddress(params);
+        this.tmpDir = Files.createTempDir();
+        this.clientAppKit = createAppKit();
     }
 
     public Client(NetworkParameters params, ECKey ecKeyClient, ECKey ecKeyServer) throws Exception {
@@ -72,7 +86,30 @@ public class Client {
         this.p2shScript = createP2SHScript(ecKey, ecKeyServer);
         this.redeemScript = createRedeemScript(ecKey, ecKeyServer);
         this.p2shAddress = p2shScript.getToAddress(params);
+        this.tmpDir = Files.createTempDir();
+        this.clientAppKit = createAppKit();
     }
+    
+    private WalletAppKit createAppKit() {
+        final WalletAppKit walletAppKit = new WalletAppKit(params, tmpDir, p2shAddress.toString());
+        walletAppKit.setDiscovery(new PeerDiscovery() {
+            @Override
+            public void shutdown() {
+            }
+
+            @Override
+            public InetSocketAddress[] getPeers(long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {
+                return new InetSocketAddress[0];
+            }
+        });
+        walletAppKit.setBlockingStartup(false);
+        walletAppKit.startAsync().awaitRunning();
+        walletAppKit.wallet().addWatchedAddress(ecKey.toAddress(params));
+        walletAppKit.wallet().addWatchedAddress(p2shAddress);
+        return walletAppKit;
+    }
+    
+    
 
     public ECKey ecKey() {
         return ecKey;
@@ -92,6 +129,10 @@ public class Client {
 
     public Address p2shAddress() {
         return p2shAddress;
+    }
+    
+    public BlockChain blockChain() {
+        return clientAppKit.chain();
     }
 
     private Script createP2SHScript(ECKey ecKeyClient, ECKey ecKeyServer) {
@@ -126,13 +167,57 @@ public class Client {
         return ECKey.fromPublicOnly(status.publicKey());
     }
     
+    
+    
+    public List<Pair<byte[], Long>> outpointsRaw(Transaction funding) {
+        List<Pair<byte[], Long>> retVal = new ArrayList<>(funding.getOutputs().size());
+        for(TransactionOutput output:funding.getOutputs()) {
+            if(p2shAddress.equals(output.getAddressFromP2SH(params))) {
+                retVal.add(new Pair<>(
+                    output.getOutPointFor().unsafeBitcoinSerialize(), output.getValue().getValue()));
+            }
+        }
+        return retVal;
+    }
+    
+    public List<Pair<TransactionOutPoint, Coin>> outpoints(Transaction funding) {
+        List<Pair<TransactionOutPoint, Coin>> retVal = new ArrayList<>(funding.getOutputs().size());
+        for(TransactionOutput output:funding.getOutputs()) {
+            if(p2shAddress.equals(output.getAddressFromP2SH(params))) {
+                retVal.add(new Pair<>(
+                    output.getOutPointFor(), output.getValue()));
+            }
+        }
+        return retVal;
+    }
+    
+    public Wallet wallet() {
+        return clientAppKit.wallet();
+    }
+
+    public void deleteWallet() {
+        File[] walletFiles = tmpDir.listFiles(new FilenameFilter() {
+            @Override
+            public boolean accept(File dir, String name) {
+                return name.startsWith(p2shAddress.toString());
+            }
+        });
+        for (File f : walletFiles) {
+            f.delete();
+        }
+        tmpDir.delete();
+    }
+    
     public static Transaction sendFakeCoins(NetworkParameters params, Coin amount, Address to, int wait,
             BlockChain... chains) 
             throws VerificationException, PrunedException, BlockStoreException, InterruptedException {
         Transaction tx = FakeTxBuilder.createFakeTx(params, amount, to);
+        if(chains.length == 0) {
+            return tx;
+        }
+        final Block block = FakeTxBuilder.makeSolvedTestBlock(
+                chains[0].getBlockStore().getChainHead().getHeader(), tx);
         for(BlockChain chain:chains) {
-            Block block = FakeTxBuilder.makeSolvedTestBlock(
-                chain.getBlockStore().getChainHead().getHeader(), tx);
             chain.add(block);
         }
         //in case we need to wait for any kind of notification
@@ -142,14 +227,21 @@ public class Client {
         return tx;
     }
     
-    public List<Pair<byte[], Long>> outpoints(Transaction funding) {
-        List<Pair<byte[], Long>> retVal = new ArrayList<>(funding.getOutputs().size());
-        for(TransactionOutput output:funding.getOutputs()) {
-            if(p2shAddress.equals(output.getAddressFromP2SH(params))) {
-                retVal.add(new Pair<byte[], Long>(
-                    output.getOutPointFor().unsafeBitcoinSerialize(), output.getValue().getValue()));
-            }
+    public static Transaction sendFakeBroadcast(NetworkParameters params, Transaction tx, int wait, BlockChain... chains) 
+            throws BlockStoreException, VerificationException, PrunedException, InterruptedException {
+        Transaction tx2 = new Transaction(params, tx.unsafeBitcoinSerialize());
+        if(chains.length == 0) {
+            return tx2;
+        } 
+        final Block block = FakeTxBuilder.makeSolvedTestBlock(chains[0].getBlockStore().getChainHead().getHeader(), tx2);
+        for(BlockChain chain:chains) {
+            Block b = new Block(params, block.unsafeBitcoinSerialize());
+            System.out.println("block is:"+b);
+            chain.add(b);
         }
-        return retVal;
+        Thread.sleep(wait);
+        return tx2;
     }
+
+    
 }
