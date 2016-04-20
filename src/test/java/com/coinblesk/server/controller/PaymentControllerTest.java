@@ -70,7 +70,7 @@ import com.github.springtestdbunit.annotation.DatabaseTearDown;
 @WebAppConfiguration
 public class PaymentControllerTest {
 	
-	private static final String URL_CREATE_TIME_LOCKED_ADDRESS = "/v3/payment/createTimeLockedAddress";
+	public static final String URL_CREATE_TIME_LOCKED_ADDRESS = "/v3/payment/createTimeLockedAddress";
 	
 	@Autowired
     private WebApplicationContext webAppContext;

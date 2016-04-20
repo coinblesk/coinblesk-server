@@ -38,13 +38,13 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.Wallet;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscoveryException;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.testing.FakeTxBuilder;
+import org.bitcoinj.wallet.Wallet;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -97,10 +97,11 @@ public class Client {
             public void shutdown() {
             }
 
-            @Override
-            public InetSocketAddress[] getPeers(long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {
-                return new InetSocketAddress[0];
-            }
+			@Override
+			public InetSocketAddress[] getPeers(long services, long timeoutValue, TimeUnit timeoutUnit)
+					throws PeerDiscoveryException {
+				return new InetSocketAddress[0];
+			}
         });
         walletAppKit.setBlockingStartup(false);
         walletAppKit.startAsync().awaitRunning();

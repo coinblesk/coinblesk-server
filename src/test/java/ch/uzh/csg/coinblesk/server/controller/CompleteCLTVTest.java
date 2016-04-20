@@ -56,17 +56,18 @@ import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.json.KeyTO;
 import com.coinblesk.json.SignTO;
 import com.coinblesk.json.TimeLockedAddressTO;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.config.BeanConfig;
+import com.coinblesk.server.config.SecurityConfig;
+import com.coinblesk.server.controller.PaymentControllerTest;
+import com.coinblesk.server.service.KeyService;
+import com.coinblesk.server.service.WalletService;
+import com.coinblesk.server.utilTest.TestBean;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.google.common.io.Files;
 
-import ch.uzh.csg.coinblesk.server.config.AppConfig;
-import ch.uzh.csg.coinblesk.server.config.BeanConfig;
-import ch.uzh.csg.coinblesk.server.config.SecurityConfig;
-import ch.uzh.csg.coinblesk.server.service.KeyService;
-import ch.uzh.csg.coinblesk.server.service.WalletService;
-import ch.uzh.csg.coinblesk.server.utilTest.TestBean;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @TestExecutionListeners({
@@ -141,7 +142,7 @@ public class CompleteCLTVTest {
     }
     
     private Transaction fundClient(Address addressTo) throws Exception {
-    	Transaction tx = PrepareTest.sendFakeCoins(params, Coin.COIN, 
+    	Transaction tx = sendFakeCoins(params, Coin.COIN, 
     			addressTo, 
     			walletService.blockChain(), client.blockChain());
     	assertNotNull(tx);
@@ -161,44 +162,7 @@ public class CompleteCLTVTest {
     	assertTrue(txUnspent.containsKey(tx.getHash()));
     }
     
-//    @Test
-//    public void testSpend_BeforeLockTimeExpiry() throws Exception {
-//    	List<TransactionOutput> unspent = client.wallet().getUnspents();
-//    	Transaction spendTx = new Transaction(params);
-//    	for (TransactionOutput to : unspent) {
-//    		spendTx.addInput(to);
-//    	}
-//    	spendTx.addOutput(spendTx.getInputSum(), merchant.getChangeAddress());
-//    	
-//    	SignTO signTO = client.signTxByServer(spendTx);
-//    	assertNotNull(signTO);
-//    	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.serverSignatures());
-//    	assertTrue(serverSigs.size() > 0);
-//    	assertEquals(serverSigs.size(), spendTx.getInputs().size());
-//    	
-//    	List<TransactionSignature> clientSigs = new ArrayList<>();
-//    	for (int tiIndex = 0; tiIndex < spendTx.getInputs().size(); ++tiIndex) {
-//    		TransactionSignature sig = spendTx.calculateSignature(tiIndex, 
-//    				client.getClientKey(), client.getChangeAddress().createRedeemScript(), 
-//    				Transaction.SigHash.ALL, false);
-//    		clientSigs.add(sig);
-//    	}
-//    	assertTrue(clientSigs.size() > 0);
-//    	assertEquals(clientSigs.size(), serverSigs.size());
-//    	
-//    	// apply
-//    	for (int tiIndex = 0; tiIndex < spendTx.getInputs().size(); ++tiIndex) {
-//    		TransactionInput ti = spendTx.getInput(tiIndex);
-//    		TransactionSignature clientSig = clientSigs.get(tiIndex);
-//    		TransactionSignature serverSig = serverSigs.get(tiIndex);
-//    		Script scriptsig = client.getTimeLockedAddress().createScriptSigBeforeLockTime(clientSig, serverSig);
-//    		ti.setScriptSig(scriptsig);
-//    		
-//    		// throws if error
-//    		scriptsig.correctlySpends(spendTx, tiIndex, ti.getConnectedOutput().getScriptPubKey(), Script.ALL_VERIFY_FLAGS);
-//    	}   	
-//    }
-    
+   
     @Test
     public void testSpend_BeforeLockTimeExpiry() throws Exception {
     	Transaction tx = BitcoinUtils.createTx(
@@ -226,10 +190,10 @@ public class CompleteCLTVTest {
     
     @Test
     public void testSpend_BeforeLockTime_MultipleInputs() throws Exception {
-    	for (int i = 0; i < 5; ++i) {
+    	for (int i = 0; i < 3; ++i) {
     		client.createTimeLockedAddress();
     		fundClient(client.getChangeAddress());
-    		Thread.sleep(500);
+    		Thread.sleep(250);
     	}
     	
     	for (Address a : client.getAllAddresses().keySet()) {
@@ -340,64 +304,25 @@ public class CompleteCLTVTest {
     	
     }
     
-//    @Test
-//    public void testReceiveFunds_temp() throws Exception {
-////    	Transaction tx = PrepareTest.sendFakeCoins(params, Coin.COIN, client.getTimeLockedAddress().getAddress(params), 
-////    			walletService.blockChain(), clientAppKit.chain());
-////    	
-//    	List<TransactionOutput> unspent = client.wallet().getUnspents();
-//    	Transaction t2 = new Transaction(params);
-//    	for (TransactionOutput to : unspent) {
-//    		t2.addInput(to);
-//    	}
-//    	t2.addOutput(Coin.COIN, merchant.getChangeAddress());
-//    	
-////    	SignTO signTO = client.signTx(t2);
-////    	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.serverSignatures());
-////    	
-////    	TransactionSignature clientSig = t2.calculateSignature(0, client.getClientKey(), client.getTimeLockedAddress().createRedeemScript(), Transaction.SigHash.ALL, false);
-////    	
-////    	int i = 0;
-////    	for (TransactionInput ti : t2.getInputs()) {
-////    		Script scriptsig = client.getTimeLockedAddress().createScriptSigBeforeLockTime(clientSig, serverSigs.get(0));
-////    		ti.setScriptSig(scriptsig);
-////    		scriptsig.correctlySpends(t2, i, ti.getConnectedOutput().getScriptPubKey(), Script.ALL_VERIFY_FLAGS);
-////    		++i;
-////    	}
-//    	
-//    	
-//    	t2.setLockTime(client.getTimeLockedAddress().getLockTime());
-//    	for (TransactionInput ti : t2.getInputs()) {
-//    		ti.setSequenceNumber(0);
-//    	}
-//    	TransactionSignature clientSig = t2.calculateSignature(0, client.getClientKey(), client.getTimeLockedAddress().createRedeemScript(), Transaction.SigHash.ALL, false);
-//    	int i = 0;
-//    	for (TransactionInput ti : t2.getInputs()) {
-//    		Script scriptsig = client.getTimeLockedAddress().createScriptSigAfterLockTime(clientSig);
-//    		ti.setScriptSig(scriptsig);
-//    		scriptsig.correctlySpends(t2, i, ti.getConnectedOutput().getScriptPubKey(), Script.ALL_VERIFY_FLAGS);
-//    		++i;
-//    	}
-//    	
-//    	System.out.println(t2.toString());
-//    }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     
     /*******************************
      * 
      * CLIENT implementation
      * 
      *******************************/
+    
+    private static Transaction sendFakeCoins(NetworkParameters params, 
+    		Coin amount, Address to, BlockChain... chains) 
+            throws Exception {
+        Transaction tx = FakeTxBuilder.createFakeTx(params, amount, to);
+        for(BlockChain chain:chains) {
+            Block block = FakeTxBuilder.makeSolvedTestBlock(
+                chain.getBlockStore().getChainHead().getHeader(), tx);
+            chain.add(block);
+        }
+        Thread.sleep(250);
+        return tx;
+    }
 	
 	private static class Client {
 		private final ECKey clientKey, serverKey;
@@ -504,13 +429,20 @@ public class CompleteCLTVTest {
 		}
 
 		public TimeLockedAddress createTimeLockedAddress() throws Exception {
-			KeyTO keyTO = new KeyTO().publicKey(clientKey.getPubKey());
+			TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
+					.currentDate(System.currentTimeMillis())
+					.clientPublicKey(clientKey.getPubKey());
+			SerializeUtils.signJSON(requestTO, clientKey);
 	        MvcResult res = mockMvc
-	        		.perform(post("/payment/createTimeLockedAddress").secure(true)
-	        				.contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(keyTO)))
+	        		.perform(
+	        				post(PaymentControllerTest.URL_CREATE_TIME_LOCKED_ADDRESS)
+	        				.secure(true)
+	        				.contentType(MediaType.APPLICATION_JSON)
+	        				.content(SerializeUtils.GSON.toJson(requestTO)))
 	        		.andExpect(status().isOk())
 	        		.andReturn();
-	        TimeLockedAddressTO response = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), TimeLockedAddressTO.class);
+	        TimeLockedAddressTO response = SerializeUtils.GSON
+	        		.fromJson(res.getResponse().getContentAsString(), TimeLockedAddressTO.class);
 	        
 	        TimeLockedAddress timeLockedAddress = response.timeLockedAddress();
 	        Address address = timeLockedAddress.getAddress(params);
