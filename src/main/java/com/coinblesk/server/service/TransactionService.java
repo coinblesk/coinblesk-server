@@ -75,7 +75,6 @@ public class TransactionService {
                 return true;
             }
         }
-
         //if we have a tx that is confirmed, we are good to go
         if (fullTx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf()) {
             LOG.debug("(instast-check) the confidence of tx {} is good: {}", fullTx.getHash(), fullTx.getConfidence()
@@ -87,9 +86,9 @@ public class TransactionService {
         final List<Transaction> clientTransactions = listTransactions(params, clientPublicKey, false);
 
         // check double signing
-        final boolean alreadySigned = alreadySigned(params, clientTransactions, inputsToCheck);
+        final boolean signedExactlyOnce = signedExactlyOnce(params, clientTransactions, inputsToCheck);
 
-        if (alreadySigned) {
+        if (!signedExactlyOnce) {
             return false;
         }
 
@@ -119,9 +118,10 @@ public class TransactionService {
         
     }
     
-    private boolean alreadySigned(final NetworkParameters params, final List<Transaction> clientTransactions,
+    private boolean signedExactlyOnce(final NetworkParameters params, final List<Transaction> clientTransactions,
             final List<TransactionInput> inputsToCheck) {
         // check double signing
+        int once = 0;
         final long currentTime = System.currentTimeMillis();
         for (final Transaction storedTransaction : clientTransactions) {
             final long lockTime = storedTransaction.getLockTime() * 1000;
@@ -132,12 +132,16 @@ public class TransactionService {
             for (final TransactionInput relevantTransactionInput : inputsToCheck) {
                 for (final TransactionInput storedTransactionInput : storedTransaction.getInputs()) {
                     if (storedTransactionInput.getOutpoint().equals(relevantTransactionInput.getOutpoint())) {
-                        return false;
+                        once++;
+                        //abort early
+                        if(once > 1) {
+                            return false;
+                        }
                     }
                 }
             }
         }
-        return true;
+        return once == 1;
     }
     
     @Transactional(readOnly = true)

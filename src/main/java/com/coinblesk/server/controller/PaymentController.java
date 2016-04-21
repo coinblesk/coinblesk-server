@@ -327,7 +327,7 @@ public class PaymentController {
 
             final byte[] serializedTransaction = transaction.unsafeBitcoinSerialize();
             txService.addTransaction(input.clientPublicKey(), serializedTransaction, transaction.getHash().getBytes(), false);
-            LOG.debug("{sign}:{} done", (System.currentTimeMillis() - start));
+            LOG.debug("{sign}:tx-hash {} in {} done", transaction.getHash(), (System.currentTimeMillis() - start));
             return new SignTO()
                     .setSuccess()
                     .transaction(serializedTransaction)
@@ -432,13 +432,12 @@ public class PaymentController {
 
             //ok, refunds are locked or no refund found
             fullTx.getConfidence().setSource(TransactionConfidence.Source.SELF);
-            final Transaction connectedFullTx = walletService.receivePending(fullTx);
-            broadcast(fullTx);
+            walletService.receivePending(fullTx);
+            walletService.broadcast(fullTx);
 
             LOG.debug("{verify}:{} broadcast done", (System.currentTimeMillis() - start));
             
-            if (txService.isTransactionInstant(params, input.clientPublicKey(), redeemScript, connectedFullTx)) {
-                //burn outpoints
+            if (txService.isTransactionInstant(params, input.clientPublicKey(), redeemScript, fullTx)) {
                 LOG.debug("{verify}:{} instant payment **OK**", (System.currentTimeMillis() - start));
                 return output.setSuccess();
             } else {
@@ -456,29 +455,7 @@ public class PaymentController {
         }
     }
 
-    private void broadcast(final Transaction fullTx) {
-        //broadcast immediately
-        final TransactionBroadcast broadcast = walletService.peerGroup().broadcastTransaction(fullTx);
-        Futures.addCallback(broadcast.future(), new FutureCallback<Transaction>() {
-            @Override
-            public void onSuccess(Transaction transaction) {
-                LOG.debug("success, transaction is out {}", fullTx.getHash());
-            }
-
-            @Override
-            public void onFailure(Throwable throwable) {
-                LOG.error("failed, transaction is out " + fullTx.getHash(), throwable);
-                try {
-                    Thread.sleep(60 * 1000);
-                    broadcast(fullTx);
-                } catch (InterruptedException ex) {
-                    LOG.debug("don't wait for tx {}", fullTx.getHash());
-                }
-
-            }
-        });
-
-    }
+    
 
     private static <K extends BaseTO> K newInstance(K k, Type returnType) {
         try {

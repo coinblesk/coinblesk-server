@@ -45,14 +45,9 @@ public class AppConfig {
     @Value("${bitcoin.net:unittest}")
     private String bitcoinNet;
 
-    @Value("${bitcoin.minconf:0}")
+    @Value("${bitcoin.minconf:1}")
     private int minConf;
 
-    @Value("${bitcoin.locktime:8}")
-    private int lockTime;
-
-    @Value("${bitcoin.lockPrecision:3}")
-    private int lockPrecision;
 
     public FileSystemResource getConfigDir() {
         //improvement: this check needs to be done only at startup
@@ -72,13 +67,5 @@ public class AppConfig {
 
     public int getMinConf() {
         return minConf;
-    }
-
-    public int lockTime() {
-        return lockTime;
-    }
-
-    public int lockPrecision() {
-        return lockPrecision;
     }
 }
