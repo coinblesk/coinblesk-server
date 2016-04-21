@@ -1,6 +1,8 @@
-package ch.uzh.csg.coinblesk.server.controller;
+package com.coinblesk.server.controller;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -20,24 +22,26 @@ import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.ScriptException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
-import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscoveryException;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.testing.FakeTxBuilder;
-import org.bitcoinj.wallet.CoinSelection;
-import org.bitcoinj.wallet.CoinSelector;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletTransaction.Pool;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.web.FilterChainProxy;
@@ -52,14 +56,13 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import com.coinblesk.bitcoin.AddressCoinSelector;
 import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.json.KeyTO;
 import com.coinblesk.json.SignTO;
 import com.coinblesk.json.TimeLockedAddressTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
-import com.coinblesk.server.controller.PaymentControllerTest;
 import com.coinblesk.server.service.KeyService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.TestBean;
@@ -80,6 +83,11 @@ import com.google.common.io.Files;
 		SecurityConfig.class})
 @WebAppConfiguration
 public class CompleteCLTVTest {
+	
+	private static final Logger Log = LoggerFactory.getLogger(CompleteCLTVTest.class);
+	
+	@Rule
+    public ExpectedException thrown = ExpectedException.none();
 	
 	private final String TEST_WALLET_PREFIX = "test-wallet";
 	
@@ -115,12 +123,13 @@ public class CompleteCLTVTest {
                 .webAppContextSetup(webAppContext)
                 .addFilter(springSecurityFilterChain)
                 .build();
-
+        
         params = appConfig.getNetworkParameters();
         walletService.init();
         client = new Client(appConfig.getNetworkParameters(), mockMvc);
         merchant = new Client(appConfig.getNetworkParameters(), mockMvc);
         client.initWallet(tempDir, TEST_WALLET_PREFIX + "_client");
+        
         fundClient(client.getChangeAddress());
     }
 
@@ -141,14 +150,6 @@ public class CompleteCLTVTest {
 		tempDir.delete();
     }
     
-    private Transaction fundClient(Address addressTo) throws Exception {
-    	Transaction tx = sendFakeCoins(params, Coin.COIN, 
-    			addressTo, 
-    			walletService.blockChain(), client.blockChain());
-    	assertNotNull(tx);
-    	return tx;
-    }
-    
     @Test
     public void testReceiveFunds() throws Exception {
     	Transaction tx = fundClient(client.getChangeAddress());
@@ -162,8 +163,8 @@ public class CompleteCLTVTest {
     	assertTrue(txUnspent.containsKey(tx.getHash()));
     }
     
-   
     @Test
+    /* provide 2 signatures -> spending should succeed */
     public void testSpend_BeforeLockTimeExpiry() throws Exception {
     	Transaction tx = BitcoinUtils.createTx(
 						    			params, 
@@ -184,35 +185,213 @@ public class CompleteCLTVTest {
     	assertEquals(clientSigs.size(), serverSigs.size());
     	
     	client.applySignatures(tx, clientSigs, serverSigs);
-    	
     	client.verifyTx(tx);
+    	
+    	fakeBroadcast(tx);
     }
     
     @Test
+    /* provide 2 signatures, but in reversed order, should fail */
+    public void testSpend_BeforeLockTimeExpiry_ReversedSignatures() throws Exception {
+    	thrown.expect(ScriptException.class);
+    	thrown.expectMessage("Script failed OP_CHECKSIGVERIFY"); // checksigverify is used for the server sig (before client)
+    	
+    	Transaction tx = BitcoinUtils.createTx(
+						    			params, 
+						    			client.wallet().getUnspents(), 
+						    			client.getAllAddresses().keySet(), 
+						    			client.getChangeAddress(), 
+						    			merchant.getChangeAddress(), 
+						    			Coin.COIN.divide(2).value);
+    	
+    	SignTO signTO = client.signTxByServer(tx);
+    	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.serverSignatures());
+    	List<TransactionSignature> clientSigs = client.signTxByClient(tx);
+    	assertTrue(tx.getInputs().size() > 0 && tx.getInputs().size() == clientSigs.size() && clientSigs.size() == serverSigs.size());
+    	
+    	// Note: reversed signature lists
+    	client.applySignatures(tx, serverSigs, clientSigs);
+    	client.verifyTx(tx);
+    	
+    	fakeBroadcast(tx);
+    }
+    
+    @Test
+    /* spending with single sig of client is possible if locktime and seqNr is set properly */
+    public void testSpend_AfterLockTimeExpiry_SingleSig() throws Exception {
+    	Transaction tx = BitcoinUtils.createTx(
+						    			params, 
+						    			client.wallet().getUnspents(), 
+						    			client.getAllAddresses().keySet(), 
+						    			client.getChangeAddress(), 
+						    			merchant.getChangeAddress(), 
+						    			Coin.COIN.divide(2).value);
+    	
+    	TimeLockedAddress address = TimeLockedAddress.fromRedeemScript(client.getAllAddresses().get(client.getChangeAddress()));
+    	tx.setLockTime(address.getLockTime());
+    	tx.getInputs().forEach(ti -> ti.setSequenceNumber(0));
+
+    	List<TransactionSignature> clientSigs = client.signTxByClient(tx);
+    	assertTrue(tx.getInputs().size() > 0 && tx.getInputs().size() == clientSigs.size());
+    	
+    	// provide only single sig.
+    	client.applySignatures(tx, clientSigs);
+    	client.verifyTx(tx);
+
+    	fakeBroadcast(tx);
+    }
+    
+    @Test
+    /* spending with single sig of server should not be possible */
+    public void testSpend_AfterLockTimeExpiry_SingleServerSig() throws Exception {
+    	thrown.expect(ScriptException.class);
+    	/* last checksig operation will fail and push false onto the stack */
+    	thrown.expectMessage("P2SH script execution resulted in a non-true stack"); 
+    	
+    	Transaction tx = BitcoinUtils.createTx(
+						    			params, 
+						    			client.wallet().getUnspents(), 
+						    			client.getAllAddresses().keySet(), 
+						    			client.getChangeAddress(), 
+						    			merchant.getChangeAddress(), 
+						    			Coin.COIN.divide(2).value);
+    	
+    	TimeLockedAddress address = TimeLockedAddress.fromRedeemScript(client.getAllAddresses().get(client.getChangeAddress()));
+    	tx.setLockTime(address.getLockTime());
+    	tx.getInputs().forEach(ti -> ti.setSequenceNumber(0));
+
+    	SignTO signTO = client.signTxByServer(tx);
+    	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.serverSignatures());
+    	assertTrue(tx.getInputs().size() > 0 && tx.getInputs().size() == serverSigs.size());
+    	
+    	// provide only single sig, but not from client!
+    	client.applySignatures(tx, serverSigs);
+    	client.verifyTx(tx);
+    	
+    	fakeBroadcast(tx);
+    }
+    
+    @Test
+	/* spending with single sig of client fails without lockTime */
+	public void testSpend_AfterLockTimeExpiry_SingleSig_LockTimeTooSmall() throws Exception {
+		thrown.expect(ScriptException.class);
+		thrown.expectMessage("Locktime requirement not satisfied"); /* tx lock time does not match CLTV argument */
+		
+		Transaction tx = BitcoinUtils.createTx(
+						    			params, 
+						    			client.wallet().getUnspents(), 
+						    			client.getAllAddresses().keySet(), 
+						    			client.getChangeAddress(), 
+						    			merchant.getChangeAddress(), 
+						    			Coin.COIN.divide(2).value);
+		
+		TimeLockedAddress address = TimeLockedAddress.fromRedeemScript(client.getAllAddresses().get(client.getChangeAddress()));
+		tx.setLockTime(address.getLockTime() - 1);
+		tx.getInputs().forEach(ti -> ti.setSequenceNumber(0));
+	
+		List<TransactionSignature> clientSigs = client.signTxByClient(tx);
+		assertTrue(tx.getInputs().size() > 0 && tx.getInputs().size() == clientSigs.size());
+		
+		// provide only single sig.
+		client.applySignatures(tx, clientSigs);
+		client.verifyTx(tx);
+		
+		fakeBroadcast(tx);
+	}
+
+	@Test
+    /* spending with single sig of client fails without lockTime */
+    public void testSpend_AfterLockTimeExpiry_SingleSig_MissingLockTime() throws Exception {
+    	thrown.expect(ScriptException.class);
+    	thrown.expectMessage("Locktime requirement type mismatch"); /* tx lock time is 0 ("blockheight"), but provided is a  lock time in seconds */
+    	
+    	Transaction tx = BitcoinUtils.createTx(
+						    			params, 
+						    			client.wallet().getUnspents(), 
+						    			client.getAllAddresses().keySet(), 
+						    			client.getChangeAddress(), 
+						    			merchant.getChangeAddress(), 
+						    			Coin.COIN.divide(2).value);
+    	
+    	// nLockTime of Tx not set!
+    	tx.getInputs().forEach(ti -> ti.setSequenceNumber(0));
+
+    	List<TransactionSignature> clientSigs = client.signTxByClient(tx);
+    	assertTrue(tx.getInputs().size() > 0 && tx.getInputs().size() == clientSigs.size());
+    	
+    	// provide only single sig.
+    	client.applySignatures(tx, clientSigs);
+    	client.verifyTx(tx);
+    	
+    	fakeBroadcast(tx);
+    }
+    
+    @Test
+    /* spending with single sig of client fails without seqNr */
+    public void testSpend_AfterLockTimeExpiry_SingleSig_MissingSeqNr() throws Exception {
+    	thrown.expect(ScriptException.class);
+    	thrown.expectMessage("Transaction contains a final transaction input for a CHECKLOCKTIMEVERIFY script.");
+    	
+    	Transaction tx = BitcoinUtils.createTx(
+						    			params, 
+						    			client.wallet().getUnspents(), 
+						    			client.getAllAddresses().keySet(), 
+						    			client.getChangeAddress(), 
+						    			merchant.getChangeAddress(), 
+						    			Coin.COIN.divide(2).value);
+
+    	
+    	TimeLockedAddress address = TimeLockedAddress.fromRedeemScript(client.getAllAddresses().get(client.getChangeAddress()));
+    	tx.setLockTime(address.getLockTime());
+    	// seqNr not set!
+
+    	List<TransactionSignature> clientSigs = client.signTxByClient(tx);
+    	assertTrue(tx.getInputs().size() > 0 && tx.getInputs().size() == clientSigs.size());
+    	
+    	// provide only single sig.
+    	client.applySignatures(tx, clientSigs);
+    	client.verifyTx(tx);
+    	
+    	fakeBroadcast(tx);
+    }
+    
+    @Test
+    /* spending with single sig of client fails without seqNr */
+    public void testSpend_AfterLockTimeExpiry_SingleSig_MissingSeqNrAndLockTime() throws Exception {
+    	thrown.expect(ScriptException.class);
+    	thrown.expectMessage("Locktime requirement type mismatch"); /* we have set a lockTime in seconds, lockTime 0 is "blockheight" */
+    	
+    	Transaction tx = BitcoinUtils.createTx(
+						    			params, 
+						    			client.wallet().getUnspents(), 
+						    			client.getAllAddresses().keySet(), 
+						    			client.getChangeAddress(), 
+						    			merchant.getChangeAddress(), 
+						    			Coin.COIN.divide(2).value);
+
+    	// nLockTime not set!
+    	// seqNr not set!
+
+    	List<TransactionSignature> clientSigs = client.signTxByClient(tx);
+    	assertTrue(tx.getInputs().size() > 0 && tx.getInputs().size() == clientSigs.size());
+    	
+    	// provide only single sig.
+    	client.applySignatures(tx, clientSigs);
+    	client.verifyTx(tx);
+    	
+    	fakeBroadcast(tx);
+    }
+
+	@Test
     public void testSpend_BeforeLockTime_MultipleInputs() throws Exception {
-    	for (int i = 0; i < 3; ++i) {
+    	for (int i = 0; i < 5; ++i) {
     		client.createTimeLockedAddress();
     		fundClient(client.getChangeAddress());
-    		Thread.sleep(250);
+    		Thread.sleep(500);
     	}
     	
-    	for (Address a : client.getAllAddresses().keySet()) {
-	    	Coin addressBalance = client.wallet().getBalance(new CoinSelector() {
-				@Override
-				public CoinSelection select(Coin target, List<TransactionOutput> candidates) {
-					Coin valueGathered = Coin.ZERO;
-					List<TransactionOutput> gathered = new ArrayList<>();
-					for (TransactionOutput to : candidates) {
-						if (to.isAvailableForSpending() && to.getAddressFromP2SH(params).equals(a)) {
-							valueGathered = valueGathered.add(to.getValue());
-							gathered.add(to);
-						}
-					}
-					CoinSelection selection = new CoinSelection(valueGathered, gathered);
-					return selection;
-				}
-			});
-	    	System.out.println("Balance - Address=" + a + ", balance=" + addressBalance.value);
+    	for (Map.Entry<Address, Coin> b : client.getBalanceByAddresses().entrySet()) {
+    		Log.info("Address balance: {}", b.getValue().toFriendlyString());
     	}
     	
     	Transaction tx = BitcoinUtils.createTx(
@@ -224,85 +403,57 @@ public class CompleteCLTVTest {
 						    			Coin.COIN.multiply(3).value);
     	
     	SignTO signTO = client.signTxByServer(tx);
-    	assertNotNull(signTO);
     	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.serverSignatures());
-    	assertTrue(serverSigs.size() > 0);
-    	assertEquals(serverSigs.size(), tx.getInputs().size());
-    	
     	List<TransactionSignature> clientSigs = client.signTxByClient(tx);
-    	assertTrue(clientSigs.size() > 0);
     	assertEquals(clientSigs.size(), serverSigs.size());
     	
     	client.applySignatures(tx, clientSigs, serverSigs);
-    	
     	client.verifyTx(tx);
     	
-    	  for(BlockChain chain:new BlockChain[]{client.clientAppKit.chain()}) {
-              Block block = FakeTxBuilder.makeSolvedTestBlock(chain.getBlockStore().getChainHead().getHeader(), tx);
-              chain.add(block);
-          }
-    	
-    	
-    	for (Address a : client.getAllAddresses().keySet()) {
-	    	Coin addressBalance = client.wallet().getBalance(new CoinSelector() {
-				@Override
-				public CoinSelection select(Coin target, List<TransactionOutput> candidates) {
-					Coin valueGathered = Coin.ZERO;
-					List<TransactionOutput> gathered = new ArrayList<>();
-					for (TransactionOutput to : candidates) {
-						if (to.isAvailableForSpending() && to.getAddressFromP2SH(params).equals(a)) {
-							valueGathered = valueGathered.add(to.getValue());
-							gathered.add(to);
-						}
-					}
-					CoinSelection selection = new CoinSelection(valueGathered, gathered);
-					return selection;
-				}
-			});
-	    	System.out.println("Balance - Address=" + a + ", balance=" + addressBalance.value);
-    	}
-    	
+    	fakeBroadcast(tx);
+    }
+	
+	
+	
+    /*******************************
+     * 
+     * BLOCKCHAIN implementation
+     * 
+     *******************************/
+	
+    private Transaction fundClient(Address addressTo) throws Exception {
+    	Transaction tx = sendFakeCoins(params, Coin.COIN, addressTo);
+    	assertNotNull(tx);
+    	return tx;
+    }
+	
+    private Transaction sendFakeCoins(NetworkParameters params, Coin amount, Address to) throws Exception {
+        Transaction tx = FakeTxBuilder.createFakeTx(params, amount, to);
+        fakeBroadcast(tx);
+        Thread.sleep(250);
+        return tx;
     }
     
-    
-    @Test
-    public void testSpend_BeforeLockTimeExpiry_OnlyClientSig() throws Exception {
-    	Transaction tx = BitcoinUtils.createTx(
-						    			params, 
-						    			client.wallet().getUnspents(), 
-						    			client.getAllAddresses().keySet(), 
-						    			client.getChangeAddress(), 
-						    			merchant.getChangeAddress(), 
-						    			Coin.COIN.divide(2).value);
-				tx.setLockTime(TimeLockedAddress.fromRedeemScript(client.getAllAddresses().get(client.getChangeAddress())).getLockTime());
-				tx.getInputs().forEach(ti -> ti.setSequenceNumber(0));
-				List<TransactionSignature> clientSigs = client.signTxByClient(tx);
-				
-				client.applySignatures(tx, clientSigs);
-				
-				client.verifyTx(tx);
-				
-				for(BlockChain chain:new BlockChain[]{client.clientAppKit.chain()}) {
-		              Block block = FakeTxBuilder.makeSolvedTestBlock(chain.getBlockStore().getChainHead().getHeader(), tx);
-		              chain.add(block);
-		          }
-				
+    private void fakeBroadcast(Transaction tx) throws Exception {
+    	fakeBroadcast(tx, walletService.blockChain(), client.blockChain(), merchant.blockChain());
     }
     
-    @Test
-    public void testSpendAfterLockTime() {
-    	
-    }
-    
-    @Test
-    public void testSpend_AfterLockTime_NoSeqNr() {
-    	
-    }
-    
-    @Test
-    public void testSpend_AfterLockTime_NoLockTime() {
-    	
-    }
+    private static void fakeBroadcast(Transaction tx, BlockChain... blockChain) throws Exception {
+    	// tx is serialized for each blockChain such because adding to chain and wallet alters flags and pointers.
+    	final NetworkParameters params = tx.getParams();
+    	final byte[] serializedTx = tx.bitcoinSerialize();
+		for (BlockChain chain : blockChain) {
+			if (chain == null) {
+				continue;
+			}
+			
+			Block blockHead = chain.getBlockStore().getChainHead().getHeader();
+			Transaction txCopy = new Transaction(params, serializedTx);
+			Block block = FakeTxBuilder.makeSolvedTestBlock(blockHead, txCopy);
+			chain.add(block);
+		}
+	}
+
     
     
     /*******************************
@@ -310,19 +461,6 @@ public class CompleteCLTVTest {
      * CLIENT implementation
      * 
      *******************************/
-    
-    private static Transaction sendFakeCoins(NetworkParameters params, 
-    		Coin amount, Address to, BlockChain... chains) 
-            throws Exception {
-        Transaction tx = FakeTxBuilder.createFakeTx(params, amount, to);
-        for(BlockChain chain:chains) {
-            Block block = FakeTxBuilder.makeSolvedTestBlock(
-                chain.getBlockStore().getChainHead().getHeader(), tx);
-            chain.add(block);
-        }
-        Thread.sleep(250);
-        return tx;
-    }
 	
 	private static class Client {
 		private final ECKey clientKey, serverKey;
@@ -343,6 +481,16 @@ public class CompleteCLTVTest {
 			
 			TimeLockedAddress timeLockedAddress = createTimeLockedAddress();
 			this.serverKey = ECKey.fromPublicOnly(timeLockedAddress.getServicePubKey());
+		}
+		
+		public Map<Address, Coin> getBalanceByAddresses() {
+			// this is not really efficient, we could it do in 1 iteration!
+			Map<Address, Coin> balance = new HashMap<>();
+	    	for (Address addr : getAllAddresses().keySet()) {
+	    		Coin addressBalance = wallet().getBalance(new AddressCoinSelector(addr));
+	    		balance.put(addr, addressBalance);
+	    	}
+	    	return balance;
 		}
 		
 		public void applySignatures(Transaction tx, List<TransactionSignature> clientSigs,
