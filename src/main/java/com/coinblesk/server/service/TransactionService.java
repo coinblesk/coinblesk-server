@@ -52,12 +52,12 @@ public class TransactionService {
     @Autowired
     private WalletService walletService;
 
+    @Transactional(readOnly = true)
     public boolean isTransactionInstant(final NetworkParameters params, byte[] clientPublicKey, Script redeemScript, Transaction fullTx) {
         //check if the funding (inputs) of fullTx are timelocked, so only for the 
         return isTransactionInstant(params, clientPublicKey, redeemScript, fullTx, null);
     }
 
-    @Transactional(readOnly = true)
     private boolean isTransactionInstant(final NetworkParameters params, byte[] clientPublicKey, Script redeemScript, Transaction fullTx,
             Transaction requester) {
         
@@ -140,6 +140,7 @@ public class TransactionService {
         return true;
     }
     
+    @Transactional(readOnly = true)
     public boolean isBurned(NetworkParameters params, byte[] pubKey, Transaction fullTx) {
         //check for already approved outpoints, if we have, we won't sign
         final List<Transaction> approvedTxs = listTransactions(params, pubKey, true);
@@ -177,7 +178,6 @@ public class TransactionService {
         txDAO.remove(tx.getHash().getBytes());
     }
 
-    @Transactional(readOnly = true)
     private List<Transaction> listTransactions(final NetworkParameters params, 
             final byte[] clientPublicKey, final boolean approved) {
         final List<Tx> list = txDAO.findByClientPublicKey(clientPublicKey, approved);
@@ -199,5 +199,4 @@ public class TransactionService {
         }
         return retVal;
     }
-
 }
