@@ -28,31 +28,17 @@ import com.coinblesk.json.VerifyTO;
 import com.coinblesk.server.utilTest.Client;
 import com.coinblesk.server.utilTest.ServerCalls;
 import com.coinblesk.util.BitcoinUtils;
-import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
 import com.coinblesk.util.Triple;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
-import com.google.common.io.Files;
-import java.io.File;
-import java.io.FilenameFilter;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.bitcoinj.core.Address;
-import org.bitcoinj.core.BloomFilter;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionInput;
-import org.bitcoinj.core.TransactionOutPoint;
-import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.TransactionSignature;
-import org.bitcoinj.kits.WalletAppKit;
-import org.bitcoinj.net.discovery.PeerDiscovery;
-import org.bitcoinj.net.discovery.PeerDiscoveryException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -83,9 +69,6 @@ import org.springframework.web.context.WebApplicationContext;
 @ContextConfiguration(classes = {TestBean.class, BeanConfig.class, SecurityConfig.class})
 @WebAppConfiguration
 public class VerifyTest {
-
-    public final static long UNIX_TIME_MONTH = 60 * 60 * 24 * 30;
-    public final static int LOCK_TIME_MONTHS = 3;
 
     @Autowired
     private WebApplicationContext webAppContext;
