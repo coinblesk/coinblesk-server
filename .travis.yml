@@ -6,4 +6,4 @@ install:
   - cd coinblesk-shared-resources; gradle clean install
   
 script:
-  - gradle clean test -i
+  - gradle clean test
