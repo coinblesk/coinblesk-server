@@ -113,7 +113,7 @@ public class AuthTest {
         
         res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
         status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
-        Assert.assertEquals(Type.EMAIL_ALREADY_EXISTS_NOT_ACTIVATED.nr(), status.type().nr());
+        Assert.assertEquals(Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_NOT_ACTIVATED.nr(), status.type().nr());
         Assert.assertEquals(2, adminEmail.sentEmails());
         
         //activate

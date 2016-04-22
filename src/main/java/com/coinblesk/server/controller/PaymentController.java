@@ -126,7 +126,7 @@ public class PaymentController {
             } else {
                 serverKeyTO.publicKey(retVal.element1().serverPublicKey());
                 LOG.debug("{register}:{} keys already there", (System.currentTimeMillis() - start));
-                return serverKeyTO.type(Type.KEY_ALREADY_EXISTS);
+                return serverKeyTO.type(Type.SUCCESS_BUT_KEY_ALREADY_EXISTS);
             }
         } catch (Exception e) {
             LOG.error("{register} keys error", e);
@@ -442,7 +442,7 @@ public class PaymentController {
                 return output.setSuccess();
             } else {
                 LOG.debug("{verify}:{} instant payment NOTOK", (System.currentTimeMillis() - start));
-                return output.type(Type.NO_INSTANT_PAYMENT);
+                return output.type(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT);
             }
 
         } catch (Exception e) {

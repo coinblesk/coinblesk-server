@@ -161,7 +161,7 @@ public class VerifyTest {
                 merchant.p2shAddress(), 9876, client, SerializeUtils.serializeSignatures(clientSigs1),
                 status1.serverSignatures(), new Date());
         Assert.assertTrue(verify.isSuccess());
-        Assert.assertEquals(Type.NO_INSTANT_PAYMENT, verify.type());
+        Assert.assertEquals(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT, verify.type());
     }
     
     @Test
@@ -198,7 +198,7 @@ public class VerifyTest {
                 unknown, 9876, client, SerializeUtils.serializeSignatures(clientSigs2),
                 status2.serverSignatures(), new Date());
         Assert.assertTrue(verify.isSuccess());        
-        Assert.assertEquals(Type.NO_INSTANT_PAYMENT, verify.type());
+        Assert.assertEquals(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT, verify.type());
     }
     
     @Test
@@ -221,7 +221,7 @@ public class VerifyTest {
                 merchant.p2shAddress(), 9876, client, SerializeUtils.serializeSignatures(clientSigs1),
                 status1.serverSignatures(), new Date());
         Assert.assertTrue(verify.isSuccess());
-        Assert.assertEquals(Type.NO_INSTANT_PAYMENT, verify.type());
+        Assert.assertEquals(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT, verify.type());
     }
     
     @Test
