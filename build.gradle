@@ -31,6 +31,11 @@ repositories {
     maven {url 'http://tomp2p.net/dev/mvn'}
 }
 
+test {
+    testLogging.showStandardStreams = true
+    testLogging.exceptionFormat = 'full'
+}
+
 dependencies {
     def springVersion = '4.2.4.RELEASE'
     def springSecurityVersion = '4.0.3.RELEASE'
