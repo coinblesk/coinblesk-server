@@ -229,7 +229,7 @@ public class VerifyTest {
         Assert.assertTrue(status1.isSuccess());
         
         Triple<RefundTO,Transaction,List<TransactionSignature>> t =
-        RefundTest.refundServerCall(params, mockMvc, client, txClient1, new Date(), (System.currentTimeMillis() / 1000) - 10);
+        RefundTest.refundServerCall(params, mockMvc, client, funding, new Date(), (System.currentTimeMillis() / 1000) - 10);
         Assert.assertTrue(t.element0().isSuccess());
         
         List<TransactionSignature> clientSigs1 = BitcoinUtils.partiallySign(txClient1, client.redeemScript(), client.ecKey());
@@ -239,5 +239,28 @@ public class VerifyTest {
                 status1.serverSignatures(), new Date());
         Assert.assertTrue(verify.isSuccess());
         Assert.assertEquals(Type.NO_INSTANT_PAYMENT, verify.type());
+    }
+    
+    @Test
+    public void testVerifyNonExpiredRefund() throws Exception {
+        Transaction txClient1 = BitcoinUtils.createTx(
+                params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
+                9876);
+        
+        SignTO status1 = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
+                merchant.p2shAddress(), 9876, client, new Date());
+        Assert.assertTrue(status1.isSuccess());
+        
+        Triple<RefundTO,Transaction,List<TransactionSignature>> t =
+        RefundTest.refundServerCall(params, mockMvc, client, funding, new Date(), ((System.currentTimeMillis() / 1000) + (24 * 60 * 60)));
+        Assert.assertTrue(t.element0().isSuccess());
+        
+        List<TransactionSignature> clientSigs1 = BitcoinUtils.partiallySign(txClient1, client.redeemScript(), client.ecKey());
+        
+        VerifyTO verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), 
+                merchant.p2shAddress(), 9876, client, SerializeUtils.serializeSignatures(clientSigs1),
+                status1.serverSignatures(), new Date());
+        Assert.assertTrue(verify.isSuccess());
+        Assert.assertEquals(Type.SUCCESS, verify.type());
     }
 }

@@ -124,9 +124,9 @@ public class TransactionService {
         int once = 0;
         final long currentTime = System.currentTimeMillis();
         for (final Transaction storedTransaction : clientTransactions) {
-            final long lockTime = storedTransaction.getLockTime() * 1000;
+            final long lockTimeMillis = storedTransaction.getLockTime() * 1000;
             //ignore if we have a locktime in the future
-            if (lockTime > currentTime + LOCK_THRESHOLD_MILLIS) {
+            if (lockTimeMillis > currentTime + LOCK_THRESHOLD_MILLIS) {
                 continue;
             }
             for (final TransactionInput relevantTransactionInput : inputsToCheck) {
