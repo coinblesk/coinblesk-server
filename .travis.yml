@@ -4,3 +4,6 @@ jdk:
 install:
   - cd /tmp; git clone https://github.com/coinblesk/coinblesk-shared-resources.git
   - cd coinblesk-shared-resources; gradle clean install
+  
+script:
+  - gradle test
