@@ -89,13 +89,13 @@ public class ServerCalls {
 
     public static RefundTO refundServerCallInput(NetworkParameters params, ECKey client,
             List<Pair<TransactionOutPoint, Coin>> refundClientOutpoints,
-            List<TransactionSignature> partiallySignedRefundClient, Date date, long lockTime) throws Exception {
+            List<TransactionSignature> partiallySignedRefundClient, Date date, long lockTimeSeconds) throws Exception {
         RefundTO refundP2shTO = new RefundTO()
                 .clientPublicKey(client.getPubKey())
                 .outpointsCoinPair(SerializeUtils.serializeOutPointsCoin(refundClientOutpoints))
                 .clientSignatures(SerializeUtils.serializeSignatures(partiallySignedRefundClient))
                 .refundSendTo(client.toAddress(params).toString())
-                .lockTime(lockTime)
+                .lockTimeSeconds(lockTimeSeconds)
                 .currentDate(date.getTime());
         SerializeUtils.signJSON(refundP2shTO, client);
         return refundP2shTO;

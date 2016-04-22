@@ -264,21 +264,22 @@ public class GenericEndpointTest {
         List<Pair<TransactionOutPoint, Coin>> refundOutpoints = new ArrayList<>(1);
         refundOutpoints.add(new Pair<>(output.getOutPointFor(), output.getValue()));
 
-        long lockTime = System.currentTimeMillis() + (60 * 1000);
+        //now + 1min
+        long lockTimeSeconds = (System.currentTimeMillis() / 1000) + 60;
         Transaction refundTx = BitcoinUtils.createRefundTx(params, refundOutpoints, client.redeemScript(),
-                client.ecKey().toAddress(params), lockTime);
+                client.ecKey().toAddress(params), lockTimeSeconds);
 
         List<TransactionSignature> clientSigsRefund = BitcoinUtils.partiallySign(refundTx, client
                 .redeemScript(), client.ecKey());
 
         RefundTO statusRefund1 = ServerCalls
                 .refundServerCall(params, mockMvc, client.ecKey(), refundOutpoints, clientSigsRefund, now,
-                        lockTime);
+                        lockTimeSeconds);
         Assert.assertTrue(statusRefund1.isSuccess());
 
         RefundTO statusRefund2 = ServerCalls
                 .refundServerCall(params, mockMvc, client.ecKey(), refundOutpoints, clientSigsRefund, now,
-                        lockTime);
+                        lockTimeSeconds);
         Assert.assertTrue(statusRefund1.isSuccess());
         Assert.assertEquals(SerializeUtils.GSON.toJson(statusRefund1), SerializeUtils.GSON.toJson(
                 statusRefund2));

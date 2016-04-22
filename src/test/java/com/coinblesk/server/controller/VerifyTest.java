@@ -229,7 +229,7 @@ public class VerifyTest {
         Assert.assertTrue(status1.isSuccess());
         
         Triple<RefundTO,Transaction,List<TransactionSignature>> t =
-        RefundTest.refundServerCall(params, mockMvc, client, txClient1, new Date(), System.currentTimeMillis() - 10000);
+        RefundTest.refundServerCall(params, mockMvc, client, txClient1, new Date(), (System.currentTimeMillis() / 1000) - 10);
         Assert.assertTrue(t.element0().isSuccess());
         
         List<TransactionSignature> clientSigs1 = BitcoinUtils.partiallySign(txClient1, client.redeemScript(), client.ecKey());

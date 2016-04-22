@@ -199,14 +199,14 @@ public class PaymentController {
             } 
             //choice 2 - send outpoints, coins, where to send btc to, and amount
             else if (refundTO.outpointsCoinPair() != null && !refundTO.outpointsCoinPair().isEmpty()
-                    && refundTO.lockTime() > 0 && refundTO.refundSendTo() != null) {
+                    && refundTO.lockTimeSeconds() > 0 && refundTO.refundSendTo() != null) {
                 final List<Pair<TransactionOutPoint, Coin>> refundClientPoints = SerializeUtils
                         .deserializeOutPointsCoin(
                                 params, refundTO.outpointsCoinPair());
                 try {
                     Address refundSendTo = new Address(params, refundTO.refundSendTo());
                     refundTransaction = BitcoinUtils.createRefundTx(params, refundClientPoints, redeemScript,
-                            refundSendTo, refundTO.lockTime());
+                            refundSendTo, refundTO.lockTimeSeconds());
                 } catch (AddressFormatException e) {
                     LOG.debug("{refund}:{} empty address for", (System.currentTimeMillis() - start));
                     return new RefundTO().type(Type.ADDRESS_EMPTY).message(e.getMessage());
