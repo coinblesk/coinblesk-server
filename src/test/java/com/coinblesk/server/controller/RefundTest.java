@@ -102,7 +102,8 @@ public class RefundTest {
     private Client merchant;
     //private Coin amountToRequest = Coin.valueOf(9876);
     private Transaction funding;
-    final private static long LOCK_TIME = System.currentTimeMillis() + (1000 * 60 * 10 * 3);
+    //now + 30min
+    final private static long LOCK_TIME_SECONDS = (System.currentTimeMillis() / 1000) + (60 * 10 * 3);
 
     @Before
     public void setUp() throws Exception {
@@ -138,7 +139,7 @@ public class RefundTest {
                 9876);
         
         Triple<RefundTO,Transaction,List<TransactionSignature>> t = 
-                refundServerCall(params, mockMvc, client, txClient, new Date(), LOCK_TIME);
+                refundServerCall(params, mockMvc, client, txClient, new Date(), LOCK_TIME_SECONDS);
         Assert.assertTrue(t.element0().isSuccess());
         
         List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(t.element0().serverSignatures());
@@ -155,21 +156,20 @@ public class RefundTest {
                 9876);
         
         Triple<RefundTO,Transaction,List<TransactionSignature>> t = 
-                refundServerCall(params, mockMvc, client, txClient, new Date(), LOCK_TIME);
+                refundServerCall(params, mockMvc, client, txClient, new Date(), LOCK_TIME_SECONDS);
         Assert.assertTrue(t.element0().isSuccess());
         
         Transaction refund = t.element1();
-        Assert.assertEquals(LOCK_TIME, refund.getLockTime());
+        Assert.assertEquals(LOCK_TIME_SECONDS, refund.getLockTime());
         //in unit test we can't wait for locktime, as block includes all tx
         Client.sendFakeBroadcast(params, refund, 200, walletService.blockChain(), client.blockChain(), merchant.blockChain());
         Assert.assertEquals(234004, client.wallet().getBalance().value);
         //we have not yet sent out the real tx
         Assert.assertEquals(123450, walletService.balance(params, client.p2shAddress()));
         //we already spent the inputs
-        try {
-            Client.sendFakeBroadcast(params, txClient, 200, walletService.blockChain(), client.blockChain(), merchant.blockChain());
-        } catch (IllegalStateException e) {return;}
-        Assert.fail("did not throw exception");
+        
+        Client.sendFakeBroadcast(params, txClient, 200, walletService.blockChain(), client.blockChain(), merchant.blockChain());
+        Assert.assertEquals(222458, client.wallet().getBalance().value);
     }
     
     @Test
@@ -182,36 +182,32 @@ public class RefundTest {
         BitcoinUtils.applySignatures(txClient, client.redeemScript(), clientSigs, serverSigs, true);
         
         Triple<RefundTO,Transaction,List<TransactionSignature>> t = 
-                refundServerCall(params, mockMvc, client, txClient, new Date(), LOCK_TIME);
+                refundServerCall(params, mockMvc, client, txClient, new Date(), LOCK_TIME_SECONDS);
         Assert.assertTrue(t.element0().isSuccess());
         
         Transaction refund = t.element1();
-        Assert.assertEquals(LOCK_TIME, refund.getLockTime());
+        Assert.assertEquals(LOCK_TIME_SECONDS, refund.getLockTime());
         //in unit test we can't wait for locktime, as block includes all tx
-        //Client.sendFakeBroadcast(params, txClient, 200, walletService.blockChain(), client.blockChain(), merchant.blockChain());
-        //Client.sendFakeBroadcast(params, txClient, 200, client.blockChain());
+        Client.sendFakeBroadcast(params, txClient, 200, walletService.blockChain(), client.blockChain(), merchant.blockChain());
+        Assert.assertEquals(111904, client.wallet().getBalance().value);
+        Assert.assertEquals(111904, walletService.balance(params, client.p2shAddress()));
         
-        //Assert.assertEquals(111904, client.wallet().getBalance().value);
+        Client.sendFakeBroadcast(params, refund, 200, walletService.blockChain(), client.blockChain(), merchant.blockChain());
+        Assert.assertEquals(110554, client.wallet().getBalance().value);
         
-        //we have not yet sent out the real tx
-        //TODO: remove non-expired refund
+        Assert.assertTrue(SerializeUtils.verifyTxSignatures(refund, t.element2(), client.redeemScript(), client.ecKey()));
+        Assert.assertTrue(SerializeUtils.verifyTxSignatures(refund, 
+                SerializeUtils.deserializeSignatures(t.element0().serverSignatures()), client.redeemScript(), client.ecKeyServer()));
         
-        //Assert.assertEquals(0, walletService.balance(params, client.p2shAddress()));
-
-        //we already spent the inputs
-        try {
-            Client.sendFakeBroadcast(params, refund, 200, walletService.blockChain(), client.blockChain(), merchant.blockChain());
-        } catch (IllegalStateException e) {return;}
-        Assert.fail("did not throw exception");
     }
 
-    private static Triple<RefundTO,Transaction,List<TransactionSignature>> refundServerCall(NetworkParameters params, MockMvc mockMvc, Client client,
-            Transaction txClient, Date date, long LOCK_TIME) throws Exception {
+    public static Triple<RefundTO,Transaction,List<TransactionSignature>> refundServerCall(NetworkParameters params, MockMvc mockMvc, Client client,
+            Transaction txClient, Date date, long lockTimeSeconds) throws Exception {
         final Transaction txRefund = BitcoinUtils.createRefundTx(params, client.outpoints(txClient), client.redeemScript(),
-                client.ecKey().toAddress(params), LOCK_TIME);
+                client.ecKey().toAddress(params), lockTimeSeconds);
         final List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(txRefund, client.redeemScript(), client.ecKey());
         RefundTO refundTO = ServerCalls.refundServerCall(params, mockMvc, client.ecKey(), client.outpoints(txClient),
-                clientSigs, date, LOCK_TIME);
+                clientSigs, date, lockTimeSeconds);
         return new Triple<>(refundTO, txRefund, clientSigs);
     }
 }

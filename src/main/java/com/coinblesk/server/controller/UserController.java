@@ -69,7 +69,7 @@ public class UserController {
             //TODO: reactived if deleted flag is set
             Pair<UserAccountStatusTO, UserAccount> pair = userAccountService.create(userAccount);
             if ((pair.element0().isSuccess()
-                    || pair.element0().type() == Type.EMAIL_ALREADY_EXISTS_NOT_ACTIVATED)
+                    || pair.element0().type() == Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_NOT_ACTIVATED)
                     && pair.element1() != null && pair.element1().getEmailToken() != null) {
                 SimpleMailMessage smm = new SimpleMailMessage();
                 smm.setFrom("bitcoin@csg.uzh.ch");

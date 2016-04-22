@@ -277,12 +277,15 @@ public class PaymentController {
             consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
     @ResponseBody
-    public KeyTO keyExchange(@RequestBody KeyTO keyTO) {
+    public KeyTO keyExchange(@RequestBody KeyTO input) {
         final long start = System.currentTimeMillis();
         try {
-            LOG.debug("{register} clientHash for {}", SerializeUtils.bytesToHex(keyTO.publicKey()));
+            if(input.publicKey()== null || input.publicKey().length == 0) {
+                return new KeyTO().type(Type.KEYS_NOT_FOUND);
+            }
+            LOG.debug("{register} clientHash for {}", SerializeUtils.bytesToHex(input.publicKey()));
             //no input checking as input may not be signed
-            final byte[] clientPublicKey = keyTO.publicKey();
+            final byte[] clientPublicKey = input.publicKey();
             final ECKey serverEcKey = new ECKey();
             final List<ECKey> keys = new ArrayList<>(2);
             keys.add(ECKey.fromPublicOnly(clientPublicKey));
@@ -302,7 +305,7 @@ public class PaymentController {
             } else {
                 serverKeyTO.publicKey(retVal.element1().serverPublicKey());
                 LOG.debug("{register}:{} keys already there", (System.currentTimeMillis() - start));
-                return serverKeyTO.type(Type.KEY_ALREADY_EXISTS);
+                return serverKeyTO.type(Type.SUCCESS_BUT_KEY_ALREADY_EXISTS);
             }
         } catch (Exception e) {
             LOG.error("{register} keys error", e);
@@ -316,16 +319,19 @@ public class PaymentController {
             consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
     @ResponseBody
-    public BalanceTO balance(@RequestBody BalanceTO keyTO) {
+    public BalanceTO balance(@RequestBody BalanceTO input) {
         final long start = System.currentTimeMillis();
         try {
-            LOG.debug("{balance} clientHash for {}", SerializeUtils.bytesToHex(keyTO.publicKey()));
-            final BalanceTO error = checkInput(keyTO);
+            if(input.publicKey() == null || input.publicKey().length == 0) {
+                return new BalanceTO().type(Type.KEYS_NOT_FOUND);
+            }
+            LOG.debug("{balance} clientHash for {}", SerializeUtils.bytesToHex(input.publicKey()));
+            final BalanceTO error = checkInput(input);
             if (error != null) {
                 return error;
             }
             final NetworkParameters params = appConfig.getNetworkParameters();
-            final List<ECKey> keys = keyService.getPublicECKeysByClientPublicKey(keyTO.publicKey());
+            final List<ECKey> keys = keyService.getPublicECKeysByClientPublicKey(input.publicKey());
             final Script script = BitcoinUtils.createP2SHOutputScript(2, keys);
             final Address p2shAddressFrom = script.getToAddress(params);
             List<TransactionOutput> outputs = walletService.verifiedOutputs(params, p2shAddressFrom);
@@ -350,15 +356,18 @@ public class PaymentController {
             consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
     @ResponseBody
-    public RefundTO refund(@RequestBody RefundTO refundTO) {
+    public RefundTO refund(@RequestBody RefundTO input) {
         final long start = System.currentTimeMillis();
         try {
-            LOG.debug("{refund} for {}", SerializeUtils.bytesToHex(refundTO.clientPublicKey()));
-            final RefundTO error = checkInput(refundTO);
+            if(input.publicKey() == null || input.publicKey().length == 0) {
+                return new RefundTO().type(Type.KEYS_NOT_FOUND);
+            }
+            LOG.debug("{refund} for {}", SerializeUtils.bytesToHex(input.publicKey()));
+            final RefundTO error = checkInput(input);
             if (error != null) {
                 return error;
             }
-            final List<ECKey> keys = keyService.getECKeysByClientPublicKey(refundTO.clientPublicKey());
+            final List<ECKey> keys = keyService.getECKeysByClientPublicKey(input.publicKey());
             if (keys == null || keys.size() != 2) {
                 return new RefundTO().type(Type.KEYS_NOT_FOUND);
             }
@@ -370,19 +379,19 @@ public class PaymentController {
             final Transaction refundTransaction;
             
             //choice 1 - full refund tx
-            if (refundTO.refundTransaction() != null) {
-                    refundTransaction = new Transaction(params, refundTO.refundTransaction());
+            if (input.refundTransaction() != null) {
+                    refundTransaction = new Transaction(params, input.refundTransaction());
             } 
             //choice 2 - send outpoints, coins, where to send btc to, and amount
-            else if (refundTO.outpointsCoinPair() != null && !refundTO.outpointsCoinPair().isEmpty()
-                    && refundTO.lockTime() > 0 && refundTO.refundSendTo() != null) {
+            else if (input.outpointsCoinPair() != null && !input.outpointsCoinPair().isEmpty()
+                    && input.lockTimeSeconds() > 0 && input.refundSendTo() != null) {
                 final List<Pair<TransactionOutPoint, Coin>> refundClientPoints = SerializeUtils
                         .deserializeOutPointsCoin(
-                                params, refundTO.outpointsCoinPair());
+                                params, input.outpointsCoinPair());
                 try {
-                    Address refundSendTo = new Address(params, refundTO.refundSendTo());
+                    Address refundSendTo = new Address(params, input.refundSendTo());
                     refundTransaction = BitcoinUtils.createRefundTx(params, refundClientPoints, redeemScript,
-                            refundSendTo, refundTO.lockTime());
+                            refundSendTo, input.lockTimeSeconds());
                 } catch (AddressFormatException e) {
                     LOG.debug("{refund}:{} empty address for", (System.currentTimeMillis() - start));
                     return new RefundTO().type(Type.ADDRESS_EMPTY).message(e.getMessage());
@@ -396,7 +405,7 @@ public class PaymentController {
             //sanity check
             refundTransaction.verify();
             
-            List<TransactionSignature> clientSigs = SerializeUtils.deserializeSignatures(refundTO
+            List<TransactionSignature> clientSigs = SerializeUtils.deserializeSignatures(input
                     .clientSignatures());
 
             //now we can check the client sigs
@@ -415,11 +424,11 @@ public class PaymentController {
                     .partiallySign(refundTransaction, redeemScript, serverKey);
             boolean clientFirst = BitcoinUtils.clientFirst(keys, clientKey);
             BitcoinUtils.applySignatures(refundTransaction, redeemScript, clientSigs, serverSigs, clientFirst);
-            refundTO.serverSignatures(SerializeUtils.serializeSignatures(serverSigs));
+            input.serverSignatures(SerializeUtils.serializeSignatures(serverSigs));
             //TODO: enable
             //refundTransaction.verify(); make sure those inputs are from the known p2sh address (min conf)
             byte[] refundTx = refundTransaction.unsafeBitcoinSerialize();
-            txService.addTransaction(refundTO.clientPublicKey(), refundTx, refundTransaction.getHash().getBytes(), false);
+            txService.addTransaction(input.publicKey(), refundTx, refundTransaction.getHash().getBytes(), false);
             LOG.debug("{refund}:{} done", (System.currentTimeMillis() - start));
             return new RefundTO()
                     .setSuccess()
@@ -440,8 +449,11 @@ public class PaymentController {
     @ResponseBody
     public SignTO sign(@RequestBody SignTO input) {
         final long start = System.currentTimeMillis();
-        final String key = SerializeUtils.bytesToHex(input.clientPublicKey());
-        try {
+        if(input.publicKey() == null || input.publicKey().length == 0) {
+            return new SignTO().type(Type.KEYS_NOT_FOUND);
+        }
+        final String key = SerializeUtils.bytesToHex(input.publicKey());
+        try {    
             LOG.debug("{sign} for {}", key);
             if(!CONCURRENCY.add(key)) {
                 return new SignTO().type(Type.CONCURRENCY_ERROR);
@@ -451,7 +463,7 @@ public class PaymentController {
                 return error;
             }
             final NetworkParameters params = appConfig.getNetworkParameters();
-            final List<ECKey> keys = keyService.getECKeysByClientPublicKey(input.clientPublicKey());
+            final List<ECKey> keys = keyService.getECKeysByClientPublicKey(input.publicKey());
             if (keys == null || keys.size() != 2) {
                 return new SignTO().type(Type.KEYS_NOT_FOUND);
             }
@@ -494,7 +506,7 @@ public class PaymentController {
             //sanity check
             transaction.verify();
             
-            if(txService.isBurned(params, input.clientPublicKey(), transaction)) {
+            if(txService.isBurned(params, input.publicKey(), transaction)) {
                 return new SignTO().type(Type.BURNED_OUTPUTS);
             }
 
@@ -502,8 +514,8 @@ public class PaymentController {
                     .partiallySign(transaction, redeemScript, serverKey);
 
             final byte[] serializedTransaction = transaction.unsafeBitcoinSerialize();
-            txService.addTransaction(input.clientPublicKey(), serializedTransaction, transaction.getHash().getBytes(), false);
-            LOG.debug("{sign}:{} done", (System.currentTimeMillis() - start));
+            txService.addTransaction(input.publicKey(), serializedTransaction, transaction.getHash().getBytes(), false);
+            LOG.debug("{sign}:tx-hash {} in {} done", transaction.getHash(), (System.currentTimeMillis() - start));
             return new SignTO()
                     .setSuccess()
                     .transaction(serializedTransaction)
@@ -526,7 +538,10 @@ public class PaymentController {
     @ResponseBody
     public VerifyTO verify(@RequestBody VerifyTO input) {
         final long start = System.currentTimeMillis();
-        final String key = SerializeUtils.bytesToHex(input.clientPublicKey());
+        if(input.publicKey() == null || input.publicKey().length == 0) {
+            return new VerifyTO().type(Type.KEYS_NOT_FOUND);
+        }
+        final String key = SerializeUtils.bytesToHex(input.publicKey());
         try {
             LOG.debug("{verify} for {}", key);
             if(!CONCURRENCY.add(key)) {
@@ -537,7 +552,7 @@ public class PaymentController {
                 return error;
             }
             final NetworkParameters params = appConfig.getNetworkParameters();
-            final List<ECKey> keys = keyService.getECKeysByClientPublicKey(input.clientPublicKey());
+            final List<ECKey> keys = keyService.getECKeysByClientPublicKey(input.publicKey());
             if (keys == null || keys.size() != 2) {
                 return new VerifyTO().type(Type.KEYS_NOT_FOUND);
             }
@@ -608,18 +623,17 @@ public class PaymentController {
 
             //ok, refunds are locked or no refund found
             fullTx.getConfidence().setSource(TransactionConfidence.Source.SELF);
-            final Transaction connectedFullTx = walletService.receivePending(fullTx);
-            broadcast(fullTx);
+            walletService.receivePending(fullTx);
+            walletService.broadcast(fullTx);
 
             LOG.debug("{verify}:{} broadcast done", (System.currentTimeMillis() - start));
             
-            if (txService.isTransactionInstant(params, input.clientPublicKey(), redeemScript, connectedFullTx)) {
-                //burn outpoints
+            if (txService.isTransactionInstant(params, input.publicKey(), redeemScript, fullTx)) {
                 LOG.debug("{verify}:{} instant payment **OK**", (System.currentTimeMillis() - start));
                 return output.setSuccess();
             } else {
                 LOG.debug("{verify}:{} instant payment NOTOK", (System.currentTimeMillis() - start));
-                return output.type(Type.NO_INSTANT_PAYMENT);
+                return output.type(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT);
             }
 
         } catch (Exception e) {
@@ -632,29 +646,7 @@ public class PaymentController {
         }
     }
 
-    private void broadcast(final Transaction fullTx) {
-        //broadcast immediately
-        final TransactionBroadcast broadcast = walletService.peerGroup().broadcastTransaction(fullTx);
-        Futures.addCallback(broadcast.future(), new FutureCallback<Transaction>() {
-            @Override
-            public void onSuccess(Transaction transaction) {
-                LOG.debug("success, transaction is out {}", fullTx.getHash());
-            }
-
-            @Override
-            public void onFailure(Throwable throwable) {
-                LOG.error("failed, transaction is out " + fullTx.getHash(), throwable);
-                try {
-                    Thread.sleep(60 * 1000);
-                    broadcast(fullTx);
-                } catch (InterruptedException ex) {
-                    LOG.debug("don't wait for tx {}", fullTx.getHash());
-                }
-
-            }
-        });
-
-    }
+    
 
     private static <K extends BaseTO> K newInstance(K k, Type returnType) {
         try {
@@ -691,7 +683,7 @@ public class PaymentController {
             return newInstance(input, Type.TIME_MISMATCH);
         }
 
-        if (!SerializeUtils.verifyJSONSignature(input, ECKey.fromPublicOnly(input.clientPublicKey()))) {
+        if (!SerializeUtils.verifyJSONSignature(input, ECKey.fromPublicOnly(input.publicKey()))) {
             return newInstance(input, Type.JSON_SIGNATURE_ERROR);
 
         }

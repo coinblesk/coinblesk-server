@@ -45,9 +45,9 @@ public class AppConfig {
     @Value("${bitcoin.net:unittest}")
     private String bitcoinNet;
 
-    @Value("${bitcoin.minconf:0}")
+    @Value("${bitcoin.minconf:1}")
     private int minConf;
-    
+
  	/*
  	 * The lock time span is the interval in seconds that funds are locked. 
  	 * 2592000s = 60*60*24*30s = 30days
@@ -81,7 +81,6 @@ public class AppConfig {
     public int getMinConf() {
         return minConf;
     }
-    
     public long getLockTimeSpan() {
     	return lockTimeSpan;
     }

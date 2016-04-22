@@ -13,7 +13,6 @@ import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.TestBean;
 import com.coinblesk.json.RefundTO;
 import com.coinblesk.json.SignTO;
-import com.coinblesk.json.TxSig;
 import com.coinblesk.json.Type;
 import com.coinblesk.json.VerifyTO;
 import com.coinblesk.server.utilTest.ServerCalls;
@@ -23,7 +22,6 @@ import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseOperation;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -40,16 +38,13 @@ import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.TransactionSignature;
-import org.bitcoinj.script.Script;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.testing.FakeTxBuilder;
-import org.bitcoinj.uri.BitcoinURIParseException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
 import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestExecutionListeners;
@@ -58,9 +53,6 @@ import org.springframework.test.context.support.DependencyInjectionTestExecution
 import org.springframework.test.context.transaction.TransactionalTestExecutionListener;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -272,21 +264,22 @@ public class GenericEndpointTest {
         List<Pair<TransactionOutPoint, Coin>> refundOutpoints = new ArrayList<>(1);
         refundOutpoints.add(new Pair<>(output.getOutPointFor(), output.getValue()));
 
-        long lockTime = System.currentTimeMillis() + (60 * 1000);
+        //now + 1min
+        long lockTimeSeconds = (System.currentTimeMillis() / 1000) + 60;
         Transaction refundTx = BitcoinUtils.createRefundTx(params, refundOutpoints, client.redeemScript(),
-                client.ecKey().toAddress(params), lockTime);
+                client.ecKey().toAddress(params), lockTimeSeconds);
 
         List<TransactionSignature> clientSigsRefund = BitcoinUtils.partiallySign(refundTx, client
                 .redeemScript(), client.ecKey());
 
         RefundTO statusRefund1 = ServerCalls
                 .refundServerCall(params, mockMvc, client.ecKey(), refundOutpoints, clientSigsRefund, now,
-                        lockTime);
+                        lockTimeSeconds);
         Assert.assertTrue(statusRefund1.isSuccess());
 
         RefundTO statusRefund2 = ServerCalls
                 .refundServerCall(params, mockMvc, client.ecKey(), refundOutpoints, clientSigsRefund, now,
-                        lockTime);
+                        lockTimeSeconds);
         Assert.assertTrue(statusRefund1.isSuccess());
         Assert.assertEquals(SerializeUtils.GSON.toJson(statusRefund1), SerializeUtils.GSON.toJson(
                 statusRefund2));

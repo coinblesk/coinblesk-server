@@ -219,7 +219,11 @@ public class Client {
         final Block block = FakeTxBuilder.makeSolvedTestBlock(
                 chains[0].getBlockStore().getChainHead().getHeader(), tx);
         for(BlockChain chain:chains) {
-            chain.add(block);
+            Block b = block.cloneAsHeader();
+            for(Transaction t:block.getTransactions()) {
+                b.addTransaction(new Transaction(params, t.unsafeBitcoinSerialize()));
+            }
+            chain.add(b);
         }
         //in case we need to wait for any kind of notification
         if(wait > 0) {
@@ -236,7 +240,10 @@ public class Client {
         } 
         final Block block = FakeTxBuilder.makeSolvedTestBlock(chains[0].getBlockStore().getChainHead().getHeader(), tx2);
         for(BlockChain chain:chains) {
-            Block b = new Block(params, block.unsafeBitcoinSerialize());
+            Block b = block.cloneAsHeader();
+            for(Transaction t:block.getTransactions()) {
+                b.addTransaction(new Transaction(params, t.unsafeBitcoinSerialize()));
+            }
             System.out.println("block is:"+b);
             chain.add(b);
         }

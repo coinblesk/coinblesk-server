@@ -73,9 +73,9 @@ public class UserAccountService {
         final UserAccount found = userAccountDao.getByAttribute("email", email);
         if (found != null) {
             if (found.getEmailToken() != null) {
-                return new Pair(new UserAccountStatusTO().type(Type.EMAIL_ALREADY_EXISTS_NOT_ACTIVATED), found);
+                return new Pair(new UserAccountStatusTO().type(Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_NOT_ACTIVATED), found);
             }
-            return new Pair(new UserAccountStatusTO().type(Type.EMAIL_ALREADY_EXISTS_ACTIVATED), found);
+            return new Pair(new UserAccountStatusTO().type(Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_ACTIVATED), found);
         }
 
         //convert TO to Entity

@@ -14,7 +14,7 @@
   <logger name="com.coinblesk" level="ALL"/> 
   <logger name="com.coinblesk.util" level="WARN"/> 
   <logger name="org.springframework" level="DEBUG"/>
-  <logger name="org.bitcoinj" level="DEBUG"/>
+  <logger name="org.bitcoinj" level="WARN"/>
 
   <root level="WARN">
     <appender-ref ref="STDOUT" /> 

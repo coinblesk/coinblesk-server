@@ -48,7 +48,7 @@ public class ServerCalls {
                 .outpointsCoinPair(outpointCoinPair)
                 .amountToSpend(amount)
                 .p2shAddressTo(to.toString())
-                .clientPublicKey(client.getPubKey())
+                .publicKey(client.getPubKey())
                 .serverSignatures(serverSigs)
                 .clientSignatures(clientSigs)
                 .currentDate(date.getTime());
@@ -65,7 +65,7 @@ public class ServerCalls {
     public static VerifyTO verifyServerCallInput(
             ECKey client, Address p2shAddressTo, Transaction fullTx, Date now) throws UnsupportedEncodingException, Exception {
         VerifyTO cs = new VerifyTO()
-                .clientPublicKey(client.getPubKey())
+                .publicKey(client.getPubKey())
                 .transaction(fullTx.unsafeBitcoinSerialize())
                 .currentDate(now.getTime());
         SerializeUtils.signJSON(cs, client);
@@ -89,13 +89,13 @@ public class ServerCalls {
 
     public static RefundTO refundServerCallInput(NetworkParameters params, ECKey client,
             List<Pair<TransactionOutPoint, Coin>> refundClientOutpoints,
-            List<TransactionSignature> partiallySignedRefundClient, Date date, long lockTime) throws Exception {
+            List<TransactionSignature> partiallySignedRefundClient, Date date, long lockTimeSeconds) throws Exception {
         RefundTO refundP2shTO = new RefundTO()
-                .clientPublicKey(client.getPubKey())
+                .publicKey(client.getPubKey())
                 .outpointsCoinPair(SerializeUtils.serializeOutPointsCoin(refundClientOutpoints))
                 .clientSignatures(SerializeUtils.serializeSignatures(partiallySignedRefundClient))
                 .refundSendTo(client.toAddress(params).toString())
-                .lockTime(lockTime)
+                .lockTimeSeconds(lockTimeSeconds)
                 .currentDate(date.getTime());
         SerializeUtils.signJSON(refundP2shTO, client);
         return refundP2shTO;
@@ -120,7 +120,7 @@ public class ServerCalls {
                 .outpointsCoinPair(outpointCoinPair)
                 .amountToSpend(amount)
                 .p2shAddressTo(to.toString())
-                .clientPublicKey(client.getPubKey())
+                .publicKey(client.getPubKey())
                 .currentDate(date.getTime());
         SerializeUtils.signJSON(prepareHalfSignTO, client);
         return prepareHalfSignTO;
@@ -134,7 +134,7 @@ public class ServerCalls {
     public static SignTO signServerCallInput(Transaction tx, ECKey client, Date date) throws Exception {
         SignTO prepareHalfSignTO = new SignTO()
                 .transaction(tx.unsafeBitcoinSerialize())
-                .clientPublicKey(client.getPubKey())
+                .publicKey(client.getPubKey())
                 .currentDate(date.getTime());
         SerializeUtils.signJSON(prepareHalfSignTO, client);
         return prepareHalfSignTO;

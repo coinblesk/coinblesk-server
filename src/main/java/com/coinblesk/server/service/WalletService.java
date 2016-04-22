@@ -15,6 +15,8 @@
  */
 package com.coinblesk.server.service;
 
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -28,13 +30,17 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Block;
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.FilteredBlock;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerAddress;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionBroadcast;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
@@ -125,7 +131,7 @@ public class WalletService {
             peerGroup.addAddress(new PeerAddress(InetAddress.getLocalHost(), params.getPort()));
         } else {
             //peerGroup handles the shutdown for us
-            //TODO: connect to real peers
+            //params have the seed nodes to connect to the network
             DnsDiscovery discovery = new DnsDiscovery(params);
             peerGroup.addPeerDiscovery(discovery);
         }
@@ -134,11 +140,17 @@ public class WalletService {
         peerGroup.addWallet(wallet);
         installShutdownHook();
         peerGroup.start();
-        final DownloadProgressTracker listener = new DownloadProgressTracker();
+        final DownloadProgressTracker listener = new DownloadProgressTracker() {
+            @Override
+            protected void doneDownload() {
+                //once we downloaded all the blocks we need to broadcast the stored approved tx
+                List<Transaction> txs = transactionService.approvedTx(params);
+                for(Transaction tx:txs) {
+                    broadcast(tx);
+                }
+            }
+        };
         peerGroup.startBlockChainDownload(listener);
-        //TODO: add wallet listener, and remove burnedoutputs when confirmed tx 
-        // has those outputs (maintenance)
-        //also remove the approved tx, once we see them in the blockchain (maintenance)
         wallet.addTransactionConfidenceEventListener(new TransactionConfidenceEventListener() {
 			@Override
 			public void onTransactionConfidenceChanged(Wallet wallet, Transaction tx) {
@@ -288,5 +300,30 @@ public class WalletService {
             return null;
         }
         return tx.getOutput(input.getOutpoint().getIndex());
+    }
+    
+    public void broadcast(final Transaction fullTx) {
+        //broadcast immediately
+        final TransactionBroadcast broadcast = peerGroup().broadcastTransaction(fullTx);
+        Futures.addCallback(broadcast.future(), new FutureCallback<Transaction>() {
+            @Override
+            public void onSuccess(Transaction transaction) {
+                LOG.debug("broadcast success, transaction is out {}", fullTx.getHash());
+            }
+
+            @Override
+            public void onFailure(Throwable throwable) {
+                LOG.error("broadcast failed, transaction is " + fullTx.getHash(), throwable);
+                try {
+                    //wait ten minutes
+                    Thread.sleep(10 * 60 * 1000);
+                    broadcast(fullTx);
+                } catch (InterruptedException ex) {
+                    LOG.debug("don't wait for tx {}", fullTx.getHash());
+                }
+
+            }
+        });
+
     }
 }
