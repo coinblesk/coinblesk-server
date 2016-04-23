@@ -12,5 +12,6 @@ install:
   - ./gradlew --version
   
 script:
+  - cd; cd coinblesk/coinblesk-server
   - ./gradlew --version
   - ./gradlew clean test
