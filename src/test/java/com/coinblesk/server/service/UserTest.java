@@ -58,7 +58,6 @@ public class UserTest {
     }
 
     @Test
-    @DatabaseTearDown(value = {"EmptyUser.xml"}, type = DatabaseOperation.DELETE_ALL)
     @ExpectedDatabase(value = "UserTestAddUser.xml",
             assertionMode = DatabaseAssertionMode.NON_STRICT_UNORDERED)
     public void testAddUser() throws Exception {
