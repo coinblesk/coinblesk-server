@@ -13,6 +13,6 @@ install:
   - ./gradlew --version
   
 script:
-  - cd /home/travis/coinblesk/coinblesk-server
+  - cd /home/travis/build/coinblesk/coinblesk-server
   - ./gradlew --version
   - ./gradlew clean test
