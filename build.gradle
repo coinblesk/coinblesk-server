@@ -36,10 +36,6 @@ test {
     testLogging.exceptionFormat = 'full'
 }
 
-task wrapper(type: Wrapper) {
-    gradleVersion = '2.11'
-}
-
 dependencies {
     def springVersion = '4.2.4.RELEASE'
     def springSecurityVersion = '4.0.3.RELEASE'
