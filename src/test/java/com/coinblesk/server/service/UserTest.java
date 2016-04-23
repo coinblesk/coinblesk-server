@@ -18,7 +18,9 @@ package com.coinblesk.server.service;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.entity.UserAccount;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
+import com.github.springtestdbunit.annotation.DatabaseOperation;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
+import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import com.github.springtestdbunit.annotation.ExpectedDatabase;
 import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
 import java.math.BigDecimal;
@@ -56,6 +58,7 @@ public class UserTest {
     }
 
     @Test
+    @DatabaseTearDown(value = {"EmptyUser.xml"}, type = DatabaseOperation.DELETE_ALL)
     @ExpectedDatabase(value = "UserTestAddUser.xml",
             assertionMode = DatabaseAssertionMode.NON_STRICT_UNORDERED)
     public void testAddUser() throws Exception {
