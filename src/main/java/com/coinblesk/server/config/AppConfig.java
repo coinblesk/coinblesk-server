@@ -19,6 +19,7 @@ import com.coinblesk.server.utils.CoinUtils;
 import com.coinblesk.bitcoin.BitcoinNet;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.TimeZone;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
@@ -40,6 +41,8 @@ import org.bitcoinj.core.NetworkParameters;
  */
 @Configuration
 public class AppConfig {
+    
+    
 
     @Value("${coinblesk.config.dir:/var/lib/coinblesk}")
     private FileSystemResource configDir;
@@ -50,6 +53,9 @@ public class AppConfig {
     @Value("${bitcoin.minconf:1}")
     private int minConf;
 
+    static {
+        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+    }
 
     public FileSystemResource getConfigDir() {
         if (configDir != null && !configDir.exists()) {
