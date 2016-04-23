@@ -3,6 +3,7 @@ jdk:
   - oraclejdk8
 
 before_install:
+ - pwd
  - chmod +x gradlew
 
 install:
@@ -12,6 +13,6 @@ install:
   - ./gradlew --version
   
 script:
-  - cd; cd coinblesk/coinblesk-server
+  - cd /home/travis/coinblesk/coinblesk-server
   - ./gradlew --version
   - ./gradlew clean test
