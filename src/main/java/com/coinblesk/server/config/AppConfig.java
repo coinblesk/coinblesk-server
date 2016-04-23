@@ -17,6 +17,8 @@ package com.coinblesk.server.config;
 
 import com.coinblesk.server.utils.CoinUtils;
 import com.coinblesk.bitcoin.BitcoinNet;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
@@ -50,9 +52,10 @@ public class AppConfig {
 
 
     public FileSystemResource getConfigDir() {
-        //improvement: this check needs to be done only at startup
         if (configDir != null && !configDir.exists()) {
-            throw new RuntimeException("The directory " + configDir + " does not exist");
+            if(!configDir.getFile().mkdirs()) {
+                throw new RuntimeException("The directory " + configDir + " does not exist");
+            }
         }
         return configDir;
     }

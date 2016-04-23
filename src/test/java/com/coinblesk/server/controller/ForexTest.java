@@ -23,6 +23,7 @@ import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,6 +61,11 @@ public class ForexTest {
     private FilterChainProxy springSecurityFilterChain;
     
     private static MockMvc mockMvc;
+    
+    @BeforeClass
+    public static void beforeClass() {
+        System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk");
+    }
     
     @Before
     public void setUp() {

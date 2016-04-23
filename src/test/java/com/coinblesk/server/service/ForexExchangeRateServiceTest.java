@@ -27,6 +27,7 @@ import org.springframework.test.context.web.WebAppConfiguration;
 
 import com.coinblesk.server.config.BeanConfig;
 import java.util.Map;
+import org.junit.BeforeClass;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @WebAppConfiguration
@@ -35,6 +36,11 @@ public class ForexExchangeRateServiceTest {
 
     @Autowired
     private ForexService forexExchangeRateService;
+    
+    @BeforeClass
+    public static void beforeClass() {
+        System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk");
+    }
 
     @Test
     public void testForex() throws Exception {

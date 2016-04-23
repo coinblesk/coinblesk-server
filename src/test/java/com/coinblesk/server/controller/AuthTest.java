@@ -48,6 +48,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import com.coinblesk.json.Type;
 import com.coinblesk.util.SerializeUtils;
+import org.junit.BeforeClass;
 import org.springframework.mock.web.MockHttpSession;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 
@@ -76,6 +77,11 @@ public class AuthTest {
     private AdminEmail adminEmail;
 
     private static MockMvc mockMvc;
+    
+    @BeforeClass
+    public static void beforeClass() {
+        System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk");
+    }
     
     @Before
     public void setUp() {
