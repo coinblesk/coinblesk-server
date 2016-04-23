@@ -16,3 +16,8 @@ script:
   - cd /home/travis/build/coinblesk/coinblesk-server
   - ./gradlew --version
   - ./gradlew clean test
+  
+after_failure:
+  - cd /home/travis/build/coinblesk/coinblesk-server/build/reports/tests/
+  - sudo apt-get install -qq lynx && lynx --dump index.html > myIndex.log
+  - echo "====================="; cat myIndex.log
