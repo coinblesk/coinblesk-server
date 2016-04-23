@@ -1,10 +1,15 @@
 language: java
 jdk:
   - oraclejdk8
+
+before_install:
+ - chmod +x gradlew
+
 install:
-  - cd /tmp; git clone https://github.com/coinblesk/coinblesk-shared-resources.git
-  - cd coinblesk-shared-resources; gradle clean install
+  - cd /tmp; git clone https://github.com/coinblesk/coinblesk-shared-resources.git; cd coinblesk-shared-resources; 
+  - ./gradlew clean test
+  - ./gradlew clean install
   - gradle --version
   
 script:
-  - gradle clean test
+  - ./gradlew clean test
