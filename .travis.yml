@@ -10,8 +10,7 @@ install:
   - ./gradlew clean test
   - ./gradlew install
   - ./gradlew --version
-  - cd ../coinblesk-server 
-  - ./gradlew --version
   
 script:
+  - ./gradlew --version
   - ./gradlew clean test
