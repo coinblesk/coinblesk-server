@@ -8,8 +8,10 @@ before_install:
 install:
   - cd /tmp; git clone https://github.com/coinblesk/coinblesk-shared-resources.git; cd coinblesk-shared-resources; 
   - ./gradlew clean test
-  - ./gradlew clean install
-  - gradle --version
+  - ./gradlew install
+  - ./gradlew --version
+  - cd ../coinblesk-server 
+  - ./gradlew --version
   
 script:
   - ./gradlew clean test
