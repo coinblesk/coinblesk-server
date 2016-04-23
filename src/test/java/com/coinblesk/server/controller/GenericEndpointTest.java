@@ -252,8 +252,9 @@ public class GenericEndpointTest {
                 client.ecKey());
         List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(statusPrepare4
                 .serverSignatures());
+        
         BitcoinUtils.applySignatures(transaction, client.redeemScript(),
-                clientSigs, serverSigs, true);
+                clientSigs, serverSigs, client.clientFirst());
         Coin fee = transaction.getFee();
         int len = transaction.unsafeBitcoinSerialize().length;
         System.out.println("tx len: " + len);

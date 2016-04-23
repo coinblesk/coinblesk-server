@@ -179,7 +179,8 @@ public class RefundTest {
                 params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
                 9876);
         List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(txClient, client.redeemScript(), client.ecKey());
-        BitcoinUtils.applySignatures(txClient, client.redeemScript(), clientSigs, serverSigs, true);
+        
+        BitcoinUtils.applySignatures(txClient, client.redeemScript(), clientSigs, serverSigs, client.clientFirst());
         
         Triple<RefundTO,Transaction,List<TransactionSignature>> t = 
                 refundServerCall(params, mockMvc, client, txClient, new Date(), LOCK_TIME_SECONDS);
