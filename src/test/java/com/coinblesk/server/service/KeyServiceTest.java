@@ -29,6 +29,7 @@ import java.util.List;
 
 import org.bitcoinj.core.ECKey;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,6 +53,11 @@ import com.github.springtestdbunit.DbUnitTestExecutionListener;
 @WebAppConfiguration
 @ContextConfiguration(classes = {BeanConfig.class})
 public class KeyServiceTest {
+    
+    @BeforeClass
+    public static void beforeClass() {
+        System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk");
+    }
 
     @Autowired
     private KeyService keyService;

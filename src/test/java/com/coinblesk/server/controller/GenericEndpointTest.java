@@ -42,6 +42,7 @@ import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.testing.FakeTxBuilder;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -87,6 +88,11 @@ public class GenericEndpointTest {
     private static MockMvc mockMvc;
 
     private NetworkParameters params;
+    
+    @BeforeClass
+    public static void beforeClass() {
+        System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk");
+    }
 
     @Before
     public void setUp() throws Exception {
@@ -252,8 +258,9 @@ public class GenericEndpointTest {
                 client.ecKey());
         List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(statusPrepare4
                 .serverSignatures());
+        
         BitcoinUtils.applySignatures(transaction, client.redeemScript(),
-                clientSigs, serverSigs, true);
+                clientSigs, serverSigs, client.clientFirst());
         Coin fee = transaction.getFee();
         int len = transaction.unsafeBitcoinSerialize().length;
         System.out.println("tx len: " + len);

@@ -568,6 +568,7 @@ public class PaymentController {
             if (input.transaction() != null) {
                 LOG.debug("{verify}:{} got transaction from input", (System.currentTimeMillis() - start));
                 fullTx = new Transaction(appConfig.getNetworkParameters(), input.transaction());
+                LOG.debug("{verify}:{} tx1 created {}", (System.currentTimeMillis() - start), fullTx);
                 //TODO: verify that this was sent from us
             }
             //choice 2 - send outpoints, coins, where to send btc to, and amount
@@ -581,7 +582,10 @@ public class PaymentController {
                             input.clientSignatures());
                     List<TransactionSignature> severSigs = SerializeUtils.deserializeSignatures(
                             input.serverSignatures());
-                    BitcoinUtils.applySignatures(fullTx, redeemScript, clientSigs, severSigs, true);
+                    final boolean clientFirst = BitcoinUtils.clientFirst(keys, clientKey);
+                    BitcoinUtils.applySignatures(fullTx, redeemScript, clientSigs, severSigs, clientFirst);
+                    
+                    LOG.debug("{verify}:{} tx2 created {}", (System.currentTimeMillis() - start), fullTx);
                     
                     if (!SerializeUtils.verifyTxSignatures(fullTx, clientSigs, redeemScript, clientKey)) {
                         LOG.debug("{verify} signature mismatch for client-sigs tx {} with sigs {}", fullTx, clientSigs);

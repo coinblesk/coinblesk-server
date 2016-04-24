@@ -15,13 +15,15 @@
  */
 package com.coinblesk.server.config;
 
-import com.coinblesk.server.utils.CoinUtils;
-import com.coinblesk.bitcoin.BitcoinNet;
+import java.util.TimeZone;
+
+import org.bitcoinj.core.NetworkParameters;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 
-import org.bitcoinj.core.NetworkParameters;
+import com.coinblesk.bitcoin.BitcoinNet;
+import com.coinblesk.server.utils.CoinUtils;
 
 /**
  * This is the default configuration for testcases. If you want to change these settings e.g. when using
@@ -38,6 +40,8 @@ import org.bitcoinj.core.NetworkParameters;
  */
 @Configuration
 public class AppConfig {
+    
+    
 
     @Value("${coinblesk.config.dir:/var/lib/coinblesk}")
     private FileSystemResource configDir;
@@ -48,24 +52,29 @@ public class AppConfig {
     @Value("${bitcoin.minconf:1}")
     private int minConf;
 
- 	/*
- 	 * The lock time span is the interval in seconds that funds are locked. 
- 	 * 2592000s = 60*60*24*30s = 30days
- 	 */
+    static {
+        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+    }
+    
+	/*
+	 * The lock time span is the interval in seconds that funds are locked. 
+	 * 2592000s = 60*60*24*30s = 30days
+	 */
     @Value("${bitcoin.lockTimeSpan:2592000}") 
     private long lockTimeSpan;
     
     /*
-     * Safety margin for accepting instant payments.
-     * 60*60*4s = 14400s = 4h
-     */
+	 * Safety margin for accepting instant payments.
+	 * 60*60*4s = 14400s = 4h
+	 */
     @Value("${bitcoin.lockTimePrecision:14400}") //
     private long lockTimePrecision;
     
     public FileSystemResource getConfigDir() {
-        //improvement: this check needs to be done only at startup
         if (configDir != null && !configDir.exists()) {
-            throw new RuntimeException("The directory " + configDir + " does not exist");
+            if(!configDir.getFile().mkdirs()) {
+                throw new RuntimeException("The directory " + configDir + " does not exist");
+            }
         }
         return configDir;
     }

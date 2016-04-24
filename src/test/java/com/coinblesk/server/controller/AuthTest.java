@@ -48,6 +48,9 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import com.coinblesk.json.Type;
 import com.coinblesk.util.SerializeUtils;
+import com.github.springtestdbunit.annotation.DatabaseOperation;
+import com.github.springtestdbunit.annotation.DatabaseTearDown;
+import org.junit.BeforeClass;
 import org.springframework.mock.web.MockHttpSession;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 
@@ -77,12 +80,18 @@ public class AuthTest {
 
     private static MockMvc mockMvc;
     
+    @BeforeClass
+    public static void beforeClass() {
+        System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk");
+    }
+    
     @Before
     public void setUp() {
          mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();   
     }
     
     @Test
+    @DatabaseTearDown(value = {"EmptyUser.xml"}, type = DatabaseOperation.DELETE_ALL)
     public void testCreateActivate() throws Exception {
 	mockMvc.perform(get("/u/a/g").secure(true)).andExpect(status().is3xxRedirection());
         UserAccountTO userAccountTO = new UserAccountTO();

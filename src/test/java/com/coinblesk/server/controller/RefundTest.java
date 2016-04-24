@@ -22,37 +22,23 @@ import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.TestBean;
-import com.coinblesk.json.Type;
 import com.coinblesk.server.utilTest.Client;
 import com.coinblesk.server.utilTest.ServerCalls;
 import com.coinblesk.util.BitcoinUtils;
-import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
-import com.coinblesk.util.SimpleBloomFilter;
 import com.coinblesk.util.Triple;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
-import com.google.common.io.Files;
-import java.io.File;
-import java.io.FilenameFilter;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionInput;
-import org.bitcoinj.core.TransactionOutPoint;
-import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.TransactionSignature;
-import org.bitcoinj.kits.WalletAppKit;
-import org.bitcoinj.net.discovery.PeerDiscovery;
-import org.bitcoinj.net.discovery.PeerDiscoveryException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -104,6 +90,11 @@ public class RefundTest {
     private Transaction funding;
     //now + 30min
     final private static long LOCK_TIME_SECONDS = (System.currentTimeMillis() / 1000) + (60 * 10 * 3);
+    
+    @BeforeClass
+    public static void beforeClass() {
+        System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk");
+    }
 
     @Before
     public void setUp() throws Exception {
@@ -179,7 +170,8 @@ public class RefundTest {
                 params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
                 9876);
         List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(txClient, client.redeemScript(), client.ecKey());
-        BitcoinUtils.applySignatures(txClient, client.redeemScript(), clientSigs, serverSigs, true);
+        
+        BitcoinUtils.applySignatures(txClient, client.redeemScript(), clientSigs, serverSigs, client.clientFirst());
         
         Triple<RefundTO,Transaction,List<TransactionSignature>> t = 
                 refundServerCall(params, mockMvc, client, txClient, new Date(), LOCK_TIME_SECONDS);

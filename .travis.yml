@@ -1,10 +1,23 @@
 language: java
 jdk:
   - oraclejdk8
+
+before_install:
+ - pwd
+ - chmod +x gradlew
+
 install:
-  - cd /tmp; git clone https://github.com/coinblesk/coinblesk-shared-resources.git
-  - cd coinblesk-shared-resources; gradle clean install
-  - gradle --version
+  - cd /tmp; git clone https://github.com/coinblesk/coinblesk-shared-resources.git; cd coinblesk-shared-resources; 
+  - ./gradlew clean test
+  - ./gradlew install
+  - ./gradlew --version
   
 script:
-  - gradle clean test
+  - cd /home/travis/build/coinblesk/coinblesk-server
+  - ./gradlew --version
+  - ./gradlew clean test
+  
+after_failure:
+  - cd /home/travis/build/coinblesk/coinblesk-server/build/reports/tests/
+  - sudo apt-get install -qq lynx && lynx --dump index.html > myIndex.log
+  - echo "====================="; cat myIndex.log

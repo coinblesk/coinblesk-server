@@ -18,12 +18,15 @@ package com.coinblesk.server.service;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.entity.UserAccount;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
+import com.github.springtestdbunit.annotation.DatabaseOperation;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
+import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import com.github.springtestdbunit.annotation.ExpectedDatabase;
 import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
 import java.math.BigDecimal;
 import java.util.Date;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +51,11 @@ public class UserTest {
 
     @Autowired
     UserAccountService userAccountService;
+    
+    @BeforeClass
+    public static void beforeClass() {
+        System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk");
+    }
 
     @Test
     @ExpectedDatabase(value = "UserTestAddUser.xml",
