@@ -137,12 +137,12 @@ public class VerifyTest {
         
         VerifyTO verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), 
                 merchant.p2shAddress(), 9876, client, SerializeUtils.serializeSignatures(clientSigs),
-                status.serverSignatures(), new Date());
+                status.signatures(), new Date());
         Assert.assertTrue(verify.isSuccess());
         
         verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), 
                 merchant.p2shAddress(), 9876, client, SerializeUtils.serializeSignatures(clientSigs),
-                status.serverSignatures(), new Date());
+                status.signatures(), new Date());
         Assert.assertTrue(verify.isSuccess());        
     }
     
@@ -164,7 +164,7 @@ public class VerifyTest {
         
         VerifyTO verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), 
                 merchant.p2shAddress(), 9876, client, SerializeUtils.serializeSignatures(clientSigs1),
-                status1.serverSignatures(), new Date());
+                status1.signatures(), new Date());
         Assert.assertTrue(verify.isSuccess());
         Assert.assertEquals(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT, verify.type());
     }
@@ -191,7 +191,7 @@ public class VerifyTest {
         
         VerifyTO verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), 
                 merchant.p2shAddress(), 9876, client, SerializeUtils.serializeSignatures(clientSigs1),
-                status1.serverSignatures(), new Date());
+                status1.signatures(), new Date());
         Assert.assertTrue(verify.isSuccess());
         Assert.assertEquals(Type.SUCCESS, verify.type());
         
@@ -201,7 +201,7 @@ public class VerifyTest {
         
         verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), 
                 unknown, 9876, client, SerializeUtils.serializeSignatures(clientSigs2),
-                status2.serverSignatures(), new Date());
+                status2.signatures(), new Date());
         Assert.assertTrue(verify.isSuccess());        
         Assert.assertEquals(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT, verify.type());
     }
@@ -224,7 +224,7 @@ public class VerifyTest {
         
         VerifyTO verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), 
                 merchant.p2shAddress(), 9876, client, SerializeUtils.serializeSignatures(clientSigs1),
-                status1.serverSignatures(), new Date());
+                status1.signatures(), new Date());
         Assert.assertTrue(verify.isSuccess());
         Assert.assertEquals(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT, verify.type());
     }
@@ -247,7 +247,7 @@ public class VerifyTest {
         
         VerifyTO verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), 
                 merchant.p2shAddress(), 9876, client, SerializeUtils.serializeSignatures(clientSigs1),
-                status1.serverSignatures(), new Date());
+                status1.signatures(), new Date());
         Assert.assertTrue(verify.isSuccess());
         Assert.assertEquals(Type.SUCCESS, verify.type());
     }

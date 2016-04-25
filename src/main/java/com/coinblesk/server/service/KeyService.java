@@ -108,6 +108,11 @@ public class KeyService {
         return retVal;
     }
     
+    @Transactional(readOnly = true)
+    public List<Keys> allKeys() {
+    	return clientKeyDAO.findAll();
+    }
+    
     @Transactional(readOnly = false)
 	public TimeLockedAddressEntity storeTimeLockedAddress(Keys keys, TimeLockedAddress address) {
 		if (address == null || keys == null) {

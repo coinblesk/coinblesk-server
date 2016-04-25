@@ -15,6 +15,8 @@
  */
 package com.coinblesk.server.controller;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -29,12 +31,13 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionBroadcast;
+import org.bitcoinj.core.Transaction.SigHash;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
 import org.slf4j.Logger;
@@ -68,8 +71,6 @@ import com.coinblesk.util.CoinbleskException;
 import com.coinblesk.util.InsuffientFunds;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 
 /**
  *
@@ -117,7 +118,7 @@ public class PaymentController {
             }
     		
     		final NetworkParameters params = appConfig.getNetworkParameters();
-    		final ECKey clientKey = ECKey.fromPublicOnly(input.clientPublicKey());
+    		final ECKey clientKey = ECKey.fromPublicOnly(input.publicKey());
     		final String clientPubKeyHex = clientKey.getPublicKeyAsHex();
     		LOG.debug("{} - clientPubKey={}", tag, clientPubKeyHex);
     		
@@ -127,8 +128,8 @@ public class PaymentController {
 				return new TimeLockedAddressTO().type(Type.KEYS_NOT_FOUND);
 			}
     		final ECKey serverKey = ECKey.fromPrivateAndPrecalculatedPublic(
-    						keys.serverPrivateKey(), keys.serverPublicKey());
-            final long lockTime = createNewLockTime();
+    				keys.serverPrivateKey(), keys.serverPublicKey());
+            final long lockTime = createNewLockTime(); // TODO: allow client to select own lock time.
             final TimeLockedAddress address = new TimeLockedAddress(
             			clientKey.getPubKey(), serverKey.getPubKey(), lockTime);
             
@@ -183,88 +184,147 @@ public class PaymentController {
     	return Utils.currentTimeSeconds() + appConfig.getLockTimeSpan();
     }
     
-    @RequestMapping(value = {"/signtx", "/stx"}, 
+    @RequestMapping(value = {"/signverify", "/sv"}, 
 			method = RequestMethod.POST,
 	        consumes = "application/json; charset=UTF-8",
 	        produces = "application/json; charset=UTF-8")
 	@ApiVersion("v3")
 	@ResponseBody
 	public SignTO signTx(@RequestBody SignTO request) {
+    	final String tag = "{signverify}";
+    	final Instant startTime = Instant.now();
 		try {
-			LOG.info("{signTx} - sign request from clientPubKey={}", Utils.HEX.encode(request.clientPublicKey()));
 			final NetworkParameters params = appConfig.getNetworkParameters();
-	        final Keys keys = keyService.getByClientPublicKey(request.clientPublicKey());
-	        if (keys == null || 
-	        		keys.serverPrivateKey() == null || keys.serverPublicKey() == null || 
-	        		keys.clientPublicKey() == null) {
-	        	return new SignTO()
-	        			.type(Type.KEYS_NOT_FOUND);
-	        }
-			if (keys.addresses().isEmpty()) {
-				return new SignTO()
-						.type(Type.ADDRESS_EMPTY)
-						.message("No address created yet.");
-			}
-	        
-	        final ECKey clientKey = ECKey.fromPublicOnly(keys.clientPublicKey());
-	        final ECKey serverKey = ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey());
-	        final List<Address> addresses = keys.btcAddresses(params);
-	        final List<TransactionSignature> clientSignatures;
-	        final Transaction transaction;
-	        
-	        /*
-	         * Got a transaction in the request - sign the tx inputs
-	         */
-			if (request.transaction() != null) {
-				clientSignatures = null;
-				transaction = new Transaction(params, request.transaction());
-				LOG.debug("{signTx} got transaction from input: \n{}", transaction.toString());
-			} else {
-				return new SignTO().type(Type.INPUT_MISMATCH);
+    		final ECKey clientKey = ECKey.fromPublicOnly(request.publicKey());
+    		final String clientPubKeyHex = clientKey.getPublicKeyAsHex();
+    		final ECKey serverKey;
+    		final Keys keys;
+    		final Transaction transaction;
+    		
+    		final SignTO error = checkInput(request);
+			if (error != null) {
+				LOG.info("{} - input error - clientPubKey={}, type={}", tag, clientPubKeyHex, error.type());
+				return error;
 			}
 			
-			
-			// for each input, search corresponding redeemData (looking up in DB for address hash in the output)
-	        List<TransactionInput> txInputs = transaction.getInputs();
-	        List<byte[]> redeemScriptsForInputs = new ArrayList<>(txInputs.size());
-	        for (int inputIndex = 0; inputIndex < txInputs.size(); ++inputIndex) {
-				TransactionInput txIn = txInputs.get(inputIndex);
-				// get it from the wallet service because Tx may not be connected if received over the network.
-				TransactionOutput txOutput = walletService.findOutputFor(txIn);
-				byte[] redeemScriptBytes = null;
-				if (txOutput != null) {
-					byte[] addressHashFrom = txOutput.getScriptPubKey().getPubKeyHash();
-					redeemScriptBytes = keyService.getRedeemScriptByAddressHash(addressHashFrom);
-					if (redeemScriptBytes == null) {
-						LOG.warn("Redeem script not found for address: {}", Address.fromP2SHHash(params, addressHashFrom));
+    		try {
+				if(!CONCURRENCY.add(clientPubKeyHex)) {
+	                return new SignTO().type(Type.CONCURRENCY_ERROR);
+	            }
+				
+				LOG.info("{} - sign request from clientPubKey={}", tag, clientPubKeyHex);
+		        keys = keyService.getByClientPublicKey(clientKey.getPubKey());
+		        if (keys == null || keys.clientPublicKey() == null ||
+		        		keys.serverPrivateKey() == null || keys.serverPublicKey() == null) {
+		        	return new SignTO().type(Type.KEYS_NOT_FOUND);
+		        }
+				if (keys.addresses().isEmpty()) {
+					return new SignTO()
+							.type(Type.ADDRESS_EMPTY)
+							.message("No address created yet.");
+				}
+		        
+		        serverKey = ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey());
+		     		        
+		        /*
+		         * Got a transaction in the request - sign the tx inputs
+		         */
+				if (request.transaction() != null) {
+					transaction = new Transaction(params, request.transaction());
+					LOG.debug("{} - got transaction from input: \n{}", tag, transaction);
+					if (transaction.getInputs().size() != request.signatures().size()) {
+						return new SignTO()
+								.type(Type.SIGNATURE_ERROR)
+								.message("Number of inputs is not equal to signatures");
 					}
 				} else {
-					// may happen if Tx contains inputs of other transactions
-					// not related to coinblesk (unknown tx outputs).
-					LOG.warn("Transaction output for tx input not found. {}", txIn.toString());
-					redeemScriptBytes = new byte[0];
+					return new SignTO().type(Type.INPUT_MISMATCH);
 				}
-				redeemScriptsForInputs.add(redeemScriptBytes);
-				LOG.debug("redeemScript for input {}: {} - {}", inputIndex, txIn, new Script(redeemScriptBytes));
-	        }
-			
-			
-			final List<TransactionSignature> serverSigs = BitcoinUtils.partiallySign(transaction, redeemScriptsForInputs, serverKey);
-			final List<TxSig> txSigs = SerializeUtils.serializeSignatures(serverSigs);
-	        final byte[] serializedTransaction = transaction.unsafeBitcoinSerialize();
-	        //keyService.addTransaction(clientKey.getPubKey(), serializedTransaction);
+
+				
+				// for each input, search corresponding redeemScript and sign
+		        final List<TransactionInput> txInputs = transaction.getInputs();
+		        final List<TransactionSignature> serverSigs = new ArrayList<>(txInputs.size()); 
+		        final List<TransactionSignature> clientSigs = SerializeUtils.deserializeSignatures(request.signatures());
+		        
+		        for (int inputIndex = 0; inputIndex < txInputs.size(); ++inputIndex) {
+					TransactionInput txIn = txInputs.get(inputIndex);
+					// get output from wallet because Tx may not be connected if received over the network.
+					TransactionOutput txOut = walletService.findOutputFor(txIn);
+					final byte[] redeemScript;
+					if (txOut != null) {
+						byte[] addressHashFrom = txOut.getScriptPubKey().getPubKeyHash();
+						redeemScript = keyService.getRedeemScriptByAddressHash(addressHashFrom);
+						if (redeemScript == null) {
+							LOG.warn("{} - redeem script for input {} not found, address: {}", 
+									tag, inputIndex, Address.fromP2SHHash(params, addressHashFrom));
+						}
+					} else {
+						// may happen if Tx contains inputs of other transactions
+						// not related to coinblesk (unknown tx outputs).
+						LOG.warn("{} - transaction output for tx input {} not found - {}", tag, inputIndex, txIn);
+						redeemScript = null;
+					}
+					//LOG.debug("{} - redeemScript for input {}: {} -> {}", 
+					//		tag, inputIndex, txIn, new Script(redeemScriptData));
+					
+					TransactionSignature clientSig = clientSigs.get(inputIndex);
+					TransactionSignature serverSig = transaction.calculateSignature(
+							inputIndex, serverKey, redeemScript, SigHash.ALL, false);
+					serverSigs.add(serverSig);
+					
+					TimeLockedAddress tla = TimeLockedAddress.fromRedeemScript(redeemScript);
+					Script scriptSig = tla.createScriptSigBeforeLockTime(clientSig, serverSig);
+					txIn.setScriptSig(scriptSig);
+		        }
+		        
+		        // verify fully signed Tx and each tx input (execute scriptSig + redeemScript).
+		        // Note: this is the verification of the Bitcoin rules (scripts and signatures), 
+		        // 		 not the instant payment rules.
+				try {
+					transaction.verify();
+					for (TransactionInput txIn : txInputs) {
+						TransactionOutput txOut = walletService.findOutputFor(txIn);
+						txIn.verify(txOut);
+					}
+				} catch (VerificationException e) {
+					LOG.error("{} - Verification of transaction failed: ", e);
+					return new SignTO().type(Type.TX_ERROR).message(e.getMessage());
+				}
+									
+		        final byte[] serializedTx = transaction.unsafeBitcoinSerialize();
+		        txService.addTransaction(clientKey.getPubKey(), serializedTx, transaction.getHash().getBytes(), false);
+		       
+		    	walletService.broadcast(transaction);
+				walletService.receivePending(transaction);
+				
+				// TODO: instant payment verify() logic -> add directly to responseTO
+				
+		        final List<TxSig> serializedServerSigs = SerializeUtils.serializeSignatures(serverSigs);
+				final SignTO responseTO = new SignTO()
+						.setSuccess()
+						.currentDate(System.currentTimeMillis())
+						.publicKey(serverKey.getPubKey())
+						.signatures(serializedServerSigs);
+				SerializeUtils.signJSON(responseTO, serverKey);
+				
+				LOG.info("{} - signed tx={} ({} bytes)", tag, transaction.getHashAsString(), serializedTx.length);
+				return responseTO;
 	        
-	        return new SignTO()
-	                .setSuccess()
-	                .serverSignatures(txSigs);
+			} finally {
+				CONCURRENCY.remove(clientPubKeyHex);
+			}
 	        
 		} catch (Exception e) {
-			LOG.error("{signTx} - Sign keys error", e);
+			LOG.error("{} - Sign error", tag, e);
 	        return new SignTO()
 	                .type(Type.SERVER_ERROR)
 	                .message(e.getMessage());
+		} finally {
+			LOG.debug("{} - finished in {} ms", tag, Duration.between(startTime, Instant.now()).toMillis());
 		}
 	}
+   
 
 	/**
      * Input is the KeyTO with the client public key. The server will create for this client public key its
@@ -519,7 +579,7 @@ public class PaymentController {
             return new SignTO()
                     .setSuccess()
                     .transaction(serializedTransaction)
-                    .serverSignatures(SerializeUtils.serializeSignatures(serverSigs));
+                    .signatures(SerializeUtils.serializeSignatures(serverSigs));
 
         } catch (Exception e) {
             LOG.error("Sign keys error", e);

@@ -179,7 +179,7 @@ public class SignTest {
         Transaction tx = new Transaction(params, status.transaction());
 
         List<TransactionSignature> sigs = SerializeUtils.deserializeSignatures(
-                status.serverSignatures());
+                status.signatures());
         Assert.assertTrue(SerializeUtils.verifyTxSignatures(tx, sigs,
                 client.redeemScript(), client.ecKeyServer()));
         Assert.assertFalse(SerializeUtils.verifyTxSignatures(tx, sigs,

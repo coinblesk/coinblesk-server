@@ -257,7 +257,7 @@ public class GenericEndpointTest {
         List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(transaction, client.redeemScript(),
                 client.ecKey());
         List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(statusPrepare4
-                .serverSignatures());
+                .signatures());
         
         BitcoinUtils.applySignatures(transaction, client.redeemScript(),
                 clientSigs, serverSigs, client.clientFirst());

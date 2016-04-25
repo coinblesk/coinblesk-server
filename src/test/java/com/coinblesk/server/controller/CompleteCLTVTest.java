@@ -176,7 +176,7 @@ public class CompleteCLTVTest {
     	
     	SignTO signTO = client.signTxByServer(tx);
     	assertNotNull(signTO);
-    	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.serverSignatures());
+    	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.signatures());
     	assertTrue(serverSigs.size() > 0);
     	assertEquals(serverSigs.size(), tx.getInputs().size());
     	
@@ -205,7 +205,7 @@ public class CompleteCLTVTest {
 						    			Coin.COIN.divide(2).value);
     	
     	SignTO signTO = client.signTxByServer(tx);
-    	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.serverSignatures());
+    	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.signatures());
     	List<TransactionSignature> clientSigs = client.signTxByClient(tx);
     	assertTrue(tx.getInputs().size() > 0 && tx.getInputs().size() == clientSigs.size() && clientSigs.size() == serverSigs.size());
     	
@@ -261,7 +261,7 @@ public class CompleteCLTVTest {
     	tx.getInputs().forEach(ti -> ti.setSequenceNumber(0));
 
     	SignTO signTO = client.signTxByServer(tx);
-    	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.serverSignatures());
+    	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.signatures());
     	assertTrue(tx.getInputs().size() > 0 && tx.getInputs().size() == serverSigs.size());
     	
     	// provide only single sig, but not from client!
@@ -403,7 +403,7 @@ public class CompleteCLTVTest {
 						    			Coin.COIN.multiply(3).value);
     	
     	SignTO signTO = client.signTxByServer(tx);
-    	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.serverSignatures());
+    	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.signatures());
     	List<TransactionSignature> clientSigs = client.signTxByClient(tx);
     	assertEquals(clientSigs.size(), serverSigs.size());
     	

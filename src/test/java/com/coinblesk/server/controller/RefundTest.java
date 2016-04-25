@@ -165,7 +165,7 @@ public class RefundTest {
     
     @Test
     public void testRefund2() throws Exception {
-        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.serverSignatures());
+        List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.signatures());
         Transaction txClient = BitcoinUtils.createTx(
                 params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
                 9876);

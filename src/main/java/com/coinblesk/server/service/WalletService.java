@@ -15,8 +15,6 @@
  */
 package com.coinblesk.server.service;
 
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -30,12 +28,9 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 import org.bitcoinj.core.Address;
-import org.bitcoinj.core.Block;
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.FilteredBlock;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerAddress;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
@@ -61,7 +56,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.coinblesk.bitcoin.BitcoinNet;
 import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.entity.AddressEntity;
+import com.coinblesk.server.entity.Keys;
 import com.coinblesk.util.BitcoinUtils;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 
 
 /**
@@ -160,7 +159,7 @@ public class WalletService {
             }
         });
     }
-
+    
     private void walletWatchKeys() {
         final List<List<ECKey>> all = keyService.all();
         final List<Script> scripts = new ArrayList<>();
@@ -169,6 +168,12 @@ public class WalletService {
             scripts.add(script);
         }
         wallet.addWatchedScripts(scripts);
+        
+        for (Keys key : keyService.allKeys()) {
+        	for (AddressEntity address : key.addresses()) {
+        		wallet.addWatchedAddress(address.toAddress(appConfig.getNetworkParameters()));
+        	}
+        }
     }
 
     public BlockChain blockChain() {
