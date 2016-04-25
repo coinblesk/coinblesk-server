@@ -43,7 +43,6 @@ import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscoveryException;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.store.BlockStoreException;
-import org.bitcoinj.testing.FakeTxBuilder;
 import org.bitcoinj.wallet.Wallet;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
