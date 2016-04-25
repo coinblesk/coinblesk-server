@@ -18,7 +18,6 @@ package com.coinblesk.server.service;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.bitcoin.BitcoinNet;
 import com.coinblesk.util.BitcoinUtils;
-import com.coinblesk.util.Pair;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import java.io.File;
@@ -31,15 +30,10 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import org.bitcoinj.core.AbstractWalletEventListener;
 import org.bitcoinj.core.Address;
-import org.bitcoinj.core.Block;
 import org.bitcoinj.core.BlockChain;
-import org.bitcoinj.core.DownloadProgressTracker;
 import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.FilteredBlock;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerAddress;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.Sha256Hash;
@@ -47,13 +41,15 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBroadcast;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.core.Wallet;
+import org.bitcoinj.core.listeners.DownloadProgressTracker;
+import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
+import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
-import org.bitcoinj.store.UnreadableWalletException;
+import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.WalletTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -148,7 +144,7 @@ public class WalletService {
             }
         };
         peerGroup.startBlockChainDownload(listener);
-        wallet.addEventListener(new AbstractWalletEventListener() {
+        wallet.addTransactionConfidenceEventListener(new TransactionConfidenceEventListener() {
             @Override
             public void onTransactionConfidenceChanged(Wallet wallet, Transaction tx) {
                 if (tx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf()) {
