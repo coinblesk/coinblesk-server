@@ -19,6 +19,7 @@ import com.coinblesk.json.KeyTO;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
+import com.coinblesk.utilTest.FakeTxBuilder;
 import com.google.common.io.Files;
 import java.io.File;
 import java.io.FilenameFilter;

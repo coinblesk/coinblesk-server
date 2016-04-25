@@ -487,7 +487,7 @@ public class CompleteCLTVTest {
 			// this is not really efficient, we could it do in 1 iteration!
 			Map<Address, Coin> balance = new HashMap<>();
 	    	for (Address addr : getAllAddresses().keySet()) {
-	    		Coin addressBalance = wallet().getBalance(new AddressCoinSelector(addr));
+	    		Coin addressBalance = wallet().getBalance(new AddressCoinSelector(addr, params));
 	    		balance.put(addr, addressBalance);
 	    	}
 	    	return balance;
@@ -579,7 +579,7 @@ public class CompleteCLTVTest {
 		public TimeLockedAddress createTimeLockedAddress() throws Exception {
 			TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
 					.currentDate(System.currentTimeMillis())
-					.clientPublicKey(clientKey.getPubKey());
+					.publicKey(clientKey.getPubKey());
 			SerializeUtils.signJSON(requestTO, clientKey);
 	        MvcResult res = mockMvc
 	        		.perform(
@@ -605,12 +605,12 @@ public class CompleteCLTVTest {
 		
 		public SignTO signTxByServer(Transaction tx) throws Exception {
 			SignTO signTO = new SignTO()
-					.clientPublicKey(clientKey.getPubKey())
+					.publicKey(clientKey.getPubKey())
 					.transaction(tx.unsafeBitcoinSerialize())
 					.setSuccess();
 			
 			MvcResult res = mockMvc
-	        		.perform(post("/v3/payment/signtx").secure(true)
+	        		.perform(post(PaymentControllerTest.URL_SIGN_VERIFY).secure(true)
 	        				.contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(signTO)))
 	        		.andExpect(status().isOk())
 	        		.andReturn();

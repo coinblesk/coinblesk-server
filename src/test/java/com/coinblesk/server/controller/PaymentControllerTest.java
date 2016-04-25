@@ -71,6 +71,7 @@ import com.github.springtestdbunit.annotation.DatabaseTearDown;
 public class PaymentControllerTest {
 	
 	public static final String URL_CREATE_TIME_LOCKED_ADDRESS = "/v3/payment/createTimeLockedAddress";
+	public static final String URL_SIGN_VERIFY = "/v3/payment/signverify";
 	
 	@Autowired
     private WebApplicationContext webAppContext;
@@ -135,7 +136,7 @@ public class PaymentControllerTest {
         ECKey wrongKey = new ECKey();
         TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
         		.currentDate(Utils.currentTimeMillis())
-        		.clientPublicKey(clientKey.getPubKey());
+        		.publicKey(clientKey.getPubKey());
         SerializeUtils.signJSON(requestTO, wrongKey);
         String jsonTO = SerializeUtils.GSON.toJson(requestTO);
         TimeLockedAddressTO responseTO = performTimeLockedAddressRequest(jsonTO);
@@ -146,7 +147,7 @@ public class PaymentControllerTest {
 	@Test
 	public void testCreateTimeLockedAddress_WrongECKey() throws Exception {
 		TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
-				.clientPublicKey("helloworld".getBytes())
+				.publicKey("helloworld".getBytes())
 				.currentDate(System.currentTimeMillis());
 		SerializeUtils.signJSON(requestTO, new ECKey());
 	    String jsonTO = SerializeUtils.GSON.toJson(requestTO);
@@ -234,7 +235,7 @@ public class PaymentControllerTest {
 	private TimeLockedAddressTO createSignedTimeLockedAddressTO(ECKey clientKey) {
 		TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
 	    		.currentDate(Utils.currentTimeMillis())
-	    		.clientPublicKey(clientKey.getPubKey());
+	    		.publicKey(clientKey.getPubKey());
 	    SerializeUtils.signJSON(requestTO, clientKey);
 	    return requestTO;
 	}
