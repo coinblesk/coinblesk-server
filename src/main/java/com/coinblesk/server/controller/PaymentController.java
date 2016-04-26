@@ -68,7 +68,7 @@ import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.CoinbleskException;
-import com.coinblesk.util.InsuffientFunds;
+import com.coinblesk.util.InsufficientFunds;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
 
@@ -109,7 +109,7 @@ public class PaymentController {
     @ResponseBody
     public TimeLockedAddressTO createTimeLockedAddress(@RequestBody TimeLockedAddressTO input) {
     	final String tag = "{createTimeLockedAddress}";
-    	final long tsStart = System.currentTimeMillis();
+    	final Instant startTime = Instant.now();
     	try {
     		final TimeLockedAddressTO error = checkInput(input);
             if (error != null) {
@@ -129,7 +129,7 @@ public class PaymentController {
 			}
     		final ECKey serverKey = ECKey.fromPrivateAndPrecalculatedPublic(
     				keys.serverPrivateKey(), keys.serverPublicKey());
-            final long lockTime = createNewLockTime(); // TODO: allow client to select own lock time.
+            final long lockTime = createNewLockTime();
             final TimeLockedAddress address = new TimeLockedAddress(
             			clientKey.getPubKey(), serverKey.getPubKey(), lockTime);
             
@@ -137,8 +137,7 @@ public class PaymentController {
             if (checkExists == null) {
                 keyService.storeTimeLockedAddress(keys, address);
                 walletService.addWatching(address.createPubkeyScript());
-                LOG.debug("{} - new address created ({}ms): {}", 
-                		tag, (System.currentTimeMillis()-tsStart), address.toStringDetailed(params));
+                LOG.debug("{} - new address created: {}", tag, address.toStringDetailed(params));
             } else {
                 LOG.warn("{} - address does already exist (multiple requests in a short time?): {}", 
                 		tag, address.toStringDetailed(params));
@@ -148,16 +147,18 @@ public class PaymentController {
             		.timeLockedAddress(address)
             		.setSuccess();
             SerializeUtils.signJSON(addressTO, serverKey);
-            LOG.info("{} - time locked address: {}, clientPubKey={} ({}ms)", 
-            		tag, address.toString(params), clientPubKeyHex, (System.currentTimeMillis()-tsStart));
+            LOG.info("{} - time locked address: {}, clientPubKey={}", tag, address.toString(params), clientPubKeyHex);
     		return addressTO;
     		
     	} catch (Exception e) {
-    		LOG.error("{} - error ({}ms): ", tag, (System.currentTimeMillis()-tsStart), e);
+    		LOG.error("{} - error: ", tag, e);
     		return new TimeLockedAddressTO()
     				.type(Type.SERVER_ERROR)
     				.message(e.getMessage());
+    	} finally {
+    		LOG.debug("{} - finished in {} ms", tag, Duration.between(startTime, Instant.now()).toMillis());
     	}
+    	
     }
     
     /**
@@ -553,7 +554,7 @@ public class PaymentController {
                 }  catch (CoinbleskException e) {
                     LOG.warn("{sign} could not create tx", e);
                     return new SignTO().type(Type.TX_ERROR).message(e.getMessage());
-                } catch (InsuffientFunds e) {
+                } catch (InsufficientFunds e) {
                     LOG.debug("{sign} not enough coins or amount too small");
                     return new SignTO().type(Type.NOT_ENOUGH_COINS);
                 }
@@ -667,7 +668,7 @@ public class PaymentController {
                 }  catch (CoinbleskException e) {
                     LOG.warn("{verify} could not create tx", e);
                     return new VerifyTO().type(Type.SERVER_ERROR).message(e.getMessage());
-                } catch (InsuffientFunds e) {
+                } catch (InsufficientFunds e) {
                     LOG.debug("{verify} not enough coins or amount too small");
                     return new VerifyTO().type(Type.NOT_ENOUGH_COINS);
                 }
@@ -756,7 +757,7 @@ public class PaymentController {
 
     private static Transaction createTx(NetworkParameters params, String p2shAddressTo, Address p2shAddressFrom,
             List<Pair<byte[], Long>> outpointsCoinPair, long amountToSpend, Script redeemScript) 
-            throws AddressFormatException, CoinbleskException, InsuffientFunds {
+            throws AddressFormatException, CoinbleskException, InsufficientFunds {
         final Address p2shAddressTo1 = new Address(params, p2shAddressTo);
 
         //we now get from the client the outpoints for the refund tx (including hash)
