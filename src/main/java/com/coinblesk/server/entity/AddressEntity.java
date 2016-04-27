@@ -23,7 +23,7 @@ import org.bitcoinj.core.Utils;
 @Entity(name = "ADDRESSES")
 @Table(indexes = {
 	    @Index(name = "ADDRESS_HASH_INDEX", columnList = "addressHash", unique = true)})
-@Inheritance(strategy=InheritanceType.TABLE_PER_CLASS)
+@Inheritance(strategy=InheritanceType.SINGLE_TABLE)
 public class AddressEntity {
 	
 	@Id
