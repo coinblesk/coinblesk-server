@@ -38,7 +38,6 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.store.BlockStoreException;
-//import org.bitcoinj.testing.FakeTxBuilder;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;

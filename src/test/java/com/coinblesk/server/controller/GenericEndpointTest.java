@@ -6,6 +6,7 @@
 package com.coinblesk.server.controller;
 
 import com.coinblesk.server.utilTest.Client;
+import com.coinblesk.server.utilTest.FakeTxBuilder;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
@@ -19,7 +20,6 @@ import com.coinblesk.server.utilTest.ServerCalls;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
-import com.coinblesk.util.FakeTxBuilder;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseOperation;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
