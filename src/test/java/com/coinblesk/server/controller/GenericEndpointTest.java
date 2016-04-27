@@ -19,7 +19,7 @@ import com.coinblesk.server.utilTest.ServerCalls;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
-import com.coinblesk.utilTest.FakeTxBuilder;
+import com.coinblesk.util.FakeTxBuilder;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseOperation;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
