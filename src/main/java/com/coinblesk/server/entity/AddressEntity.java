@@ -3,6 +3,7 @@ package com.coinblesk.server.entity;
 import java.util.Comparator;
 
 import javax.persistence.Column;
+import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -24,6 +25,7 @@ import org.bitcoinj.core.Utils;
 @Table(indexes = {
 	    @Index(name = "ADDRESS_HASH_INDEX", columnList = "addressHash", unique = true)})
 @Inheritance(strategy=InheritanceType.SINGLE_TABLE)
+@DiscriminatorValue("P2SH_ADDRESS")
 public class AddressEntity {
 	
 	@Id

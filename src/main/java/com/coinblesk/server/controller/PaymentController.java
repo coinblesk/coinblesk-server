@@ -306,6 +306,7 @@ public class PaymentController {
 						.setSuccess()
 						.currentDate(System.currentTimeMillis())
 						.publicKey(serverKey.getPubKey())
+						.transaction(serializedTx)
 						.signatures(serializedServerSigs);
 				SerializeUtils.signJSON(responseTO, serverKey);
 				
@@ -357,16 +358,20 @@ public class PaymentController {
             final Pair<Boolean, Keys> retVal = keyService.storeKeysAndAddress(clientPublicKey,
                     serverEcKey.getPubKey(),
                     serverEcKey.getPrivKeyBytes());
-            final KeyTO serverKeyTO = new KeyTO();
+            final KeyTO serverKeyTO = new KeyTO().currentDate(System.currentTimeMillis());
             if (retVal.element0()) {
                 serverKeyTO.publicKey(serverEcKey.getPubKey());
                 walletService.addWatching(script);
                 LOG.debug("{register}:{} done", (System.currentTimeMillis() - start));
-                return serverKeyTO.setSuccess();
+                serverKeyTO.setSuccess();
+                SerializeUtils.signJSON(serverKeyTO, serverEcKey);
+                return serverKeyTO;
             } else {
                 serverKeyTO.publicKey(retVal.element1().serverPublicKey());
                 LOG.debug("{register}:{} keys already there", (System.currentTimeMillis() - start));
-                return serverKeyTO.type(Type.SUCCESS_BUT_KEY_ALREADY_EXISTS);
+                serverKeyTO.type(Type.SUCCESS_BUT_KEY_ALREADY_EXISTS);
+                SerializeUtils.signJSON(serverKeyTO, serverEcKey);
+                return serverKeyTO;
             }
         } catch (Exception e) {
             LOG.error("{register} keys error", e);

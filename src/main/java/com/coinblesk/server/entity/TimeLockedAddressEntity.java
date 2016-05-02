@@ -1,15 +1,15 @@
 package com.coinblesk.server.entity;
 
 import javax.persistence.Column;
+import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
-import javax.persistence.Table;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.bitcoinj.core.Utils;
 
 @Entity
-@Table(name="TIME_LOCKED_ADDRESSES")
+@DiscriminatorValue("TIME_LOCKED_ADDRESS")
 public class TimeLockedAddressEntity extends AddressEntity {
 	
 	@Column(nullable = false, updatable = false)
