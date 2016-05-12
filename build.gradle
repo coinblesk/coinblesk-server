@@ -42,9 +42,10 @@ dependencies {
     def tomcatVersion = '8.0.30'
     def hibernateVersion = '5.0.7.Final'
     
-    providedCompile 'javax.servlet:javax.servlet-api:3.1.0'
+    
     compile 'javax.transaction:javax.transaction-api:1.2'
     compile 'javax.servlet:jstl:1.2'
+    providedCompile 'javax.servlet:javax.servlet-api:3.1.0'
     providedCompile 'javax.servlet.jsp:javax.servlet.jsp-api:2.3.1'
     compile 'com.sun.mail:javax.mail:1.5.5'
     
@@ -62,16 +63,12 @@ dependencies {
     //compile "org.springframework.data:spring-data-jpa:1.9.2.RELEASE"
     
     
-    
     compile "org.hibernate:hibernate-core:${hibernateVersion}"
     compile "org.hibernate:hibernate-entitymanager:${hibernateVersion}"
     compile "org.hibernate:hibernate-c3p0:${hibernateVersion}"
     
-    
-    
-    
-    //compile 'org.bitcoinj:bitcoinj-core:0.14-SNAPSHOT'
-    //compile group: 'org.bitcoinj', name: 'orchid', version: '1.1.1'
+        
+    //compile 'org.bitcoinj:bitcoinj-core:0.14'
     compile 'com.google.protobuf:protobuf-java:2.5.0'
     //compile group: 'com.squareup.okhttp', name: 'okhttp', version: '2.2.0'
     //compile group: 'com.lambdaworks', name: 'scrypt', version: '1.4.0'
@@ -81,7 +78,7 @@ dependencies {
     
     compile 'ch.qos.logback:logback-classic:1.1.6'
     compile 'org.slf4j:slf4j-api:1.7.18'
-    compile 'com.coinblesk:coinblesk-shared-resources:1.4.35'
+    compile 'com.coinblesk:coinblesk-shared-resources:1.4.37'
     compile 'com.madgag.spongycastle:core:1.54.0.0'
 
     

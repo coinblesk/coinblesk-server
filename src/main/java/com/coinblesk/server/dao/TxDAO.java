@@ -50,7 +50,9 @@ public class TxDAO {
     }
 
     public <T> T save(final T enity) {
-        return em.merge(enity);
+    	T e = em.merge(enity);
+        em.flush();
+    	return e;
     }
 
     public List<Tx> findAll() {

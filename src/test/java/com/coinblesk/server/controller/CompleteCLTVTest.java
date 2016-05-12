@@ -174,14 +174,18 @@ public class CompleteCLTVTest {
 						    			merchant.getChangeAddress(), 
 						    			Coin.COIN.divide(2).value);
     	
-    	SignTO signTO = client.signTxByServer(tx);
+    	
+    	
+    	List<TransactionSignature> clientSigs = client.signTxByClient(tx);
+    	assertTrue(clientSigs.size() > 0);
+    	
+    	SignTO signTO = client.signTxByServer(tx, clientSigs);
     	assertNotNull(signTO);
     	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.signatures());
     	assertTrue(serverSigs.size() > 0);
     	assertEquals(serverSigs.size(), tx.getInputs().size());
     	
-    	List<TransactionSignature> clientSigs = client.signTxByClient(tx);
-    	assertTrue(clientSigs.size() > 0);
+    	
     	assertEquals(clientSigs.size(), serverSigs.size());
     	
     	client.applySignatures(tx, clientSigs, serverSigs);
@@ -204,9 +208,10 @@ public class CompleteCLTVTest {
 						    			merchant.getChangeAddress(), 
 						    			Coin.COIN.divide(2).value);
     	
-    	SignTO signTO = client.signTxByServer(tx);
-    	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.signatures());
     	List<TransactionSignature> clientSigs = client.signTxByClient(tx);
+    	SignTO signTO = client.signTxByServer(tx, clientSigs);
+    	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.signatures());
+    	
     	assertTrue(tx.getInputs().size() > 0 && tx.getInputs().size() == clientSigs.size() && clientSigs.size() == serverSigs.size());
     	
     	// Note: reversed signature lists
@@ -260,7 +265,9 @@ public class CompleteCLTVTest {
     	tx.setLockTime(address.getLockTime());
     	tx.getInputs().forEach(ti -> ti.setSequenceNumber(0));
 
-    	SignTO signTO = client.signTxByServer(tx);
+    	// we must send signatures to server in order to sign.
+    	List<TransactionSignature> clientSigs = client.signTxByClient(tx);
+    	SignTO signTO = client.signTxByServer(tx, clientSigs);
     	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.signatures());
     	assertTrue(tx.getInputs().size() > 0 && tx.getInputs().size() == serverSigs.size());
     	
@@ -402,11 +409,11 @@ public class CompleteCLTVTest {
 						    			merchant.getChangeAddress(), 
 						    			Coin.COIN.multiply(3).value);
     	
-    	SignTO signTO = client.signTxByServer(tx);
-    	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.signatures());
     	List<TransactionSignature> clientSigs = client.signTxByClient(tx);
-    	assertEquals(clientSigs.size(), serverSigs.size());
+    	SignTO signTO = client.signTxByServer(tx, clientSigs);
+    	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.signatures());
     	
+    	assertEquals(clientSigs.size(), serverSigs.size());
     	client.applySignatures(tx, clientSigs, serverSigs);
     	client.verifyTx(tx);
     	
@@ -453,6 +460,16 @@ public class CompleteCLTVTest {
 			chain.add(block);
 		}
 	}
+    
+    
+    /**
+     * TODO Testcases
+     * - double spend
+     * - instant test: 
+     * (1) before/after time lock (one and multiple inputs)
+     * (2) parent not instant / instant 
+     * (3) by confidence
+     */
 
     
     
@@ -509,16 +526,16 @@ public class CompleteCLTVTest {
 		}
 		
 		public void applySignatures(Transaction tx, List<TransactionSignature> clientSigs) {
-				// apply
-				for (int tiIndex = 0; tiIndex < tx.getInputs().size(); ++tiIndex) {
+			// apply
+			for (int tiIndex = 0; tiIndex < tx.getInputs().size(); ++tiIndex) {
 				TransactionInput ti = tx.getInput(tiIndex);
 				TransactionSignature clientSig = clientSigs.get(tiIndex);
-				
+
 				Address outputAddr = ti.getConnectedOutput().getAddressFromP2SH(params);
 				byte[] redeemScript = addressesToRedeemScripts.get(outputAddr);
 				Script scriptsig = TimeLockedAddress.createScriptSig(redeemScript, true, clientSig);
 				ti.setScriptSig(scriptsig);
-				}  
+			} 
 		}		
 		
 		public void verifyTx(Transaction tx) {
@@ -603,11 +620,14 @@ public class CompleteCLTVTest {
 	        return timeLockedAddress;
 		}
 		
-		public SignTO signTxByServer(Transaction tx) throws Exception {
+		public SignTO signTxByServer(Transaction tx, List<TransactionSignature> clientSigs) throws Exception {
 			SignTO signTO = new SignTO()
+					.currentDate(System.currentTimeMillis())
 					.publicKey(clientKey.getPubKey())
 					.transaction(tx.unsafeBitcoinSerialize())
+					.signatures(SerializeUtils.serializeSignatures(clientSigs))
 					.setSuccess();
+			SerializeUtils.signJSON(signTO, clientKey);
 			
 			MvcResult res = mockMvc
 	        		.perform(post(PaymentControllerTest.URL_SIGN_VERIFY).secure(true)

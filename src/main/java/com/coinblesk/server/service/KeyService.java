@@ -152,11 +152,16 @@ public class KeyService {
     	return addressDAO.findTimeLockedAddressesByClientPublicKey(publicKey);
     }
     
-    public byte[] getRedeemScriptByAddressHash(byte[] addressHash) {
-		if (addressHash == null) {
+    public AddressEntity findAddressByAddressHash(byte[] addressHash) {
+    	if (addressHash == null) {
 			throw new IllegalArgumentException("addressHash must not be null.");
 		}
-		AddressEntity address = addressDAO.findAddressByAddressHash(addressHash);
+    	AddressEntity address = addressDAO.findAddressByAddressHash(addressHash);
+    	return address;
+    }
+    
+    public byte[] getRedeemScriptByAddressHash(byte[] addressHash) {
+		AddressEntity address = findAddressByAddressHash(addressHash);
 		byte[] data = address != null ? address.getRedeemScript() : null;
 		return data;
 	}

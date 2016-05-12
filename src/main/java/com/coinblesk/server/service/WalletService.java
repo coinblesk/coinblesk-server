@@ -143,7 +143,7 @@ public class WalletService {
             @Override
             protected void doneDownload() {
                 //once we downloaded all the blocks we need to broadcast the stored approved tx
-                List<Transaction> txs = transactionService.approvedTx(params);
+                List<Transaction> txs = transactionService.listApprovedTransactions(params);
                 for(Transaction tx:txs) {
                     broadcast(tx);
                 }
@@ -210,7 +210,7 @@ public class WalletService {
             LOG.debug("unspent tx from Network: {}", t.getHash());
         }
 
-        List<Transaction> approvedTx = transactionService.approvedTx(params);
+        List<Transaction> approvedTx = transactionService.listApprovedTransactions(params);
         for (Transaction t : approvedTx) {
             LOG.debug("adding approved tx, which can be used for spending: {}", t);
             copy2.put(t.getHash(), t);
