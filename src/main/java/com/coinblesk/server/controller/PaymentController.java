@@ -36,7 +36,6 @@ import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
@@ -61,7 +60,6 @@ import com.coinblesk.json.Type;
 import com.coinblesk.json.VerifyTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.entity.Keys;
-import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.service.KeyService;
 import com.coinblesk.server.service.TransactionService;
 import com.coinblesk.server.service.WalletService;
@@ -101,91 +99,78 @@ public class PaymentController {
     
     
     @RequestMapping(
-    		value = {"/createTimeLockedAddress"},
+    		value = {"/createTimeLockedAddress", "/ctla"},
     		method = RequestMethod.POST,
     		consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
-    @ApiVersion("v3")
     @ResponseBody
     public TimeLockedAddressTO createTimeLockedAddress(@RequestBody TimeLockedAddressTO input) {
     	final String tag = "{createTimeLockedAddress}";
     	final Instant startTime = Instant.now();
+    	final NetworkParameters params = appConfig.getNetworkParameters();
+    	
     	try {
     		final TimeLockedAddressTO error = checkInput(input);
             if (error != null) {
-            	LOG.warn("{} - input error - type={}", tag, error.type().toString());
+            	LOG.debug("{} - input error - type={}", tag, error.type().toString());
                 return error;
             }
-    		
-    		final NetworkParameters params = appConfig.getNetworkParameters();
+
+            // set client/server keys
     		final ECKey clientKey = ECKey.fromPublicOnly(input.publicKey());
     		final String clientPubKeyHex = clientKey.getPublicKeyAsHex();
-    		LOG.debug("{} - clientPubKey={}", tag, clientPubKeyHex);
-    		
-    		final Keys keys = getKeysOrCreate(clientKey.getPubKey());
+    		final Keys keys = keyService.getByClientPublicKey(clientKey.getPubKey());
 			if (keys == null) {
-				LOG.error("{} - keys not found for clientPubKey={}", tag, clientPubKeyHex);
+				LOG.debug("{} - keys not found for clientPubKey={}", tag, clientPubKeyHex);
 				return new TimeLockedAddressTO().type(Type.KEYS_NOT_FOUND);
 			}
-    		final ECKey serverKey = ECKey.fromPrivateAndPrecalculatedPublic(
-    				keys.serverPrivateKey(), keys.serverPublicKey());
-            final long lockTime = createNewLockTime();
+			final ECKey serverKey = ECKey.fromPrivateAndPrecalculatedPublic(
+					keys.serverPrivateKey(), keys.serverPublicKey());
+    		
+    		// lockTime: do not allow locking by block and lockTime in the past
+            final long lockTime = input.lockTime();
+            if (!BitcoinUtils.isLockTimeByTime(lockTime) || 
+            	 BitcoinUtils.isAfterLockTime(startTime.getEpochSecond(), lockTime)) {
+            	return new TimeLockedAddressTO().type(Type.LOCKTIME_ERROR);
+            }
+            
+            // Input is OK: create and return address
             final TimeLockedAddress address = new TimeLockedAddress(
             		clientKey.getPubKey(), serverKey.getPubKey(), lockTime);
+            TimeLockedAddressTO responseTO = new TimeLockedAddressTO()
+            		.currentDate(startTime.toEpochMilli())
+            		.timeLockedAddress(address);
             
-            final TimeLockedAddressEntity checkExists = keyService.getTimeLockedAddressByAddressHash(address.getAddressHash());
-            if (checkExists == null) {
+            // save if not exists
+            if (!keyService.addressExists(address.getAddressHash())) {
                 keyService.storeTimeLockedAddress(keys, address);
                 walletService.addWatching(address.createPubkeyScript());
+                responseTO.setSuccess();
                 LOG.debug("{} - new address created: {}", tag, address.toStringDetailed(params));
             } else {
-                LOG.warn("{} - address does already exist (multiple requests in a short time?): {}", 
+            	responseTO.type(Type.SUCCESS_BUT_ADDRESS_ALREADY_EXISTS);
+                LOG.debug("{} - address already exists (multiple requests in a short time?): {}", 
                 		tag, address.toStringDetailed(params));
             }
             
-            TimeLockedAddressTO addressTO = new TimeLockedAddressTO()
-            		.timeLockedAddress(address)
-            		.setSuccess();
-            SerializeUtils.signJSON(addressTO, serverKey);
-            LOG.info("{} - time locked address: {}, clientPubKey={}", tag, address.toString(params), clientPubKeyHex);
-    		return addressTO;
+            SerializeUtils.signJSON(responseTO, serverKey);
+            LOG.info("{} - created address: {}, clientPubKey={}", tag, address.toString(params), clientPubKeyHex);
+    		return responseTO;
     		
     	} catch (Exception e) {
-    		LOG.error("{} - error: ", tag, e);
+    		LOG.error("{} - Failed with exception: ", tag, e);
     		return new TimeLockedAddressTO()
     				.type(Type.SERVER_ERROR)
     				.message(e.getMessage());
     	} finally {
     		LOG.debug("{} - finished in {} ms", tag, Duration.between(startTime, Instant.now()).toMillis());
     	}
-    	
-    }
-    
-    /**
-     * @param clientPubKey 
-     * @return the keys for the given client public key. new key is created and added if not in DB yet.
-     */
-    private Keys getKeysOrCreate(final byte[] clientPubKey) {
-    	Keys keys = keyService.getByClientPublicKey(clientPubKey);
-    	if (keys == null) {
-    		final ECKey serverKey = new ECKey();
-        	keyService.storeKeysAndAddress(clientPubKey, serverKey.getPubKey(), serverKey.getPrivKeyBytes());
-        	keys = keyService.getByClientPublicKey(clientPubKey);
-        	LOG.info("{getKeysOrCreate} - created new serverKey - clientPubKey={}, serverPubKey={}, ", 
-        			Utils.HEX.encode(keys.clientPublicKey()), Utils.HEX.encode(keys.serverPublicKey()));
-    	}
-    	return keys;
-    }
-    
-    private long createNewLockTime() {
-    	return Utils.currentTimeSeconds() + appConfig.getLockTimeSpan();
     }
     
     @RequestMapping(value = {"/signverify", "/sv"}, 
 			method = RequestMethod.POST,
 	        consumes = "application/json; charset=UTF-8",
 	        produces = "application/json; charset=UTF-8")
-	@ApiVersion("v3")
 	@ResponseBody
 	public SignTO signVerify(@RequestBody SignTO request) {
     	final String tag = "{signverify}";

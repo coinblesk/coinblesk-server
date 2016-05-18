@@ -138,6 +138,10 @@ public class KeyService {
 		return result;
 	}
     
+    public boolean addressExists(byte[] addressHash) {
+    	return addressDAO.findTimeLockedAddressByAddressHash(addressHash) != null;
+    }
+    
     public TimeLockedAddressEntity getTimeLockedAddressByAddressHash(byte[] addressHash) {
     	if (addressHash == null) {
     		throw new IllegalArgumentException("addressHash must not be null.");

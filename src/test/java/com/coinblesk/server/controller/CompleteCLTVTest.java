@@ -497,7 +497,7 @@ public class CompleteCLTVTest {
 			this.addressesToRedeemScripts = new HashMap<>();
 			
 			TimeLockedAddress timeLockedAddress = createTimeLockedAddress();
-			this.serverKey = ECKey.fromPublicOnly(timeLockedAddress.getServicePubKey());
+			this.serverKey = ECKey.fromPublicOnly(timeLockedAddress.getServerPubKey());
 		}
 		
 		public Map<Address, Coin> getBalanceByAddresses() {
