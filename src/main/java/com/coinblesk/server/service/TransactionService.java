@@ -15,22 +15,36 @@
  */
 package com.coinblesk.server.service;
 
+import com.coinblesk.bitcoin.TimeLockedAddress;
+import com.coinblesk.json.SignTO;
+import com.coinblesk.json.TxSig;
+import com.coinblesk.json.Type;
 import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.controller.PaymentController;
 import com.coinblesk.server.dao.TxDAO;
 import com.coinblesk.server.entity.AddressEntity;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.entity.Tx;
+import com.coinblesk.server.utils.ToUtils;
 import com.coinblesk.util.BitcoinUtils;
+import com.coinblesk.util.CoinbleskException;
+import com.coinblesk.util.SerializeUtils;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
+import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.core.Transaction.SigHash;
+import org.bitcoinj.crypto.TransactionSignature;
+import org.bitcoinj.script.Script;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,6 +72,117 @@ public class TransactionService {
     
     @Autowired
     private KeyService keyService;
+    
+    
+    @Transactional(readOnly = false)
+	public SignTO signVerifyTransaction(Transaction transaction, ECKey clientKey, 
+																ECKey serverKey, 
+																List<TransactionSignature> clientSigs) {
+		final String tag = "{signverify}";
+		final String clientPubKeyHex = clientKey.getPublicKeyAsHex();
+		final NetworkParameters params = appConfig.getNetworkParameters();
+	
+		// Check if Tx contains already signed (spent) outputs
+		if (isBurned(params, clientKey.getPubKey(), transaction)) {
+			LOG.warn("{} - clientPubKey={} - BURNED_OUTPUTS - Transaction:\n{}", tag, clientPubKeyHex, transaction);
+			return ToUtils.newInstance(SignTO.class, Type.BURNED_OUTPUTS, serverKey);
+		}
+		
+		// for each input, search corresponding redeemScript and sign
+		final List<TransactionSignature> serverSigs = new ArrayList<>(clientSigs.size()); 
+		signTransaction(transaction, clientSigs, serverKey, serverSigs);
+		
+		try {
+			// verify fully signed Tx and each Tx input (execute scriptSig + redeemScript).
+			verifyTransaction(transaction);
+		} catch (CoinbleskException e) {
+			LOG.error("{} - clientPubKey={} - Verification of transaction failed (TX_ERROR): ", tag, clientPubKeyHex, e);
+			return ToUtils.newInstance(SignTO.class, Type.TX_ERROR, serverKey);
+		}
+		
+		// Transaction is complete: store and broadcast.
+		saveAndBroadcast(transaction, clientKey.getPubKey());
+		
+		final List<TxSig> serializedServerSigs = SerializeUtils.serializeSignatures(serverSigs);
+		final SignTO responseTO = new SignTO()
+				.currentDate(System.currentTimeMillis())
+				.publicKey(serverKey.getPubKey())
+				.transaction(transaction.unsafeBitcoinSerialize())
+				.signatures(serializedServerSigs);
+		
+		// Determine instant or not.
+		if (isTransactionInstant(params, clientKey.getPubKey(), transaction)) {
+			responseTO.setSuccess();
+		} else {
+			responseTO.type(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT);
+		}
+		
+		SerializeUtils.signJSON(responseTO, serverKey);
+		LOG.info("{} - clientPubKey={} - signed tx={} ({} bytes) - done with status={}", 
+				tag, clientPubKeyHex, transaction.getHashAsString(), transaction.getMessageSize(), responseTO.type());
+		return responseTO;
+	}
+    
+    private void signTransaction(final Transaction transaction, 
+										final List<TransactionSignature> clientSigs,
+										final ECKey serverKey, 
+										final List<TransactionSignature> serverSigs) {
+		
+		for (int inputIndex = 0; inputIndex < transaction.getInputs().size(); ++inputIndex) {
+			TransactionInput txIn = transaction.getInput(inputIndex);
+			// get output from wallet because Tx may not be connected if received over the network.
+			TransactionOutput txOut = walletService.findOutputFor(txIn);
+			final byte[] redeemScript;
+			if (txOut != null) {
+				byte[] addressHashFrom = txOut.getScriptPubKey().getPubKeyHash();
+				redeemScript = keyService.getRedeemScriptByAddressHash(addressHashFrom);
+				if (redeemScript == null) {
+					LOG.warn("signTransaction - redeem script for input {} not found - output: {}", inputIndex, txOut);
+				}
+			} else {
+				// may happen if Tx contains inputs of other transactions
+				// not related to coinblesk (unknown tx outputs).
+				LOG.warn("signTransaction - transaction output for tx input {} not found - input: {}", inputIndex, txIn);
+				redeemScript = null;
+			}
+			
+			TransactionSignature clientSig = clientSigs.get(inputIndex);
+			TransactionSignature serverSig = transaction.calculateSignature(
+					inputIndex, serverKey, redeemScript, SigHash.ALL, false);
+			serverSigs.add(serverSig);
+			
+			TimeLockedAddress tla = TimeLockedAddress.fromRedeemScript(redeemScript);
+			Script scriptSig = tla.createScriptSigBeforeLockTime(clientSig, serverSig);
+			txIn.setScriptSig(scriptSig);
+		}
+	}
+    
+    private void saveAndBroadcast(Transaction transaction, byte[] clientPubKey) {
+    	final byte[] serializedTx = transaction.unsafeBitcoinSerialize();
+        addTransaction(clientPubKey, serializedTx, transaction.getHash().getBytes(), false);
+        walletService.receivePending(transaction);
+    	walletService.broadcast(transaction);
+	}
+    
+    /**
+     *  Transaction verification
+     *  Note: this is the verification of the Bitcoin rules (scripts and signatures), 
+     *  not the instant payment rules.
+     *  
+     * @param transaction
+     * @throws CoinbleskException if verification fails
+     */		 
+    private void verifyTransaction(Transaction transaction) throws CoinbleskException {
+    	try {
+	    	transaction.verify();
+			for (TransactionInput txIn : transaction.getInputs()) {
+				TransactionOutput txOut = walletService.findOutputFor(txIn);
+				txIn.verify(txOut);
+			}
+    	} catch (VerificationException e) {
+    		throw new CoinbleskException("Verification of transaction failed", e);
+    	}
+    }
 
     @Transactional(readOnly = false)
     public boolean isTransactionInstant(final NetworkParameters params, byte[] clientPublicKey, Transaction fullTx) {
