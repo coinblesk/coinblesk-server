@@ -176,6 +176,7 @@ public class PaymentController {
     	final String tag = "{signverify}";
     	final Instant startTime = Instant.now();
     	String clientPubKeyHex = "(UNKNOWN)";
+    	
 		try {
 			final NetworkParameters params = appConfig.getNetworkParameters();
     		final ECKey clientKey = ECKey.fromPublicOnly(request.publicKey());
@@ -189,99 +190,91 @@ public class PaymentController {
 				LOG.info("{} - clientPubKey={} - input error - type={}", tag, clientPubKeyHex, error.type());
 				return error;
 			}
-			
-    		try {
-				if(!CONCURRENCY.add(clientPubKeyHex)) {
-					LOG.debug("{} - clientPubKey={} - CONCURRENCY_ERROR", tag, clientPubKeyHex);
-	                return new SignTO().type(Type.CONCURRENCY_ERROR);
-	            }
 				
-				LOG.info("{} - clientPubKey={} - sign request", tag, clientPubKeyHex);
-		        keys = keyService.getByClientPublicKey(clientKey.getPubKey());
-		        if (keys == null || keys.clientPublicKey() == null ||
-		        		keys.serverPrivateKey() == null || keys.serverPublicKey() == null) {
-		        	LOG.debug("{} - clientPubKey={} - KEYS_NOT_FOUND", tag, clientPubKeyHex);
-		        	return new SignTO().type(Type.KEYS_NOT_FOUND);
-		        }
-				if (keys.addresses().isEmpty()) {
-					LOG.debug("{} - clientPubKey={} - ADDRESS_EMPTY", tag, clientPubKeyHex);
-					return new SignTO().type(Type.ADDRESS_EMPTY);
-				}
-		        serverKey = ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey());
-		     		        
-		        /*
-		         * Got a transaction in the request - sign the tx inputs
-		         */
-				if (request.transaction() != null) {
-					transaction = new Transaction(params, request.transaction());
-					LOG.debug("{} - clientPubKey={} - transaction from input: \n{}", tag, clientPubKeyHex, transaction);
-					if (request.signatures() == null || (request.signatures().size() != transaction.getInputs().size())) {
-						LOG.debug("{} - clientPubKey={} - INPUT_MISMATCH", tag, clientPubKeyHex);
-						return new SignTO()
-								.type(Type.INPUT_MISMATCH)
-								.message("Number of inputs is not equal to number of signatures.");
-					}
-				} else {
-					LOG.debug("{} - clientPubKey={} - INPUT_MISMATCH", tag, clientPubKeyHex);
-					return new SignTO().type(Type.INPUT_MISMATCH);
-				}
-				
-				/*
-				 * Check if Tx contains already signed (spent) outputs
-				 */
-	            if(txService.isBurned(params, clientKey.getPubKey(), transaction)) {
-	                return new SignTO().type(Type.BURNED_OUTPUTS);
-	            }
-				
-				// for each input, search corresponding redeemScript and sign
-		        final List<TransactionSignature> clientSigs = SerializeUtils.deserializeSignatures(request.signatures());
-		        final List<TransactionSignature> serverSigs = new ArrayList<>(clientSigs.size()); 
-		        signTransaction(transaction, clientSigs, serverKey, serverSigs);
-		        
-				try {
-					// verify fully signed Tx and each Tx input (execute scriptSig + redeemScript).
-					verifyTransaction(transaction);
-				} catch (CoinbleskException e) {
-					LOG.error("{} - clientPubKey={} - Verification of transaction failed (TX_ERROR): ", 
-							tag, clientPubKeyHex, e);
-					return new SignTO().type(Type.TX_ERROR).message(e.getMessage());
-				}
-			
-				// Transaction is complete: store and broadcast.
-		        saveAndBroadcast(transaction, clientKey.getPubKey());
-		    	
-		    	final List<TxSig> serializedServerSigs = SerializeUtils.serializeSignatures(serverSigs);
-		    	final SignTO responseTO = new SignTO()
-						.currentDate(System.currentTimeMillis())
-						.publicKey(serverKey.getPubKey())
-						.transaction(transaction.unsafeBitcoinSerialize())
-						.signatures(serializedServerSigs);
-		    	
-		    	// Determine instant or not.
-	            if (txService.isTransactionInstant(params, clientKey.getPubKey(), transaction)) {
-	                LOG.debug("{}: tx {} instant payment SUCCESS", tag, transaction.getHashAsString());
-	                responseTO.setSuccess();
-	            } else {
-	                LOG.debug("{}: tx {} instant payment SUCCESS_BUT_NO_INSTANT_PAYMENT", tag, transaction.getHashAsString());
-	                responseTO.type(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT);
-	            }
-	       
-				SerializeUtils.signJSON(responseTO, serverKey);
-				LOG.info("{} - clientPubKey={} - signed tx={} ({} bytes)", 
-						tag, clientPubKeyHex, transaction.getHashAsString(), transaction.getMessageSize());
-				return responseTO;
+			LOG.debug("{} - clientPubKey={} - request", tag, clientPubKeyHex);
+	        keys = keyService.getByClientPublicKey(clientKey.getPubKey());
+	        if (keys == null || keys.clientPublicKey() == null ||
+	        		keys.serverPrivateKey() == null || keys.serverPublicKey() == null) {
+	        	LOG.debug("{} - clientPubKey={} - KEYS_NOT_FOUND", tag, clientPubKeyHex);
+	        	return newInstance(SignTO.class, Type.KEYS_NOT_FOUND);
+	        }
+	        serverKey = ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey());
 	        
-			} finally {
-				CONCURRENCY.remove(clientPubKeyHex);
+			if (keys.addresses().isEmpty()) {
+				LOG.debug("{} - clientPubKey={} - ADDRESS_EMPTY", tag, clientPubKeyHex);
+				return newInstance(SignTO.class, Type.ADDRESS_EMPTY, serverKey); 
 			}
+	     		        
+	        /*
+	         * Got a transaction in the request - sign
+	         */
+			if (request.transaction() != null) {
+				transaction = new Transaction(params, request.transaction());
+				LOG.debug("{} - clientPubKey={} - transaction from input: \n{}", tag, clientPubKeyHex, transaction);
+				if (request.signatures() == null || (request.signatures().size() != transaction.getInputs().size())) {
+					LOG.debug("{} - clientPubKey={} - INPUT_MISMATCH - number of signatures ({}) != number of inputs ({})", 
+							tag, clientPubKeyHex, request.signatures().size(), transaction.getInputs().size());
+					return newInstance(SignTO.class, Type.INPUT_MISMATCH, serverKey);
+				}
+			} else {
+				LOG.debug("{} - clientPubKey={} - INPUT_MISMATCH", tag, clientPubKeyHex);
+				return newInstance(SignTO.class, Type.INPUT_MISMATCH, serverKey);
+			}
+			
+			/*
+			 * Check if Tx contains already signed (spent) outputs
+			 */
+            if (txService.isBurned(params, clientKey.getPubKey(), transaction)) {
+            	LOG.warn("{} - clientPubKey={} - BURNED_OUTPUTS - Transaction:\n{}", tag, clientPubKeyHex, transaction);
+                return newInstance(SignTO.class, Type.BURNED_OUTPUTS, serverKey);
+            }
+			
+			// for each input, search corresponding redeemScript and sign
+	        final List<TransactionSignature> clientSigs = SerializeUtils.deserializeSignatures(request.signatures());
+	        final List<TransactionSignature> serverSigs = new ArrayList<>(clientSigs.size()); 
+	        signTransaction(transaction, clientSigs, serverKey, serverSigs);
 	        
+			try {
+				// verify fully signed Tx and each Tx input (execute scriptSig + redeemScript).
+				verifyTransaction(transaction);
+			} catch (CoinbleskException e) {
+				LOG.error("{} - clientPubKey={} - Verification of transaction failed (TX_ERROR): ", 
+						tag, clientPubKeyHex, e);
+				return newInstance(SignTO.class, Type.TX_ERROR, serverKey);
+			}
+		
+			// Transaction is complete: store and broadcast.
+	        saveAndBroadcast(transaction, clientKey.getPubKey());
+	    	
+	    	final List<TxSig> serializedServerSigs = SerializeUtils.serializeSignatures(serverSigs);
+	    	final SignTO responseTO = new SignTO()
+					.currentDate(System.currentTimeMillis())
+					.publicKey(serverKey.getPubKey())
+					.transaction(transaction.unsafeBitcoinSerialize())
+					.signatures(serializedServerSigs);
+	    	
+	    	// Determine instant or not.
+            if (txService.isTransactionInstant(params, clientKey.getPubKey(), transaction)) {
+                LOG.debug("{}: tx {} instant payment SUCCESS", tag, transaction.getHashAsString());
+                responseTO.setSuccess();
+            } else {
+                LOG.debug("{}: tx {} instant payment SUCCESS_BUT_NO_INSTANT_PAYMENT", tag, transaction.getHashAsString());
+                responseTO.type(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT);
+            }
+			
+			LOG.info("{} - clientPubKey={} - signed tx={} ({} bytes)", 
+					tag, clientPubKeyHex, transaction.getHashAsString(), transaction.getMessageSize());
+			SerializeUtils.signJSON(responseTO, serverKey);
+			return responseTO;
 		} catch (Exception e) {
 			LOG.error("{} - clientPubKey={} - SERVER_ERROR: ", tag, clientPubKeyHex, e);
 	        return new SignTO()
+	        		.currentDate(System.currentTimeMillis())
 	        		.type(Type.SERVER_ERROR)
 	                .message(e.getMessage());
 		} finally {
-			LOG.debug("{} - clientPubKey={} - finished in {} ms", tag, clientPubKeyHex, Duration.between(startTime, Instant.now()).toMillis());
+			LOG.debug("{} - clientPubKey={} - finished in {} ms", 
+					tag, clientPubKeyHex, Duration.between(startTime, Instant.now()).toMillis());
 		}
 	}
 
@@ -324,7 +317,6 @@ public class PaymentController {
         txService.addTransaction(clientPubKey, serializedTx, transaction.getHash().getBytes(), false);
         walletService.receivePending(transaction);
     	walletService.broadcast(transaction);
-
 	}
 
 	/**
@@ -375,10 +367,12 @@ public class PaymentController {
             //2-of-2 multisig
             final Script script = BitcoinUtils.createP2SHOutputScript(2, keys);
             
-            final Pair<Boolean, Keys> retVal = keyService.storeKeysAndAddress(clientPublicKey,
+            final Pair<Boolean, Keys> retVal = keyService.storeKeysAndAddress(
+            		clientPublicKey,
                     serverEcKey.getPubKey(),
                     serverEcKey.getPrivKeyBytes());
-            final KeyTO serverKeyTO = new KeyTO().currentDate(System.currentTimeMillis());
+            final KeyTO serverKeyTO = new KeyTO()
+            		.currentDate(System.currentTimeMillis());
             if (retVal.element0()) {
                 serverKeyTO.publicKey(serverEcKey.getPubKey());
                 walletService.addWatching(script);
@@ -735,15 +729,45 @@ public class PaymentController {
             CONCURRENCY.remove(key);
         }
     }
-
     
+    private static Transaction createTx(NetworkParameters params, String p2shAddressTo, Address p2shAddressFrom,
+            List<Pair<byte[], Long>> outpointsCoinPair, long amountToSpend, Script redeemScript) 
+            throws AddressFormatException, CoinbleskException, InsufficientFunds {
+        final Address p2shAddressTo1 = new Address(params, p2shAddressTo);
 
+        //we now get from the client the outpoints for the refund tx (including hash)
+        final List<Pair<TransactionOutPoint, Coin>> refundClientPoints = SerializeUtils
+                .deserializeOutPointsCoin(params, outpointsCoinPair);
+
+        return BitcoinUtils.createTx(params, refundClientPoints, redeemScript,
+                    p2shAddressFrom, p2shAddressTo1, amountToSpend);
+    }
+
+    private static <K extends BaseTO> K newInstance(K k, Type returnType, ECKey signKey) {
+    	return newInstance(k.getClass(), returnType, signKey);
+    }
+    
+    private static <K extends BaseTO> K newInstance(Class<? extends BaseTO> clazz, Type returnType, ECKey signKey) {
+        K instance = newInstance(clazz, returnType);
+        if (instance == null) {
+        	return instance;
+        }
+        instance.publicKey(signKey.getPubKey());
+        SerializeUtils.signJSON(instance, signKey);
+        return instance;
+    }
+    
     private static <K extends BaseTO> K newInstance(K k, Type returnType) {
-        try {
-            BaseTO b = k.getClass().newInstance();
-            b.type(returnType);
-            return (K) b;
-        } catch (InstantiationException | IllegalAccessException ex) {
+    	return newInstance(k.getClass(), returnType);
+    }
+    
+    private static <K extends BaseTO> K newInstance(Class<? extends BaseTO> clazz, Type returnType) {
+    	try {
+	    	BaseTO b = clazz.newInstance();
+	    	b.currentDate(System.currentTimeMillis());
+	        b.type(returnType);
+	        return (K) b;
+    	} catch (InstantiationException | IllegalAccessException ex) {
             LOG.error("cannot create instance", ex);
         }
         return null;
@@ -778,18 +802,5 @@ public class PaymentController {
 
         }
         return null;
-    }
-
-    private static Transaction createTx(NetworkParameters params, String p2shAddressTo, Address p2shAddressFrom,
-            List<Pair<byte[], Long>> outpointsCoinPair, long amountToSpend, Script redeemScript) 
-            throws AddressFormatException, CoinbleskException, InsufficientFunds {
-        final Address p2shAddressTo1 = new Address(params, p2shAddressTo);
-
-        //we now get from the client the outpoints for the refund tx (including hash)
-        final List<Pair<TransactionOutPoint, Coin>> refundClientPoints = SerializeUtils
-                .deserializeOutPointsCoin(params, outpointsCoinPair);
-
-        return BitcoinUtils.createTx(params, refundClientPoints, redeemScript,
-                    p2shAddressFrom, p2shAddressTo1, amountToSpend);
     }
 }
