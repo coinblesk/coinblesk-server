@@ -49,6 +49,7 @@ import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
 import com.coinblesk.server.service.KeyService;
 import com.coinblesk.server.utilTest.KeyTestUtil;
+import com.coinblesk.server.utilTest.RESTUtils;
 import com.coinblesk.server.utilTest.TestBean;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.SerializeUtils;
@@ -296,23 +297,9 @@ public class PaymentControllerTest {
     
     private TimeLockedAddressTO requestCreateTimeLockedAddress(TimeLockedAddressTO requestTO) throws Exception {
     	String jsonTO = SerializeUtils.GSON.toJson(requestTO);;
-    	return performRequest(URL_CREATE_TIME_LOCKED_ADDRESS, jsonTO, TimeLockedAddressTO.class);
+    	return RESTUtils.postRequest(mockMvc, URL_CREATE_TIME_LOCKED_ADDRESS, jsonTO, TimeLockedAddressTO.class);
     }
     
-    private <T> T performRequest(String url, String jsonTO, Class<T> responseClass) throws Exception {
-    	final MvcResult res = mockMvc
-				.perform(
-						post(url)
-						.secure(true)
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(jsonTO))
-				.andExpect(status().isOk())
-				.andReturn();
-    	final T responseTO = SerializeUtils.GSON.fromJson(
-    			res.getResponse().getContentAsString(), responseClass);
-		return responseTO;
-	}
-
 	private TimeLockedAddressTO createSignedTimeLockedAddressTO(ECKey clientKey) {
 		// lock time between now and (now+1year)
 		long lockTime = Utils.currentTimeSeconds() + new Random().nextInt(365*24*60*60);

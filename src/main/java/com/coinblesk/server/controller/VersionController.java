@@ -47,12 +47,13 @@ import com.coinblesk.util.CoinbleskException;
 @ApiVersion({"v1", ""})
 public class VersionController {
 	
-	private static Set<String> supportedVersions = new HashSet<>();
-	static {
-		supportedVersions.add("1.0");
-	}
-	
 	private final static Logger LOG = LoggerFactory.getLogger(VersionController.class);
+	
+	private final static Set<String> SUPPORTED_CLIENT_VERSIONS;
+	static {
+		SUPPORTED_CLIENT_VERSIONS = new HashSet<>();
+		SUPPORTED_CLIENT_VERSIONS.add("1.0");
+	}
 	
 	@Autowired
     private ServletContext context;
@@ -91,26 +92,46 @@ public class VersionController {
 		}
 	}
 
+	/**
+	 * Extracts the Version property from the manifest.
+	 * 
+	 * @return the version iff run as war packaged application. Otherwise, (UNKNOWN) is returned.
+	 * @throws CoinbleskException
+	 */
 	private String getServerVersion() throws CoinbleskException {
-        try {
-        	final String versionKey = "Version";
-			InputStream inputStream = context.getResourceAsStream("/META-INF/MANIFEST.MF");
+        // see: build.gradle
+    	final String versionKey = "Version";
+    	final String defaultVersion = "(UNKNOWN)";
+    	InputStream inputStream = null;
+		try {
+			inputStream = context.getResourceAsStream("/META-INF/MANIFEST.MF");
 			if (inputStream == null) {
-				throw new IOException("Manifest resource not found.");
+				LOG.warn("Manifest resource not found (inputStream=null, maybe not run as war file?).");
+				return defaultVersion;
 			}
-            Properties prop = new Properties();
-            prop.load(inputStream);
-            if (!prop.containsKey(versionKey)) {
-            	throw new CoinbleskException("Version key not found.");
-            }
-            return prop.get(versionKey).toString().trim();
-        } catch (Exception e) {
-        	LOG.error("Could not determine version: ", e);
-        	throw new CoinbleskException("Could not determine version.", e);
-        }
+			
+			Properties prop = new Properties();
+			prop.load(inputStream);
+			if (prop.containsKey(versionKey)) {
+				return prop.getProperty(versionKey, defaultVersion).toString().trim();
+			} else {
+				LOG.warn("Version key '{}' not foudn in manifest.", versionKey);
+			}
+		} catch (Exception e) {
+			LOG.error("Could not determine version: ", e);
+		} finally {
+			if (inputStream != null) {
+				try {
+					inputStream.close();
+				} catch (IOException e) {
+					LOG.debug("Could not close input stream: ", e);
+				}
+			}
+		}
+        return defaultVersion;
 	}
 
 	private boolean isVersionSupported(String clientVersion) {
-		return supportedVersions.contains(clientVersion);
+		return SUPPORTED_CLIENT_VERSIONS.contains(clientVersion);
 	}
 }
