@@ -157,6 +157,9 @@ public class AddressEntity {
 	    		 .toHashCode();
 	}
 	
+	/**
+	 * Sorts addresses by {@link AddressEntity#timeCreated} in ascending order.
+	 */
 	public static class TimeCreatedComparator implements Comparator<AddressEntity> {
 		@Override
 		public int compare(AddressEntity lhs, AddressEntity rhs) {

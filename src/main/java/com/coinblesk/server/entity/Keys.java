@@ -19,6 +19,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.SortedSet;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -30,6 +31,7 @@ import javax.persistence.OneToMany;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.NetworkParameters;
+import org.hibernate.annotations.SortComparator;
 
 /**
  *
@@ -57,7 +59,8 @@ public class Keys implements Serializable {
 	private long timeCreated;
     
     @OneToMany(mappedBy="keys", fetch = FetchType.EAGER)
-    private List<AddressEntity> addresses; 
+    @SortComparator(value = AddressEntity.TimeCreatedComparator.class)
+    private SortedSet<AddressEntity> addresses; 
     
     public byte[] clientPublicKey() {
         return clientPublicKey;
@@ -95,11 +98,11 @@ public class Keys implements Serializable {
     	return this;
     }
 
-	public List<AddressEntity> addresses() {
+	public SortedSet<AddressEntity> addresses() {
 		return addresses;
 	}
     
-	public Keys addresses(List<AddressEntity> addresses) {
+	public Keys addresses(SortedSet<AddressEntity> addresses) {
 		this.addresses = addresses;
 		return this;
 	}
