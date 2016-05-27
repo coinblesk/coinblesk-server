@@ -32,6 +32,7 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
 import org.slf4j.Logger;
@@ -206,16 +207,35 @@ public class PaymentController {
 			if (request.transaction() != null) {
 				transaction = new Transaction(params, request.transaction());
 				LOG.debug("{} - clientPubKey={} - transaction from input: \n{}", tag, clientPubKeyHex, transaction);
-				if (request.signatures() == null || (request.signatures().size() != transaction.getInputs().size())) {
-					LOG.debug("{} - clientPubKey={} - INPUT_MISMATCH - number of signatures ({}) != number of inputs ({})", 
-							tag, clientPubKeyHex, request.signatures().size(), transaction.getInputs().size());
-					return ToUtils.newInstance(SignTO.class, Type.INPUT_MISMATCH, serverKey);
+								
+				// if amount to spend && address provided, add corresponding output
+				if (request.amountToSpend() > 0 && request.p2shAddressTo() != null && !request.p2shAddressTo().isEmpty()) {
+					TransactionOutput txOut = transaction.addOutput(
+							Coin.valueOf(request.amountToSpend()), 
+							Address.fromBase58(params, request.p2shAddressTo()));
+					LOG.debug("{} - added output={} to Tx={}", tag, txOut, transaction.getHash());
 				}
+				
+				// if change is provided, we add an output to the most recently created address of the client.
+				if (request.amountChange() > 0) {
+					Address changeAddress = keys.addresses().last().toAddress(params);
+					Coin changeAmount = Coin.valueOf(request.amountChange());
+					TransactionOutput changeOut = transaction.addOutput(changeAmount, changeAddress);
+					LOG.debug("{} - added change output={} to Tx={}", tag, changeOut, transaction.getHash());
+				}
+				
 			} else {
 				LOG.debug("{} - clientPubKey={} - INPUT_MISMATCH", tag, clientPubKeyHex);
 				return ToUtils.newInstance(SignTO.class, Type.INPUT_MISMATCH, serverKey);
 			}
 			
+			// check signatures
+			if (request.signatures() == null || (request.signatures().size() != transaction.getInputs().size())) {
+				LOG.debug("{} - clientPubKey={} - INPUT_MISMATCH - number of signatures ({}) != number of inputs ({})", 
+					tag, clientPubKeyHex, request.signatures().size(), transaction.getInputs().size());
+				return ToUtils.newInstance(SignTO.class, Type.INPUT_MISMATCH, serverKey);
+			}
+
 			clientSigs = SerializeUtils.deserializeSignatures(request.signatures());
 			SignTO responseTO = txService.signVerifyTransaction(transaction, clientKey, serverKey, clientSigs);
 			return responseTO;
