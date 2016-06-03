@@ -18,6 +18,7 @@ package com.coinblesk.server.controller;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -32,7 +33,6 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
 import org.slf4j.Logger;
@@ -49,7 +49,9 @@ import com.coinblesk.json.BalanceTO;
 import com.coinblesk.json.KeyTO;
 import com.coinblesk.json.RefundTO;
 import com.coinblesk.json.SignTO;
+import com.coinblesk.json.SignVerifyTO;
 import com.coinblesk.json.TimeLockedAddressTO;
+import com.coinblesk.json.TxSig;
 import com.coinblesk.json.Type;
 import com.coinblesk.json.VerifyTO;
 import com.coinblesk.server.config.AppConfig;
@@ -167,7 +169,7 @@ public class PaymentController {
 	        consumes = "application/json; charset=UTF-8",
 	        produces = "application/json; charset=UTF-8")
 	@ResponseBody
-	public SignTO signVerify(@RequestBody SignTO request) {
+	public SignVerifyTO signVerify(@RequestBody SignVerifyTO request) {
     	final String tag = "{signverify}";
     	final Instant startTime = Instant.now();
     	String clientPubKeyHex = "(UNKNOWN)";
@@ -181,7 +183,13 @@ public class PaymentController {
     		final Transaction transaction;
     		final List<TransactionSignature> clientSigs;
     		
-    		final SignTO error = ToUtils.checkInput(request);
+    		// clear payeeSig since client sig does not cover it
+    		final TxSig payeeSigInput = request.payeeMessageSig();
+    		request.payeeMessageSig(null);
+    		final byte[] payeePubKey = request.payeePublicKey();
+    		request.payeePublicKey(null);
+    		
+    		final SignVerifyTO error = ToUtils.checkInput(request);
 			if (error != null) {
 				LOG.info("{} - clientPubKey={} - input error - type={}", tag, clientPubKeyHex, error.type());
 				return error;
@@ -209,10 +217,10 @@ public class PaymentController {
 				LOG.debug("{} - clientPubKey={} - transaction from input: \n{}", tag, clientPubKeyHex, transaction);
 								
 				// if amount to spend && address provided, add corresponding output
-				if (request.amountToSpend() > 0 && request.p2shAddressTo() != null && !request.p2shAddressTo().isEmpty()) {
+				if (request.amountToSpend() > 0 && request.addressTo() != null && !request.addressTo().isEmpty()) {
 					TransactionOutput txOut = transaction.addOutput(
 							Coin.valueOf(request.amountToSpend()), 
-							Address.fromBase58(params, request.p2shAddressTo()));
+							Address.fromBase58(params, request.addressTo()));
 					LOG.debug("{} - added output={} to Tx={}", tag, txOut, transaction.getHash());
 				}
 				
@@ -237,11 +245,20 @@ public class PaymentController {
 			}
 
 			clientSigs = SerializeUtils.deserializeSignatures(request.signatures());
-			SignTO responseTO = txService.signVerifyTransaction(transaction, clientKey, serverKey, clientSigs);
+			SignVerifyTO responseTO = txService.signVerifyTransaction(transaction, clientKey, serverKey, clientSigs);
+			SerializeUtils.signJSON(responseTO, serverKey);
+			
+			// if we know the receiver, we create an additional signature with the key of the payee.
+			if (maybeAppendPayeeSignature(request, payeePubKey, payeeSigInput, responseTO)) {
+				LOG.debug("{} - created additional signature for payee.", tag);
+			} else {
+				LOG.debug("{} - payee unknown (no additional signature)");
+			}
+			
 			return responseTO;
 		} catch (Exception e) {
 			LOG.error("{} - clientPubKey={} - SERVER_ERROR: ", tag, clientPubKeyHex, e);
-	        return new SignTO()
+	        return new SignVerifyTO()
 	        		.currentDate(System.currentTimeMillis())
 	        		.type(Type.SERVER_ERROR)
 	                .message(e.getMessage());
@@ -249,7 +266,37 @@ public class PaymentController {
 			LOG.debug("{} - clientPubKey={} - finished in {} ms", 
 					tag, clientPubKeyHex, Duration.between(startTime, Instant.now()).toMillis());
 		}
-	} 
+	}
+    
+    private boolean maybeAppendPayeeSignature(SignVerifyTO request, 
+	    											byte[] payeePubKey, 
+	    											TxSig payeeTxSig, 
+	    											SignVerifyTO response) {
+    	if (payeePubKey == null || !ECKey.isPubKeyCanonical(payeePubKey) || payeeTxSig == null) {
+    		return false;
+    	}
+		
+    	Keys payeeKeys = keyService.getByClientPublicKey(payeePubKey);
+    	if (payeeKeys == null) {
+    		return false; // payee unknown / external user.
+    	}
+    	ECKey payeeClientKey = ECKey.fromPublicOnly(payeePubKey);
+		ECKey payeeServerKey = ECKey.fromPrivateAndPrecalculatedPublic(
+				payeeKeys.serverPrivateKey(), payeeKeys.serverPublicKey());
+		
+		// check that payee signature is valid
+		request.payeePublicKey(payeePubKey);
+		if (!SerializeUtils.verifyJSONSignatureRaw(request, payeeTxSig, payeeClientKey)) {
+			return false;
+		}
+		request.payeePublicKey(null);
+		
+		// all checks OK - sign and append signature
+		response.payeePublicKey(payeeServerKey.getPubKey());
+		TxSig payeeSigOutput = SerializeUtils.signJSONRaw(response, payeeServerKey);
+		response.payeeMessageSig(payeeSigOutput);
+		return true;
+    }
 
 	/**
      * Input is the KeyTO with the client public key. The server will create for this client public key its
@@ -266,7 +313,8 @@ public class PaymentController {
         final long startTime = System.currentTimeMillis();
         final String tag = "{key-exchange}";
         try {
-            if (input.publicKey() == null || ECKey.isPubKeyCanonical(input.publicKey())) {
+            if (input.publicKey() == null || !ECKey.isPubKeyCanonical(input.publicKey())) {
+            	LOG.debug("{} - INPUT_MISMATCH", tag);
                 return ToUtils.newInstance(KeyTO.class, Type.INPUT_MISMATCH);
             }
             

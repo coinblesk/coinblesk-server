@@ -17,6 +17,7 @@ package com.coinblesk.server.service;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.json.SignTO;
+import com.coinblesk.json.SignVerifyTO;
 import com.coinblesk.json.TxSig;
 import com.coinblesk.json.Type;
 import com.coinblesk.server.config.AppConfig;
@@ -75,7 +76,7 @@ public class TransactionService {
     
     
     @Transactional(readOnly = false)
-	public SignTO signVerifyTransaction(Transaction transaction, ECKey clientKey, 
+	public SignVerifyTO signVerifyTransaction(Transaction transaction, ECKey clientKey, 
 																ECKey serverKey, 
 																List<TransactionSignature> clientSigs) {
 		final String tag = "{signverify}";
@@ -104,7 +105,7 @@ public class TransactionService {
 		saveAndBroadcast(transaction, clientKey.getPubKey());
 		
 		final List<TxSig> serializedServerSigs = SerializeUtils.serializeSignatures(serverSigs);
-		final SignTO responseTO = new SignTO()
+		final SignVerifyTO responseTO = new SignVerifyTO()
 				.currentDate(System.currentTimeMillis())
 				.publicKey(serverKey.getPubKey())
 				.transaction(transaction.unsafeBitcoinSerialize())
@@ -117,7 +118,6 @@ public class TransactionService {
 			responseTO.type(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT);
 		}
 		
-		SerializeUtils.signJSON(responseTO, serverKey);
 		LOG.info("{} - clientPubKey={} - signed tx={} ({} bytes) - done with status={}", 
 				tag, clientPubKeyHex, transaction.getHashAsString(), transaction.getMessageSize(), responseTO.type());
 		return responseTO;
