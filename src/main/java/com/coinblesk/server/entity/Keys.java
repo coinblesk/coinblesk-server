@@ -27,7 +27,9 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.OneToMany;
+import javax.persistence.Table;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.NetworkParameters;
@@ -38,6 +40,9 @@ import org.hibernate.annotations.SortComparator;
  * @author Thomas Bocek
  */
 @Entity(name = "KEYS")
+@Table(indexes = {
+		@Index(name = "KEYS_CLIENT_PUBLIC_KEY", columnList = "CLIENT_PUBLIC_KEY")
+})
 public class Keys implements Serializable {
 
     private static final long serialVersionUID = -7496348013847426913L;
@@ -46,7 +51,7 @@ public class Keys implements Serializable {
     @GeneratedValue(strategy=GenerationType.SEQUENCE)
     private long id;
     
-    @Column(name = "CLIENT_PUBLIC_KEY", updatable = false, length = 255)
+    @Column(name = "CLIENT_PUBLIC_KEY", unique = true, nullable = false, updatable = false, length = 255)
     private byte[] clientPublicKey;
 
     @Column(name = "SERVER_PUBLIC_KEY", unique = true, nullable = false, updatable = false, length = 255)

@@ -50,6 +50,7 @@ public final class ToUtils {
             return newInstance(input, Type.INPUT_MISMATCH);
         }
 
+/*        
         //check if the client sent us a time which is way too old (1 day)
         final Calendar fromClient = Calendar.getInstance();
         fromClient.setTime(new Date(input.currentDate()));
@@ -67,7 +68,8 @@ public final class ToUtils {
         if (fromClient.after(fromServerDayAfter)) {
             return newInstance(input, Type.TIME_MISMATCH);
         }
-
+*/
+        
         if (!SerializeUtils.verifyJSONSignature(input, ECKey.fromPublicOnly(input.publicKey()))) {
             return newInstance(input, Type.JSON_SIGNATURE_ERROR);
 
