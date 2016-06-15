@@ -1,3 +1,6 @@
+//deploy with: 
+//gradle clean assemble deploy -Pprofile=prod
+
 dependencies {
     compile 'org.postgresql:postgresql:9.4.1208.jre7'
 }
