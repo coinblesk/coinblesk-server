@@ -137,7 +137,7 @@ public class KeyServiceTest {
     	assertEquals(intoDB, fromDB);
     	
     	keys = keyService.getByClientPublicKey(clientKey.getPubKey());
-    	assertTrue(keys.addresses().contains(fromDB));
+    	assertTrue(keys.timeLockedAddresses().contains(fromDB));
     }
 
     @Test
@@ -163,6 +163,6 @@ public class KeyServiceTest {
     	assertTrue(fromDB.contains(addressEntity_2));
     	
     	keys = keyService.getByClientPublicKey(clientKey.getPubKey());
-    	assertTrue(keys.addresses().containsAll(fromDB));
+    	assertTrue(keys.timeLockedAddresses().containsAll(fromDB));
     }
 }

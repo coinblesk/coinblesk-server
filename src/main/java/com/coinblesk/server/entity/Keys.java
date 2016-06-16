@@ -16,10 +16,7 @@
 package com.coinblesk.server.entity;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.SortedSet;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -29,11 +26,9 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Index;
 import javax.persistence.OneToMany;
+import javax.persistence.OrderBy;
 import javax.persistence.Table;
 
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.NetworkParameters;
-import org.hibernate.annotations.SortComparator;
 
 /**
  *
@@ -64,8 +59,8 @@ public class Keys implements Serializable {
 	private long timeCreated;
     
     @OneToMany(mappedBy="keys", fetch = FetchType.EAGER)
-    @SortComparator(value = AddressEntity.TimeCreatedComparator.class)
-    private SortedSet<AddressEntity> addresses; 
+    @OrderBy("TIME_CREATED ASC")
+    private List<TimeLockedAddressEntity> timeLockedAddresses; 
     
     public byte[] clientPublicKey() {
         return clientPublicKey;
@@ -103,21 +98,25 @@ public class Keys implements Serializable {
     	return this;
     }
 
-	public SortedSet<AddressEntity> addresses() {
-		return addresses;
-	}
+    public List<TimeLockedAddressEntity> timeLockedAddresses() {
+    	return timeLockedAddresses;
+    }
     
-	public Keys addresses(SortedSet<AddressEntity> addresses) {
-		this.addresses = addresses;
-		return this;
-	}
+    public TimeLockedAddressEntity latestTimeLockedAddresses() {
+    	return timeLockedAddresses.get(timeLockedAddresses.size() - 1);
+    }
+    
+    public Keys timeLockedAddresses(List<TimeLockedAddressEntity> timeLockedAddresses) {
+	this.timeLockedAddresses = timeLockedAddresses;
+	return this;
+    }
 	
-	public List<Address> btcAddresses(NetworkParameters params) {
+	/*public List<Address> btcAddresses(NetworkParameters params) {
 		List<Address> addressList = new ArrayList<>(addresses.size());
-		for (AddressEntity e : addresses) {
+		for (TimeLockedAddressEntity e : addresses) {
 			addressList.add(e.toAddress(params));
 		}
 		// make explicit that this list is not stored in DB!
 		return Collections.unmodifiableList(addressList);
-	}
+	}*/
 }

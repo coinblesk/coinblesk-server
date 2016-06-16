@@ -50,7 +50,6 @@ import com.coinblesk.server.config.SecurityConfig;
 import com.coinblesk.server.service.KeyService;
 import com.coinblesk.server.utilTest.KeyTestUtil;
 import com.coinblesk.server.utilTest.RESTUtils;
-import com.coinblesk.server.utilTest.TestBean;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
@@ -68,7 +67,6 @@ import com.github.springtestdbunit.annotation.DatabaseTearDown;
 	TransactionalTestExecutionListener.class,
     DbUnitTestExecutionListener.class})
 @ContextConfiguration(classes = {
-		TestBean.class, 
 		BeanConfig.class, 
 		SecurityConfig.class})
 @WebAppConfiguration

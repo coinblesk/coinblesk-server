@@ -21,7 +21,6 @@ import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
 import com.coinblesk.server.service.WalletService;
-import com.coinblesk.server.utilTest.TestBean;
 import com.coinblesk.server.utilTest.Client;
 import com.coinblesk.server.utilTest.ServerCalls;
 import com.coinblesk.util.BitcoinUtils;
@@ -63,7 +62,7 @@ import org.springframework.web.context.WebApplicationContext;
 @TestExecutionListeners(
             {DependencyInjectionTestExecutionListener.class, TransactionalTestExecutionListener.class,
                 DbUnitTestExecutionListener.class})
-@ContextConfiguration(classes = {TestBean.class, BeanConfig.class, SecurityConfig.class})
+@ContextConfiguration(classes = {BeanConfig.class, SecurityConfig.class})
 @WebAppConfiguration
 public class RefundTest {
 

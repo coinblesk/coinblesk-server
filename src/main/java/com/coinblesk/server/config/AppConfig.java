@@ -23,7 +23,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 
 import com.coinblesk.bitcoin.BitcoinNet;
+import com.coinblesk.server.controller.AdminController;
 import com.coinblesk.server.utils.CoinUtils;
+import java.math.BigInteger;
+import org.bitcoinj.core.ECKey;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is the default configuration for testcases. If you want to change these settings e.g. when using
@@ -41,7 +45,7 @@ import com.coinblesk.server.utils.CoinUtils;
 @Configuration
 public class AppConfig {
     
-    
+    private static org.slf4j.Logger LOG = LoggerFactory.getLogger(AppConfig.class);
 
     @Value("${coinblesk.config.dir:/var/lib/coinblesk}")
     private FileSystemResource configDir;
@@ -51,6 +55,10 @@ public class AppConfig {
 
     @Value("${bitcoin.minconf:1}")
     private int minConf;
+    
+    //this private key is just use for unit tests
+    @Value("${bitcoin.potprivkey:97324063353421115888582782536755703931560774174498831848725083330146537953701}")
+    private BigInteger potPrivateKeyAddress;
 
     static {
         TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
@@ -75,5 +83,19 @@ public class AppConfig {
 
     public int getMinConf() {
         return minConf;
+    }
+    
+    public ECKey getPotPrivateKeyAddress() {
+        if(potPrivateKeyAddress == null || potPrivateKeyAddress.equals("")) {
+            ECKey ecKey = new ECKey();
+            LOG.error("No private key defined, cannot continue, suggested key:{}", ecKey.getPrivKey());
+            throw new RuntimeException("No private key defined, cannot continue, suggested key:" + ecKey.getPrivKey());
+        }
+        else if(potPrivateKeyAddress.equals("0")) {
+            LOG.warn("Using unit-test public key");
+            return ECKey.fromPrivate(potPrivateKeyAddress);
+        }
+        
+        return ECKey.fromPrivate(potPrivateKeyAddress);
     }
 }

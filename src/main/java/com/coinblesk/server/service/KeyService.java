@@ -17,9 +17,9 @@
 package com.coinblesk.server.service;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.server.dao.AddressDAO;
+import com.coinblesk.server.dao.TimeLockedAddressDAO;
 import com.coinblesk.server.dao.KeyDAO;
-import com.coinblesk.server.entity.AddressEntity;
+import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.entity.Keys;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.util.Pair;
@@ -45,7 +45,7 @@ public class KeyService {
     private KeyDAO clientKeyDAO;
     
     @Autowired
-    private AddressDAO addressDAO;
+    private TimeLockedAddressDAO addressDAO;
     
     @Transactional(readOnly = true)
     public Keys getByClientPublicKey(final byte[] clientPublicKey) {
@@ -156,16 +156,16 @@ public class KeyService {
     	return addressDAO.findTimeLockedAddressesByClientPublicKey(publicKey);
     }
     
-    public AddressEntity findAddressByAddressHash(byte[] addressHash) {
+    public TimeLockedAddressEntity findAddressByAddressHash(byte[] addressHash) {
     	if (addressHash == null) {
 			throw new IllegalArgumentException("addressHash must not be null.");
 		}
-    	AddressEntity address = addressDAO.findAddressByAddressHash(addressHash);
+    	TimeLockedAddressEntity address = addressDAO.findAddressByAddressHash(addressHash);
     	return address;
     }
     
     public byte[] getRedeemScriptByAddressHash(byte[] addressHash) {
-		AddressEntity address = findAddressByAddressHash(addressHash);
+		TimeLockedAddressEntity address = findAddressByAddressHash(addressHash);
 		byte[] data = address != null ? address.getRedeemScript() : null;
 		return data;
 	}

@@ -20,9 +20,23 @@ import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.json.Type;
 import com.coinblesk.json.UserAccountStatusTO;
 import com.coinblesk.json.UserAccountTO;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.config.UserRole;
+import com.coinblesk.server.entity.Keys;
+import com.coinblesk.util.BitcoinUtils;
+import com.coinblesk.util.CoinbleskException;
+import com.coinblesk.util.InsufficientFunds;
 import com.coinblesk.util.Pair;
+import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionOutput;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -39,12 +53,23 @@ public class UserAccountService {
     private static final String EMAIL_PATTERN
             = "^[_A-Za-z0-9-\\+]+(\\.[_A-Za-z0-9-]+)*@"
             + "[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$";
+    
+    private final static Logger LOG = LoggerFactory.getLogger(UserAccountService.class);
 
     @Autowired
     private UserAccountDAO userAccountDao;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+    
+    @Autowired
+    private AppConfig appConfig;
+    
+    @Autowired
+    private WalletService walletService;
+    
+    @Autowired
+    private KeyService keyService;
 
     @Transactional(readOnly = true)
     public UserAccount getByEmail(String email) {
@@ -85,6 +110,7 @@ public class UserAccountService {
         userAccount.setCreationDate(new Date());
         userAccount.setDeleted(false);
         userAccount.setEmailToken(UUID.randomUUID().toString());
+        userAccount.setUserRole(UserRole.USER);
         userAccountDao.save(userAccount);
         return new Pair(new UserAccountStatusTO().setSuccess(), userAccount);
     }
@@ -133,6 +159,35 @@ public class UserAccountService {
         userAccountTO.email(userAccount.getEmail());
         return userAccountTO;
     }
+    
+    @Transactional(readOnly = false)
+    public UserAccountStatusTO transferP2SH(ECKey clientKey, String email) {
+        final NetworkParameters params = appConfig.getNetworkParameters();
+        final UserAccount userAccount = userAccountDao.getByAttribute("email", email);
+        if (userAccount == null) {
+            return new UserAccountStatusTO().type(Type.NO_ACCOUNT);
+        }
+        final ECKey pot = appConfig.getPotPrivateKeyAddress();
+        long satoshi = userAccount.getBalance().multiply(new BigDecimal(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI)).longValue();
+        
+        List<TransactionOutput> outputs = walletService.potTransactionOutput(params);
+        
+        //TODO: get current timelocked multisig address
+        Keys keys = keyService.getByClientPublicKey(clientKey.getPubKey());
+        Transaction tx;
+        try {
+             tx = BitcoinUtils.createTx(params, outputs, pot.toAddress(params), 
+                keys.latestTimeLockedAddresses().toAddress(params), satoshi);
+            } catch (CoinbleskException | InsufficientFunds e) {
+                LOG.error("Cannot create transaction", e);
+                return null;
+        }
+        
+        walletService.broadcast(tx);
+        userAccount.setBalance(BigDecimal.ZERO);
+        
+        return new UserAccountStatusTO().setSuccess();
+    }
 
     //for debugging
     @Transactional(readOnly = true)
@@ -143,4 +198,6 @@ public class UserAccountService {
         }
         return userAccount.getEmailToken();
     }
+
+    
 }

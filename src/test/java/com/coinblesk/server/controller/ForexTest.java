@@ -18,7 +18,6 @@ package com.coinblesk.server.controller;
 import com.coinblesk.json.ExchangeRateTO;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
-import com.coinblesk.server.utilTest.TestBean;
 import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import org.junit.Assert;
@@ -51,7 +50,7 @@ import org.springframework.web.context.WebApplicationContext;
         {DependencyInjectionTestExecutionListener.class, TransactionalTestExecutionListener.class,
             DbUnitTestExecutionListener.class})
 @ContextConfiguration(
-        classes = {TestBean.class, BeanConfig.class, SecurityConfig.class})
+        classes = {BeanConfig.class, SecurityConfig.class})
 @WebAppConfiguration
 public class ForexTest {
     @Autowired

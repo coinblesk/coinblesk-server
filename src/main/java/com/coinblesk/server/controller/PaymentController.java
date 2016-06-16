@@ -204,7 +204,7 @@ public class PaymentController {
 	        }
 	        serverKey = ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey());
 	        
-			if (keys.addresses().isEmpty()) {
+			if (keys.timeLockedAddresses().isEmpty()) {
 				LOG.debug("{} - clientPubKey={} - ADDRESS_EMPTY", tag, clientPubKeyHex);
 				return ToUtils.newInstance(SignTO.class, Type.ADDRESS_EMPTY, serverKey); 
 			}
@@ -226,7 +226,7 @@ public class PaymentController {
 				
 				// if change is provided, we add an output to the most recently created address of the client.
 				if (request.amountChange() > 0) {
-					Address changeAddress = keys.addresses().last().toAddress(params);
+					Address changeAddress = keys.latestTimeLockedAddresses().toAddress(params);
 					Coin changeAmount = Coin.valueOf(request.amountChange());
 					TransactionOutput changeOut = transaction.addOutput(changeAmount, changeAddress);
 					LOG.debug("{} - added change output={} to Tx={}", tag, changeOut, transaction.getHash());

@@ -17,7 +17,6 @@ package com.coinblesk.server.controller;
 
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
-import com.coinblesk.server.utilTest.TestBean;
 
 import com.coinblesk.json.KeyTO;
 import com.coinblesk.json.Type;
@@ -54,7 +53,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @TestExecutionListeners(
             {DependencyInjectionTestExecutionListener.class, TransactionalTestExecutionListener.class,
                 DbUnitTestExecutionListener.class})
-@ContextConfiguration(classes = {TestBean.class, BeanConfig.class, SecurityConfig.class})
+@ContextConfiguration(classes = {BeanConfig.class, SecurityConfig.class})
 @WebAppConfiguration
 public class RegisterKeyTest {
 

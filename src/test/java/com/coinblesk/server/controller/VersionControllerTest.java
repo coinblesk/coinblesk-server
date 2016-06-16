@@ -39,7 +39,6 @@ import com.coinblesk.json.VersionTO;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
 import com.coinblesk.server.utilTest.RESTUtils;
-import com.coinblesk.server.utilTest.TestBean;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 
 /**
@@ -52,8 +51,7 @@ import com.github.springtestdbunit.DbUnitTestExecutionListener;
 	DependencyInjectionTestExecutionListener.class, 
 	TransactionalTestExecutionListener.class,
     DbUnitTestExecutionListener.class})
-@ContextConfiguration(classes = {
-		TestBean.class, 
+@ContextConfiguration(classes = { 
 		BeanConfig.class, 
 		SecurityConfig.class})
 @WebAppConfiguration
@@ -97,7 +95,7 @@ public class VersionControllerTest {
 	@Test
 	public void testVersion_SupportedClient() throws Exception {
 		VersionTO requestTO = new VersionTO();
-		requestTO.version(SUPPORTED_CLIENT_VERSION);
+		requestTO.clientVersion(SUPPORTED_CLIENT_VERSION);
 		VersionTO responseTO = RESTUtils.postRequest(mockMvc, URL_VERSION, requestTO);
 		
 		assertNotNull(responseTO);
@@ -109,7 +107,7 @@ public class VersionControllerTest {
 	@Test
 	public void testVersion_UnsupportedClient() throws Exception {
 		VersionTO requestTO = new VersionTO();
-		requestTO.version(UNSUPPORTED_CLIENT_VERSION);
+		requestTO.clientVersion(UNSUPPORTED_CLIENT_VERSION);
 		VersionTO responseTO = RESTUtils.postRequest(mockMvc, URL_VERSION, requestTO);
 		
 		assertNotNull(responseTO);

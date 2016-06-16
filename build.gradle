@@ -44,7 +44,7 @@ dependencies {
     
     
     compile 'javax.transaction:javax.transaction-api:1.2'
-    compile 'javax.servlet:jstl:1.2'
+    //compile 'javax.servlet:jstl:1.2'
     providedCompile 'javax.servlet:javax.servlet-api:3.1.0'
     providedCompile 'javax.servlet.jsp:javax.servlet.jsp-api:2.3.1'
     compile 'com.sun.mail:javax.mail:1.5.5'
@@ -78,7 +78,7 @@ dependencies {
     
     compile 'ch.qos.logback:logback-classic:1.1.6'
     compile 'org.slf4j:slf4j-api:1.7.18'
-    compile 'com.coinblesk:coinblesk-shared-resources:1.4.44'
+    compile 'com.coinblesk:coinblesk-shared-resources:1.4.46'
     compile 'com.madgag.spongycastle:core:1.54.0.0'
 
     

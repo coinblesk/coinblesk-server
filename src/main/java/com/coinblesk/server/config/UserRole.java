@@ -13,13 +13,14 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package com.coinblesk.server.entity;
+package com.coinblesk.server.config;
 
 import org.springframework.security.core.GrantedAuthority;
 
 /**
  * 
  * @author Andreas Albrecht
+ * @author Thomas Bocek
  *
  */
 public enum UserRole implements GrantedAuthority {
@@ -27,7 +28,7 @@ public enum UserRole implements GrantedAuthority {
 	USER, 
 	ADMIN;
 
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 13449904136869644L;
 
 	@Override
 	public String getAuthority() {

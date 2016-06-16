@@ -44,7 +44,7 @@ import com.coinblesk.util.CoinbleskException;
  */
 @RestController
 @RequestMapping(value = {"/version", "/v"})
-@ApiVersion({"v1", ""})
+@ApiVersion({"v1"})
 public class VersionController {
 	
 	private final static Logger LOG = LoggerFactory.getLogger(VersionController.class);
@@ -70,7 +70,7 @@ public class VersionController {
 		
 		try {
 			final String serverVersion = getServerVersion();
-			final String clientVersion = input.version();
+			final String clientVersion = input.clientVersion();
 			if (clientVersion == null || clientVersion.isEmpty()) {
 				return new VersionTO().type(Type.INPUT_MISMATCH);
 			}

@@ -16,18 +16,14 @@
 
 package com.coinblesk.server.entity;
 
+import com.coinblesk.server.config.UserRole;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
-import java.util.Set;
-
-import javax.persistence.CollectionTable;
 import javax.persistence.Column;
-import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -36,8 +32,6 @@ import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 /**
  *
@@ -69,13 +63,9 @@ public class UserAccount implements Serializable {
     private BigDecimal balance;
     @Column(name = "EMAIL_TOKEN", nullable = true)
     private String emailToken;
-    @ElementCollection(targetClass=UserRole.class, fetch=FetchType.EAGER)
     @Enumerated(EnumType.STRING)
-    @CollectionTable(name="USER_ROLES", indexes = {
-    		@Index(name = "USER_ROLES_INDEX", columnList = "USER_ACCOUNT_ID"), 
-    		@Index(name="user_role_unique", unique=true, columnList="user_account_id,user_role")})
     @Column(name="USER_ROLE")
-    private Set<UserRole> userRoles;
+    private UserRole userRole;
     
     public boolean isDeleted() {
         return deleted;
@@ -149,12 +139,12 @@ public class UserAccount implements Serializable {
         return this;
     }
     
-    public Set<UserRole> getUserRoles() {
-    	return userRoles;
+    public UserRole getUserRole() {
+    	return userRole;
     }
     
-    public UserAccount setUserRoles(Set<UserRole> userRoles) {
-    	this.userRoles = userRoles;
+    public UserAccount setUserRole(UserRole userRole) {
+    	this.userRole = userRole;
     	return this;
     }
     
@@ -174,50 +164,9 @@ public class UserAccount implements Serializable {
             .append(", balance: ")
             .append(getBalance())
             .append(", emailToken: ")
-            .append(getEmailToken());
-        sb.append(", userRoles: ");
-        userRoles.forEach(r -> sb.append(r.name()).append(";"));
+            .append(getEmailToken())
+            .append(", userRoles: ")
+            .append(getUserRole());
         return sb.toString();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o == null) {
-            return false;
-        }
-
-        if (o == this) {
-            return true;
-        }
-
-        if (!(o instanceof UserAccount)) {
-            return false;
-        }
-
-        UserAccount other = (UserAccount) o;
-        return new EqualsBuilder().append(getId(), other.getId())
-                .append(getUsername(), other.getUsername())
-                .append(getPassword(), other.getPassword())
-                .append(getEmail(), other.getEmail())
-                .append(isDeleted(), other.isDeleted())
-                .append(getCreationDate(), other.getCreationDate())
-                .append(getBalance(), other.getBalance())
-                .append(getUserRoles(), other.getUserRoles())
-                .isEquals();
-                
-    }
-
-    @Override
-    public int hashCode() {
-        return new HashCodeBuilder(31, 59)
-        		.append(getId())
-                .append(getUsername())
-                .append(getPassword())
-                .append(getEmail())
-                .append(getCreationDate())
-                .append(isDeleted())
-                .append(getBalance())
-                .append(getUserRoles())
-                .toHashCode();
     }
 }

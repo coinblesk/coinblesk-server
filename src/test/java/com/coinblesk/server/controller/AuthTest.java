@@ -15,7 +15,6 @@
  */
 package com.coinblesk.server.controller;
 
-import com.coinblesk.server.utilTest.TestBean;
 import com.coinblesk.server.config.AdminEmail;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
@@ -62,7 +61,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 @RunWith(SpringJUnit4ClassRunner.class)
 @TestExecutionListeners({DependencyInjectionTestExecutionListener.class, TransactionalTestExecutionListener.class,
     DbUnitTestExecutionListener.class})
-@ContextConfiguration(classes = {TestBean.class, BeanConfig.class, SecurityConfig.class})
+@ContextConfiguration(classes = {BeanConfig.class, SecurityConfig.class})
 @WebAppConfiguration
 public class AuthTest {
 

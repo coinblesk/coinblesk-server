@@ -22,6 +22,7 @@ import com.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.json.Type;
 import com.coinblesk.json.UserAccountStatusTO;
 import com.coinblesk.json.UserAccountTO;
+import com.coinblesk.server.config.UserEmail;
 import com.coinblesk.util.Pair;
 import javax.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -53,10 +54,10 @@ public class UserController {
     private UserAccountService userAccountService;
 
     @Autowired
-    private JavaMailSender javaMailService;
-
-    @Autowired
     private AdminEmail adminEmail;
+    
+    @Autowired
+    private UserEmail userEmail;
 
     //CRUD for the user
     @RequestMapping(value = {"/create", "/c"}, method = RequestMethod.POST,
@@ -71,15 +72,12 @@ public class UserController {
             if ((pair.element0().isSuccess()
                     || pair.element0().type() == Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_NOT_ACTIVATED)
                     && pair.element1() != null && pair.element1().getEmailToken() != null) {
-                SimpleMailMessage smm = new SimpleMailMessage();
-                smm.setFrom("bitcoin@csg.uzh.ch");
-                smm.setTo(pair.element1().getEmail());
-                //TODO: text/layout
-                smm.setSubject("Coinblesk Account Activation");
-                smm.setText("Please click here: http://host/");
+                
                 try {
                     LOG.debug("send email to {}", pair.element1().getEmail());
-                    javaMailService.send(smm);
+                    userEmail.send(pair.element1().getEmail(), 
+                            "Coinblesk Account Activation", 
+                            "Please click here: http://host/");
                 } catch (Exception e) {
                     LOG.error("Mail send error", e);
                     adminEmail.send("Coinblesk Error", "Unexpected Error: " + e);

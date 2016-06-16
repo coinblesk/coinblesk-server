@@ -16,9 +16,10 @@
 package com.coinblesk.server.config;
 
 import com.coinblesk.server.entity.UserAccount;
-import com.coinblesk.server.entity.UserRole;
 import com.coinblesk.server.service.UserAccountService;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.regex.Pattern;
 
 import javax.servlet.Filter;
@@ -173,8 +174,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			if (!passwordEncoder.matches(password, userAccount.getPassword())) {
 				throw new BadCredentialsException("Wrong username/password");
 			}
-            
-            return new UsernamePasswordAuthenticationToken(email, password, userAccount.getUserRoles());
+            Collection<UserRole> roles = new ArrayList<UserRole>(1);
+            roles.add(userAccount.getUserRole());
+            return new UsernamePasswordAuthenticationToken(email, password, roles);
         };
     }
 }

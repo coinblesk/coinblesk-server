@@ -9,7 +9,6 @@ import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
 import com.coinblesk.server.service.WalletService;
-import com.coinblesk.server.utilTest.TestBean;
 import com.coinblesk.json.BalanceTO;
 import com.coinblesk.json.KeyTO;
 import com.coinblesk.json.TxSig;

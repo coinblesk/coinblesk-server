@@ -23,7 +23,7 @@ import com.coinblesk.json.Type;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.controller.PaymentController;
 import com.coinblesk.server.dao.TxDAO;
-import com.coinblesk.server.entity.AddressEntity;
+import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.entity.Tx;
 import com.coinblesk.server.utils.ToUtils;
@@ -270,7 +270,7 @@ public class TransactionService {
     		}
     		
     		byte[] addressHash = output.getScriptPubKey().getPubKeyHash();
-    		AddressEntity address = keyService.findAddressByAddressHash(addressHash);
+    		TimeLockedAddressEntity address = keyService.findAddressByAddressHash(addressHash);
     		if (address == null) {
     			// unknown input (maybe not locked)
     			return false;

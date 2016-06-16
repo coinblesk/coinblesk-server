@@ -15,8 +15,20 @@
  */
 package com.coinblesk.server.config;
 
+import com.coinblesk.util.Pair;
+import java.util.LinkedList;
+import java.util.Properties;
+import java.util.Queue;
+import java.util.concurrent.atomic.AtomicInteger;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 
 /**
  *
@@ -25,7 +37,10 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class MailConfig {
     
-    @Value("${email.host:localhost}")
+    private final static String UNIT_TEST = "unittest";
+    private final Queue<Pair<String,String>> emailQueue = new LinkedList<>();
+    
+    @Value("${email.host:"+UNIT_TEST+"}")
     private String host;
 
     @Value("${email.port:25}")
@@ -86,5 +101,95 @@ public class MailConfig {
     
     public String getAdmin() {
 	return admin;
+    }
+    
+    @Bean UserEmail userEmail() {
+        return new UserEmail() {
+            final private JavaMailSender javaMailService = javaMailService();
+            @Override
+            public void send(String recipient, String subject, String text) {
+                if(getHost().equals(UNIT_TEST)) {
+                    emailQueue.add(new Pair<>(subject,text));
+                } else {
+                    SimpleMailMessage smm = new SimpleMailMessage();
+                    smm.setFrom("bitcoin@csg.uzh.ch");
+                    smm.setTo(recipient);
+                    smm.setSubject(subject);
+                    smm.setText(text);
+                    try {
+                        javaMailService.send(smm);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+                
+            }
+
+            @Override
+            public int sentEmails() {
+                return emailQueue.size();
+            }
+        };
+    }
+    
+    @Bean
+    public AdminEmail adminEmail() {
+        return new AdminEmail() {
+            final private JavaMailSender javaMailService = javaMailService();
+            
+            @Override
+            public void send(String subject, String text) {
+                if(getHost().equals(UNIT_TEST)) {
+                    emailQueue.add(new Pair<>(subject,text));
+                } else {
+                    SimpleMailMessage smm = new SimpleMailMessage();
+                    smm.setFrom("bitcoin@csg.uzh.ch");
+                    smm.setTo(getAdmin());
+                    smm.setSubject(subject);
+                    smm.setText(text);
+                    try {
+                        javaMailService.send(smm);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+            @Override
+            public int sentEmails() {
+                return emailQueue.size();
+            }
+        };   
+    }
+    
+    //as seen in: http://stackoverflow.com/questions/22483407/send-emails-with-spring-by-using-java-annotations
+    private JavaMailSender javaMailService() { 
+        JavaMailSenderImpl javaMailSender = new JavaMailSenderImpl();
+        if(isAuth()) {
+            Session session = Session.getInstance(getMailProperties(), new javax.mail.Authenticator() {
+                @Override
+                protected PasswordAuthentication getPasswordAuthentication() {
+                    return new PasswordAuthentication(getUsername(), getPassword());
+                }
+            });
+            javaMailSender.setSession(session);
+        } else {
+            javaMailSender.setJavaMailProperties(getMailProperties());
+        }
+        return javaMailSender;
+    }
+    
+    private Properties getMailProperties() {
+        Properties properties = new Properties();
+        properties.setProperty("mail.transport.protocol", "smtp");
+        properties.setProperty("mail.smtp.auth", Boolean.toString(isAuth()));
+        properties.setProperty("mail.smtp.starttls.enable", Boolean.toString(isStartTLS()));
+        properties.setProperty("mail.debug", Boolean.toString(isDebug()));
+        properties.setProperty("mail.smtp.host", getHost());
+	properties.setProperty("mail.smtp.port", Integer.toString(getPort()));
+        if(getTrust() != null) {
+            properties.setProperty("mail.smtp.ssl.trust", getTrust() );
+        }
+        return properties;
     }
 }

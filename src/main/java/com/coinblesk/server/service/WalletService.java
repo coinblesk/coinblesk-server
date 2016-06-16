@@ -56,7 +56,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.coinblesk.bitcoin.BitcoinNet;
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.entity.AddressEntity;
+import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.entity.Keys;
 import com.coinblesk.util.BitcoinUtils;
 import com.google.common.util.concurrent.FutureCallback;
@@ -80,6 +80,9 @@ public class WalletService {
 
     @Autowired
     private TransactionService transactionService;
+    
+    @Autowired
+    private TxQueueService txQueueService;
 
     private Wallet wallet;
 
@@ -121,7 +124,10 @@ public class WalletService {
         //TODO: do we nood this?
         //wallet.currentAddress(KeyChain.KeyPurpose.RECEIVE_FUNDS);
         wallet.autosaveToFile(walletFile, 5, TimeUnit.SECONDS, null);
-        walletWatchKeys();
+        walletWatchKeysP2SH(params);
+        walletWatchKeysCLTV(params);
+        walletWatchKeysPot(params);
+        
         blockStore = new SPVBlockStore(params, chainFile);
         blockChain = new BlockChain(params, blockStore);
         peerGroup = new PeerGroup(params, blockChain);
@@ -158,9 +164,11 @@ public class WalletService {
                 }
             }
         });
+        pendingTransactions();
     }
     
-    private void walletWatchKeys() {
+    private void walletWatchKeysP2SH(final NetworkParameters params) {
+        
         final List<List<ECKey>> all = keyService.all();
         final List<Script> scripts = new ArrayList<>();
         for (List<ECKey> keys : all) {
@@ -169,11 +177,35 @@ public class WalletService {
         }
         wallet.addWatchedScripts(scripts);
         
+        
+    }
+    
+    private void walletWatchKeysCLTV(final NetworkParameters params) {
+        
         for (Keys key : keyService.allKeys()) {
-        	for (AddressEntity address : key.addresses()) {
-        		wallet.addWatchedAddress(address.toAddress(appConfig.getNetworkParameters()));
+        	for (TimeLockedAddressEntity address : key.timeLockedAddresses()) {
+        		wallet.addWatchedAddress(address.toAddress(params));
         	}
         }
+    }
+    
+    private void walletWatchKeysPot(final NetworkParameters params) {
+        ECKey potAddress = appConfig.getPotPrivateKeyAddress();
+        wallet.addWatchedAddress(potAddress.toAddress(params));
+    }
+    
+    public List<TransactionOutput> potTransactionOutput(final NetworkParameters params) {
+        ECKey potAddress = appConfig.getPotPrivateKeyAddress();
+        final List<TransactionOutput> retVal = new ArrayList<TransactionOutput>();
+        for(TransactionOutput output:wallet.getWatchedOutputs(true)) {
+            Address to = output.getScriptPubKey().getToAddress(params);
+            if(!to.isP2SHAddress()) {
+                if(to.equals(potAddress.toAddress(params))) {
+                    retVal.add(output);
+                }
+            }
+        }
+        return retVal;
     }
 
     public BlockChain blockChain() {
@@ -308,12 +340,14 @@ public class WalletService {
     }
     
     public void broadcast(final Transaction fullTx) {
+        txQueueService.addTx(fullTx);
         //broadcast immediately
         final TransactionBroadcast broadcast = peerGroup().broadcastTransaction(fullTx);
         Futures.addCallback(broadcast.future(), new FutureCallback<Transaction>() {
             @Override
             public void onSuccess(Transaction transaction) {
                 LOG.debug("broadcast success, transaction is out {}", fullTx.getHash());
+                txQueueService.removeTx(fullTx);
             }
 
             @Override
@@ -330,5 +364,12 @@ public class WalletService {
             }
         });
 
+    }
+
+    private void pendingTransactions() {
+        final NetworkParameters params = appConfig.getNetworkParameters();
+        for(Transaction tx:txQueueService.all(params)) {
+            broadcast(tx);
+        }
     }
 }

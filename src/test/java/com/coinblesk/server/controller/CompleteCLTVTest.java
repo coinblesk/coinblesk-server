@@ -65,7 +65,6 @@ import com.coinblesk.server.config.SecurityConfig;
 import com.coinblesk.server.service.KeyService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.FakeTxBuilder;
-import com.coinblesk.server.utilTest.TestBean;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
@@ -78,7 +77,6 @@ import com.google.common.io.Files;
 	TransactionalTestExecutionListener.class,
     DbUnitTestExecutionListener.class})
 @ContextConfiguration(classes = {
-		TestBean.class, 
 		BeanConfig.class, 
 		SecurityConfig.class})
 @WebAppConfiguration

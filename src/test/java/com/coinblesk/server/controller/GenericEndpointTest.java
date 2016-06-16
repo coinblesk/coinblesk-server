@@ -11,7 +11,6 @@ import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
 import com.coinblesk.server.service.WalletService;
-import com.coinblesk.server.utilTest.TestBean;
 import com.coinblesk.json.RefundTO;
 import com.coinblesk.json.SignTO;
 import com.coinblesk.json.Type;
@@ -66,7 +65,7 @@ import org.springframework.web.context.WebApplicationContext;
 @TestExecutionListeners(
             {DependencyInjectionTestExecutionListener.class, TransactionalTestExecutionListener.class,
                 DbUnitTestExecutionListener.class})
-@ContextConfiguration(classes = {TestBean.class, BeanConfig.class, SecurityConfig.class})
+@ContextConfiguration(classes = {BeanConfig.class, SecurityConfig.class})
 @WebAppConfiguration
 public class GenericEndpointTest {
 

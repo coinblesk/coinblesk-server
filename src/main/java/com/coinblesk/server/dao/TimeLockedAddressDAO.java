@@ -12,12 +12,11 @@ import javax.persistence.criteria.Root;
 
 import org.springframework.stereotype.Repository;
 
-import com.coinblesk.server.entity.AddressEntity;
 import com.coinblesk.server.entity.Keys;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 
 @Repository
-public class AddressDAO {
+public class TimeLockedAddressDAO {
 	
 	@PersistenceContext()
     private EntityManager em;
@@ -26,7 +25,7 @@ public class AddressDAO {
         return em.merge(enity);
     }
 
-	// TODO: make generic --> AddressEntity instead of timelockedaddressentity.
+	// TODO: make generic --> TimeLockedAddressEntity instead of timelockedaddressentity.
 	public TimeLockedAddressEntity findTimeLockedAddressByAddressHash(byte[] addressHash) {
 		final CriteriaBuilder cb = em.getCriteriaBuilder();
         final CriteriaQuery<TimeLockedAddressEntity> query = cb.createQuery(TimeLockedAddressEntity.class);
@@ -47,13 +46,13 @@ public class AddressDAO {
 		return result;
 	}
 	
-	public AddressEntity findAddressByAddressHash(byte[] addressHash160) {
+	public TimeLockedAddressEntity findAddressByAddressHash(byte[] addressHash160) {
 		final CriteriaBuilder cb = em.getCriteriaBuilder();
-        final CriteriaQuery<AddressEntity> query = cb.createQuery(AddressEntity.class);
-        final Root<AddressEntity> from = query.from(AddressEntity.class);
+        final CriteriaQuery<TimeLockedAddressEntity> query = cb.createQuery(TimeLockedAddressEntity.class);
+        final Root<TimeLockedAddressEntity> from = query.from(TimeLockedAddressEntity.class);
         final Predicate condition = cb.equal(from.get("addressHash"), addressHash160);
-        final CriteriaQuery<AddressEntity> select = query.select(from).where(condition);
-        final AddressEntity result = DAOUtils.getSingleResultOrNull(em.createQuery(select));
+        final CriteriaQuery<TimeLockedAddressEntity> select = query.select(from).where(condition);
+        final TimeLockedAddressEntity result = DAOUtils.getSingleResultOrNull(em.createQuery(select));
         return result;
 	}
 

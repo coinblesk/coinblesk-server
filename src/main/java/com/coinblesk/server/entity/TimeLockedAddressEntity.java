@@ -15,20 +15,102 @@
  */
 package com.coinblesk.server.entity;
 
+import java.util.Comparator;
+
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Index;
+import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Utils;
 
-@Entity
-@DiscriminatorValue("TIME_LOCKED_ADDRESS")
-public class TimeLockedAddressEntity extends AddressEntity {
+@Entity(name = "TIME_LOCKED_ADDRESS")
+@Table(indexes = {
+	    @Index(name = "ADDRESS_HASH_INDEX", columnList = "addressHash", unique = true)})
+public class TimeLockedAddressEntity {
+	
+	@Id
+	@GeneratedValue(strategy=GenerationType.SEQUENCE)
+	private long id;
+	
+	@ManyToOne
+        @JoinColumn(name="keys_fk")
+        private Keys keys;
 	
 	@Column(nullable = false, updatable = false)
+	private long timeCreated;
+	
+	@Column(nullable = false, unique=true, updatable = false, length=255)
+	private byte[] addressHash;
+	
+	@Column(nullable = false, updatable = false, length=4096)
+	private byte[] redeemScript;
+        
+        @Column(nullable = false, updatable = false)
 	private long lockTime;
+	
+	public long getId() {
+		return id;
+	}
+	
+	public TimeLockedAddressEntity setId(long id) {
+		this.id = id;
+		return this;
+	}
+	
+	public Keys getKeys() {
+		return keys;
+	}
+	
+	public TimeLockedAddressEntity setKeys(Keys keys) {
+		this.keys = keys;
+		return this;
+	}
+	
+	public long getTimeCreated() {
+		return timeCreated;
+	}
+	
+	public TimeLockedAddressEntity setTimeCreated(long timeCreatedSeconds) {
+		this.timeCreated = timeCreatedSeconds;
+		return this;
+	}
+	
+	public byte[] getAddressHash() {
+		return addressHash;
+	}
+	
+	public TimeLockedAddressEntity setAddressHash(byte[] addressHash) {
+		this.addressHash = addressHash;
+		return this;
+	}
+	
+	public byte[] getRedeemScript() {
+		return redeemScript;
+	}
+	
+	public TimeLockedAddressEntity setRedeemScript(byte[] redeemScript) {
+		this.redeemScript = redeemScript;
+		return this;
+	}
+	
+	public Address toAddress(NetworkParameters params) {
+		return Address.fromP2SHHash(params, addressHash);
+	}
+        
+        
 	
 	public long getLockTime() {
 		return lockTime;
@@ -37,6 +119,23 @@ public class TimeLockedAddressEntity extends AddressEntity {
 	public TimeLockedAddressEntity setLockTime(long lockTime) {
 		this.lockTime = lockTime;
 		return this;
+	}
+	
+	public String toString(NetworkParameters params) {
+		StringBuilder sb = new StringBuilder();
+		sb.append(getClass().getSimpleName());
+		sb.append("[Id=").append(id);
+		sb.append(", AddressHash=").append(Utils.HEX.encode(addressHash));
+		if (params != null) {
+			sb.append(", Address=").append(toAddress(params));
+		}
+		sb.append("]");
+		return sb.toString();
+	}
+	
+	@Override
+	public String toString() {
+		return toString(null);
 	}
 	
 	@Override 
@@ -55,26 +154,29 @@ public class TimeLockedAddressEntity extends AddressEntity {
 		
 		final TimeLockedAddressEntity other = (TimeLockedAddressEntity) object;
 		return new EqualsBuilder()
-				.appendSuper(super.equals(other))
-				.append(lockTime, other.getLockTime())
+				.append(id, other.getId())
+				.append(addressHash, other.getAddressHash())
+				.append(redeemScript, other.getRedeemScript())
 				.isEquals();
 	}
 	
 	@Override
 	public int hashCode() {
 	     return new HashCodeBuilder()
-	    		 .appendSuper(super.hashCode())
-	    		 .append(lockTime)
+	    		 .append(id)
+	    		 .append(addressHash)
+	    		 .append(redeemScript)
 	    		 .toHashCode();
 	}
 	
-	@Override
-	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(getClass().getSimpleName());
-		sb.append("[Id=").append(getId());
-		sb.append(", AddressHash=").append(Utils.HEX.encode(getAddressHash()));
-		sb.append(", lockTime=").append(lockTime).append("]");
-		return sb.toString();
+	/**
+	 * Sorts addresses by {@link TimeLockedAddressEntity#timeCreated} in ascending order.
+	 */
+	public static class TimeCreatedComparator implements Comparator<TimeLockedAddressEntity> {
+		@Override
+		public int compare(TimeLockedAddressEntity lhs, TimeLockedAddressEntity rhs) {
+			return Long.compare(lhs.getTimeCreated(), rhs.getTimeCreated());
+		}
+		
 	}
 }
