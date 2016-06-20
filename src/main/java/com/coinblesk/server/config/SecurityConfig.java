@@ -55,6 +55,12 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
+    
+    @Autowired
+    private UserAccountService userAccountService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     final private static String REQUEST_ATTRIBUTE_NAME = "_csrf";
     final private static String RESPONSE_HEADER_NAME = "X-CSRF-HEADER";
@@ -129,12 +135,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		return false;
 	}
            
-
-    @Autowired
-    private UserAccountService userAccountService;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
