@@ -176,17 +176,18 @@ public class UserAccountService {
         Keys keys = keyService.getByClientPublicKey(clientKey.getPubKey());
         Transaction tx;
         try {
-             tx = BitcoinUtils.createTx(params, outputs, pot.toAddress(params), 
+            tx = BitcoinUtils.createTx(params, outputs, pot.toAddress(params), 
                 keys.latestTimeLockedAddresses().toAddress(params), satoshi);
-            } catch (CoinbleskException | InsufficientFunds e) {
-                LOG.error("Cannot create transaction", e);
-                return null;
+            LOG.debug("About tot zero balance with tx {}", tx);
+            userAccount.setBalance(BigDecimal.ZERO);
+            LOG.debug("About to broadcast tx");
+            walletService.broadcast(tx);
+            LOG.debug("Broadcast done");
+            return new UserAccountStatusTO().setSuccess();
+        } catch (CoinbleskException | InsufficientFunds e) {
+            LOG.error("Cannot create transaction", e);
+            return new UserAccountStatusTO().type(Type.ACCOUNT_ERROR).message(e.getMessage());
         }
-        
-        walletService.broadcast(tx);
-        userAccount.setBalance(BigDecimal.ZERO);
-        
-        return new UserAccountStatusTO().setSuccess();
     }
 
     //for debugging
