@@ -200,13 +200,13 @@ public class PaymentController {
 	        if (keys == null || keys.clientPublicKey() == null ||
 	        		keys.serverPrivateKey() == null || keys.serverPublicKey() == null) {
 	        	LOG.debug("{} - clientPubKey={} - KEYS_NOT_FOUND", tag, clientPubKeyHex);
-	        	return ToUtils.newInstance(SignTO.class, Type.KEYS_NOT_FOUND);
+	        	return ToUtils.newInstance(SignVerifyTO.class, Type.KEYS_NOT_FOUND);
 	        }
 	        serverKey = ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey());
 	        
 			if (keys.timeLockedAddresses().isEmpty()) {
 				LOG.debug("{} - clientPubKey={} - ADDRESS_EMPTY", tag, clientPubKeyHex);
-				return ToUtils.newInstance(SignTO.class, Type.ADDRESS_EMPTY, serverKey); 
+				return ToUtils.newInstance(SignVerifyTO.class, Type.ADDRESS_EMPTY, serverKey); 
 			}
 	     		        
 	        /*
@@ -234,14 +234,14 @@ public class PaymentController {
 				
 			} else {
 				LOG.debug("{} - clientPubKey={} - INPUT_MISMATCH", tag, clientPubKeyHex);
-				return ToUtils.newInstance(SignTO.class, Type.INPUT_MISMATCH, serverKey);
+				return ToUtils.newInstance(SignVerifyTO.class, Type.INPUT_MISMATCH, serverKey);
 			}
 			
 			// check signatures
 			if (request.signatures() == null || (request.signatures().size() != transaction.getInputs().size())) {
 				LOG.debug("{} - clientPubKey={} - INPUT_MISMATCH - number of signatures ({}) != number of inputs ({})", 
 					tag, clientPubKeyHex, request.signatures().size(), transaction.getInputs().size());
-				return ToUtils.newInstance(SignTO.class, Type.INPUT_MISMATCH, serverKey);
+				return ToUtils.newInstance(SignVerifyTO.class, Type.INPUT_MISMATCH, serverKey);
 			}
 
 			clientSigs = SerializeUtils.deserializeSignatures(request.signatures());
