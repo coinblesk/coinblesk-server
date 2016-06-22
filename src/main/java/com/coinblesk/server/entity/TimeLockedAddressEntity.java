@@ -38,27 +38,28 @@ import org.bitcoinj.core.Utils;
 
 @Entity(name = "TIME_LOCKED_ADDRESS")
 @Table(indexes = {
-	    @Index(name = "ADDRESS_HASH_INDEX", columnList = "addressHash", unique = true)})
+	    @Index(name = "ADDRESS_HASH_INDEX", columnList = "ADDRESS_HASH", unique = true)})
 public class TimeLockedAddressEntity {
 	
 	@Id
+	@Column(name = "ID", nullable = false, unique=true, updatable = false)
 	@GeneratedValue(strategy=GenerationType.SEQUENCE)
 	private long id;
 	
 	@ManyToOne
-        @JoinColumn(name="keys_fk")
-        private Keys keys;
+    @JoinColumn(name="KEYS_FK")
+    private Keys keys;
 	
-	@Column(nullable = false, updatable = false)
+	@Column(name="TIME_CREATED", nullable = false, updatable = false)
 	private long timeCreated;
 	
-	@Column(nullable = false, unique=true, updatable = false, length=255)
+	@Column(name="ADDRESS_HASH", nullable = false, unique=true, updatable = false, length=255)
 	private byte[] addressHash;
 	
-	@Column(nullable = false, updatable = false, length=4096)
+	@Column(name="REDEEM_SCRIPT", nullable = false, updatable = false, length=4096)
 	private byte[] redeemScript;
         
-        @Column(nullable = false, updatable = false)
+    @Column(name="LOCK_TIME", nullable = false, updatable = false)
 	private long lockTime;
 	
 	public long getId() {
