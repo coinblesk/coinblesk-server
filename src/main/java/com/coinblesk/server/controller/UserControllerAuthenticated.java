@@ -16,7 +16,6 @@
 package com.coinblesk.server.controller;
 
 import com.coinblesk.json.BaseTO;
-import com.coinblesk.json.SignVerifyTO;
 import com.coinblesk.server.config.AdminEmail;
 import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.server.utils.ApiVersion;

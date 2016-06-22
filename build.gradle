@@ -37,7 +37,7 @@ test {
 }
 
 dependencies {
-    def springVersion = '4.2.4.RELEASE'
+    def springVersion = '4.2.6.RELEASE'
     def springSecurityVersion = '4.0.3.RELEASE'
     def tomcatVersion = '8.0.30'
     def hibernateVersion = '5.0.7.Final'
@@ -78,7 +78,7 @@ dependencies {
     
     compile 'ch.qos.logback:logback-classic:1.1.6'
     compile 'org.slf4j:slf4j-api:1.7.18'
-    compile 'com.coinblesk:coinblesk-shared-resources:1.4.46'
+    compile 'com.coinblesk:coinblesk-shared-resources:1.4.49'
     compile 'com.madgag.spongycastle:core:1.54.0.0'
 
     

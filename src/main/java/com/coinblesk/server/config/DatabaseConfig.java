@@ -16,9 +16,11 @@
 
 package com.coinblesk.server.config;
 
+import com.coinblesk.server.service.UserAccountService;
 import java.util.Properties;
 
 import javax.persistence.EntityManagerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -72,6 +74,15 @@ public class DatabaseConfig {
 
 	@Value("${db.driver.class.name:org.hsqldb.jdbcDriver}")
 	private String driverClassName;
+        
+        @Value("${db.injectCredentials:true}")
+	private boolean injectCredentials;
+        
+        @Autowired UserAccountService userAccountService;
+        
+        public boolean isTest() {
+            return driverClassName.equals("org.hsqldb.jdbcDriver") && injectCredentials;
+        }
 
 	@Bean
 	public DriverManagerDataSource dataSource() {
@@ -107,7 +118,7 @@ public class DatabaseConfig {
 		return new PersistenceExceptionTranslationPostProcessor();
 	}
 
-	Properties additionalProperties() {
+	private Properties additionalProperties() {
 		Properties properties = new Properties();
 		properties.setProperty("hibernate.hbm2ddl.auto", hbm2ddlAuto);
 		properties.setProperty("hibernate.dialect", dialect);
@@ -121,5 +132,4 @@ public class DatabaseConfig {
 
 		return properties;
 	}
-
 }

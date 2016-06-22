@@ -102,10 +102,14 @@ public class UserAccountService {
             }
             return new Pair(new UserAccountStatusTO().type(Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_ACTIVATED), found);
         }
-
+        return createEntity(userAccountTO);
+    }
+   
+    //call this for testing only directy!!
+    public Pair<UserAccountStatusTO, UserAccount> createEntity(final UserAccountTO userAccountTO) {
         //convert TO to Entity
         UserAccount userAccount = new UserAccount();
-        userAccount.setEmail(email);
+        userAccount.setEmail(userAccountTO.email());
         userAccount.setPassword(passwordEncoder.encode(userAccountTO.password()));
         userAccount.setCreationDate(new Date());
         userAccount.setDeleted(false);
@@ -155,8 +159,11 @@ public class UserAccountService {
         if (userAccount == null) {
             return null;
         }
+        long satoshi = userAccount.getBalance().multiply(new BigDecimal(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI)).longValue();
         final UserAccountTO userAccountTO = new UserAccountTO();
-        userAccountTO.email(userAccount.getEmail());
+        userAccountTO
+                .email(userAccount.getEmail())
+                .balance(satoshi);
         return userAccountTO;
     }
     

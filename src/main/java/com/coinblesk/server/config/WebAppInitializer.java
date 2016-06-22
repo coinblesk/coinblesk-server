@@ -17,6 +17,8 @@ package com.coinblesk.server.config;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletRegistration;
+import javax.servlet.http.HttpSessionEvent;
+import javax.servlet.http.HttpSessionListener;
 
 import org.springframework.web.WebApplicationInitializer;
 import org.springframework.web.context.ContextLoaderListener;
@@ -33,11 +35,23 @@ public class WebAppInitializer implements WebApplicationInitializer {
         rootContext.setConfigLocation("com.coinblesk.server.config");
         // Manage the lifecycle of the root application context
         container.addListener(new ContextLoaderListener(rootContext));
-
+        container.addListener(new SessionListener());
+        
         // Register and map the dispatcher servlet
         ServletRegistration.Dynamic dispatcher = container.addServlet("dispatcher", new DispatcherServlet(
                 rootContext));
         dispatcher.setLoadOnStartup(1);
         dispatcher.addMapping("/");
+    }
+    
+    private static class SessionListener implements HttpSessionListener {
+        @Override
+        public void sessionCreated(HttpSessionEvent se) {
+            //session is valid for 30 days
+            se.getSession().setMaxInactiveInterval(30*24*60*60*1);
+        }
+
+        @Override
+        public void sessionDestroyed(HttpSessionEvent se) {}
     }
 }

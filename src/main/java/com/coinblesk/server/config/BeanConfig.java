@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package com.coinblesk.server.config;
 
 import org.springframework.context.annotation.Bean;
@@ -31,24 +30,23 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @Configuration
 @ComponentScan("com.coinblesk.server")
 @EnableScheduling
-
 public class BeanConfig {
 
     @Bean
     public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
-       return new PropertySourcesPlaceholderConfigurer();
+        return new PropertySourcesPlaceholderConfigurer();
     }
-    
+
     @Bean
     public static ForexService.ForexTask forexTask() {
-    	return new ForexService.ForexTask();
+        return new ForexService.ForexTask();
     }
-    
+
     @Bean
     public static TaskScheduler taskScheduler() {
-    	return new ThreadPoolTaskScheduler();
+        return new ThreadPoolTaskScheduler();
     }
-    
+
     @Bean
     public static PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
