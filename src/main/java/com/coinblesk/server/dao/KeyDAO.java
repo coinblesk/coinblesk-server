@@ -32,7 +32,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class KeyDAO {
 
-    @PersistenceContext()
+    @PersistenceContext
     private EntityManager em;
 
     public Keys findByClientPublicKey(final byte[] clientPublicKey) {

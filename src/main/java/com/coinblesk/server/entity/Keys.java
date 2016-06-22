@@ -56,7 +56,7 @@ public class Keys implements Serializable {
     private byte[] serverPrivateKey;
 
     @Column(name = "TIME_CREATED", updatable = false, nullable = false)
-	private long timeCreated;
+    private long timeCreated;
     
     @OneToMany(mappedBy="keys", fetch = FetchType.EAGER)
     @OrderBy("TIME_CREATED ASC")

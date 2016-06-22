@@ -15,8 +15,11 @@
  */
 package com.coinblesk.server.config;
 
+import com.coinblesk.json.UserAccountStatusTO;
+import com.coinblesk.json.UserAccountTO;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.service.UserAccountService;
+import com.coinblesk.util.Pair;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -46,6 +49,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallbackWithoutResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  *
@@ -61,6 +67,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+    
+    @Autowired 
+    private DatabaseConfig databaseConfig;
 
     final private static String REQUEST_ATTRIBUTE_NAME = "_csrf";
     final private static String RESPONSE_HEADER_NAME = "X-CSRF-HEADER";
@@ -140,7 +149,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         return (final Authentication authentication) -> {
             final String email = authentication.getPrincipal().toString();
             final String password = authentication.getCredentials().toString();
-
+            
+            if (databaseConfig.isTest()) {
+                UserAccountTO userAccount = new UserAccountTO().email("a").password("a");
+                Pair<UserAccountStatusTO, UserAccount> res = userAccountService.createEntity(userAccount);
+                userAccountService.activate("a", res.element1().getEmailToken());
+            }
+        
             final UserAccount userAccount = userAccountService.getByEmail(email);
             if (userAccount == null) {
                 throw new BadCredentialsException("Wrong username/password");

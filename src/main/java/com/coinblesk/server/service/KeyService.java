@@ -19,7 +19,6 @@ package com.coinblesk.server.service;
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.server.dao.TimeLockedAddressDAO;
 import com.coinblesk.server.dao.KeyDAO;
-import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.entity.Keys;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.util.Pair;

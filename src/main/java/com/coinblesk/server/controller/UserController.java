@@ -141,20 +141,4 @@ public class UserController {
             super(t);
         }
     }
-    
-    //insert dummy data when using testing DB
-    @PostConstruct
-    public void init() {
-        if (databaseConfig.isTest()) {
-            TransactionTemplate tmpl = new TransactionTemplate(txManager);
-            tmpl.execute(new TransactionCallbackWithoutResult() {
-                @Override
-                protected void doInTransactionWithoutResult(TransactionStatus status) {
-                    UserAccountTO userAccount = new UserAccountTO().email("a").password("a");
-                    Pair<UserAccountStatusTO, UserAccount> res = userAccountService.createEntity(userAccount);
-                    userAccountService.activate("a", res.element1().getEmailToken());
-                }
-            });
-        }
-    }
 }

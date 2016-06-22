@@ -39,7 +39,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @author Thomas Bocek
  */
 @RestController
-@RequestMapping(value = {"/user/a", "user/auth", "u/auth", "/u/a"})
+@RequestMapping(value = {"/user/a", "/user/auth", "/u/auth", "/u/a"})
 @ApiVersion({"v1"})
 public class UserControllerAuthenticated {
 

@@ -95,6 +95,14 @@ public class UserAccountService {
             return new Pair(new UserAccountStatusTO().type(Type.PASSWORD_TOO_SHORT), null);
         }
 
+        
+        return createEntity(userAccountTO);
+    }
+   
+    //call this for testing only directy!!
+    @Transactional(readOnly = false)
+    public Pair<UserAccountStatusTO, UserAccount> createEntity(final UserAccountTO userAccountTO) {
+        final String email = userAccountTO.email();
         final UserAccount found = userAccountDao.getByAttribute("email", email);
         if (found != null) {
             if (found.getEmailToken() != null) {
@@ -102,11 +110,6 @@ public class UserAccountService {
             }
             return new Pair(new UserAccountStatusTO().type(Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_ACTIVATED), found);
         }
-        return createEntity(userAccountTO);
-    }
-   
-    //call this for testing only directy!!
-    public Pair<UserAccountStatusTO, UserAccount> createEntity(final UserAccountTO userAccountTO) {
         //convert TO to Entity
         UserAccount userAccount = new UserAccount();
         userAccount.setEmail(userAccountTO.email());
