@@ -22,12 +22,15 @@ import com.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.json.Type;
 import com.coinblesk.json.UserAccountStatusTO;
 import com.coinblesk.json.UserAccountTO;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import org.bitcoinj.core.ECKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -84,9 +87,9 @@ public class UserControllerAuthenticated {
             
             UserAccountTO userAccount = userAccountService.get(auth.getName());
             if (userAccount == null) {
-                LOG.error("Someone tried a delete account with an invalid username: {}", auth);
-                adminEmail.send("Wrong Delete Account?",
-                        "Someone tried a delete account with an invalid username: " + auth);
+                LOG.error("Someone tried to access an account with an invalid username: {}", auth);
+                adminEmail.send("Wrong Account?",
+                        "Someone tried to access an account with an invalid username: " + auth);
                 return null;
             }
             LOG.debug("Get account success for {}", auth.getName());
@@ -100,21 +103,29 @@ public class UserControllerAuthenticated {
     @RequestMapping(value = {"/transfer-p2sh", "/t"}, method = RequestMethod.GET,
             produces = "application/json; charset=UTF-8")
     @ResponseBody
-    public UserAccountStatusTO transferToP2SH(@RequestBody BaseTO request) {
+    public UserAccountTO transferToP2SH(@RequestBody BaseTO request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         LOG.debug("Get account for {}", auth.getName());
         try {
             final ECKey clientKey = ECKey.fromPublicOnly(request.publicKey());
-            UserAccountStatusTO status = userAccountService.transferP2SH(clientKey, auth.getName());
+            UserAccountTO status = userAccountService.transferP2SH(clientKey, auth.getName());
             if(status != null) {
                 LOG.debug("Transfer P2SH success for {}, tx:{}", auth.getName(), status.message());
                 return status;
             } else {
-                return new UserAccountStatusTO().type(Type.ACCOUNT_ERROR); 
+                return new UserAccountTO().type(Type.ACCOUNT_ERROR); 
             }
         } catch (Exception e) {
             LOG.error("User create error", e);
-            return new UserAccountStatusTO().type(Type.SERVER_ERROR).message(e.getMessage());
+            return new UserAccountTO().type(Type.SERVER_ERROR).message(e.getMessage());
+        }
+    }
+    
+    @RequestMapping(value="/logout", method = RequestMethod.GET)
+    public void logout (HttpServletRequest request, HttpServletResponse response) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null) {
+            new SecurityContextLogoutHandler().logout(request, response, auth);
         }
     }
 }

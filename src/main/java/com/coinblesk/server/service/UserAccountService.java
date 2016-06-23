@@ -95,7 +95,7 @@ public class UserAccountService {
             return new Pair(new UserAccountStatusTO().type(Type.PASSWORD_TOO_SHORT), null);
         }
 
-        
+        userAccountTO.balance(0);
         return createEntity(userAccountTO);
     }
    
@@ -118,6 +118,8 @@ public class UserAccountService {
         userAccount.setDeleted(false);
         userAccount.setEmailToken(UUID.randomUUID().toString());
         userAccount.setUserRole(UserRole.USER);
+        userAccount.setBalance(BigDecimal.valueOf(
+                userAccountTO.balance()).divide(BigDecimal.valueOf(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI)));
         userAccountDao.save(userAccount);
         return new Pair(new UserAccountStatusTO().setSuccess(), userAccount);
     }
@@ -171,11 +173,11 @@ public class UserAccountService {
     }
     
     @Transactional(readOnly = false)
-    public UserAccountStatusTO transferP2SH(ECKey clientKey, String email) {
+    public UserAccountTO transferP2SH(ECKey clientKey, String email) {
         final NetworkParameters params = appConfig.getNetworkParameters();
         final UserAccount userAccount = userAccountDao.getByAttribute("email", email);
         if (userAccount == null) {
-            return new UserAccountStatusTO().type(Type.NO_ACCOUNT);
+            return new UserAccountTO().type(Type.NO_ACCOUNT);
         }
         final ECKey pot = appConfig.getPotPrivateKeyAddress();
         long satoshi = userAccount.getBalance().multiply(new BigDecimal(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI)).longValue();
@@ -193,10 +195,16 @@ public class UserAccountService {
             LOG.debug("About to broadcast tx");
             walletService.broadcast(tx);
             LOG.debug("Broadcast done");
-            return new UserAccountStatusTO().setSuccess();
+            long satoshiNew = userAccount.getBalance().multiply(new BigDecimal(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI)).longValue();
+            
+            final UserAccountTO userAccountTO = new UserAccountTO();
+            userAccountTO
+                .email(userAccount.getEmail())
+                .balance(satoshiNew);
+            return userAccountTO;
         } catch (CoinbleskException | InsufficientFunds e) {
             LOG.error("Cannot create transaction", e);
-            return new UserAccountStatusTO().type(Type.ACCOUNT_ERROR).message(e.getMessage());
+            return new UserAccountTO().type(Type.ACCOUNT_ERROR).message(e.getMessage());
         }
     }
 

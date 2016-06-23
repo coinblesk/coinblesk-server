@@ -19,6 +19,7 @@ import com.coinblesk.json.UserAccountStatusTO;
 import com.coinblesk.json.UserAccountTO;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.service.UserAccountService;
+import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -46,6 +47,8 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -75,8 +78,20 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     final private static String RESPONSE_HEADER_NAME = "X-CSRF-HEADER";
     final private static String[] CSRF_PREFIX = {"/web", "/w"};
 
-    final private static String[] REQUIRE_USER_ROLE = {"/user/a/**", "/user/auth/**", "/u/auth/**", "/u/a/**"};
-    final private static String[] REQUIRE_ADMIN_ROLE = {"/admin/**", "/a/**"};
+    final private static String[] REQUIRE_USER_ROLE = {
+        "/user/a/**", 
+        "/user/auth/**", 
+        "/u/auth/**", 
+        "/u/a/**",
+        "/v?/user/a/**", 
+        "/v?/user/auth/**", 
+        "/v?/u/auth/**", 
+        "/v?/u/a/**" };
+    final private static String[] REQUIRE_ADMIN_ROLE = {
+        "/admin/**", 
+        "/a/**", 
+        "/v?/admin/**", 
+        "/v?/a/**"};
 
     private static class CsfrHeaderAppendFilter implements Filter {
 
@@ -132,12 +147,22 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .requireCsrfProtectionMatcher(new CsfrIgnoreRequestMatcher())
                 .and()
                 .authorizeRequests()
-                .antMatchers(REQUIRE_ADMIN_ROLE).hasRole(UserRole.ADMIN.getRole())
-                .antMatchers(REQUIRE_USER_ROLE).hasRole(UserRole.USER.getRole())
+                    .antMatchers("/").permitAll()
+                    .antMatchers(REQUIRE_ADMIN_ROLE).hasRole(UserRole.ADMIN.getRole())
+                    .antMatchers(REQUIRE_USER_ROLE).hasRole(UserRole.USER.getRole())
                 .and()
                 .formLogin()
                 .loginPage("/login")
-                .defaultSuccessUrl("/login?success")
+                .successHandler(new SimpleUrlAuthenticationSuccessHandler(){
+                    @Override
+                    public void onAuthenticationSuccess(HttpServletRequest request,
+			HttpServletResponse response, Authentication authentication)
+			throws IOException, ServletException {
+                            clearAuthenticationAttributes(request);
+                        }
+                    
+                }) // return 200 instead 301
+                .failureHandler(new SimpleUrlAuthenticationFailureHandler()) // return 401 instead 302
                 .and()
                 .addFilterAfter(new CsfrHeaderAppendFilter(), CsrfFilter.class);
 
@@ -151,7 +176,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             final String password = authentication.getCredentials().toString();
             
             if (databaseConfig.isTest()) {
-                UserAccountTO userAccount = new UserAccountTO().email("a").password("a");
+                UserAccountTO userAccount = new UserAccountTO()
+                        .email("a")
+                        .password("a")
+                        .balance(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI);
                 Pair<UserAccountStatusTO, UserAccount> res = userAccountService.createEntity(userAccount);
                 userAccountService.activate("a", res.element1().getEmailToken());
             }
