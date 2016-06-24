@@ -62,25 +62,30 @@ public class ForexController {
      *
      * @return CustomResponseObject with exchangeRate BTC/CHF as a String
      */
-    @RequestMapping(value = {"/rate/{from}-{to}", "/r/{from}-{to}"},
-            method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
+    @RequestMapping(
+    		value = {"/rate/{from}-{to}", "/r/{from}-{to}"},
+            method = RequestMethod.GET, 
+            produces = "application/json; charset=UTF-8")
     @ApiVersion({"v2"})
     @ResponseBody
-    public ResponseEntity<ExchangeRateTO> forexExchangeRate(@PathVariable(value = "from") String from,
-            @PathVariable(value = "to") String to) {
-        LOG.debug("Received exchange rate request for currency {}/{}", from, to);
+    public ResponseEntity<ExchangeRateTO> forexExchangeRate(
+					    		@PathVariable(value = "from") String from,
+					            @PathVariable(value = "to") String to) {
+        LOG.debug("{exchange-rate} - Received exchange rate request for currency {}/{}", from, to);
         ExchangeRateTO output = new ExchangeRateTO();
         try {
             if (!Pattern.matches("[A-Z]{3}", from) || !Pattern.matches("[A-Z]{3}", to)) {
-                output.type(Type.SERVER_ERROR).message("unknown symbol");
+                output.type(Type.SERVER_ERROR).message("unknown currency symbol");
                 return new ResponseEntity<>(output, HttpStatus.BAD_REQUEST);
             }
             BigDecimal exchangeRate = forexExchangeRateService.getExchangeRate(from, to);
             output.name(from + to);
             output.rate(exchangeRate.toString());
             output.setSuccess();
+            LOG.debug("{exchange-rate} - {}, rate: {}", output.name(), output.rate());
             return new ResponseEntity<>(output, HttpStatus.OK);
         } catch (Exception e) {
+        	LOG.error("{exchange-rate} - SERVER_ERROR - exception: ", e);
             output.type(Type.SERVER_ERROR);
             output.message(e.getMessage());
             return new ResponseEntity<>(output, HttpStatus.BAD_REQUEST);
