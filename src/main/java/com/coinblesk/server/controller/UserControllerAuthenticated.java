@@ -100,7 +100,7 @@ public class UserControllerAuthenticated {
         }
     }
     
-    @RequestMapping(value = {"/transfer-p2sh", "/t"}, method = RequestMethod.GET,
+    @RequestMapping(value = {"/transfer-p2sh", "/t"}, method = RequestMethod.POST,
             produces = "application/json; charset=UTF-8")
     @ResponseBody
     public UserAccountTO transferToP2SH(@RequestBody BaseTO request) {
@@ -121,11 +121,12 @@ public class UserControllerAuthenticated {
         }
     }
     
-    @RequestMapping(value="/logout", method = RequestMethod.GET)
-    public void logout (HttpServletRequest request, HttpServletResponse response) {
+    @RequestMapping(value="/logout", method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
+    public UserAccountStatusTO logout (HttpServletRequest request, HttpServletResponse response) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null) {
             new SecurityContextLogoutHandler().logout(request, response, auth);
         }
+        return new UserAccountStatusTO().setSuccess();
     }
 }
