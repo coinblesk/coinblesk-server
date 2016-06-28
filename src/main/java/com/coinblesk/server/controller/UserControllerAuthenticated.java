@@ -124,6 +124,7 @@ public class UserControllerAuthenticated {
     @RequestMapping(value="/logout", method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
     public UserAccountStatusTO logout (HttpServletRequest request, HttpServletResponse response) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        LOG.debug("Logout account for {}", auth.getName());
         if (auth != null) {
             new SecurityContextLogoutHandler().logout(request, response, auth);
         }
