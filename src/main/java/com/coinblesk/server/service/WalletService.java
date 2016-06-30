@@ -163,11 +163,15 @@ public class WalletService {
 			@Override
 			public void onTransactionConfidenceChanged(Wallet wallet, Transaction tx) {
                 if (tx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf()) {
+                    LOG.debug("remove tx we got from the network {}", tx);
                     transactionService.removeTransaction(tx);
+                    txQueueService.removeTx(tx);
+                    LOG.debug("remove tx we got from the network done.");
                 }
             }
         });
         pendingTransactions();
+        LOG.debug("wallet init done.");
     } 
 
 	private void walletWatchKeysP2SH(final NetworkParameters params) {

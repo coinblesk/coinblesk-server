@@ -130,4 +130,5 @@ public class UserControllerAuthenticated {
         }
         return new UserAccountStatusTO().setSuccess();
     }
+    
 }

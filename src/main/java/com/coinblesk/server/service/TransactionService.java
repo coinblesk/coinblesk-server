@@ -86,7 +86,7 @@ public class TransactionService {
 		// Check if Tx contains already signed (spent) outputs
 		if (isBurned(params, clientKey.getPubKey(), transaction)) {
 			LOG.warn("{} - clientPubKey={} - BURNED_OUTPUTS - Transaction:\n{}", tag, clientPubKeyHex, transaction);
-			return ToUtils.newInstance(SignTO.class, Type.BURNED_OUTPUTS, serverKey);
+			return ToUtils.newInstance(SignVerifyTO.class, Type.BURNED_OUTPUTS, serverKey);
 		}
 		
 		// for each input, search corresponding redeemScript and sign
@@ -97,8 +97,8 @@ public class TransactionService {
 			// verify fully signed Tx and each Tx input (execute scriptSig + redeemScript).
 			verifyTransaction(transaction);
 		} catch (CoinbleskException e) {
-			LOG.error("{} - clientPubKey={} - Verification of transaction failed (TX_ERROR): ", tag, clientPubKeyHex, e);
-			return ToUtils.newInstance(SignTO.class, Type.TX_ERROR, serverKey);
+			LOG.error("{} - clientPubKey={} - Verification of transaction failed (TX_ERROR): {}", tag, clientPubKeyHex, transaction, e);
+			return ToUtils.newInstance(SignVerifyTO.class, Type.TX_ERROR, serverKey);
 		}
 		
 		// Transaction is complete: store and broadcast.

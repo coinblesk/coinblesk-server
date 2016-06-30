@@ -46,7 +46,9 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.security.web.csrf.CsrfFilter;
@@ -162,7 +164,14 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                         }
                     
                 }) // return 200 instead 301
-                .failureHandler(new SimpleUrlAuthenticationFailureHandler()) // return 401 instead 302
+                .failureHandler(new AuthenticationFailureHandler(){
+            @Override
+            public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
+                    AuthenticationException exception) throws IOException, ServletException {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
+					"Authentication Failed: " + exception.getMessage());
+            }
+        }) // return 401 instead 302
                 .and()
                 .addFilterAfter(new CsfrHeaderAppendFilter(), CsrfFilter.class);
 

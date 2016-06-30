@@ -223,8 +223,8 @@ public class PaymentController {
 					LOG.debug("{} - added output={} to Tx={}", tag, txOut, transaction.getHash());
 				}
 				
-				// if change is provided, we add an output to the most recently created address of the client.
-				if (request.amountChange() > 0) {
+				// if fee is provided, we add an output to the most recently created address of the client.
+				if (request.amountChange()> 0) {
 					Address changeAddress = keys.latestTimeLockedAddresses().toAddress(params);
 					Coin changeAmount = Coin.valueOf(request.amountChange());
 					TransactionOutput changeOut = transaction.addOutput(changeAmount, changeAddress);
