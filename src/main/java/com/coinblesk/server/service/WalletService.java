@@ -29,6 +29,7 @@ import javax.annotation.PreDestroy;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.BlockChain;
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerAddress;
@@ -47,6 +48,7 @@ import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.WalletTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,10 +56,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.coinblesk.bitcoin.AddressCoinSelector;
 import com.coinblesk.bitcoin.BitcoinNet;
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.entity.Keys;
+import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.util.BitcoinUtils;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -165,33 +168,37 @@ public class WalletService {
             }
         });
         pendingTransactions();
-    }
-    
-    private void walletWatchKeysP2SH(final NetworkParameters params) {
-        
+    } 
+
+	private void walletWatchKeysP2SH(final NetworkParameters params) {
+		StringBuilder sb = new StringBuilder();
         final List<List<ECKey>> all = keyService.all();
         final List<Script> scripts = new ArrayList<>();
         for (List<ECKey> keys : all) {
             final Script script = BitcoinUtils.createP2SHOutputScript(2, keys);
+            script.setCreationTimeSeconds(0);
             scripts.add(script);
+            sb.append(script.getToAddress(params)).append("\n");
         }
         wallet.addWatchedScripts(scripts);
-        
-        
+        LOG.debug("walletWatchKeysP2SH:\n{}", sb.toString());
     }
     
     private void walletWatchKeysCLTV(final NetworkParameters params) {
-        
+    	StringBuilder sb = new StringBuilder();
         for (Keys key : keyService.allKeys()) {
         	for (TimeLockedAddressEntity address : key.timeLockedAddresses()) {
-        		wallet.addWatchedAddress(address.toAddress(params));
+        		wallet.addWatchedAddress(address.toAddress(params), 0);
+        		sb.append(address.toAddress(params)).append("\n");
         	}
         }
+        LOG.debug("walletWatchKeysCLTV:\n{}", sb.toString());
     }
     
     private void walletWatchKeysPot(final NetworkParameters params) {
         ECKey potAddress = appConfig.getPotPrivateKeyAddress();
-        wallet.addWatchedAddress(potAddress.toAddress(params));
+        wallet.addWatchedAddress(potAddress.toAddress(params), 0);
+        LOG.debug("walletWatchKeysPot: {}", potAddress.toAddress(params));
     }
     
     public List<TransactionOutput> potTransactionOutput(final NetworkParameters params) {
@@ -372,4 +379,34 @@ public class WalletService {
             broadcast(tx);
         }
     }
+
+	public Map<Address, Coin> getBalanceByAddresses() {
+		final NetworkParameters params = appConfig.getNetworkParameters();
+		
+		AddressCoinSelector selector = new AddressCoinSelector(null, params);
+		wallet.getBalance(selector);
+		
+		// getBalance considers UTXO: add zero balance for all watched scripts without unspent outputs
+		Map<Address, Coin> fullBalances = new HashMap<>(selector.getAddressBalances());
+		for (Script watched : getWatchedScripts()) {
+			Address address = watched.getToAddress(params);
+			if (!fullBalances.containsKey(address)) {
+				fullBalances.put(address, Coin.ZERO);
+			}
+		}
+		
+		return fullBalances;
+	}
+
+	public List<Script> getWatchedScripts() {
+		return wallet.getWatchedScripts();
+	}
+
+	public Coin getBalance() {
+		return wallet.getBalance(BalanceType.ESTIMATED);
+	}
+
+	public List<TransactionOutput> getUnspentOutputs() {
+		return wallet.getUnspents();
+	}
 }

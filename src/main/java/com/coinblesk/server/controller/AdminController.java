@@ -15,7 +15,6 @@
  */
 package com.coinblesk.server.controller;
 
-import com.coinblesk.server.utils.ApiVersion;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -24,8 +23,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+
 import javax.servlet.ServletContext;
 
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.TransactionOutput;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -33,6 +36,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
+
+import com.coinblesk.server.service.WalletService;
+import com.coinblesk.server.utils.ApiVersion;
+import com.coinblesk.util.Pair;
 
 /**
  *
@@ -49,6 +56,9 @@ public class AdminController {
 
     @Autowired
     ServletContext context;
+    
+    @Autowired
+    private WalletService walletService;
 
     @RequestMapping(method=RequestMethod.GET)
     public ModelAndView overview() {
@@ -68,6 +78,32 @@ public class AdminController {
     public ModelAndView tasks() {
     	ModelAndView mw = new ModelAndView("admin/tasks");
     	return mw;
+    }
+    
+    @RequestMapping(value = {"/balance", "/b"}, method=RequestMethod.GET)
+    @ResponseBody
+    public Coin balance() {
+    	return walletService.getBalance();
+    }
+    
+    @RequestMapping(value = {"/addresses", "/a"}, method=RequestMethod.GET)
+    @ResponseBody
+    public Map<Address, Coin> addresses() {
+    	Map<Address, Coin> addressBalances = walletService.getBalanceByAddresses();
+    	LOG.debug("Total addresses: " + addressBalances.size());
+    	return addressBalances;
+    }
+    
+    @RequestMapping(value = {"/utxo", "/u"}, method=RequestMethod.GET)
+    @ResponseBody
+    public List<Pair<String, String>> utxo() {
+    	// cannot return utxo due to GSON recursion
+    	List<TransactionOutput> utxo = walletService.getUnspentOutputs();
+    	List<Pair<String, String>> txOuts = new ArrayList<>();
+    	for (TransactionOutput txOut : utxo) {
+    		txOuts.add(new Pair<>(txOut.getOutPointFor().toString(), txOut.toString()));
+    	}
+    	return txOuts;
     }
     
     @RequestMapping(value = {"/info", "/i"}, method = RequestMethod.GET)
