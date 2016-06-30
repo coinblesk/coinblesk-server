@@ -703,6 +703,6 @@ public class PaymentController {
                 .deserializeOutPointsCoin(params, outpointsCoinPair);
 
         return BitcoinUtils.createTx(params, refundClientPoints, redeemScript,
-                    p2shAddressFrom, p2shAddressTo1, amountToSpend);
+                    p2shAddressFrom, p2shAddressTo1, amountToSpend, true);
     }
 }

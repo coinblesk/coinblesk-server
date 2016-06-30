@@ -189,7 +189,7 @@ public class UserAccountService {
         Transaction tx;
         try {
             tx = BitcoinUtils.createTx(params, outputs, pot.toAddress(params), 
-                keys.latestTimeLockedAddresses().toAddress(params), satoshi);
+                keys.latestTimeLockedAddresses().toAddress(params), satoshi, true);
             LOG.debug("About tot zero balance with tx {}", tx);
             userAccount.setBalance(BigDecimal.ZERO);
             LOG.debug("About to broadcast tx");

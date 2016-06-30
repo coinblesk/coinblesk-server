@@ -110,7 +110,7 @@ public class GenericEndpointTest {
         Date now = new Date(1);
         Address merchantAddress = new ECKey().toAddress(params);
         Transaction tx = BitcoinUtils.createTx(params, client.outpoints(t), client.redeemScript(), client.p2shAddress(),
-                merchantAddress, amountToRequest.getValue());
+                merchantAddress, amountToRequest.getValue(), true);
         // test /prepare
         SignTO statusPrepare = ServerCalls.signServerCall(mockMvc, tx, client, now);
         Assert.assertFalse(statusPrepare.isSuccess());
@@ -136,7 +136,7 @@ public class GenericEndpointTest {
         Date now = new Date(Long.MAX_VALUE / 2);
         Address merchantAddress = new ECKey().toAddress(params);
         Transaction tx = BitcoinUtils.createTx(params, client.outpoints(t), client.redeemScript(), client.p2shAddress(),
-                merchantAddress, amountToRequest.getValue());
+                merchantAddress, amountToRequest.getValue(), true);
         // test /prepare
         SignTO status = ServerCalls.signServerCall(mockMvc, tx, client, now);
         Assert.assertFalse(status.isSuccess());
@@ -161,7 +161,7 @@ public class GenericEndpointTest {
         Date now = new Date();
         Address merchantAddress = new ECKey().toAddress(params);
         Transaction tx = BitcoinUtils.createTx(params, client.outpoints(t), client.redeemScript(), client.p2shAddress(),
-                merchantAddress, amountToRequest.getValue());
+                merchantAddress, amountToRequest.getValue(), true);
         // test /prepare
         SignTO prepareHalfSignTO = ServerCalls.signServerCallInput(tx, client.ecKey(), now);
         SerializeUtils.signJSON(prepareHalfSignTO, new ECKey());
@@ -193,7 +193,7 @@ public class GenericEndpointTest {
         Date now = new Date();
         Address merchantAddress = new ECKey().toAddress(params);
         Transaction tx = BitcoinUtils.createTx(params, client.outpoints(t), client.redeemScript(), client.p2shAddress(),
-                merchantAddress, amountToRequest.getValue());
+                merchantAddress, amountToRequest.getValue(), true);
         // test /prepare
         ECKey key = new ECKey();
         SignTO prepareHalfSignTO = ServerCalls.signServerCallInput(tx, key, now);
@@ -227,7 +227,7 @@ public class GenericEndpointTest {
         Address merchantAddress = new ECKey().toAddress(params);
 
         Transaction tx = BitcoinUtils.createTx(params, client.outpoints(t), client.redeemScript(), client.p2shAddress(),
-                merchantAddress, amountToRequest.getValue());
+                merchantAddress, amountToRequest.getValue(), true);
         // test /sign
         SignTO statusPrepare1 = ServerCalls.signServerCall(mockMvc, tx, client, now);
         Assert.assertTrue(statusPrepare1.isSuccess());
@@ -252,7 +252,7 @@ public class GenericEndpointTest {
         Transaction transaction = BitcoinUtils.createTx(params, convert2(t.getOutputs()), client
                 .redeemScript(),
                 client.p2shAddress(),
-                merchantAddress, amountToRequest.getValue());
+                merchantAddress, amountToRequest.getValue(), true);
         List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(transaction, client.redeemScript(),
                 client.ecKey());
         List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(statusPrepare4

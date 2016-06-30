@@ -126,7 +126,7 @@ public class RefundTest {
         
         Transaction txClient = BitcoinUtils.createTx(
                 params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
-                9876);
+                9876, true);
         
         Triple<RefundTO,Transaction,List<TransactionSignature>> t = 
                 refundServerCall(params, mockMvc, client, txClient, new Date(), LOCK_TIME_SECONDS);
@@ -143,7 +143,7 @@ public class RefundTest {
         //List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.serverSignatures());
         Transaction txClient = BitcoinUtils.createTx(
                 params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
-                9876);
+                9876, true);
         
         Triple<RefundTO,Transaction,List<TransactionSignature>> t = 
                 refundServerCall(params, mockMvc, client, txClient, new Date(), LOCK_TIME_SECONDS);
@@ -167,7 +167,7 @@ public class RefundTest {
         List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(status.signatures());
         Transaction txClient = BitcoinUtils.createTx(
                 params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
-                9876);
+                9876, true);
         List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(txClient, client.redeemScript(), client.ecKey());
         
         BitcoinUtils.applySignatures(txClient, client.redeemScript(), clientSigs, serverSigs, client.clientFirst());

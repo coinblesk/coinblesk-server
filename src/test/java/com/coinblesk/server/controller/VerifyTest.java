@@ -122,7 +122,7 @@ public class VerifyTest {
     public void testVerify() throws Exception {
         Transaction txClient = BitcoinUtils.createTx(
                 params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
-                9876);
+                9876, true);
         
         SignTO status = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
                 merchant.p2shAddress(), 9876, client, new Date());
@@ -131,7 +131,7 @@ public class VerifyTest {
         List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(txClient, client.redeemScript(), client.ecKey());
         
         Transaction txVerification = BitcoinUtils.createTx(params, client.outpoints(funding), client.redeemScript(),
-                    client.p2shAddress(), merchant.p2shAddress(), 9876);
+                    client.p2shAddress(), merchant.p2shAddress(), 9876, true);
         Assert.assertTrue(SerializeUtils.verifyTxSignatures(txVerification, clientSigs, client.redeemScript(), client.ecKey()));
         
         VerifyTO verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), 
@@ -149,7 +149,7 @@ public class VerifyTest {
     public void testVerifyDoubleSpending() throws Exception {
         Transaction txClient1 = BitcoinUtils.createTx(
                 params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
-                9876);
+                9876, true);
         Address unknown = new ECKey().toAddress(params);
         
         SignTO status1 = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
@@ -172,11 +172,11 @@ public class VerifyTest {
     public void testVerifyDoubleSpending2() throws Exception {
         Transaction txClient1 = BitcoinUtils.createTx(
                 params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
-                9876);
+                9876, true);
         Address unknown = new ECKey().toAddress(params);
         Transaction txClient2 = BitcoinUtils.createTx(
                 params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), unknown,
-                9876);
+                9876, true);
         
         Assert.assertFalse(txClient1.getHash().equals(txClient2.getHash()));
         
@@ -209,7 +209,7 @@ public class VerifyTest {
     public void testVerifyExpiredRefund() throws Exception {
         Transaction txClient1 = BitcoinUtils.createTx(
                 params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
-                9876);
+                9876, true);
         
         SignTO status1 = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
                 merchant.p2shAddress(), 9876, client, new Date());
@@ -232,7 +232,7 @@ public class VerifyTest {
     public void testVerifyNonExpiredRefund() throws Exception {
         Transaction txClient1 = BitcoinUtils.createTx(
                 params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
-                9876);
+                9876, true);
         
         SignTO status1 = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
                 merchant.p2shAddress(), 9876, client, new Date());
