@@ -171,24 +171,28 @@ public class WalletService {
     } 
 
 	private void walletWatchKeysP2SH(final NetworkParameters params) {
+		StringBuilder sb = new StringBuilder();
         final List<List<ECKey>> all = keyService.all();
         final List<Script> scripts = new ArrayList<>();
         for (List<ECKey> keys : all) {
             final Script script = BitcoinUtils.createP2SHOutputScript(2, keys);
             script.setCreationTimeSeconds(0);
             scripts.add(script);
-            LOG.debug("walletWatchKeysP2SH: {}", script.getToAddress(params));
+            sb.append(script.getToAddress(params)).append("\n");
         }
         wallet.addWatchedScripts(scripts);
+        LOG.debug("walletWatchKeysP2SH:\n{}", sb.toString());
     }
     
     private void walletWatchKeysCLTV(final NetworkParameters params) {
+    	StringBuilder sb = new StringBuilder();
         for (Keys key : keyService.allKeys()) {
         	for (TimeLockedAddressEntity address : key.timeLockedAddresses()) {
         		wallet.addWatchedAddress(address.toAddress(params), 0);
-        		LOG.debug("walletWatchKeysCLTV: {}", address.toAddress(params));
+        		sb.append(address.toAddress(params)).append("\n");
         	}
         }
+        LOG.debug("walletWatchKeysCLTV:\n{}", sb.toString());
     }
     
     private void walletWatchKeysPot(final NetworkParameters params) {
