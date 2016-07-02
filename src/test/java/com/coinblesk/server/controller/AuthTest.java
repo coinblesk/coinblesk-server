@@ -92,54 +92,54 @@ public class AuthTest {
     @Test
     @DatabaseTearDown(value = {"EmptyUser.xml"}, type = DatabaseOperation.DELETE_ALL)
     public void testCreateActivate() throws Exception {
-	mockMvc.perform(get("/u/a/g").secure(true)).andExpect(status().is3xxRedirection());
+	mockMvc.perform(get("/v1/u/a/g").secure(true)).andExpect(status().is3xxRedirection());
         UserAccountTO userAccountTO = new UserAccountTO();
-        MvcResult res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
+        MvcResult res = mockMvc.perform(post("/v1/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
         UserAccountStatusTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
         Assert.assertEquals(Type.NO_EMAIL.nr(), status.type().nr());
         
         userAccountTO.email("test-test.test");
-        res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
+        res = mockMvc.perform(post("/v1/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
         status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
         Assert.assertEquals(Type.INVALID_EMAIL.nr(), status.type().nr());
         
         userAccountTO.email("test@test.test");
-        res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
+        res = mockMvc.perform(post("/v1/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
         status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
         Assert.assertEquals(Type.PASSWORD_TOO_SHORT.nr(), status.type().nr());
         
         userAccountTO.password("1234");
-        res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
+        res = mockMvc.perform(post("/v1/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
         status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
         Assert.assertEquals(Type.PASSWORD_TOO_SHORT.nr(), status.type().nr());
         
         userAccountTO.password("123456");
-        res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
+        res = mockMvc.perform(post("/v1/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
         status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
         Assert.assertTrue(status.isSuccess());
         Assert.assertEquals(1, adminEmail.sentEmails());
         
-        res = mockMvc.perform(post("/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
+        res = mockMvc.perform(post("/v1/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
         status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
         Assert.assertEquals(Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_NOT_ACTIVATED.nr(), status.type().nr());
         Assert.assertEquals(2, adminEmail.sentEmails());
         
         //activate
-        mockMvc.perform(patch("/u/v/test@test.test/blub").secure(true)).andExpect(status().is5xxServerError());
+        mockMvc.perform(patch("/v1/u/v/test@test.test/blub").secure(true)).andExpect(status().is5xxServerError());
         Assert.assertEquals(3, adminEmail.sentEmails());
         
         //get correct token
         String token = userAccountService.getToken("test@test.test");
         Assert.assertNotNull(token);
-        mockMvc.perform(patch("/u/v/test@test.test/"+token).secure(true)).andExpect(status().isOk());
+        mockMvc.perform(patch("/v1/u/v/test@test.test/"+token).secure(true)).andExpect(status().isOk());
         Assert.assertEquals(3, adminEmail.sentEmails());
         
-        mockMvc.perform(get("/u/a/g").secure(true).with(csrf())).andExpect(status().is3xxRedirection());
+        mockMvc.perform(get("/v1/u/a/g").secure(true).with(csrf())).andExpect(status().is3xxRedirection());
         
         loginAndGetSessionFail("test@test.test", "12345");
         
         HttpSession session = loginAndGetSession("test@test.test", "123456");
-        res = mockMvc.perform(get("/u/a/g").secure(true).with(csrf()).session((MockHttpSession) session)).andExpect(status().isOk()).andReturn();
+        res = mockMvc.perform(get("/v1/u/a/g").secure(true).with(csrf()).session((MockHttpSession) session)).andExpect(status().isOk()).andReturn();
         UserAccountTO uato = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountTO.class);
         Assert.assertEquals("test@test.test", uato.email());
     }
@@ -149,7 +149,7 @@ public class AuthTest {
                 .param("username", username)
                 .param("password", password)
                 .with(csrf()))
-                .andExpect(header().string("Location", "/login?success"))
+                .andExpect(status().isOk())
 		.andReturn()
 		.getRequest()
 		.getSession();
@@ -161,7 +161,7 @@ public class AuthTest {
                 .param("username", username)
                 .param("password", password)
                 .with(csrf()))
-                .andExpect(header().string("Location", "/login?error"))
+                .andExpect(status().isUnauthorized())
 		.andReturn()
 		.getRequest()
 		.getSession();

@@ -102,9 +102,9 @@ public class KeyServiceTest {
 
     
     @Test
-	@DatabaseSetup("classpath:DbUnitFiles/keys.xml")
-	@DatabaseTearDown("classpath:DbUnitFiles/emptyAddresses.xml")
-    @DatabaseTearDown("classpath:DbUnitFiles/emptyKeys.xml")
+    @DatabaseSetup("keys.xml")
+    @DatabaseTearDown("emptyAddresses.xml")
+    @DatabaseTearDown("emptyKeys.xml")
 	public void testGetTimeLockedAddress_EmptyResult() {
 		long lockTime = 123456;
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
@@ -118,10 +118,10 @@ public class KeyServiceTest {
 		assertNull(fromDB);
 	}
 
-	@Test
-    @DatabaseSetup("classpath:DbUnitFiles/keys.xml")
-    @DatabaseTearDown("classpath:DbUnitFiles/emptyAddresses.xml")
-	@DatabaseTearDown("classpath:DbUnitFiles/emptyKeys.xml")
+    @Test
+    @DatabaseSetup("keys.xml")
+    @DatabaseTearDown("emptyAddresses.xml")
+    @DatabaseTearDown("emptyKeys.xml")
     public void testStoreAndGetTimeLockedAddress() {
     	long lockTime = 123456;
     	ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
@@ -141,9 +141,9 @@ public class KeyServiceTest {
     }
 
     @Test
-    @DatabaseSetup("classpath:DbUnitFiles/keys.xml")
-    @DatabaseTearDown("classpath:DbUnitFiles/emptyAddresses.xml")
-    @DatabaseTearDown("classpath:DbUnitFiles/emptyKeys.xml")
+    @DatabaseSetup("keys.xml")
+    @DatabaseTearDown("emptyAddresses.xml")
+    @DatabaseTearDown("emptyKeys.xml")
     public void testStoreAndGetTimeLockedAddresses() {
     	ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
     	
