@@ -15,6 +15,8 @@
  */
 package com.coinblesk.server.config;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.TimeZone;
 
 import org.bitcoinj.core.NetworkParameters;
@@ -23,7 +25,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 
 import com.coinblesk.bitcoin.BitcoinNet;
-import com.coinblesk.server.controller.AdminController;
 import com.coinblesk.server.utils.CoinUtils;
 import java.math.BigInteger;
 import org.bitcoinj.core.ECKey;
@@ -45,7 +46,14 @@ import org.slf4j.LoggerFactory;
 @Configuration
 public class AppConfig {
     
-    private static org.slf4j.Logger LOG = LoggerFactory.getLogger(AppConfig.class);
+    private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(AppConfig.class);
+    
+    private final static Set<String> SUPPORTED_CLIENT_VERSIONS;
+	static {
+		SUPPORTED_CLIENT_VERSIONS = new HashSet<>();
+		SUPPORTED_CLIENT_VERSIONS.add("1.0"); // CeBIT release (v1.0.262, should be v2.1)
+		SUPPORTED_CLIENT_VERSIONS.add("2.2"); // CLTV release
+	}
 
     @Value("${coinblesk.config.dir:/var/lib/coinblesk}")
     private FileSystemResource configDir;
@@ -73,16 +81,20 @@ public class AppConfig {
         return configDir;
     }
 
-    public String getBitcoinNet() {
-        return bitcoinNet;
+    public BitcoinNet getBitcoinNet() {
+        return BitcoinNet.of(bitcoinNet);
     }
 
     public NetworkParameters getNetworkParameters() {
-        return CoinUtils.getNetworkParams(BitcoinNet.of(bitcoinNet));
+        return CoinUtils.getNetworkParams(getBitcoinNet());
     }
 
     public int getMinConf() {
         return minConf;
+    }
+    
+    public Set<String> getSupportedClientVersions() {
+    	return new HashSet<>(SUPPORTED_CLIENT_VERSIONS);
     }
     
     public ECKey getPotPrivateKeyAddress() {

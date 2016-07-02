@@ -34,6 +34,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import com.coinblesk.bitcoin.BitcoinNet;
 import com.coinblesk.json.Type;
 import com.coinblesk.json.VersionTO;
 import com.coinblesk.server.config.BeanConfig;
@@ -82,7 +83,7 @@ public class VersionControllerTest {
 	}
 	
 	@Test
-	public void testVersion_NoClientVersion() throws Exception {
+	public void testVersion_NoInputs() throws Exception {
 		VersionTO requestTO = new VersionTO();
 		VersionTO responseTO = RESTUtils.postRequest(mockMvc, URL_VERSION, requestTO);
 		
@@ -93,26 +94,90 @@ public class VersionControllerTest {
 	}
 	
 	@Test
-	public void testVersion_SupportedClient() throws Exception {
-		VersionTO requestTO = new VersionTO();
-		requestTO.clientVersion(SUPPORTED_CLIENT_VERSION);
+	public void testVersion_NoNetwork() throws Exception {
+		VersionTO requestTO = new VersionTO()
+				.clientVersion(SUPPORTED_CLIENT_VERSION);
+				// network missing
+		VersionTO responseTO = RESTUtils.postRequest(mockMvc, URL_VERSION, requestTO);
+		
+		assertNotNull(responseTO);
+		assertFalse(responseTO.isSuccess());
+		assertFalse(responseTO.isSupported());
+		assertEquals(responseTO.type(), Type.INPUT_MISMATCH);
+	}
+	
+	@Test
+	public void testVersion_NoClientVersion() throws Exception {
+		VersionTO requestTO = new VersionTO()
+				// client version missing
+				.bitcoinNet(BitcoinNet.UNITTEST);
+				
+		VersionTO responseTO = RESTUtils.postRequest(mockMvc, URL_VERSION, requestTO);
+		
+		assertNotNull(responseTO);
+		assertFalse(responseTO.isSuccess());
+		assertFalse(responseTO.isSupported());
+		assertEquals(responseTO.type(), Type.INPUT_MISMATCH);
+	}
+	
+	@Test
+	public void testVersion_SupportedVersion_SameNetwork() throws Exception {
+		VersionTO requestTO = new VersionTO()
+				.clientVersion(SUPPORTED_CLIENT_VERSION)
+				.bitcoinNet(BitcoinNet.UNITTEST);
+		
 		VersionTO responseTO = RESTUtils.postRequest(mockMvc, URL_VERSION, requestTO);
 		
 		assertNotNull(responseTO);
 		assertTrue(responseTO.isSuccess());
 		assertTrue(responseTO.isSupported());
+		assertEquals(responseTO.bitcoinNet(), BitcoinNet.UNITTEST);
 		assertEquals(responseTO.type(), Type.SUCCESS);
 	}
 	
 	@Test
-	public void testVersion_UnsupportedClient() throws Exception {
-		VersionTO requestTO = new VersionTO();
-		requestTO.clientVersion(UNSUPPORTED_CLIENT_VERSION);
+	public void testVersion_SupportedVersion_DifferentNetwork() throws Exception {
+		VersionTO requestTO = new VersionTO()
+				.clientVersion(SUPPORTED_CLIENT_VERSION)
+				.bitcoinNet(BitcoinNet.MAINNET);
+		
 		VersionTO responseTO = RESTUtils.postRequest(mockMvc, URL_VERSION, requestTO);
 		
 		assertNotNull(responseTO);
 		assertTrue(responseTO.isSuccess());
 		assertFalse(responseTO.isSupported());
+		assertEquals(responseTO.bitcoinNet(), BitcoinNet.UNITTEST);
 		assertEquals(responseTO.type(), Type.SUCCESS);
 	}
+	
+	@Test
+	public void testVersion_UnsupportedVersion_SameNetwork() throws Exception {
+		VersionTO requestTO = new VersionTO()
+			.clientVersion(UNSUPPORTED_CLIENT_VERSION)
+			.bitcoinNet(BitcoinNet.UNITTEST);
+		VersionTO responseTO = RESTUtils.postRequest(mockMvc, URL_VERSION, requestTO);
+		
+		assertNotNull(responseTO);
+		assertTrue(responseTO.isSuccess());
+		assertFalse(responseTO.isSupported());
+		assertEquals(responseTO.bitcoinNet(), BitcoinNet.UNITTEST);
+		assertEquals(responseTO.type(), Type.SUCCESS);
+	}
+	
+	
+	
+	@Test
+	public void testVersion_UnsupportedVersion_DifferentNetwork() throws Exception {
+		VersionTO requestTO = new VersionTO()
+			.clientVersion(UNSUPPORTED_CLIENT_VERSION)
+			.bitcoinNet(BitcoinNet.MAINNET);
+		VersionTO responseTO = RESTUtils.postRequest(mockMvc, URL_VERSION, requestTO);
+		
+		assertNotNull(responseTO);
+		assertTrue(responseTO.isSuccess());
+		assertFalse(responseTO.isSupported());
+		assertEquals(responseTO.bitcoinNet(), BitcoinNet.UNITTEST);
+		assertEquals(responseTO.type(), Type.SUCCESS);
+	}
+	
 }
