@@ -94,7 +94,7 @@ public class AppConfig {
     }
     
     public Set<String> getSupportedClientVersions() {
-    	return SUPPORTED_CLIENT_VERSIONS;
+    	return new HashSet<>(SUPPORTED_CLIENT_VERSIONS);
     }
     
     public ECKey getPotPrivateKeyAddress() {
