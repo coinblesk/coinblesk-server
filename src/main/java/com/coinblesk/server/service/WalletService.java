@@ -412,5 +412,5 @@ public class WalletService {
 
 	public List<TransactionOutput> getUnspentOutputs() {
 		return wallet.getUnspents();
-	}
+	}   
 }

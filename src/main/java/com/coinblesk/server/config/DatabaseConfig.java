@@ -53,8 +53,8 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableTransactionManagement
 public class DatabaseConfig {
 
-	//@Value("${db.url:jdbc:hsqldb:mem:paging}")
-        @Value("${db.url:jdbc:hsqldb:file:/tmp/db2}")
+	@Value("${db.url:jdbc:hsqldb:mem:paging}")
+        //@Value("${db.url:jdbc:hsqldb:file:/tmp/db2}")
 	private String databaseUrl;
 
 	@Value("${db.username:sa}")

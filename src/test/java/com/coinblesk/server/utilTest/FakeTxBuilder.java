@@ -61,6 +61,20 @@ public class FakeTxBuilder {
         checkState(tx.isCoinBase());
         return tx;
     }
+    
+    /** Create a fake coinbase transaction. */
+    public static Transaction createFakeCoinbaseTx(final NetworkParameters params, ECKey output) {
+        TransactionOutPoint outpoint = new TransactionOutPoint(params, -1, Sha256Hash.ZERO_HASH);
+        TransactionInput input = new TransactionInput(params, null, new byte[0], outpoint);
+        Transaction tx = new Transaction(params);
+        tx.addInput(input);
+        TransactionOutput outputToMe = new TransactionOutput(params, tx, Coin.FIFTY_COINS,
+                output.toAddress(params));
+        tx.addOutput(outputToMe);
+
+        checkState(tx.isCoinBase());
+        return tx;
+    }
 
     /**
      * Create a fake TX of sufficient realism to exercise the unit tests. Two outputs, one to us, one to somewhere
