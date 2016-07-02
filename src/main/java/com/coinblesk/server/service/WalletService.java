@@ -109,7 +109,7 @@ public class WalletService {
         final File chainFile = new File(directory, "coinblesk2-" + appConfig.getBitcoinNet() + ".spvchain");
         final File walletFile = new File(directory, "coinblesk2-" + appConfig.getBitcoinNet() + ".wallet");
 
-        if (BitcoinNet.of(appConfig.getBitcoinNet()) == BitcoinNet.UNITTEST) {
+        if (appConfig.getBitcoinNet() == BitcoinNet.UNITTEST) {
             chainFile.delete();
             walletFile.delete();
             LOG.debug("Deleted file {} and {}", chainFile.getName(), walletFile.getName());
@@ -135,7 +135,7 @@ public class WalletService {
         blockChain = new BlockChain(params, blockStore);
         peerGroup = new PeerGroup(params, blockChain);
 
-        if (BitcoinNet.of(appConfig.getBitcoinNet()) == BitcoinNet.UNITTEST) {
+        if (appConfig.getBitcoinNet() == BitcoinNet.UNITTEST) {
             peerGroup.addAddress(new PeerAddress(InetAddress.getLocalHost(), params.getPort()));
         } else {
             //peerGroup handles the shutdown for us

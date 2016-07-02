@@ -19,9 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashSet;
 import java.util.Properties;
-import java.util.Set;
 
 import javax.servlet.ServletContext;
 
@@ -34,10 +32,13 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.coinblesk.bitcoin.BitcoinNet;
 import com.coinblesk.json.Type;
 import com.coinblesk.json.VersionTO;
+import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.util.CoinbleskException;
+
 
 /**
  * @author Andreas Albrecht
@@ -48,15 +49,12 @@ import com.coinblesk.util.CoinbleskException;
 public class VersionController {
 	
 	private final static Logger LOG = LoggerFactory.getLogger(VersionController.class);
-	
-	private final static Set<String> SUPPORTED_CLIENT_VERSIONS;
-	static {
-		SUPPORTED_CLIENT_VERSIONS = new HashSet<>();
-		SUPPORTED_CLIENT_VERSIONS.add("1.0");
-	}
-	
+		
 	@Autowired
     private ServletContext context;
+	
+	@Autowired
+	private AppConfig appConfig;
 	
 	@RequestMapping(
     		value = {""},
@@ -70,16 +68,21 @@ public class VersionController {
 		
 		try {
 			final String serverVersion = getServerVersion();
+			final BitcoinNet serverNetwork = appConfig.getBitcoinNet();
 			final String clientVersion = input.clientVersion();
-			if (clientVersion == null || clientVersion.isEmpty()) {
+			final BitcoinNet clientNetwork = input.bitcoinNet();
+						
+			if (clientVersion == null || clientVersion.isEmpty() || clientNetwork == null) {
 				return new VersionTO().type(Type.INPUT_MISMATCH);
 			}
 			
-			final boolean isSupported = isVersionSupported(clientVersion);
-			LOG.debug("{} - serverVersion={}, clientVersion={}, isSupported={}", 
-					tag, serverVersion, input.version(), isSupported);
+			final boolean isSupported = isVersionSupported(clientVersion) && 
+										isNetworkSupported(clientNetwork);
+			LOG.debug("{} - serverVersion={}, serverNetwork={}, clientVersion={}, clientNetwork={}, isSupported={}", 
+					tag, serverVersion, serverNetwork, clientVersion, clientNetwork, isSupported);
 			
 			return new VersionTO()
+					.bitcoinNet(serverNetwork)
 					.setSupported(isSupported)
 					.setSuccess();
 		} catch (Exception e) {
@@ -90,6 +93,10 @@ public class VersionController {
 		} finally {
 			LOG.debug("{} - finished in {} ms", tag, Duration.between(startTime, Instant.now()).toMillis());
 		}
+	}
+
+	private boolean isNetworkSupported(BitcoinNet clientNetwork) {
+		return clientNetwork != null && clientNetwork.equals(appConfig.getBitcoinNet());
 	}
 
 	/**
@@ -132,6 +139,6 @@ public class VersionController {
 	}
 
 	private boolean isVersionSupported(String clientVersion) {
-		return SUPPORTED_CLIENT_VERSIONS.contains(clientVersion);
+		return appConfig.getSupportedClientVersions().contains(clientVersion);
 	}
 }
