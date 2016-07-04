@@ -98,16 +98,15 @@ public class AppConfig {
     }
     
     public ECKey getPotPrivateKeyAddress() {
+        
         if(potPrivateKeyAddress == null || potPrivateKeyAddress.equals("")) {
             ECKey ecKey = new ECKey();
             LOG.error("No private key defined, cannot continue, suggested key:{}", ecKey.getPrivKey());
             throw new RuntimeException("No private key defined, cannot continue, suggested key:" + ecKey.getPrivKey());
         }
-        else if(potPrivateKeyAddress.equals("0")) {
-            LOG.warn("Using unit-test public key");
-            return ECKey.fromPrivate(potPrivateKeyAddress);
-        }
         
-        return ECKey.fromPrivate(potPrivateKeyAddress);
+        ECKey ecKey = ECKey.fromPrivate(potPrivateKeyAddress);
+        LOG.debug("Pot address is: {}", ecKey.toAddress(getNetworkParameters()));
+        return ecKey;
     }
 }
