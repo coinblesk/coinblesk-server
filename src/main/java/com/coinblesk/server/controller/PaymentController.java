@@ -214,21 +214,32 @@ public class PaymentController {
 			if (request.transaction() != null) {
 				transaction = new Transaction(params, request.transaction());
 				LOG.debug("{} - clientPubKey={} - transaction from input: \n{}", tag, clientPubKeyHex, transaction);
-								
+				
+				List<TransactionOutput> outputsToAdd = new ArrayList<>();
 				// if amount to spend && address provided, add corresponding output
 				if (request.amountToSpend() > 0 && request.addressTo() != null && !request.addressTo().isEmpty()) {
 					TransactionOutput txOut = transaction.addOutput(
 							Coin.valueOf(request.amountToSpend()), 
 							Address.fromBase58(params, request.addressTo()));
+					outputsToAdd.add(txOut);
 					LOG.debug("{} - added output={} to Tx={}", tag, txOut, transaction.getHash());
 				}
 				
-				// if fee is provided, we add an output to the most recently created address of the client.
-				if (request.amountChange()> 0) {
+				// if change amount is provided, we add an output to the most recently created address of the client.
+				if (request.amountChange() > 0) {
 					Address changeAddress = keys.latestTimeLockedAddresses().toAddress(params);
 					Coin changeAmount = Coin.valueOf(request.amountChange());
 					TransactionOutput changeOut = transaction.addOutput(changeAmount, changeAddress);
+					outputsToAdd.add(changeOut);
 					LOG.debug("{} - added change output={} to Tx={}", tag, changeOut, transaction.getHash());
+				}
+				
+				if (!outputsToAdd.isEmpty()) {
+					outputsToAdd = BitcoinUtils.sortOutputs(outputsToAdd);
+					transaction.clearOutputs();
+					for (TransactionOutput to : outputsToAdd) {
+						transaction.addOutput(to);
+					}
 				}
 				
 			} else {
