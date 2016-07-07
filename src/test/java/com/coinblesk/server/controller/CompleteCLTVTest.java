@@ -57,8 +57,8 @@ import org.springframework.web.context.WebApplicationContext;
 
 import com.coinblesk.bitcoin.AddressCoinSelector;
 import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.json.SignTO;
-import com.coinblesk.json.TimeLockedAddressTO;
+import com.coinblesk.json.v1.SignTO;
+import com.coinblesk.json.v1.TimeLockedAddressTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;

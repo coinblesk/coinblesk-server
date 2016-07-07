@@ -5,10 +5,10 @@
  */
 package com.coinblesk.server.utilTest;
 
-import com.coinblesk.json.RefundTO;
-import com.coinblesk.json.SignTO;
-import com.coinblesk.json.TxSig;
-import com.coinblesk.json.VerifyTO;
+import com.coinblesk.json.v1.RefundTO;
+import com.coinblesk.json.v1.SignTO;
+import com.coinblesk.json.v1.TxSig;
+import com.coinblesk.json.v1.VerifyTO;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
 import java.io.UnsupportedEncodingException;

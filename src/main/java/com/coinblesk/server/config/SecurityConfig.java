@@ -15,8 +15,8 @@
  */
 package com.coinblesk.server.config;
 
-import com.coinblesk.json.UserAccountStatusTO;
-import com.coinblesk.json.UserAccountTO;
+import com.coinblesk.json.v1.UserAccountStatusTO;
+import com.coinblesk.json.v1.UserAccountTO;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.util.BitcoinUtils;

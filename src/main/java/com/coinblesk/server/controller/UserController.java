@@ -19,25 +19,17 @@ import com.coinblesk.server.config.AdminEmail;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.server.utils.ApiVersion;
-import com.coinblesk.json.Type;
-import com.coinblesk.json.UserAccountStatusTO;
-import com.coinblesk.json.UserAccountTO;
+import com.coinblesk.json.v1.Type;
+import com.coinblesk.json.v1.UserAccountStatusTO;
+import com.coinblesk.json.v1.UserAccountTO;
 import com.coinblesk.server.config.DatabaseConfig;
 import com.coinblesk.server.config.UserEmail;
 import com.coinblesk.util.Pair;
-import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.TransactionCallbackWithoutResult;
-import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -66,9 +58,6 @@ public class UserController {
     @Autowired
     private UserEmail userEmail;
     
-    @Autowired
-    @Qualifier("transactionManager")
-    private PlatformTransactionManager txManager;
     @Autowired DatabaseConfig databaseConfig;
 
     //CRUD for the user

@@ -1,12 +1,10 @@
 package com.coinblesk.server.utils;
 
-import java.util.Calendar;
-import java.util.Date;
 
 import org.bitcoinj.core.ECKey;
 
-import com.coinblesk.json.BaseTO;
-import com.coinblesk.json.Type;
+import com.coinblesk.json.v1.BaseTO;
+import com.coinblesk.json.v1.Type;
 import com.coinblesk.util.SerializeUtils;
 
 public final class ToUtils {

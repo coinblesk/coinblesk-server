@@ -28,7 +28,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
 import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestExecutionListeners;
@@ -37,14 +36,14 @@ import org.springframework.test.context.support.DependencyInjectionTestExecution
 import org.springframework.test.context.transaction.TransactionalTestExecutionListener;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.json.BaseTO;
-import com.coinblesk.json.TimeLockedAddressTO;
-import com.coinblesk.json.Type;
+import com.coinblesk.json.v1.BaseTO;
+import com.coinblesk.json.v1.TimeLockedAddressTO;
+import com.coinblesk.json.v1.Type;
+import com.coinblesk.json.v1.BaseTO;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
 import com.coinblesk.server.service.KeyService;

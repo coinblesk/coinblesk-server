@@ -17,9 +17,9 @@ package com.coinblesk.server.service;
 
 import com.coinblesk.server.dao.UserAccountDAO;
 import com.coinblesk.server.entity.UserAccount;
-import com.coinblesk.json.Type;
-import com.coinblesk.json.UserAccountStatusTO;
-import com.coinblesk.json.UserAccountTO;
+import com.coinblesk.json.v1.Type;
+import com.coinblesk.json.v1.UserAccountStatusTO;
+import com.coinblesk.json.v1.UserAccountTO;
 import com.coinblesk.server.config.AdminEmail;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.config.UserRole;

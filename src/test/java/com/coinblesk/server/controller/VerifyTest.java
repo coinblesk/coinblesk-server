@@ -15,15 +15,15 @@
  */
 package com.coinblesk.server.controller;
 
-import com.coinblesk.json.RefundTO;
-import com.coinblesk.json.SignTO;
+import com.coinblesk.json.v1.RefundTO;
+import com.coinblesk.json.v1.SignTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
 import com.coinblesk.server.service.WalletService;
 
-import com.coinblesk.json.Type;
-import com.coinblesk.json.VerifyTO;
+import com.coinblesk.json.v1.Type;
+import com.coinblesk.json.v1.VerifyTO;
 import com.coinblesk.server.utilTest.Client;
 import com.coinblesk.server.utilTest.ServerCalls;
 import com.coinblesk.util.BitcoinUtils;

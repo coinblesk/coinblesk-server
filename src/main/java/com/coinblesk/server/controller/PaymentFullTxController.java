@@ -16,8 +16,8 @@
 package com.coinblesk.server.controller;
 
 import com.coinblesk.server.utils.ApiVersion;
-import com.coinblesk.json.SignTO;
-import com.coinblesk.json.VerifyTO;
+import com.coinblesk.json.v1.SignTO;
+import com.coinblesk.json.v1.VerifyTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;

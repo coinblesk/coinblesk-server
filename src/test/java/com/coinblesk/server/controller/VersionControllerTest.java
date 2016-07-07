@@ -35,8 +35,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import com.coinblesk.bitcoin.BitcoinNet;
-import com.coinblesk.json.Type;
-import com.coinblesk.json.VersionTO;
+import com.coinblesk.json.v1.Type;
+import com.coinblesk.json.v1.VersionTO;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
 import com.coinblesk.server.utilTest.RESTUtils;

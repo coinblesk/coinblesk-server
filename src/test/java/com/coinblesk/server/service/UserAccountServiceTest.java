@@ -6,7 +6,7 @@
 package com.coinblesk.server.service;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.json.UserAccountTO;
+import com.coinblesk.json.v1.UserAccountTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.entity.Keys;
@@ -20,9 +20,7 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 import org.bitcoinj.core.Block;
-import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PrunedException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
@@ -32,7 +30,6 @@ import org.bitcoinj.wallet.UnreadableWalletException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -16,14 +16,11 @@
 package com.coinblesk.server.service;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.json.SignTO;
-import com.coinblesk.json.SignVerifyTO;
-import com.coinblesk.json.TxSig;
-import com.coinblesk.json.Type;
+import com.coinblesk.json.v1.SignVerifyTO;
+import com.coinblesk.json.v1.TxSig;
+import com.coinblesk.json.v1.Type;
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.controller.PaymentController;
 import com.coinblesk.server.dao.TxDAO;
-import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.entity.Tx;
 import com.coinblesk.server.utils.ToUtils;

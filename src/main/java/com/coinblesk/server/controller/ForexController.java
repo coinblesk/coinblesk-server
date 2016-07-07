@@ -30,8 +30,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.coinblesk.server.service.ForexService;
 import com.coinblesk.server.utils.ApiVersion;
-import com.coinblesk.json.ExchangeRateTO;
-import com.coinblesk.json.Type;
+import com.coinblesk.json.v1.ExchangeRateTO;
+import com.coinblesk.json.v1.Type;
 import java.util.regex.Pattern;
 
 /**

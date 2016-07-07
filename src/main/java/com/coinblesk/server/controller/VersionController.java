@@ -33,8 +33,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.coinblesk.bitcoin.BitcoinNet;
-import com.coinblesk.json.Type;
-import com.coinblesk.json.VersionTO;
+import com.coinblesk.json.v1.Type;
+import com.coinblesk.json.v1.VersionTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.util.CoinbleskException;

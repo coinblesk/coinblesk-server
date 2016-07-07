@@ -15,7 +15,7 @@
  */
 package com.coinblesk.server.controller;
 
-import com.coinblesk.json.ExchangeRateTO;
+import com.coinblesk.json.v1.ExchangeRateTO;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
 import com.coinblesk.util.SerializeUtils;

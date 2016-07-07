@@ -15,13 +15,13 @@
  */
 package com.coinblesk.server.controller;
 
-import com.coinblesk.json.BaseTO;
+import com.coinblesk.json.v1.BaseTO;
 import com.coinblesk.server.config.AdminEmail;
 import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.server.utils.ApiVersion;
-import com.coinblesk.json.Type;
-import com.coinblesk.json.UserAccountStatusTO;
-import com.coinblesk.json.UserAccountTO;
+import com.coinblesk.json.v1.Type;
+import com.coinblesk.json.v1.UserAccountStatusTO;
+import com.coinblesk.json.v1.UserAccountTO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.bitcoinj.core.ECKey;

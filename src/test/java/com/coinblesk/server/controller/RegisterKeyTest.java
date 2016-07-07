@@ -18,8 +18,8 @@ package com.coinblesk.server.controller;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
 
-import com.coinblesk.json.KeyTO;
-import com.coinblesk.json.Type;
+import com.coinblesk.json.v1.KeyTO;
+import com.coinblesk.json.v1.Type;
 import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import org.bitcoinj.core.ECKey;

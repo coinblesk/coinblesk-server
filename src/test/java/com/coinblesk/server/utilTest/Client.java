@@ -15,7 +15,7 @@
  */
 package com.coinblesk.server.utilTest;
 
-import com.coinblesk.json.KeyTO;
+import com.coinblesk.json.v1.KeyTO;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;

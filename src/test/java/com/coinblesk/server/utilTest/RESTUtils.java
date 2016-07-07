@@ -22,7 +22,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-import com.coinblesk.json.BaseTO;
+import com.coinblesk.json.v1.BaseTO;
 import com.coinblesk.util.SerializeUtils;
 
 /**
