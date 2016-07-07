@@ -51,8 +51,9 @@ public class AppConfig {
     private final static Set<String> SUPPORTED_CLIENT_VERSIONS;
 	static {
 		SUPPORTED_CLIENT_VERSIONS = new HashSet<>();
-		SUPPORTED_CLIENT_VERSIONS.add("1.0"); // CeBIT release (v1.0.262, should be v2.1)
-		SUPPORTED_CLIENT_VERSIONS.add("2.2"); // CLTV release
+		//SUPPORTED_CLIENT_VERSIONS.add("1.0"); // CeBIT release (v1.0.262, should be v2.1)
+		//SUPPORTED_CLIENT_VERSIONS.add("2.2"); // CLTV release
+                SUPPORTED_CLIENT_VERSIONS.add("2.3"); // TO versioning release
 	}
 
     @Value("${coinblesk.config.dir:/var/lib/coinblesk}")
