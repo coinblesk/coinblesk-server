@@ -113,7 +113,7 @@ public class TransactionService {
 		
 		// Determine instant or not.
 		if (isTransactionInstant(params, clientKey.getPubKey(), transaction)) {
-			responseTO.setSuccess();
+			responseTO.type(Type.SUCCESS_INSTANT);
 		} else {
 			responseTO.type(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT);
 		}
