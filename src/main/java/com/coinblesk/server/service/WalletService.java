@@ -64,6 +64,10 @@ import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.util.BitcoinUtils;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 
 /**
@@ -94,6 +98,8 @@ public class WalletService {
     private PeerGroup peerGroup;
 
     private BlockStore blockStore;
+    
+    private Set<Sha256Hash> removed = Collections.synchronizedSet(new HashSet<Sha256Hash>());
 
     @PostConstruct
     public void init() throws IOException, UnreadableWalletException, BlockStoreException {
@@ -151,22 +157,29 @@ public class WalletService {
         final DownloadProgressTracker listener = new DownloadProgressTracker() {
             @Override
             protected void doneDownload() {
+                LOG.debug("downloading done");
                 //once we downloaded all the blocks we need to broadcast the stored approved tx
                 List<Transaction> txs = transactionService.listApprovedTransactions(params);
                 for(Transaction tx:txs) {
                     broadcast(tx);
                 }
             }
+
+            @Override
+            protected void progress(double pct, int blocksSoFar, Date date) {
+                LOG.debug("downloading: {}%", (int)pct);
+            }
+            
         };
         peerGroup.startBlockChainDownload(listener);
         wallet.addTransactionConfidenceEventListener(new TransactionConfidenceEventListener() {
 			@Override
 			public void onTransactionConfidenceChanged(Wallet wallet, Transaction tx) {
-                if (tx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf()) {
+                if (tx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf() && !removed.contains(tx.getHash())) {
                     LOG.debug("remove tx we got from the network {}", tx);
                     transactionService.removeTransaction(tx);
                     txQueueService.removeTx(tx);
-                    LOG.debug("remove tx we got from the network done.");
+                    removed.add(tx.getHash());
                 }
             }
         });
@@ -222,12 +235,15 @@ public class WalletService {
     public BlockChain blockChain() {
         return blockChain;
     }
+    
+    public void addWatching(Address address) {
+        wallet.addWatchedAddress(address);
+    }
 
     public void addWatching(Script script) {
         List<Script> list = new ArrayList<>(1);
         list.add(script);
         wallet.addWatchedScripts(list);
-
     }
 
     /**
@@ -345,6 +361,19 @@ public class WalletService {
     public TransactionOutput findOutputFor(TransactionInput input) {
         Transaction tx = wallet.getTransaction(input.getOutpoint().getHash());
         if (tx == null) {
+            //TODO: useDB?
+            /*List<TransactionOutput> touts = wallet.getWatchedOutputs(true);
+            for(TransactionOutput to:touts) {
+                if(to.getOutPointFor().getHash().equals(input.getOutpoint().getHash()) &&
+                        to.getOutPointFor().getIndex() == input.getOutpoint().getIndex()) {
+                    LOG.debug("could not get TX from wallet, but we have it..." + to);
+                    return to;
+                }
+            }
+            LOG.debug("we only have the following tx hashes:");
+            for(TransactionOutput to:touts) {
+                LOG.debug("to:"+to.getOutPointFor().getHash()+":"+to.getOutPointFor().getIndex());
+            }*/
             return null;
         }
         return tx.getOutput(input.getOutpoint().getIndex());

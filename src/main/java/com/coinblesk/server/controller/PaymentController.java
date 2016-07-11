@@ -141,6 +141,8 @@ public class PaymentController {
             if (!keyService.addressExists(address.getAddressHash())) {
                 keyService.storeTimeLockedAddress(keys, address);
                 walletService.addWatching(address.createPubkeyScript());
+                //TODO: better below?
+                //walletService.addWatching(address.getAddress(params));
                 responseTO.setSuccess();
                 LOG.debug("{} - new address created: {}", tag, address.toStringDetailed(params));
             } else {

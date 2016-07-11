@@ -135,12 +135,14 @@ public class TransactionService {
 				redeemScript = keyService.getRedeemScriptByAddressHash(addressHashFrom);
 				if (redeemScript == null) {
 					LOG.warn("signTransaction - redeem script for input {} not found - output: {}", inputIndex, txOut);
+                                        continue;
 				}
 			} else {
 				// may happen if Tx contains inputs of other transactions
 				// not related to coinblesk (unknown tx outputs).
 				LOG.warn("signTransaction - transaction output for tx input {} not found - input: {}", inputIndex, txIn);
 				redeemScript = null;
+                                continue;
 			}
 			
 			TransactionSignature clientSig = clientSigs.get(inputIndex);
