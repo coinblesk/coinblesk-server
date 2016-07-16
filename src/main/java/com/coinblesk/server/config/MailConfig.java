@@ -15,13 +15,15 @@
  */
 package com.coinblesk.server.config;
 
+import com.coinblesk.server.controller.UserController;
 import com.coinblesk.util.Pair;
 import java.util.LinkedList;
 import java.util.Properties;
 import java.util.Queue;
-import java.util.concurrent.atomic.AtomicInteger;
 import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -36,6 +38,8 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
  */
 @Configuration
 public class MailConfig {
+    
+    private final static Logger LOG = LoggerFactory.getLogger(MailConfig.class);
     
     private final static String UNIT_TEST = "unittest";
     private final Queue<Pair<String,String>> emailQueue = new LinkedList<>();
@@ -66,6 +70,9 @@ public class MailConfig {
     
     @Value("${email.admin:bocek@ifi.uzh.ch}")
     private String admin;
+    
+    @Autowired
+    private JavaMailSender javaMailService;
     
     public String getHost() {
 	return host;
@@ -103,12 +110,13 @@ public class MailConfig {
 	return admin;
     }
     
-    @Bean UserEmail userEmail() {
+    @Bean 
+    public UserEmail userEmail() {
         return new UserEmail() {
-            final private JavaMailSender javaMailService = javaMailService();
             @Override
             public void send(String recipient, String subject, String text) {
                 if(getHost().equals(UNIT_TEST)) {
+                    LOG.debug("not sending user email, we are unit testing");
                     emailQueue.add(new Pair<>(subject,text));
                 } else {
                     SimpleMailMessage smm = new SimpleMailMessage();
@@ -117,6 +125,7 @@ public class MailConfig {
                     smm.setSubject(subject);
                     smm.setText(text);
                     try {
+                        LOG.debug("send user mail {}",smm);
                         javaMailService.send(smm);
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -134,12 +143,11 @@ public class MailConfig {
     
     @Bean
     public AdminEmail adminEmail() {
-        return new AdminEmail() {
-            final private JavaMailSender javaMailService = javaMailService();
-            
+        return new AdminEmail() {   
             @Override
             public void send(String subject, String text) {
                 if(getHost().equals(UNIT_TEST)) {
+                    LOG.debug("not sending admin email, we are unit testing");
                     emailQueue.add(new Pair<>(subject,text));
                 } else {
                     SimpleMailMessage smm = new SimpleMailMessage();
@@ -148,6 +156,7 @@ public class MailConfig {
                     smm.setSubject(subject);
                     smm.setText(text);
                     try {
+                        LOG.debug("send admin mail {}",smm);
                         javaMailService.send(smm);
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -163,7 +172,8 @@ public class MailConfig {
     }
     
     //as seen in: http://stackoverflow.com/questions/22483407/send-emails-with-spring-by-using-java-annotations
-    private JavaMailSender javaMailService() { 
+    @Bean
+    public JavaMailSender javaMailService() { 
         JavaMailSenderImpl javaMailSender = new JavaMailSenderImpl();
         if(isAuth()) {
             Session session = Session.getInstance(getMailProperties(), new javax.mail.Authenticator() {

@@ -11,7 +11,7 @@ if (!hasProperty("profile") || "${profile}" == 'local') {
 }
 
 sourceSets.main.resources {
-    srcDirs = ["src/main/resources/${profile}"];
+    srcDirs = ["src/main/resources/${profile}", "src/main/resources/all"];
 }
 
 version = '2.1-SNAPSHOT'

@@ -15,6 +15,7 @@
  */
 package com.coinblesk.server.controller;
 
+import com.coinblesk.bitcoin.BitcoinNet;
 import com.coinblesk.server.config.AdminEmail;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.service.UserAccountService;
@@ -22,13 +23,17 @@ import com.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.UserAccountStatusTO;
 import com.coinblesk.json.v1.UserAccountTO;
+import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.config.DatabaseConfig;
 import com.coinblesk.server.config.UserEmail;
 import com.coinblesk.util.Pair;
+import java.net.URLEncoder;
+import java.util.Locale;
 import javax.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -58,6 +63,12 @@ public class UserController {
     @Autowired
     private UserEmail userEmail;
     
+    @Autowired
+    private MessageSource messageSource;
+    
+    @Autowired
+    private AppConfig cfg;
+    
     @Autowired DatabaseConfig databaseConfig;
 
     //CRUD for the user
@@ -65,7 +76,8 @@ public class UserController {
             consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
     @ResponseBody
-    public UserAccountStatusTO createAccount(@RequestBody UserAccountTO userAccount) {
+    public UserAccountStatusTO createAccount(Locale locale, 
+            @RequestBody UserAccountTO userAccount) {
         LOG.debug("Create account for {}", userAccount.email());
         try {
             //TODO: reactived if deleted flag is set
@@ -76,9 +88,16 @@ public class UserController {
                 
                 try {
                     LOG.debug("send email to {}", pair.element1().getEmail());
+                    final String path = "v1/user/verify/"+URLEncoder.encode(pair.element1().getEmail(), "UTF-8")+"/"+pair.element1().getEmailToken();
+                    final String url;
+                    if(cfg.getBitcoinNet() == BitcoinNet.MAINNET) {
+                        url = "https://bitcoin.csg.uzh.ch/coinblesk-server/"+path;
+                    } else {
+                        url = "http://bitcoin2-test.csg.uzh.ch/coinblesk-server/"+path;
+                    }
                     userEmail.send(pair.element1().getEmail(), 
-                            "Coinblesk Account Activation", 
-                            "Please click here: http://host/");
+                            messageSource.getMessage("activation.email.title", null, locale), 
+                            messageSource.getMessage("activation.email.text", new String[]{url}, locale));
                 } catch (Exception e) {
                     LOG.error("Mail send error", e);
                     adminEmail.send("Coinblesk Error", "Unexpected Error: " + e);
@@ -91,7 +110,7 @@ public class UserController {
         }
     }
 
-    @RequestMapping(value = {"/verif/{email}/{token}", "/v/{email}/{token}"}, method = RequestMethod.PATCH)
+    @RequestMapping(value = {"/verify/{email}/{token}", "/v/{email}/{token}"}, method = RequestMethod.GET)
     @ResponseBody
     public String verifyEmail(@PathVariable(value = "email") String email,
             @PathVariable(value = "token") String token, HttpServletRequest request) {
