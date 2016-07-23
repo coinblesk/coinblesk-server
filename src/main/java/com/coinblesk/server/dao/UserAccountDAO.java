@@ -48,13 +48,4 @@ public class UserAccountDAO {
     public <T> T save(final T enity) {
         return em.merge(enity);
     }
-    
-    public int remove(final String email) {
-        final CriteriaBuilder cb = em.getCriteriaBuilder();
-        final CriteriaUpdate<UserAccount> update = cb.createCriteriaUpdate(UserAccount.class);
-        final Root from = update.from(UserAccount.class);
-        final Predicate condition = cb.equal(from.get("email"), email);
-        update.set(from.get("isDeleted"), true).where(condition);
-        return em.createQuery(update).executeUpdate();
-    }
 }

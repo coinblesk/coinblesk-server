@@ -63,6 +63,11 @@ public class UserAccount implements Serializable {
     private BigDecimal balance;
     @Column(name = "EMAIL_TOKEN", nullable = true)
     private String emailToken;
+    @Column(name = "FORGOT_PASSWORD", nullable = true)
+    private String forgotPassword;
+    @Column(name = "FORGOT_EMAIL_TOKEN", nullable = true)
+    private String forgotEmailToken;
+    
     @Enumerated(EnumType.STRING)
     @Column(name="USER_ROLE")
     private UserRole userRole;
@@ -136,6 +141,24 @@ public class UserAccount implements Serializable {
 
     public UserAccount setEmailToken(String emailToken) {
         this.emailToken = emailToken;
+        return this;
+    }
+    
+    public String getForgotPassword() {
+        return forgotPassword;
+    }
+
+    public UserAccount setForgotPassword(String forgotPassword) {
+        this.forgotPassword = forgotPassword;
+        return this;
+    }
+    
+    public String getForgotEmailToken() {
+        return forgotEmailToken;
+    }
+
+    public UserAccount setForgotEmailToken(String forgotEmailToken) {
+        this.forgotEmailToken = forgotEmailToken;
         return this;
     }
     

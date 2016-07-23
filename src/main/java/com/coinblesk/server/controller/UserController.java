@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -68,6 +69,9 @@ public class UserController {
     
     @Autowired
     private AppConfig cfg;
+    
+    @Autowired
+    private PasswordEncoder passwordEncoder;
     
     @Autowired DatabaseConfig databaseConfig;
 
@@ -130,6 +134,64 @@ public class UserController {
             return "Activate account success";
         } catch (Exception e) {
             LOG.error("User create error", e);
+            throw new InternalServerErrorException(e);
+        }
+    }
+    
+    //http://stackoverflow.com/questions/16332092/spring-mvc-pathvariable-with-dot-is-getting-truncated
+    @RequestMapping(value = {"/forgot/{email:.+}", "/f/{email:.+}"}, method = RequestMethod.GET)
+    @ResponseBody
+    public UserAccountStatusTO forgot(Locale locale, @PathVariable(value = "email") String email, HttpServletRequest request) {
+        LOG.debug("Forgot password for {}", email);
+        try {
+            Pair<UserAccountStatusTO, UserAccountTO> pair = userAccountService.forgot(email);
+            if(pair.element0().isSuccess()) {
+                 try {
+                    LOG.debug("send forgot email to {}", email);
+                    String forgotToken = pair.element1().message();
+                    String password = pair.element1().password();
+                    final String path = "v1/user/forgot-verify/"+URLEncoder.encode(email, "UTF-8")+"/"+forgotToken;
+                    final String url;
+                    if(cfg.getBitcoinNet() == BitcoinNet.MAINNET) {
+                        url = "https://bitcoin.csg.uzh.ch/coinblesk-server/"+path;
+                    } else {
+                        url = "http://bitcoin2-test.csg.uzh.ch/coinblesk-server/"+path;
+                    }
+                    userEmail.send(email, 
+                            messageSource.getMessage("forgot.email.title", null, locale), 
+                            messageSource.getMessage("forgot.email.text", new String[]{url, password}, locale));
+                } catch (Exception e) {
+                    LOG.error("Mail send error", e);
+                    adminEmail.send("Coinblesk Error", "Unexpected Error: " + e);
+                }
+            }
+            return pair.element0(); 
+        } catch (Exception e) {
+            LOG.error("Forget password error", e);
+            return new UserAccountStatusTO().type(Type.SERVER_ERROR).message(e.getMessage());
+        }
+    }
+    
+    @RequestMapping(value = {"/forgot-verify/{email}/{forgot-token}", "/fv/{email}/{forgot-token}"}, method = RequestMethod.GET)
+    @ResponseBody
+    public String forgotVerifyEmail(@PathVariable(value = "email") String email,
+            @PathVariable(value = "forgot-token") String forgetToken, HttpServletRequest request) {
+        LOG.debug("Activate account for {}", email);
+        try {
+            UserAccountStatusTO status = userAccountService.activateForgot(email, forgetToken);
+            if (!status.isSuccess()) {
+                LOG.error("Someone tried a link with an invalid forget token: {}/{}/{}", email, forgetToken, status.type()
+                        .name());
+                adminEmail.send("Wrong Link?",
+                        "Someone tried a link with an invalid forget token: " + email + " / " + forgetToken + "/" + status
+                        .type().name());
+                throw new BadRequestException("Wrong Link");
+            }
+            LOG.debug("Activate forgot password success for {}", email);
+            //TODO: text/layout
+            return "Password reset verify success";
+        } catch (Exception e) {
+            LOG.error("Password reset verify error", e);
             throw new InternalServerErrorException(e);
         }
     }

@@ -131,4 +131,22 @@ public class UserControllerAuthenticated {
         return new UserAccountStatusTO().setSuccess();
     }
     
+    @RequestMapping(value="/change-password", method = RequestMethod.POST, 
+            produces = "application/json; charset=UTF-8", 
+            consumes = "application/json; charset=UTF-8")
+    public UserAccountStatusTO changePassword (
+            @RequestBody UserAccountTO to, 
+            HttpServletRequest request, 
+            HttpServletResponse response) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        LOG.debug("Change password account for {}", auth.getName());
+        if (auth != null) {
+            UserAccountStatusTO status = userAccountService.changePassword(auth.getName(), to.password());
+            return status;
+        } else {
+            return new UserAccountStatusTO().type(Type.ACCOUNT_ERROR);
+        }
+        
+    }
+    
 }

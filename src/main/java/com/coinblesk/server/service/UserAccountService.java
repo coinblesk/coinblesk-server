@@ -29,6 +29,7 @@ import com.coinblesk.util.CoinbleskException;
 import com.coinblesk.util.InsufficientFunds;
 import com.coinblesk.util.Pair;
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -49,6 +50,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class UserAccountService {
+    
+    private final static SecureRandom random = new SecureRandom();
 
     //as senn in: http://www.mkyong.com/regular-expressions/how-to-validate-email-address-with-regular-expression/
     private static final String EMAIL_PATTERN
@@ -152,13 +155,13 @@ public class UserAccountService {
 
     @Transactional(readOnly = false)
     public UserAccountStatusTO delete(String email) {
-        final int result = userAccountDao.remove(email);
-        if (result == 0) {
-            return new UserAccountStatusTO().type(Type.NO_ACCOUNT);
+        
+        final UserAccount found = userAccountDao.getByAttribute("email", email);
+        if (found == null) {
+            //no such email address - notok
+            return new UserAccountStatusTO().type(Type.NO_EMAIL);
         }
-        if (result > 1) {
-            return new UserAccountStatusTO().type(Type.ACCOUNT_ERROR);
-        }
+        found.setDeleted(true);
         return new UserAccountStatusTO().setSuccess();
     }
 
@@ -226,5 +229,71 @@ public class UserAccountService {
         return userAccount.getEmailToken();
     }
 
+    @Transactional(readOnly = false)
+    public UserAccountStatusTO changePassword(String email, String password) {
+        final UserAccount found = userAccountDao.getByAttribute("email", email);
+        if (found == null) {
+            //no such email address - notok
+            return new UserAccountStatusTO().type(Type.NO_EMAIL);
+        }
+        found.setPassword(passwordEncoder.encode(password));
+        return new UserAccountStatusTO().setSuccess();
+    }
     
+    @Transactional(readOnly = false)
+    public UserAccountStatusTO activateForgot(String email, String forgetToken) {
+        final UserAccount found = userAccountDao.getByAttribute("email", email);
+        if (found == null) {
+            //no such email address - notok
+            return new UserAccountStatusTO().type(Type.NO_EMAIL);
+        }
+        if (found.getForgotEmailToken() == null) {
+            //wrong no password forget requested
+            return new UserAccountStatusTO().type(Type.INVALID_EMAIL_TOKEN);
+        }
+        
+        if (!found.getForgotEmailToken().equals(forgetToken)) {
+            //wrong token - notok
+            return new UserAccountStatusTO().type(Type.INVALID_EMAIL_TOKEN);
+        }
+        
+        //activate, change password
+        found.setForgotEmailToken(null);
+        found.setPassword(found.getForgotPassword());
+        
+        return new UserAccountStatusTO().setSuccess();
+    }
+
+    @Transactional(readOnly = false)
+    public Pair<UserAccountStatusTO, UserAccountTO> forgot(String email) {
+        final UserAccount found = userAccountDao.getByAttribute("email", email);
+        if (found == null) {
+            LOG.debug("no such email found in DB {}", email);
+            //no such email address - notok
+            return new Pair<UserAccountStatusTO, UserAccountTO>(new UserAccountStatusTO().type(Type.NO_EMAIL), null);
+        }
+        String password = createPassword();
+        found.setForgotPassword(passwordEncoder.encode(password));
+        String token = UUID.randomUUID().toString();
+        found.setForgotEmailToken(token);
+        UserAccountTO to = new UserAccountTO();
+        to.email(found.getEmail());
+        to.password(password);
+        to.message(token);
+        return new Pair<UserAccountStatusTO, UserAccountTO>(new UserAccountStatusTO().setSuccess(), to);
+    }
+ 
+    private static String createPassword() {
+        // put here all characters that are allowed in password
+        final char[] ALLOWED_CHARACTERS = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789".toCharArray();;
+        final int PASSWORD_LENGTH = 8;
+        
+        final StringBuffer password = new StringBuffer();
+
+        final int len = ALLOWED_CHARACTERS.length;
+        for(int i = 0; i < PASSWORD_LENGTH; i++) {
+            password.append(ALLOWED_CHARACTERS[ random.nextInt(len) ]);
+        }
+        return password.toString();
+    }
 }
