@@ -37,6 +37,7 @@ import org.springframework.web.context.WebApplicationContext;
 import com.coinblesk.bitcoin.BitcoinNet;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.VersionTO;
+import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
 import com.coinblesk.server.utilTest.RESTUtils;
@@ -59,7 +60,11 @@ import com.github.springtestdbunit.DbUnitTestExecutionListener;
 public class VersionControllerTest {
 	private static final String URL_VERSION = "/v1/version";
 	
-	private static final String SUPPORTED_CLIENT_VERSION = "1.0";
+	private static final String SUPPORTED_CLIENT_VERSION;
+	static {
+		SUPPORTED_CLIENT_VERSION = new AppConfig().getSupportedClientVersions().iterator().next();
+	}
+	
 	private static final String UNSUPPORTED_CLIENT_VERSION = "not supported";
 	
 	@Autowired

@@ -1,8 +1,6 @@
 package com.coinblesk.server.controller;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -26,6 +24,7 @@ import org.bitcoinj.core.ScriptException;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
+import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.net.discovery.PeerDiscovery;
@@ -57,14 +56,17 @@ import org.springframework.web.context.WebApplicationContext;
 
 import com.coinblesk.bitcoin.AddressCoinSelector;
 import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.json.v1.SignTO;
+import com.coinblesk.json.v1.KeyTO;
+import com.coinblesk.json.v1.SignVerifyTO;
 import com.coinblesk.json.v1.TimeLockedAddressTO;
+import com.coinblesk.json.v1.Type;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
 import com.coinblesk.server.service.KeyService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.FakeTxBuilder;
+import com.coinblesk.server.utilTest.RESTUtils;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
@@ -177,8 +179,9 @@ public class CompleteCLTVTest {
     	List<TransactionSignature> clientSigs = client.signTxByClient(tx);
     	assertTrue(clientSigs.size() > 0);
     	
-    	SignTO signTO = client.signTxByServer(tx, clientSigs);
+    	SignVerifyTO signTO = client.signTxByServer(tx, clientSigs);
     	assertNotNull(signTO);
+    	assertTrue(signTO.isSuccess());
     	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.signatures());
     	assertTrue(serverSigs.size() > 0);
     	assertEquals(serverSigs.size(), tx.getInputs().size());
@@ -207,7 +210,7 @@ public class CompleteCLTVTest {
 						    			Coin.COIN.divide(2).value);
     	
     	List<TransactionSignature> clientSigs = client.signTxByClient(tx);
-    	SignTO signTO = client.signTxByServer(tx, clientSigs);
+    	SignVerifyTO signTO = client.signTxByServer(tx, clientSigs);
     	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.signatures());
     	
     	assertTrue(tx.getInputs().size() > 0 && tx.getInputs().size() == clientSigs.size() && clientSigs.size() == serverSigs.size());
@@ -265,7 +268,7 @@ public class CompleteCLTVTest {
 
     	// we must send signatures to server in order to sign.
     	List<TransactionSignature> clientSigs = client.signTxByClient(tx);
-    	SignTO signTO = client.signTxByServer(tx, clientSigs);
+    	SignVerifyTO signTO = client.signTxByServer(tx, clientSigs);
     	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.signatures());
     	assertTrue(tx.getInputs().size() > 0 && tx.getInputs().size() == serverSigs.size());
     	
@@ -408,7 +411,7 @@ public class CompleteCLTVTest {
 						    			Coin.COIN.multiply(3).value);
     	
     	List<TransactionSignature> clientSigs = client.signTxByClient(tx);
-    	SignTO signTO = client.signTxByServer(tx, clientSigs);
+    	SignVerifyTO signTO = client.signTxByServer(tx, clientSigs);
     	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.signatures());
     	
     	assertEquals(clientSigs.size(), serverSigs.size());
@@ -416,6 +419,54 @@ public class CompleteCLTVTest {
     	client.verifyTx(tx);
     	
     	fakeBroadcast(tx);
+    }
+	
+	@Test
+    public void testSpend_BeforeLockTime_DoubleSpend() throws Exception {
+		List<Transaction> clientTx = new ArrayList<>();
+    	for (int i = 0; i < 2; ++i) {
+    		client.createTimeLockedAddress();
+    		Transaction tx = fundClient(client.getChangeAddress());
+    		clientTx.add(tx);
+    		Thread.sleep(500);
+    	}
+    	   	
+    	List<TransactionOutput> utxo = new ArrayList<>(client.wallet().getUnspents());
+    	List<TransactionOutput> utxoToSpend = new ArrayList<>(utxo);
+    	utxoToSpend.remove(0);
+    	
+    	Transaction tx = BitcoinUtils.createTx(
+						    			params, 
+						    			utxoToSpend, 
+						    			client.getAllAddresses().keySet(), 
+						    			client.getChangeAddress(), 
+						    			merchant.getChangeAddress(), 
+						    			Coin.COIN.div(3).value);
+    	
+    	List<TransactionSignature> clientSigs = client.signTxByClient(tx);
+    	SignVerifyTO signTO = client.signTxByServer(tx, clientSigs);
+    	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.signatures());
+    	
+    	assertEquals(clientSigs.size(), serverSigs.size());
+    	client.applySignatures(tx, clientSigs, serverSigs);
+    	client.verifyTx(tx);
+    	 	
+    	//// 2. Double spend
+    	Transaction txDouble = BitcoinUtils.createTx(
+						    			params, 
+						    			utxoToSpend, 
+						    			client.getAllAddresses().keySet(), 
+						    			client.getChangeAddress(), 
+						    			merchant.getChangeAddress(), 
+						    			Coin.COIN.div(4).value);
+    	
+    	List<TransactionSignature> clientSigsDouble = client.signTxByClient(txDouble);
+    	SignVerifyTO signTODouble = client.signTxByServer(
+    			FakeTxBuilder.roundTripTransaction(params, txDouble), clientSigsDouble);
+    	assertFalse(signTODouble.isSuccess());
+    	assertEquals(signTODouble.type(), Type.BURNED_OUTPUTS);
+    	assertNull(signTODouble.transaction());
+    	assertNull(signTODouble.signatures());
     }
 	
 	
@@ -493,11 +544,12 @@ public class CompleteCLTVTest {
 			this.mockMvc = mockMvc;
 			this.clientKey = new ECKey();
 			this.addressesToRedeemScripts = new HashMap<>();
+			this.serverKey = keyExchange();
 			
 			TimeLockedAddress timeLockedAddress = createTimeLockedAddress();
-			this.serverKey = ECKey.fromPublicOnly(timeLockedAddress.getServerPubKey());
+			
 		}
-		
+
 		public Map<Address, Coin> getBalanceByAddresses() {
 			// this is not really efficient, we could it do in 1 iteration!
 			Map<Address, Coin> balance = new HashMap<>();
@@ -590,10 +642,26 @@ public class CompleteCLTVTest {
 		public Map<Address, byte[]> getAllAddresses() {
 			return addressesToRedeemScripts;
 		}
+		
+				
+		private ECKey keyExchange() throws Exception {
+			KeyTO keyTO = new KeyTO()
+					.currentDate(System.currentTimeMillis())
+					.publicKey(clientKey.getPubKey());
+			SerializeUtils.signJSON(keyTO, clientKey);
+			
+			KeyTO responseTO = RESTUtils.postRequest(mockMvc, PaymentControllerTest.URL_KEY_EXCHANGE, keyTO);
+			assertTrue(responseTO.isSuccess());
+			assertNotNull(responseTO.publicKey());
+			
+			return ECKey.fromPublicOnly(responseTO.publicKey());
+		}
 
 		public TimeLockedAddress createTimeLockedAddress() throws Exception {
+			long locktime = (System.currentTimeMillis() + 5000L) / 1000L;
 			TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
 					.currentDate(System.currentTimeMillis())
+					.lockTime(locktime)
 					.publicKey(clientKey.getPubKey());
 			SerializeUtils.signJSON(requestTO, clientKey);
 	        MvcResult res = mockMvc
@@ -607,7 +675,9 @@ public class CompleteCLTVTest {
 	        TimeLockedAddressTO response = SerializeUtils.GSON
 	        		.fromJson(res.getResponse().getContentAsString(), TimeLockedAddressTO.class);
 	        
+	        assertTrue(response.isSuccess());
 	        TimeLockedAddress timeLockedAddress = response.timeLockedAddress();
+	        assertNotNull(timeLockedAddress);
 	        Address address = timeLockedAddress.getAddress(params);
 	        addressesToRedeemScripts.put(address, timeLockedAddress.createRedeemScript().getProgram());
 	        mostRecentAddress = address;
@@ -618,9 +688,8 @@ public class CompleteCLTVTest {
 	        return timeLockedAddress;
 		}
 		
-		public SignTO signTxByServer(Transaction tx, List<TransactionSignature> clientSigs) throws Exception {
-			SignTO signTO = new SignTO()
-					.currentDate(System.currentTimeMillis())
+		public SignVerifyTO signTxByServer(Transaction tx, List<TransactionSignature> clientSigs) throws Exception {
+			SignVerifyTO signTO = new SignVerifyTO()
 					.publicKey(clientKey.getPubKey())
 					.transaction(tx.unsafeBitcoinSerialize())
 					.signatures(SerializeUtils.serializeSignatures(clientSigs))
@@ -632,7 +701,7 @@ public class CompleteCLTVTest {
 	        				.contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(signTO)))
 	        		.andExpect(status().isOk())
 	        		.andReturn();
-			SignTO response = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), SignTO.class);
+			SignVerifyTO response = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), SignVerifyTO.class);
 			return response;
 		}
 		

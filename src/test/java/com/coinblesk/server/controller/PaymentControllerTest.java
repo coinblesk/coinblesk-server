@@ -41,9 +41,9 @@ import org.springframework.web.context.WebApplicationContext;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.json.v1.BaseTO;
+import com.coinblesk.json.v1.KeyTO;
 import com.coinblesk.json.v1.TimeLockedAddressTO;
 import com.coinblesk.json.v1.Type;
-import com.coinblesk.json.v1.BaseTO;
 import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.config.SecurityConfig;
 import com.coinblesk.server.service.KeyService;
@@ -69,8 +69,12 @@ import com.github.springtestdbunit.annotation.DatabaseTearDown;
 		BeanConfig.class, 
 		SecurityConfig.class})
 @WebAppConfiguration
+@DatabaseSetup("keys.xml")
+@DatabaseTearDown("emptyAddresses.xml")
+@DatabaseTearDown("emptyKeys.xml")
 public class PaymentControllerTest {
 	
+	public static final String URL_KEY_EXCHANGE = "/v1/payment/key-exchange";
 	public static final String URL_CREATE_TIME_LOCKED_ADDRESS = "/v1/payment/createTimeLockedAddress";
 	public static final String URL_SIGN_VERIFY = "/v1/payment/signverify";
 	
@@ -89,6 +93,96 @@ public class PaymentControllerTest {
     public void setUp() {
          mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();   
     }
+    
+    	@Test
+	public void testKeyExchange_NoContent() throws Exception {
+		mockMvc
+			.perform(post(URL_KEY_EXCHANGE).secure(true))
+			.andExpect(status().is4xxClientError());
+	}
+	
+	@Test
+	public void testKeyExchange_EmptyRequest() throws Exception {
+	    KeyTO requestTO = new KeyTO();
+	    KeyTO response = requestKeyExchange(requestTO);
+	    assertFalse(response.isSuccess());
+	    assertEquals(response.type(), Type.INPUT_MISMATCH);
+		assertNull(response.publicKey());
+	}
+    
+	@Test
+    public void testKeyExchange_NoPubKey() throws Exception {
+    	KeyTO requestTO = new KeyTO();
+    	requestTO.currentDate(System.currentTimeMillis());
+    	
+	    KeyTO response = requestKeyExchange(requestTO);
+	    assertFalse(response.isSuccess());
+	    assertEquals(response.type(), Type.INPUT_MISMATCH);
+		assertNull(response.publicKey());
+    }
+    
+    @Test
+    public void testKeyExchange_InvalidPubKey() throws Exception {
+    	KeyTO requestTO = new KeyTO()
+    		.currentDate(System.currentTimeMillis())
+    		.publicKey("invalid key".getBytes());
+    	
+	    KeyTO response = requestKeyExchange(requestTO);
+	    assertFalse(response.isSuccess());
+	    assertEquals(response.type(), Type.INPUT_MISMATCH);
+		assertNull(response.publicKey());
+    }
+    
+    @Test
+    public void testKeyExchange() throws Exception {
+    	ECKey key = new ECKey();
+    	KeyTO requestTO = new KeyTO()
+    		.currentDate(System.currentTimeMillis())
+    		.publicKey(key.getPubKey());
+    	
+	    KeyTO response = requestKeyExchange(requestTO);
+	    assertTrue(response.isSuccess());
+	    assertEquals(response.type(), Type.SUCCESS);
+		assertNotNull(response.publicKey());
+		assertTrue(ECKey.isPubKeyCanonical(response.publicKey()));
+		
+		// throws if invalid
+		ECKey serverPubKey = ECKey.fromPublicOnly(response.publicKey()); 
+		assertTrue(SerializeUtils.verifyJSONSignature(response, serverPubKey));
+    }
+    
+    @Test
+    public void testKeyExchange_ExistingPubKey() throws Exception {
+    	ECKey key = new ECKey();
+    	KeyTO requestTO = new KeyTO()
+    		.currentDate(System.currentTimeMillis())
+    		.publicKey(key.getPubKey());
+    	
+	    KeyTO response = requestKeyExchange(requestTO);
+	    assertTrue(response.isSuccess());
+	    assertEquals(response.type(), Type.SUCCESS);
+		assertNotNull(response.publicKey());
+		
+		// throws if invalid
+		ECKey serverPubKey = ECKey.fromPublicOnly(response.publicKey()); 
+		assertTrue(SerializeUtils.verifyJSONSignature(response, serverPubKey));
+		
+		// execute 2nd request - server should respond with same key.
+    	KeyTO request2TO = new KeyTO()
+    		.currentDate(System.currentTimeMillis())
+    		.publicKey(key.getPubKey());
+		KeyTO response_2 = requestKeyExchange(request2TO);
+		assertTrue(response_2.isSuccess());
+		assertEquals(response_2.type(), Type.SUCCESS_BUT_KEY_ALREADY_EXISTS);
+		assertNotNull(response_2.publicKey());
+		assertArrayEquals(response_2.publicKey(), response.publicKey());
+		assertTrue(SerializeUtils.verifyJSONSignature(response_2, serverPubKey));
+    }
+    
+    private KeyTO requestKeyExchange(KeyTO requestTO) throws Exception {
+		String jsonTO = SerializeUtils.GSON.toJson(requestTO);;
+    	return RESTUtils.postRequest(mockMvc, URL_KEY_EXCHANGE, jsonTO, KeyTO.class);
+	}
     
 	@Test
 	public void testCreateTimeLockedAddress_NoContent() throws Exception {
@@ -169,9 +263,6 @@ public class PaymentControllerTest {
     }
 	
 	@Test
-    @DatabaseSetup("keys.xml")
-    @DatabaseTearDown("emptyAddresses.xml")
-    @DatabaseTearDown("emptyKeys.xml")
 	public void testCreateTimeLockedAddress_NoLockTime() throws Exception {
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 		TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
@@ -186,9 +277,6 @@ public class PaymentControllerTest {
 	}
 	
 	@Test
-    @DatabaseSetup("keys.xml")
-    @DatabaseTearDown("emptyAddresses.xml")
-    @DatabaseTearDown("emptyKeys.xml")
 	public void testCreateTimeLockedAddress_LockTimeByBlock() throws Exception {
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 		long lockTime = Transaction.LOCKTIME_THRESHOLD-1000;
@@ -205,9 +293,6 @@ public class PaymentControllerTest {
 	}
 	
 	@Test
-    @DatabaseSetup("keys.xml")
-    @DatabaseTearDown("emptyAddresses.xml")
-    @DatabaseTearDown("emptyKeys.xml")
 	public void testCreateTimeLockedAddress_LockTimeInPast() throws Exception {
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 		long lockTime = Utils.currentTimeSeconds()-1;
@@ -224,9 +309,6 @@ public class PaymentControllerTest {
 	}
 	
 	@Test
-    @DatabaseSetup("keys.xml")
-    @DatabaseTearDown("emptyAddresses.xml")
-    @DatabaseTearDown("emptyKeys.xml")
 	public void testCreateTimeLockedAddress_RequestTwice() throws Exception {
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 		long lockTime = Utils.currentTimeSeconds()+100;
@@ -258,9 +340,6 @@ public class PaymentControllerTest {
 	}
     
     @Test
-    @DatabaseSetup("keys.xml")
-    @DatabaseTearDown("emptyAddresses.xml")
-    @DatabaseTearDown("emptyKeys.xml")
     public void testCreateTimeLockedAddress_NewAddress_ClientKnown() throws Exception {
     	// keys are already stored in DB
         ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
