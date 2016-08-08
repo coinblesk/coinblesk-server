@@ -73,88 +73,109 @@ public class TransactionService {
     
     
     @Transactional(readOnly = false)
-	public SignVerifyTO signVerifyTransaction(Transaction transaction, ECKey clientKey, 
-																ECKey serverKey, 
-																List<TransactionSignature> clientSigs) {
-		final String tag = "{signverify}";
-		final String clientPubKeyHex = clientKey.getPublicKeyAsHex();
-		final NetworkParameters params = appConfig.getNetworkParameters();
-	
-		// Check if Tx contains already signed (spent) outputs
-		if (isBurned(params, clientKey.getPubKey(), transaction)) {
-			LOG.warn("{} - clientPubKey={} - BURNED_OUTPUTS - Transaction:\n{}", tag, clientPubKeyHex, transaction);
-			return ToUtils.newInstance(SignVerifyTO.class, Type.BURNED_OUTPUTS, serverKey);
-		}
-		
-		// for each input, search corresponding redeemScript and sign
-		final List<TransactionSignature> serverSigs = new ArrayList<>(clientSigs.size()); 
-		signTransaction(transaction, clientSigs, serverKey, serverSigs);
-		
-		try {
-			// verify fully signed Tx and each Tx input (execute scriptSig + redeemScript).
-			verifyTransaction(transaction);
-		} catch (CoinbleskException e) {
-			LOG.error("{} - clientPubKey={} - Verification of transaction failed (TX_ERROR): {}", tag, clientPubKeyHex, transaction, e);
-			return ToUtils.newInstance(SignVerifyTO.class, Type.TX_ERROR, serverKey);
-		}
-		
-		// Transaction is complete: store and broadcast.
-		saveAndBroadcast(transaction, clientKey.getPubKey());
-		
-		final List<TxSig> serializedServerSigs = SerializeUtils.serializeSignatures(serverSigs);
-		final SignVerifyTO responseTO = new SignVerifyTO()
-				.currentDate(System.currentTimeMillis())
-				.publicKey(serverKey.getPubKey())
-				.transaction(transaction.unsafeBitcoinSerialize())
-				.signatures(serializedServerSigs);
-		
-		// Determine instant or not.
-		if (isTransactionInstant(params, clientKey.getPubKey(), transaction)) {
-			responseTO.type(Type.SUCCESS_INSTANT);
-		} else {
-			responseTO.type(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT);
-		}
-		
-		LOG.info("{} - clientPubKey={} - signed tx={} ({} bytes) - done with status={}", 
-				tag, clientPubKeyHex, transaction.getHashAsString(), transaction.getMessageSize(), responseTO.type());
-		return responseTO;
-	}
+    public SignVerifyTO signVerifyTransaction(Transaction transaction, ECKey clientKey,
+            ECKey serverKey,
+            List<TransactionSignature> clientSigs) {
+        final String tag = "{signverify}";
+        final String clientPubKeyHex = clientKey.getPublicKeyAsHex();
+        final NetworkParameters params = appConfig.getNetworkParameters();
+
+        // Check if Tx contains already signed (spent) outputs
+        if (isBurned(params, clientKey.getPubKey(), transaction)) {
+            LOG.warn("{} - clientPubKey={} - BURNED_OUTPUTS - Transaction:\n{}", tag, clientPubKeyHex,
+                    transaction);
+            return ToUtils.newInstance(SignVerifyTO.class, Type.BURNED_OUTPUTS, serverKey);
+        }
+
+        // for each input, search corresponding redeemScript and sign
+        final List<TransactionSignature> serverSigs = new ArrayList<>(clientSigs.size());
+        Boolean instant = signTransaction(transaction, clientSigs, serverKey, serverSigs);
+        if (instant == null) {
+            LOG.warn("{} - clientPubKey={} - ALREADY_SPENT - Transaction:\n{}", tag, clientPubKeyHex,
+                    transaction);
+            return ToUtils.newInstance(SignVerifyTO.class, Type.INPUT_MISMATCH, serverKey);
+        }
+
+        try {
+            // verify fully signed Tx and each Tx input (execute scriptSig + redeemScript).
+            verifyTransaction(transaction);
+        } catch (CoinbleskException e) {
+            LOG.error("{} - clientPubKey={} - Verification of transaction failed (TX_ERROR): {}", tag,
+                    clientPubKeyHex, transaction, e);
+            return ToUtils.newInstance(SignVerifyTO.class, Type.TX_ERROR, serverKey);
+        }
+
+        // Transaction is complete: store and broadcast.
+        saveAndBroadcast(transaction, clientKey.getPubKey());
+
+        final List<TxSig> serializedServerSigs = SerializeUtils.serializeSignatures(serverSigs);
+        final SignVerifyTO responseTO = new SignVerifyTO()
+                .currentDate(System.currentTimeMillis())
+                .publicKey(serverKey.getPubKey())
+                .transaction(transaction.unsafeBitcoinSerialize())
+                .signatures(serializedServerSigs);
+
+        // Determine instant or not.
+        if (instant && isTransactionInstant(params, clientKey.getPubKey(), transaction)) {
+            responseTO.type(Type.SUCCESS_INSTANT);
+        } else {
+            responseTO.type(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT);
+        }
+
+        LOG.info("{} - clientPubKey={} - signed tx={} ({} bytes) - done with status={}",
+                tag, clientPubKeyHex, transaction.getHashAsString(), transaction.getMessageSize(), responseTO
+                .type());
+        return responseTO;
+    }
     
-    private void signTransaction(final Transaction transaction, 
-										final List<TransactionSignature> clientSigs,
-										final ECKey serverKey, 
-										final List<TransactionSignature> serverSigs) {
-		
-		for (int inputIndex = 0; inputIndex < transaction.getInputs().size(); ++inputIndex) {
-			TransactionInput txIn = transaction.getInput(inputIndex);
-			// get output from wallet because Tx may not be connected if received over the network.
-			TransactionOutput txOut = walletService.findOutputFor(txIn);
-			final byte[] redeemScript;
-			if (txOut != null) {
-				byte[] addressHashFrom = txOut.getScriptPubKey().getPubKeyHash();
-				redeemScript = keyService.getRedeemScriptByAddressHash(addressHashFrom);
-				if (redeemScript == null) {
-					LOG.warn("signTransaction - redeem script for input {} not found - output: {}", inputIndex, txOut);
-                                        continue;
-				}
-			} else {
-				// may happen if Tx contains inputs of other transactions
-				// not related to coinblesk (unknown tx outputs).
-				LOG.warn("signTransaction - transaction output for tx input {} not found - input: {}", inputIndex, txIn);
-				redeemScript = null;
-                                continue;
-			}
-			
-			TransactionSignature clientSig = clientSigs.get(inputIndex);
-			TransactionSignature serverSig = transaction.calculateSignature(
-					inputIndex, serverKey, redeemScript, SigHash.ALL, false);
-			serverSigs.add(serverSig);
-			
-			TimeLockedAddress tla = TimeLockedAddress.fromRedeemScript(redeemScript);
-			Script scriptSig = tla.createScriptSigBeforeLockTime(clientSig, serverSig);
-			txIn.setScriptSig(scriptSig);
-		}
-	}
+    private Boolean signTransaction(final Transaction transaction,
+            final List<TransactionSignature> clientSigs,
+            final ECKey serverKey,
+            final List<TransactionSignature> serverSigs) {
+
+        int instantCounter = 0;
+
+        for (int inputIndex = 0; inputIndex < transaction.getInputs().size(); ++inputIndex) {
+            TransactionInput txIn = transaction.getInput(inputIndex);
+            // get output from wallet because Tx may not be connected if received over the network.
+            TransactionOutput txOut = walletService.findOutputFor(txIn);
+            final byte[] redeemScript;
+            if (txOut != null) {
+                byte[] addressHashFrom = txOut.getScriptPubKey().getPubKeyHash();
+                redeemScript = keyService.getRedeemScriptByAddressHash(addressHashFrom);
+                if (redeemScript == null) {
+                    instantCounter++;
+                    LOG
+                            .warn("signTransaction - redeem script for input {} not found - output: {}",
+                                    inputIndex, txOut);
+                    continue;
+                }
+                // Check if outputs are spendable
+                if (!txOut.isAvailableForSpending()) {
+                    return null;
+                }
+
+            } else {
+                instantCounter++;
+                // may happen if Tx contains inputs of other transactions
+                // not related to coinblesk (unknown tx outputs).
+                LOG.warn("signTransaction - transaction output for tx input {} not found - input: {}",
+                        inputIndex, txIn);
+                redeemScript = null;
+                continue;
+            }
+
+            TransactionSignature clientSig = clientSigs.get(inputIndex);
+            TransactionSignature serverSig = transaction.calculateSignature(
+                    inputIndex, serverKey, redeemScript, SigHash.ALL, false);
+            serverSigs.add(serverSig);
+
+            TimeLockedAddress tla = TimeLockedAddress.fromRedeemScript(redeemScript);
+            Script scriptSig = tla.createScriptSigBeforeLockTime(clientSig, serverSig);
+            txIn.setScriptSig(scriptSig);
+        }
+        return instantCounter == 0;
+    }
     
     private void saveAndBroadcast(Transaction transaction, byte[] clientPubKey) {
     	final byte[] serializedTx = transaction.unsafeBitcoinSerialize();
