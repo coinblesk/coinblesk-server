@@ -125,13 +125,13 @@ public class AuthTest {
         Assert.assertEquals(2, adminEmail.sentEmails());
         
         //activate
-        mockMvc.perform(patch("/v1/u/v/test@test.test/blub").secure(true)).andExpect(status().is5xxServerError());
+        mockMvc.perform(get("/v1/u/v/test@test.test/blub").secure(true)).andExpect(status().is5xxServerError());
         Assert.assertEquals(3, adminEmail.sentEmails());
         
         //get correct token
         String token = userAccountService.getToken("test@test.test");
         Assert.assertNotNull(token);
-        mockMvc.perform(patch("/v1/u/v/test@test.test/"+token).secure(true)).andExpect(status().isOk());
+        mockMvc.perform(get("/v1/u/v/test@test.test/"+token).secure(true)).andExpect(status().isOk());
         Assert.assertEquals(3, adminEmail.sentEmails());
         
         mockMvc.perform(get("/v1/u/a/g").secure(true).with(csrf())).andExpect(status().is3xxRedirection());
