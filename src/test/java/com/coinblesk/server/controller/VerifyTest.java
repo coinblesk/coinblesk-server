@@ -192,7 +192,7 @@ public class VerifyTest {
                 merchant.p2shAddress(), 9876, client, SerializeUtils.serializeSignatures(clientSigs1),
                 status1.signatures(), new Date());
         Assert.assertTrue(verify.isSuccess());
-        Assert.assertEquals(Type.SUCCESS, verify.type());
+        Assert.assertEquals(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT, verify.type());
         
         SignTO status2 = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
                 unknown, 9876, client, new Date());
