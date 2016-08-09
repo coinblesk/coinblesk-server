@@ -248,6 +248,7 @@ public class VerifyTest {
                 merchant.p2shAddress(), 9876, client, SerializeUtils.serializeSignatures(clientSigs1),
                 status1.signatures(), new Date());
         Assert.assertTrue(verify.isSuccess());
-        Assert.assertEquals(Type.SUCCESS, verify.type());
+        //since we use timelock, the previous version - coinblesk 2.1 reports no instant payment
+        Assert.assertEquals(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT, verify.type());
     }
 }
