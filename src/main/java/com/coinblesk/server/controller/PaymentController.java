@@ -190,7 +190,8 @@ public class PaymentController {
     		final byte[] payeePubKey = request.payeePublicKey();
     		request.payeePublicKey(null);
     		
-    		final SignVerifyTO error = ToUtils.checkInput(request);
+                //NFC has a hard limit of 245, thus we have no space for the date yet.
+    		final SignVerifyTO error = ToUtils.checkInput(request, false);
 			if (error != null) {
 				LOG.info("{} - clientPubKey={} - input error - type={}", tag, clientPubKeyHex, error.type());
 				return error;
