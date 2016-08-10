@@ -30,6 +30,8 @@ import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.SerializeUtils;
 import com.coinblesk.util.Triple;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
+import com.github.springtestdbunit.annotation.DatabaseOperation;
+import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import java.util.Date;
 import java.util.List;
 import org.bitcoinj.core.Address;
@@ -229,6 +231,7 @@ public class VerifyTest {
     }
     
     @Test
+    @DatabaseTearDown(value = {"EmptyDB.xml"}, type = DatabaseOperation.DELETE_ALL)
     public void testVerifyNonExpiredRefund() throws Exception {
         Transaction txClient1 = BitcoinUtils.createTx(
                 params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),

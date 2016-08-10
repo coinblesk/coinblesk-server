@@ -82,6 +82,7 @@ public class RegisterKeyTest {
         mockMvc.perform(post("/p/x").secure(true)).andExpect(status().is4xxClientError());
         //with object, but no public key
         KeyTO keyTO = new KeyTO();
+        keyTO.currentDate(System.currentTimeMillis());
         MvcResult res = mockMvc.perform(post("/p/x").secure(true).contentType(MediaType.APPLICATION_JSON)
                 .content(SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
         KeyTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);

@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dataset>
-    
+    <keys/>
+    <time_locked_address/>
+    <tx/>
+    <tx_queue/>
+    <user_account/>
 </dataset>

@@ -71,6 +71,7 @@ import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.google.common.io.Files;
+import org.junit.Assert;
 
 
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -412,6 +413,7 @@ public class CompleteCLTVTest {
     	
     	List<TransactionSignature> clientSigs = client.signTxByClient(tx);
     	SignVerifyTO signTO = client.signTxByServer(tx, clientSigs);
+        Assert.assertTrue(signTO.isSuccess());
     	List<TransactionSignature> serverSigs = SerializeUtils.deserializeSignatures(signTO.signatures());
     	
     	assertEquals(clientSigs.size(), serverSigs.size());
@@ -693,6 +695,7 @@ public class CompleteCLTVTest {
 					.publicKey(clientKey.getPubKey())
 					.transaction(tx.unsafeBitcoinSerialize())
 					.signatures(SerializeUtils.serializeSignatures(clientSigs))
+                                        .currentDate(System.currentTimeMillis())
 					.setSuccess();
 			SerializeUtils.signJSON(signTO, clientKey);
 			
