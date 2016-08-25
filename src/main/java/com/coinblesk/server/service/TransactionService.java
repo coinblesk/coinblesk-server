@@ -98,7 +98,9 @@ public class TransactionService {
 
         try {
             // verify fully signed Tx and each Tx input (execute scriptSig + redeemScript).
-            verifyTransaction(transaction);
+            if(!verifyTransaction(transaction)) {
+                instant = false;
+            }
         } catch (CoinbleskException e) {
             LOG.error("{} - clientPubKey={} - Verification of transaction failed (TX_ERROR): {}", tag,
                     clientPubKeyHex, transaction, e);
@@ -192,16 +194,21 @@ public class TransactionService {
      * @param transaction
      * @throws CoinbleskException if verification fails
      */		 
-    private void verifyTransaction(Transaction transaction) throws CoinbleskException {
-    	try {
-	    	transaction.verify();
-			for (TransactionInput txIn : transaction.getInputs()) {
-				TransactionOutput txOut = walletService.findOutputFor(txIn);
-				txIn.verify(txOut);
-			}
-    	} catch (VerificationException e) {
-    		throw new CoinbleskException("Verification of transaction failed", e);
-    	}
+    private boolean verifyTransaction(Transaction transaction) throws CoinbleskException {
+        int counter = 0;
+        try {
+            transaction.verify();
+            for (TransactionInput txIn : transaction.getInputs()) {
+                TransactionOutput txOut = walletService.findOutputFor(txIn);
+                if(txOut == null) {
+                    counter++;
+                }
+                txIn.verify(txOut);
+            }
+        } catch (VerificationException e) {
+            throw new CoinbleskException("Verification of transaction failed", e);
+        }
+        return counter == 0;
     }
 
     @Transactional(readOnly = false)

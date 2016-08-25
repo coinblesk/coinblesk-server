@@ -37,7 +37,7 @@ test {
 }
 
 dependencies {
-    def springVersion = '4.2.6.RELEASE'
+    def springVersion = '4.3.2.RELEASE'
     def springSecurityVersion = '4.0.3.RELEASE'
     def tomcatVersion = '8.0.30'
     def hibernateVersion = '5.0.7.Final'

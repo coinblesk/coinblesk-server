@@ -173,8 +173,8 @@ public class WalletService {
         };
         peerGroup.startBlockChainDownload(listener);
         wallet.addTransactionConfidenceEventListener(new TransactionConfidenceEventListener() {
-			@Override
-			public void onTransactionConfidenceChanged(Wallet wallet, Transaction tx) {
+            @Override
+		public void onTransactionConfidenceChanged(Wallet wallet, Transaction tx) {
                 if (tx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf() && !removed.contains(tx.getHash())) {
                     LOG.debug("remove tx we got from the network {}", tx);
                     transactionService.removeTransaction(tx);
