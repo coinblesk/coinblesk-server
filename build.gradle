@@ -57,7 +57,10 @@ dependencies {
     def springSecurityVersion = '4.0.3.RELEASE'
     def tomcatVersion = '8.0.30'
     def hibernateVersion = '5.0.7.Final'
-    
+
+    // Spring Boot
+    compile 'org.springframework.boot:spring-boot-starter-web'
+    compile 'org.springframework.boot:spring-boot-devtools'
     
     compile 'javax.transaction:javax.transaction-api:1.2'
     //compile 'javax.servlet:jstl:1.2'
@@ -68,7 +71,7 @@ dependencies {
     compile "org.springframework:spring-context:${springVersion}"
     compile "org.springframework:spring-tx:${springVersion}"
     compile "org.springframework:spring-orm:${springVersion}"
-    compile "org.springframework:spring-web:${springVersion}"
+    //compile "org.springframework:spring-web:${springVersion}"
     compile "org.springframework:spring-webmvc:${springVersion}"
     //spring context und for email: http://stackoverflow.com/questions/1367303/which-artifact-for-org-springframework-mail
     compile "org.springframework:spring-context-support:${springVersion}"
