@@ -52,6 +52,7 @@ import org.springframework.security.web.authentication.AuthenticationFailureHand
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.header.writers.frameoptions.XFrameOptionsHeaderWriter;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 /**
  *
@@ -67,27 +68,24 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
-    
-    @Autowired 
-    private DatabaseConfig databaseConfig;
 
     final private static String REQUEST_ATTRIBUTE_NAME = "_csrf";
     final private static String RESPONSE_HEADER_NAME = "X-CSRF-HEADER";
     final private static String[] CSRF_PREFIX = {"/web", "/w"};
 
     final private static String[] REQUIRE_USER_ROLE = {
-        "/user/a/**", 
-        "/user/auth/**", 
-        "/u/auth/**", 
+        "/user/a/**",
+        "/user/auth/**",
+        "/u/auth/**",
         "/u/a/**",
-        "/v?/user/a/**", 
-        "/v?/user/auth/**", 
-        "/v?/u/auth/**", 
+        "/v?/user/a/**",
+        "/v?/user/auth/**",
+        "/v?/u/auth/**",
         "/v?/u/a/**" };
     final private static String[] REQUIRE_ADMIN_ROLE = {
-        "/admin/**", 
-        "/a/**", 
-        "/v?/admin/**", 
+        "/admin/**",
+        "/a/**",
+        "/v?/admin/**",
         "/v?/a/**"};
 
     private static class CsfrHeaderAppendFilter implements Filter {
@@ -157,7 +155,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			throws IOException, ServletException {
                             clearAuthenticationAttributes(request);
                         }
-                    
+
                 }) // return 200 instead 301
                 .failureHandler(new AuthenticationFailureHandler(){
             @Override
@@ -168,7 +166,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             }
         }) // return 401 instead 302
                 .and()
-                .addFilterAfter(new CsfrHeaderAppendFilter(), CsrfFilter.class);
+                .addFilterAfter(new CsfrHeaderAppendFilter(), CsrfFilter.class)
+
+                // Allow iframes from same origin (to enable h2-console)
+                .headers().frameOptions().sameOrigin();
 
     }
 
@@ -178,7 +179,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         return (final Authentication authentication) -> {
             final String email = authentication.getPrincipal().toString();
             final String password = authentication.getCredentials().toString();
-            
+
+            /*
+            TODO: Move this into tests
             if (databaseConfig.isTest()) {
                 UserAccountTO userAccount = new UserAccountTO()
                         .email("a")
@@ -187,7 +190,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 Pair<UserAccountStatusTO, UserAccount> res = userAccountService.createEntity(userAccount);
                 userAccountService.activate("a", res.element1().getEmailToken());
             }
-        
+            */
+
             final UserAccount userAccount = userAccountService.getByEmail(email);
             if (userAccount == null) {
                 throw new BadCredentialsException("Wrong username/password");

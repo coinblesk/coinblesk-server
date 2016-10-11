@@ -1,5 +1,5 @@
 dependencies {
-    compile 'org.hsqldb:hsqldb:2.3.3'
+    runtime 'com.h2database:h2'
 }
 task deploy << {
     def tomcatHome='/opt/tomcat'
