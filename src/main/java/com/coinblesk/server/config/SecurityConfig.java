@@ -60,7 +60,6 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
  * @author Andreas Albrecht
  */
 @EnableWebSecurity
-@EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
@@ -68,10 +67,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
-
-    final private static String REQUEST_ATTRIBUTE_NAME = "_csrf";
-    final private static String RESPONSE_HEADER_NAME = "X-CSRF-HEADER";
-    final private static String[] CSRF_PREFIX = {"/web", "/w"};
 
     final private static String[] REQUIRE_USER_ROLE = {
         "/user/a/**",
@@ -88,86 +83,39 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         "/v?/admin/**",
         "/v?/a/**"};
 
-    private static class CsfrHeaderAppendFilter implements Filter {
-
-        @Override
-        public void init(FilterConfig fc) throws ServletException {
-        }
-
-        @Override
-        public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain) throws IOException, ServletException {
-            if (!(response instanceof HttpServletResponse)) {
-                filterChain.doFilter(request, response);
-                return;
-            }
-            // to not use JSP we want the token to be in the HTTP header
-            CsrfToken csrfToken = (CsrfToken) request.getAttribute(REQUEST_ATTRIBUTE_NAME);
-            if (csrfToken != null) {
-                HttpServletResponse res = (HttpServletResponse) response;
-                res.setHeader(RESPONSE_HEADER_NAME, csrfToken.getToken());
-            }
-            filterChain.doFilter(request, response);
-        }
-
-        @Override
-        public void destroy() {
-        }
-    }
-
-    private static class CsfrIgnoreRequestMatcher implements RequestMatcher {
-
-        final private Pattern allowedMethods = Pattern.compile("^(GET|HEAD|TRACE|OPTIONS)$");
-
-        @Override
-        public boolean matches(HttpServletRequest request) {
-            // No CSRF due to allowedMethod
-            if (allowedMethods.matcher(request.getMethod()).matches()) {
-                return false;
-            }
-            // http://stackoverflow.com/questions/4931323/whats-the-difference-between-getrequesturi-and-getpathinfo-methods-in-httpservl
-            String url = request.getServletPath();
-            for (int i = 0; i < CSRF_PREFIX.length; i++) {
-                if (url.startsWith(CSRF_PREFIX[i])) {
-                    return true;
-                }
-            }
-            return false;
-        }
-    }
-
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http
-                .csrf()
-                .requireCsrfProtectionMatcher(new CsfrIgnoreRequestMatcher())
-                .and()
+                // Cross-site request forgery protection not needed when using JWT
+                .csrf().disable()
+
+                // Protected URLs
                 .authorizeRequests()
                     .antMatchers("/").permitAll()
                     .antMatchers(REQUIRE_ADMIN_ROLE).hasRole(UserRole.ADMIN.getRole())
                     .antMatchers(REQUIRE_USER_ROLE).hasRole(UserRole.USER.getRole())
+
+                // Add default spring login-page at /login
                 .and()
                 .formLogin()
+
+                // Return 200 instead of the default 301 for a successful login
                 .successHandler(new SimpleUrlAuthenticationSuccessHandler(){
                     @Override
                     public void onAuthenticationSuccess(HttpServletRequest request,
-			HttpServletResponse response, Authentication authentication)
-			throws IOException, ServletException {
-                            clearAuthenticationAttributes(request);
-                        }
+                                                        HttpServletResponse response, Authentication authentication)
+                            throws IOException, ServletException {
+                        clearAuthenticationAttributes(request);
+                    }
+                })
 
-                }) // return 200 instead 301
-                .failureHandler(new AuthenticationFailureHandler(){
-            @Override
-            public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
-                    AuthenticationException exception) throws IOException, ServletException {
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
-					"Authentication Failed: " + exception.getMessage());
-            }
-        }) // return 401 instead 302
-                .and()
-                .addFilterAfter(new CsfrHeaderAppendFilter(), CsrfFilter.class)
+                // Return 401 instead of the default 302 for a failed login
+                .failureHandler((request, response, exception) -> response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
+                        "Authentication Failed: " + exception.getMessage())) // return 401 instead 302
+
 
                 // Allow iframes from same origin (to enable h2-console)
+                .and()
                 .headers().frameOptions().sameOrigin();
 
     }
@@ -178,18 +126,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         return (final Authentication authentication) -> {
             final String email = authentication.getPrincipal().toString();
             final String password = authentication.getCredentials().toString();
-
-            /*
-            TODO: Move this into tests
-            if (databaseConfig.isTest()) {
-                UserAccountTO userAccount = new UserAccountTO()
-                        .email("a")
-                        .password("a")
-                        .balance(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI);
-                Pair<UserAccountStatusTO, UserAccount> res = userAccountService.createEntity(userAccount);
-                userAccountService.activate("a", res.element1().getEmailToken());
-            }
-            */
 
             final UserAccount userAccount = userAccountService.getByEmail(email);
             if (userAccount == null) {
