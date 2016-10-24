@@ -147,7 +147,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                     .antMatchers(REQUIRE_USER_ROLE).hasRole(UserRole.USER.getRole())
                 .and()
                 .formLogin()
-                .loginPage("/login")
                 .successHandler(new SimpleUrlAuthenticationSuccessHandler(){
                     @Override
                     public void onAuthenticationSuccess(HttpServletRequest request,
