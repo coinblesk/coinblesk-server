@@ -10,41 +10,17 @@ buildscript {
     }
     dependencies {
         classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
-        classpath('org.hidetake:gradle-ssh-plugin:2.7.0')
     }
 }
 
 apply plugin: 'java'
-apply plugin: 'war'
 apply plugin: 'spring-boot'
-apply plugin: 'org.hidetake.ssh'
-
-if (!hasProperty("profile") || "${profile}" == 'local') {
-    ext.profile = "local"
-    apply from: "profile-local.gradle"
-} else {
-    apply from: "profile-remote.gradle"
-}
-
-sourceSets.main.resources {
-    srcDirs = ["src/main/resources/${profile}", "src/main/resources/all"];
-}
 
 version = '2.1-SNAPSHOT'
-war {
-    //http://stackoverflow.com/questions/21272527/gradle-war-manifest-version-number-wrong-for-release-build
-    doFirst {
-        manifest {
-            attributes("Project": project.name, "Version": version, "Date": new Date())
-        }
-    }
-    archiveName = 'coinblesk-server.war'
-}
 
 repositories {
     mavenLocal()
     mavenCentral()
-    // maven {url 'http://tomp2p.net/dev/mvn'}
 }
 
 test {
@@ -53,66 +29,28 @@ test {
 }
 
 dependencies {
-    def springVersion = '4.2.6.RELEASE'
-    def springSecurityVersion = '4.0.3.RELEASE'
-    def tomcatVersion = '8.0.30'
-    def hibernateVersion = '5.0.7.Final'
-
     // Spring Boot
     compile 'org.springframework.boot:spring-boot-starter-web'
     compile 'org.springframework.boot:spring-boot-devtools'
-    
-    compile 'javax.transaction:javax.transaction-api:1.2'
-    //compile 'javax.servlet:jstl:1.2'
-    providedCompile 'javax.servlet:javax.servlet-api:3.1.0'
-    providedCompile 'javax.servlet.jsp:javax.servlet.jsp-api:2.3.1'
-    compile 'com.sun.mail:javax.mail:1.5.5'
-    
-    compile "org.springframework:spring-context:${springVersion}"
-    compile "org.springframework:spring-tx:${springVersion}"
-    compile "org.springframework:spring-orm:${springVersion}"
-    //compile "org.springframework:spring-web:${springVersion}"
-    compile "org.springframework:spring-webmvc:${springVersion}"
-    //spring context und for email: http://stackoverflow.com/questions/1367303/which-artifact-for-org-springframework-mail
-    compile "org.springframework:spring-context-support:${springVersion}"
-    compile "org.springframework.security:spring-security-web:${springSecurityVersion}"
-    compile "org.springframework.security:spring-security-config:${springSecurityVersion}"
-    compile "org.springframework.security:spring-security-taglibs:${springSecurityVersion}"
-    
-    //compile "org.springframework.data:spring-data-jpa:1.9.2.RELEASE"
-    
-    
-    compile "org.hibernate:hibernate-core:${hibernateVersion}"
-    compile "org.hibernate:hibernate-entitymanager:${hibernateVersion}"
-    compile "org.hibernate:hibernate-c3p0:${hibernateVersion}"
-    
-        
-    //compile 'org.bitcoinj:bitcoinj-core:0.14'
-    compile 'com.google.protobuf:protobuf-java:2.5.0'
-    //compile group: 'com.squareup.okhttp', name: 'okhttp', version: '2.2.0'
-    //compile group: 'com.lambdaworks', name: 'scrypt', version: '1.4.0'
-    //compile group: 'net.jcip', name: 'jcip-annotations', version: '1.0'
-    //compile group: 'com.google.code.findbugs', name: 'jsr305', version: '2.0.1'
-    compile 'org.apache.commons:commons-lang3:3.1'
-    
-    compile 'ch.qos.logback:logback-classic:1.1.6'
-    compile 'org.slf4j:slf4j-api:1.7.18'
+    compile 'org.springframework.boot:spring-boot-starter-security'
+    compile 'org.springframework.boot:spring-boot-starter-data-jpa'
+    compile 'org.springframework.boot:spring-boot-starter-mail'
+
+    // Database drivers
+    runtime 'org.postgresql:postgresql'
+    runtime 'com.h2database:h2'
+
+    // Shared resources with android client
+    // (includes transfer-objects)
     compile 'com.coinblesk:coinblesk-shared-resources:1.4.70'
-    compile 'com.madgag.spongycastle:core:1.54.0.0'
 
-    
+    // Misc
+    compile 'org.apache.commons:commons-lang3:3.5'
 
-    testCompile ('junit:junit:4.12') {
-        exclude module : 'hamcrest'
-        exclude module : 'hamcrest-core'
-    }
-    testCompile "org.springframework:spring-test:${springVersion}"
-    testCompile "org.springframework.security:spring-security-test:${springSecurityVersion}"
-    testCompile 'org.mockito:mockito-core:2.0.36-beta'
-    testCompile 'org.hamcrest:java-hamcrest:2.0.0.0'
+    // Testing
+    testCompile 'org.springframework.boot:spring-boot-starter-test'
+    testCompile "org.springframework.security:spring-security-test"
     testCompile 'com.github.springtestdbunit:spring-test-dbunit:1.2.1'
     testCompile 'org.dbunit:dbunit:2.5.1'
-    testCompile 'org.hsqldb:hsqldb:2.3.3'
-    testCompile 'com.jayway.jsonpath:json-path:2.1.0'
 }
 
