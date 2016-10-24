@@ -15,7 +15,7 @@
  */
 package com.coinblesk.server.service;
 
-import com.coinblesk.server.dao.UserAccountDAO;
+import com.coinblesk.server.dao.UserAccountRepository;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.UserAccountStatusTO;
@@ -61,7 +61,7 @@ public class UserAccountService {
     private final static Logger LOG = LoggerFactory.getLogger(UserAccountService.class);
 
     @Autowired
-    private UserAccountDAO userAccountDao;
+    private UserAccountRepository repository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -80,13 +80,13 @@ public class UserAccountService {
 
     @Transactional(readOnly = true)
     public UserAccount getByEmail(String email) {
-        return userAccountDao.getByAttribute("email", email);
+        return repository.findByEmail(email);
     }
 
     //TODO: only used for testing. remove if possible
     @Transactional(readOnly = false)
     public void save(UserAccount userAccount) {
-        userAccountDao.save(userAccount);
+        repository.save(userAccount);
     }
 
     @Transactional(readOnly = false)
@@ -110,7 +110,7 @@ public class UserAccountService {
     @Transactional(readOnly = false)
     public Pair<UserAccountStatusTO, UserAccount> createEntity(final UserAccountTO userAccountTO) {
         final String email = userAccountTO.email();
-        final UserAccount found = userAccountDao.getByAttribute("email", email);
+        final UserAccount found = repository.findByEmail(email);
         if (found != null) {
             if (found.getEmailToken() != null) {
                 return new Pair(new UserAccountStatusTO().type(Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_NOT_ACTIVATED), found);
@@ -127,13 +127,13 @@ public class UserAccountService {
         userAccount.setUserRole(UserRole.USER);
         userAccount.setBalance(BigDecimal.valueOf(
                 userAccountTO.balance()).divide(BigDecimal.valueOf(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI)));
-        userAccountDao.save(userAccount);
+        repository.save(userAccount);
         return new Pair(new UserAccountStatusTO().setSuccess(), userAccount);
     }
 
     @Transactional(readOnly = false)
     public UserAccountStatusTO activate(String email, String token) {
-        final UserAccount found = userAccountDao.getByAttribute("email", email);
+        final UserAccount found = repository.findByEmail(email);
         if (found == null) {
             //no such email address - notok
             return new UserAccountStatusTO().type(Type.NO_EMAIL);
@@ -156,7 +156,7 @@ public class UserAccountService {
     @Transactional(readOnly = false)
     public UserAccountStatusTO delete(String email) {
         
-        final UserAccount found = userAccountDao.getByAttribute("email", email);
+        final UserAccount found = repository.findByEmail(email);
         if (found == null) {
             //no such email address - notok
             return new UserAccountStatusTO().type(Type.NO_EMAIL);
@@ -167,7 +167,7 @@ public class UserAccountService {
 
     @Transactional(readOnly = true)
     public UserAccountTO get(String email) {
-        final UserAccount userAccount = userAccountDao.getByAttribute("email", email);
+        final UserAccount userAccount = repository.findByEmail(email);
         if (userAccount == null) {
             return null;
         }
@@ -182,7 +182,7 @@ public class UserAccountService {
     @Transactional(readOnly = false)
     public UserAccountTO transferP2SH(ECKey clientKey, String email) {
         final NetworkParameters params = appConfig.getNetworkParameters();
-        final UserAccount userAccount = userAccountDao.getByAttribute("email", email);
+        final UserAccount userAccount = repository.findByEmail(email);
         if (userAccount == null) {
             return new UserAccountTO().type(Type.NO_ACCOUNT);
         }
@@ -222,7 +222,7 @@ public class UserAccountService {
     //for debugging
     @Transactional(readOnly = true)
     public String getToken(String email) {
-        final UserAccount userAccount = userAccountDao.getByAttribute("email", email);
+        final UserAccount userAccount = repository.findByEmail(email);
         if (userAccount == null) {
             return null;
         }
@@ -231,7 +231,7 @@ public class UserAccountService {
 
     @Transactional(readOnly = false)
     public UserAccountStatusTO changePassword(String email, String password) {
-        final UserAccount found = userAccountDao.getByAttribute("email", email);
+        final UserAccount found = repository.findByEmail(email);
         if (found == null) {
             //no such email address - notok
             return new UserAccountStatusTO().type(Type.NO_EMAIL);
@@ -242,7 +242,7 @@ public class UserAccountService {
     
     @Transactional(readOnly = false)
     public UserAccountStatusTO activateForgot(String email, String forgetToken) {
-        final UserAccount found = userAccountDao.getByAttribute("email", email);
+        final UserAccount found = repository.findByEmail(email);
         if (found == null) {
             //no such email address - notok
             return new UserAccountStatusTO().type(Type.NO_EMAIL);
@@ -266,7 +266,7 @@ public class UserAccountService {
 
     @Transactional(readOnly = false)
     public Pair<UserAccountStatusTO, UserAccountTO> forgot(String email) {
-        final UserAccount found = userAccountDao.getByAttribute("email", email);
+        final UserAccount found = repository.findByEmail(email);
         if (found == null) {
             LOG.debug("no such email found in DB {}", email);
             //no such email address - notok
