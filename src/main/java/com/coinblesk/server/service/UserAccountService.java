@@ -285,7 +285,7 @@ public class UserAccountService {
  
     private static String createPassword() {
         // put here all characters that are allowed in password
-        final char[] ALLOWED_CHARACTERS = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789".toCharArray();;
+        final char[] ALLOWED_CHARACTERS = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789".toCharArray();
         final int PASSWORD_LENGTH = 8;
         
         final StringBuffer password = new StringBuffer();
