@@ -93,13 +93,13 @@ public class UserAccountService {
     public Pair<UserAccountStatusTO, UserAccount> create(final UserAccountTO userAccountTO) {
         final String email = userAccountTO.email();
         if (email == null) {
-            return new Pair(new UserAccountStatusTO().type(Type.NO_EMAIL), null);
+            return new Pair<>(new UserAccountStatusTO().type(Type.NO_EMAIL), null);
         }
         if (!email.matches(EMAIL_PATTERN)) {
-            return new Pair(new UserAccountStatusTO().type(Type.INVALID_EMAIL), null);
+            return new Pair<>(new UserAccountStatusTO().type(Type.INVALID_EMAIL), null);
         }
         if (userAccountTO.password() == null || userAccountTO.password().length() < 6) {
-            return new Pair(new UserAccountStatusTO().type(Type.PASSWORD_TOO_SHORT), null);
+            return new Pair<>(new UserAccountStatusTO().type(Type.PASSWORD_TOO_SHORT), null);
         }
 
         userAccountTO.balance(0);
@@ -113,9 +113,9 @@ public class UserAccountService {
         final UserAccount found = repository.findByEmail(email);
         if (found != null) {
             if (found.getEmailToken() != null) {
-                return new Pair(new UserAccountStatusTO().type(Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_NOT_ACTIVATED), found);
+                return new Pair<>(new UserAccountStatusTO().type(Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_NOT_ACTIVATED), found);
             }
-            return new Pair(new UserAccountStatusTO().type(Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_ACTIVATED), found);
+            return new Pair<>(new UserAccountStatusTO().type(Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_ACTIVATED), found);
         }
         //convert TO to Entity
         UserAccount userAccount = new UserAccount();
@@ -128,7 +128,7 @@ public class UserAccountService {
         userAccount.setBalance(BigDecimal.valueOf(
                 userAccountTO.balance()).divide(BigDecimal.valueOf(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI)));
         repository.save(userAccount);
-        return new Pair(new UserAccountStatusTO().setSuccess(), userAccount);
+        return new Pair<>(new UserAccountStatusTO().setSuccess(), userAccount);
     }
 
     @Transactional(readOnly = false)
