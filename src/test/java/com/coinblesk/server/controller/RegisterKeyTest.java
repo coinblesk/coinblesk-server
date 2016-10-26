@@ -87,7 +87,7 @@ public class RegisterKeyTest {
                 .content(SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
         KeyTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
         Assert.assertEquals(false, status.isSuccess());
-        Assert.assertEquals(Type.KEYS_NOT_FOUND, status.type());
+        Assert.assertEquals(Type.INPUT_MISMATCH, status.type());
         Assert.assertNull(status.publicKey());
         //with bogus key
         keyTO = new KeyTO().publicKey("bogus=======".getBytes());
@@ -95,7 +95,7 @@ public class RegisterKeyTest {
                 SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
         status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
         Assert.assertEquals(false, status.isSuccess());
-        Assert.assertEquals(Type.SERVER_ERROR, status.type());
+        Assert.assertEquals(Type.INPUT_MISMATCH, status.type());
         Assert.assertNull(status.publicKey());
         //with good pubilc key
         ECKey ecKeyClient = new ECKey();
