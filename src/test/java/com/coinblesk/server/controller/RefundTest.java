@@ -70,9 +70,6 @@ public class RefundTest {
     private WebApplicationContext webAppContext;
 
     @Autowired
-    private FilterChainProxy springSecurityFilterChain;
-
-    @Autowired
     private AppConfig appConfig;
 
     @Autowired
@@ -100,7 +97,6 @@ public class RefundTest {
         walletService.shutdown();
         mockMvc = MockMvcBuilders
                 .webAppContextSetup(webAppContext)
-                .addFilter(springSecurityFilterChain)
                 .build();
         walletService.init();
         client = new Client(appConfig.getNetworkParameters(), mockMvc);

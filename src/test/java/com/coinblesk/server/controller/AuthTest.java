@@ -69,9 +69,6 @@ public class AuthTest {
     private WebApplicationContext webAppContext;
 
     @Autowired
-    private FilterChainProxy springSecurityFilterChain;
-    
-    @Autowired
     private UserAccountService userAccountService;
     
     @Autowired
@@ -86,7 +83,7 @@ public class AuthTest {
     
     @Before
     public void setUp() {
-         mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();   
+         mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();
     }
     
     @Test

@@ -76,9 +76,6 @@ public class GenericEndpointTest {
     private WebApplicationContext webAppContext;
 
     @Autowired
-    private FilterChainProxy springSecurityFilterChain;
-
-    @Autowired
     private AppConfig appConfig;
 
     @Autowired
@@ -96,8 +93,7 @@ public class GenericEndpointTest {
     @Before
     public void setUp() throws Exception {
         walletService.shutdown();
-        mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain)
-                .build();
+        mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();
         walletService.init();
         params = appConfig.getNetworkParameters();
     }
