@@ -177,8 +177,8 @@ public class PaymentControllerTest {
     }
     
     private KeyTO requestKeyExchange(KeyTO requestTO) throws Exception {
-		String jsonTO = SerializeUtils.GSON.toJson(requestTO);;
-    	return RESTUtils.postRequest(mockMvc, URL_KEY_EXCHANGE, jsonTO, KeyTO.class);
+		String jsonTO = SerializeUtils.GSON.toJson(requestTO);
+        return RESTUtils.postRequest(mockMvc, URL_KEY_EXCHANGE, jsonTO, KeyTO.class);
 	}
     
 	@Test
@@ -369,8 +369,8 @@ public class PaymentControllerTest {
     }
     
     private TimeLockedAddressTO requestCreateTimeLockedAddress(TimeLockedAddressTO requestTO) throws Exception {
-    	String jsonTO = SerializeUtils.GSON.toJson(requestTO);;
-    	return RESTUtils.postRequest(mockMvc, URL_CREATE_TIME_LOCKED_ADDRESS, jsonTO, TimeLockedAddressTO.class);
+    	String jsonTO = SerializeUtils.GSON.toJson(requestTO);
+        return RESTUtils.postRequest(mockMvc, URL_CREATE_TIME_LOCKED_ADDRESS, jsonTO, TimeLockedAddressTO.class);
     }
     
 	private TimeLockedAddressTO createSignedTimeLockedAddressTO(ECKey clientKey) {
