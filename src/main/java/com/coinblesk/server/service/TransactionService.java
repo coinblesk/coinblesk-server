@@ -292,19 +292,15 @@ public class TransactionService {
     		byte[] addressHash = output.getScriptPubKey().getPubKeyHash();
     		TimeLockedAddressEntity address = keyService.getTimeLockedAddressByAddressHash(addressHash);
     		if (address == null) {
-    			// unknown input (maybe not locked)
-    			return false;
-    		} else if (address instanceof TimeLockedAddressEntity) {
-    			TimeLockedAddressEntity timeLockedAddress = (TimeLockedAddressEntity) address;
-    			if (BitcoinUtils.isAfterLockTime(
-	    					Utils.currentTimeSeconds()- LOCK_THRESHOLD_MILLIS/1000, 
-	    					timeLockedAddress.getLockTime())) {
-    				// locktime expired
-    				return false;
-    			}
-    		} else {
-    			// 2-of-2 multisig: locked
-    		}
+                // unknown input (maybe not locked)
+                return false;
+            }
+            if (BitcoinUtils.isAfterLockTime(
+                    Utils.currentTimeSeconds()- LOCK_THRESHOLD_MILLIS/1000,
+                    address.getLockTime())) {
+                // locktime expired
+                return false;
+            }
     	}
     	
     	return true;
