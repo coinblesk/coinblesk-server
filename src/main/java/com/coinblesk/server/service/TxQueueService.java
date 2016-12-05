@@ -5,7 +5,7 @@
  */
 package com.coinblesk.server.service;
 
-import com.coinblesk.server.dao.TxQueueDAO;
+import com.coinblesk.server.dao.TxQueueRepository;
 import com.coinblesk.server.entity.TxQueue;
 import java.util.ArrayList;
 import java.util.Date;
@@ -24,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class TxQueueService {
 
     @Autowired
-    private TxQueueDAO txQueueDAO;
+    private TxQueueRepository repository;
 
     @Transactional(readOnly = false)
     public void addTx(Transaction tx) {
@@ -32,13 +32,13 @@ public class TxQueueService {
                 .tx(tx.unsafeBitcoinSerialize())
                 .txHash(tx.getHash().getBytes())
                 .creationDate(new Date());
-        txQueueDAO.save(entity);
+        repository.save(entity);
     }
     
     @Transactional(readOnly = true)
     public List<Transaction> all(NetworkParameters params) {
-        List<TxQueue> txQueues = txQueueDAO.findAll();
-        List<Transaction> retVal = new ArrayList<Transaction>(txQueues.size());
+        Iterable<TxQueue> txQueues = repository.findAll();
+        List<Transaction> retVal = new ArrayList<Transaction>();
         for(TxQueue txQueue:txQueues) {
             retVal.add(new Transaction(params, txQueue.tx()));
         }
@@ -47,6 +47,6 @@ public class TxQueueService {
     
     @Transactional(readOnly = false)
     public void removeTx(Transaction tx) {
-        txQueueDAO.remove(tx.getHash().getBytes());
+        repository.delete(tx.getHash().getBytes());
     }
 }

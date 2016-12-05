@@ -24,7 +24,6 @@ import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.UserAccountStatusTO;
 import com.coinblesk.json.v1.UserAccountTO;
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.config.DatabaseConfig;
 import com.coinblesk.server.config.UserEmail;
 import com.coinblesk.util.Pair;
 import java.net.URLEncoder;
@@ -73,8 +72,6 @@ public class UserController {
     @Autowired
     private PasswordEncoder passwordEncoder;
     
-    @Autowired DatabaseConfig databaseConfig;
-
     //CRUD for the user
     @RequestMapping(value = {"/create", "/c"}, method = RequestMethod.POST,
             consumes = "application/json; charset=UTF-8",

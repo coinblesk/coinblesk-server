@@ -82,16 +82,13 @@ public class PaymentControllerTest {
     private WebApplicationContext webAppContext;
 
     @Autowired
-    private FilterChainProxy springSecurityFilterChain;
-    
-    @Autowired
     private KeyService keyService;
     
     private static MockMvc mockMvc;
     
     @Before
     public void setUp() {
-         mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();   
+         mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();
     }
     
     	@Test
@@ -180,8 +177,8 @@ public class PaymentControllerTest {
     }
     
     private KeyTO requestKeyExchange(KeyTO requestTO) throws Exception {
-		String jsonTO = SerializeUtils.GSON.toJson(requestTO);;
-    	return RESTUtils.postRequest(mockMvc, URL_KEY_EXCHANGE, jsonTO, KeyTO.class);
+		String jsonTO = SerializeUtils.GSON.toJson(requestTO);
+        return RESTUtils.postRequest(mockMvc, URL_KEY_EXCHANGE, jsonTO, KeyTO.class);
 	}
     
 	@Test
@@ -372,8 +369,8 @@ public class PaymentControllerTest {
     }
     
     private TimeLockedAddressTO requestCreateTimeLockedAddress(TimeLockedAddressTO requestTO) throws Exception {
-    	String jsonTO = SerializeUtils.GSON.toJson(requestTO);;
-    	return RESTUtils.postRequest(mockMvc, URL_CREATE_TIME_LOCKED_ADDRESS, jsonTO, TimeLockedAddressTO.class);
+    	String jsonTO = SerializeUtils.GSON.toJson(requestTO);
+        return RESTUtils.postRequest(mockMvc, URL_CREATE_TIME_LOCKED_ADDRESS, jsonTO, TimeLockedAddressTO.class);
     }
     
 	private TimeLockedAddressTO createSignedTimeLockedAddressTO(ECKey clientKey) {

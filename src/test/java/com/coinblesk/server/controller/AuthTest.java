@@ -24,6 +24,7 @@ import com.coinblesk.json.v1.UserAccountTO;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import javax.servlet.http.HttpSession;
 import org.junit.Assert;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -69,9 +70,6 @@ public class AuthTest {
     private WebApplicationContext webAppContext;
 
     @Autowired
-    private FilterChainProxy springSecurityFilterChain;
-    
-    @Autowired
     private UserAccountService userAccountService;
     
     @Autowired
@@ -86,7 +84,10 @@ public class AuthTest {
     
     @Before
     public void setUp() {
-         mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();   
+         mockMvc = MockMvcBuilders
+                 .webAppContextSetup(webAppContext)
+                 .apply(springSecurity())
+                 .build();
     }
     
     @Test

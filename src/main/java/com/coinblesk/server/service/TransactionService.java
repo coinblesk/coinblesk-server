@@ -20,7 +20,7 @@ import com.coinblesk.json.v1.SignVerifyTO;
 import com.coinblesk.json.v1.TxSig;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.dao.TxDAO;
+import com.coinblesk.server.dao.TxRepository;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.entity.Tx;
 import com.coinblesk.server.utils.ToUtils;
@@ -63,7 +63,7 @@ public class TransactionService {
     private AppConfig appConfig;
 
     @Autowired
-    private TxDAO txDAO;
+    private TxRepository repository;
 
     @Autowired
     private WalletService walletService;
@@ -290,21 +290,17 @@ public class TransactionService {
     		}
     		
     		byte[] addressHash = output.getScriptPubKey().getPubKeyHash();
-    		TimeLockedAddressEntity address = keyService.findAddressByAddressHash(addressHash);
+    		TimeLockedAddressEntity address = keyService.getTimeLockedAddressByAddressHash(addressHash);
     		if (address == null) {
-    			// unknown input (maybe not locked)
-    			return false;
-    		} else if (address instanceof TimeLockedAddressEntity) {
-    			TimeLockedAddressEntity timeLockedAddress = (TimeLockedAddressEntity) address;
-    			if (BitcoinUtils.isAfterLockTime(
-	    					Utils.currentTimeSeconds()- LOCK_THRESHOLD_MILLIS/1000, 
-	    					timeLockedAddress.getLockTime())) {
-    				// locktime expired
-    				return false;
-    			}
-    		} else {
-    			// 2-of-2 multisig: locked
-    		}
+                // unknown input (maybe not locked)
+                return false;
+            }
+            if (BitcoinUtils.isAfterLockTime(
+                    Utils.currentTimeSeconds()- LOCK_THRESHOLD_MILLIS/1000,
+                    address.getLockTime())) {
+                // locktime expired
+                return false;
+            }
     	}
     	
     	return true;
@@ -372,17 +368,17 @@ public class TransactionService {
         transaction.txHash(txHash);
         transaction.creationDate(new Date());
         transaction.approved(approved);
-        transaction = txDAO.save(transaction);
+        repository.save(transaction);
     }
     
     @Transactional(readOnly = false)
     public void removeTransaction(Transaction tx) {
-        txDAO.remove(tx.getHash().getBytes());
+        repository.delete(tx.getHash().getBytes());
     }
 
     private List<Transaction> listTransactions(final NetworkParameters params, 
             final byte[] clientPublicKey, final boolean approved) {
-        final List<Tx> list = txDAO.findByClientPublicKey(clientPublicKey, approved);
+        final List<Tx> list = repository.findByClientPublicKeyAndApproved(clientPublicKey, approved);
         final List<Transaction> retVal = new ArrayList<>(list.size());
         for (final Tx enityTx : list) {
             final Transaction tx = new Transaction(params, enityTx.tx());
@@ -393,7 +389,7 @@ public class TransactionService {
 
     @Transactional(readOnly = true)
     public List<Transaction> listApprovedTransactions(final NetworkParameters params) {
-        final List<Tx> approved = txDAO.findAll(true);
+        final List<Tx> approved = repository.findByApproved(true);
         final List<Transaction> retVal = new ArrayList<>(approved.size());
         for (final Tx approvedTx : approved) {
             final Transaction tx = new Transaction(params, approvedTx.tx());
