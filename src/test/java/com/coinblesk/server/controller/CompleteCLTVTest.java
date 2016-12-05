@@ -95,9 +95,6 @@ public class CompleteCLTVTest {
     @Autowired
     private WebApplicationContext webAppContext;
 
-    @Autowired
-    private FilterChainProxy springSecurityFilterChain;
-
     private MockMvc mockMvc;
     
     @Autowired
@@ -122,7 +119,6 @@ public class CompleteCLTVTest {
         walletService.shutdown();
         mockMvc = MockMvcBuilders
                 .webAppContextSetup(webAppContext)
-                .addFilter(springSecurityFilterChain)
                 .build();
         
         params = appConfig.getNetworkParameters();

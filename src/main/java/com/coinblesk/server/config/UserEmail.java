@@ -20,6 +20,6 @@ package com.coinblesk.server.config;
  * @author Thomas Bocek
  */
 public interface UserEmail {
-    public void send(String recipient, String subject, String text);
-    public int sentEmails();
+    void send(String recipient, String subject, String text);
+    int sentEmails();
 }

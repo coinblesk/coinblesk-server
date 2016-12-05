@@ -70,14 +70,11 @@ public class VersionControllerTest {
 	@Autowired
     private WebApplicationContext webAppContext;
 
-    @Autowired
-    private FilterChainProxy springSecurityFilterChain;
-    
     private static MockMvc mockMvc;
     
     @Before
     public void setUp() {
-         mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).addFilter(springSecurityFilterChain).build();   
+         mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();
     }
     
 	@Test

@@ -76,9 +76,6 @@ public class VerifyTest {
     private WebApplicationContext webAppContext;
 
     @Autowired
-    private FilterChainProxy springSecurityFilterChain;
-
-    @Autowired
     private AppConfig appConfig;
 
     @Autowired
@@ -103,7 +100,6 @@ public class VerifyTest {
         walletService.shutdown();
         mockMvc = MockMvcBuilders
                 .webAppContextSetup(webAppContext)
-                .addFilter(springSecurityFilterChain)
                 .build();
         walletService.init();
         client = new Client(appConfig.getNetworkParameters(), mockMvc);
@@ -204,54 +200,6 @@ public class VerifyTest {
                 unknown, 9876, client, SerializeUtils.serializeSignatures(clientSigs2),
                 status2.signatures(), new Date());
         Assert.assertTrue(verify.isSuccess());        
-        Assert.assertEquals(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT, verify.type());
-    }
-    
-    @Test
-    public void testVerifyExpiredRefund() throws Exception {
-        Transaction txClient1 = BitcoinUtils.createTx(
-                params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
-                9876, true);
-        
-        SignTO status1 = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
-                merchant.p2shAddress(), 9876, client, new Date());
-        Assert.assertTrue(status1.isSuccess());
-        
-        Triple<RefundTO,Transaction,List<TransactionSignature>> t =
-        RefundTest.refundServerCall(params, mockMvc, client, funding, new Date(), (System.currentTimeMillis() / 1000) - 10);
-        Assert.assertTrue(t.element0().isSuccess());
-        
-        List<TransactionSignature> clientSigs1 = BitcoinUtils.partiallySign(txClient1, client.redeemScript(), client.ecKey());
-        
-        VerifyTO verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), 
-                merchant.p2shAddress(), 9876, client, SerializeUtils.serializeSignatures(clientSigs1),
-                status1.signatures(), new Date());
-        Assert.assertTrue(verify.isSuccess());
-        Assert.assertEquals(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT, verify.type());
-    }
-    
-    @Test
-    @DatabaseTearDown(value = {"EmptyDB.xml"}, type = DatabaseOperation.DELETE_ALL)
-    public void testVerifyNonExpiredRefund() throws Exception {
-        Transaction txClient1 = BitcoinUtils.createTx(
-                params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
-                9876, true);
-        
-        SignTO status1 = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
-                merchant.p2shAddress(), 9876, client, new Date());
-        Assert.assertTrue(status1.isSuccess());
-        
-        Triple<RefundTO,Transaction,List<TransactionSignature>> t =
-        RefundTest.refundServerCall(params, mockMvc, client, funding, new Date(), ((System.currentTimeMillis() / 1000) + (24 * 60 * 60)));
-        Assert.assertTrue(t.element0().isSuccess());
-        
-        List<TransactionSignature> clientSigs1 = BitcoinUtils.partiallySign(txClient1, client.redeemScript(), client.ecKey());
-        
-        VerifyTO verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), 
-                merchant.p2shAddress(), 9876, client, SerializeUtils.serializeSignatures(clientSigs1),
-                status1.signatures(), new Date());
-        Assert.assertTrue(verify.isSuccess());
-        //since we use timelock, the previous version - coinblesk 2.1 reports no instant payment
         Assert.assertEquals(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT, verify.type());
     }
 }

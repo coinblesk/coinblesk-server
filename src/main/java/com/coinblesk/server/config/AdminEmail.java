@@ -20,6 +20,6 @@ package com.coinblesk.server.config;
  * @author Thomas Bocek
  */
 public interface AdminEmail {
-    public void send(String subject, String text);
-    public int sentEmails();
+    void send(String subject, String text);
+    int sentEmails();
 }
