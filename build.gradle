@@ -42,7 +42,7 @@ dependencies {
 
     // Shared resources with android client
     // (includes transfer-objects)
-    compile 'com.coinblesk:coinblesk-shared-resources:1.4.70'
+    compile 'com.coinblesk:coinblesk-shared-resources:1.4.71'
 
     // Misc
     compile 'org.apache.commons:commons-lang3:3.5'
