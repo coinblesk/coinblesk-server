@@ -6,11 +6,13 @@ buildscript {
     }
     dependencies {
         classpath("org.springframework.boot:spring-boot-gradle-plugin:1.4.2.RELEASE")
+        classpath("org.hidetake:gradle-ssh-plugin:2.7.0")
     }
 }
 
 apply plugin: 'java'
 apply plugin: 'org.springframework.boot'
+apply plugin: 'org.hidetake.ssh'
 
 version = '2.1-SNAPSHOT'
 
@@ -22,6 +24,35 @@ repositories {
 test {
     testLogging.showStandardStreams = true
     testLogging.exceptionFormat = 'full'
+}
+
+/* http://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/html/deployment-install.html
+ * this will generate a jar that is executable. It will add a script before the zipped content,
+ * thus it will not be a jar anymore. However this, simplifies the deployemnt as only one file
+ * has to be copied. For a custom script, use embeddedLaunchScript.
+ *
+ * systemd / init.d installation: 
+ * http://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/html/deployment-install.html#deployment-service
+ * 
+ * # [Unit]
+ * # Description=coinblesk
+ * # After=syslog.target
+ *
+ * # [Service]
+ * # User=nobody
+ * # Group=coinblesk
+ * # ExecStart=/var/coinblesk/coinblesk.jar
+ * # SuccessExitStatus=143
+ *
+ * # [Install]
+ * # WantedBy=multi-user.target
+ *
+ * Enable with:
+ * # systemctl enable coinblesk.service
+ */
+
+springBoot {
+    executable = true
 }
 
 dependencies {
@@ -48,4 +79,54 @@ dependencies {
     testCompile "org.springframework.security:spring-security-test"
     testCompile 'com.github.springtestdbunit:spring-test-dbunit:1.2.1'
     testCompile 'org.dbunit:dbunit:2.5.1'
+}
+
+remotes {
+    prod {
+        host = 'bitcoin3.csg.uzh.ch'
+        user = "$System.env.USER"
+        identity = file("$System.env.HOME/.ssh/id_rsa")
+    }
+    test {
+        host = 'bitcoin2-test.csg.uzh.ch'
+        user = "$System.env.USER"
+        identity = file("$System.env.HOME/.ssh/id_rsa")
+    }
+    local {
+        host = 'localhost'
+        user = "$System.env.USER"
+        identity = file("$System.env.HOME/.ssh/id_rsa")
+    }
+}
+
+/*
+ * To deploy a test the following needs to be in place:
+ * 
+ * - add group coinblesk
+ *  # groupadd coinblesk
+ *  # adduser USER coinblesk
+ *  
+ * - allow restarting of coinblesk with systemd
+ * 
+ * # %coinblesk ALL=(root)NOPASSWD: /usr/bin/systemctl stop coinblesk
+ * # %coinblesk ALL=(root)NOPASSWD: /usr/bin/systemctl start coinblesk
+ * # %coinblesk ALL=(root)NOPASSWD: /usr/bin/systemctl status coinblesk
+ * # %coinblesk ALL=(root)NOPASSWD: /usr/bin/systemctl restart coinblesk
+ * 
+ */
+task deployCoinblesk << {
+    def env = 'local'
+    if (project.hasProperty('env') && project.getProperty('env') == 'prod') {
+        env = 'prod'
+    } else if (project.hasProperty('env') && project.getProperty('env') == 'test') {
+        env = 'test'
+    }
+    println("deploying on $env")
+    ssh.run {
+        session(remotes."$env") {
+            execute 'sudo systemctl stop coinblesk'
+            put from: ssh.runtime.jar, into: '/var/coinblesk/coinblesk.jar'
+            execute 'sudo systemctl start coinblesk'
+        }
+    }
 }
