@@ -31,7 +31,7 @@ test {
  * thus it will not be a jar anymore. However this, simplifies the deployemnt as only one file
  * has to be copied. For a custom script, use embeddedLaunchScript.
  *
- * systemd / init.d installation: 
+ * systemd / init.d installation in "/etc/systemd/system/": 
  * http://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/html/deployment-install.html#deployment-service
  * 
  * # [Unit]
@@ -41,7 +41,7 @@ test {
  * # [Service]
  * # User=nobody
  * # Group=coinblesk
- * # ExecStart=/var/coinblesk/coinblesk.jar
+ * # ExecStart=/var/lib/coinblesk/coinblesk.jar
  * # SuccessExitStatus=143
  *
  * # [Install]
@@ -49,8 +49,10 @@ test {
  *
  * Enable with:
  * # systemctl enable coinblesk.service
+ * 
+ * Make sure the directory /var/lib/coinblesk exists
+ * 
  */
-
 springBoot {
     executable = true
 }
@@ -81,23 +83,7 @@ dependencies {
     testCompile 'org.dbunit:dbunit:2.5.1'
 }
 
-remotes {
-    prod {
-        host = 'bitcoin3.csg.uzh.ch'
-        user = "$System.env.USER"
-        identity = file("$System.env.HOME/.ssh/id_rsa")
-    }
-    test {
-        host = 'bitcoin2-test.csg.uzh.ch'
-        user = "$System.env.USER"
-        identity = file("$System.env.HOME/.ssh/id_rsa")
-    }
-    local {
-        host = 'localhost'
-        user = "$System.env.USER"
-        identity = file("$System.env.HOME/.ssh/id_rsa")
-    }
-}
+
 
 /*
  * To deploy a test the following needs to be in place:
@@ -108,25 +94,60 @@ remotes {
  *  
  * - allow restarting of coinblesk with systemd
  * 
- * # %coinblesk ALL=(root)NOPASSWD: /usr/bin/systemctl stop coinblesk
- * # %coinblesk ALL=(root)NOPASSWD: /usr/bin/systemctl start coinblesk
- * # %coinblesk ALL=(root)NOPASSWD: /usr/bin/systemctl status coinblesk
- * # %coinblesk ALL=(root)NOPASSWD: /usr/bin/systemctl restart coinblesk
+ * # %coinblesk ALL=(root)NOPASSWD: /bin/systemctl stop coinblesk
+ * # %coinblesk ALL=(root)NOPASSWD: /bin/systemctl start coinblesk
+ * # %coinblesk ALL=(root)NOPASSWD: /bin/systemctl status coinblesk
+ * # %coinblesk ALL=(root)NOPASSWD: /bin/systemctl restart coinblesk
  * 
+ * run with:
+ * # gradle deploy -Penv=test
+ * # gradle deploy -Penv=prod
+ * # gradle deploy
+ * 
+ * check logs with:
+ * # journalctl -u coinblesk.service -f
  */
-task deployCoinblesk << {
-    def env = 'local'
-    if (project.hasProperty('env') && project.getProperty('env') == 'prod') {
-        env = 'prod'
-    } else if (project.hasProperty('env') && project.getProperty('env') == 'test') {
-        env = 'test'
+task deploy {
+    
+    remotes {
+        prod {
+            host = 'bitcoin3.csg.uzh.ch'
+        }
+        test {
+            host = 'bitcoin2-test.csg.uzh.ch'
+        }
     }
-    println("deploying on $env")
-    ssh.run {
-        session(remotes."$env") {
-            execute 'sudo systemctl stop coinblesk'
-            put from: ssh.runtime.jar, into: '/var/coinblesk/coinblesk.jar'
-            execute 'sudo systemctl start coinblesk'
+
+    ssh.settings {
+        user = "$System.env.USER"
+        identity = file("$System.env.HOME/.ssh/id_rsa")
+    }
+    
+    doLast {
+        ext.upload = { env, archiveName, dst -> ssh.run {
+                session(remotes."$env") {
+                    execute 'sudo systemctl stop coinblesk'
+                    put from: "build/libs/$archiveName", into: dst
+                    execute "chown $System.env.USER:coinblesk $dst; chmod ug+x $dst"
+                    execute 'sudo systemctl start coinblesk'
+                }
+            }
+        }
+        def dst = '/var/lib/coinblesk/coinblesk.jar'
+        if (project.hasProperty('env') && project.getProperty('env') == 'test') {
+            println("deploying on TEST...")
+            upload('test', jar.archiveName, dst)
+        } else if (project.hasProperty('env')  && project.getProperty('env') == 'prod') {
+            println("deploying on PROD...")
+            upload('prod', jar.archiveName, dst)
+        } else {
+            println("deploying on LOCAL...")
+            exec {
+                commandLine "sudo systemctl stop coinblesk && \
+                    cp build/libs/$jar.archiveName $dst && \
+                    chown $System.env.USER:coinblesk $dst; chmod ug+x $dst && \
+                    sudo systemctl start coinblesk"
+            }
         }
     }
 }
