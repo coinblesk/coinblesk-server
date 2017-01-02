@@ -56,7 +56,7 @@ public class AppConfig {
                 SUPPORTED_CLIENT_VERSIONS.add("2.3"); // TO versioning release
 	}
 
-    @Value("${coinblesk.config.dir:/var/lib/coinblesk}")
+    @Value("${coinblesk.config.dir:./build/coinblesk}")
     private FileSystemResource configDir;
 
     @Value("${bitcoin.net:unittest}")
