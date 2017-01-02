@@ -74,11 +74,6 @@ public class AppConfig {
     }
     
     public FileSystemResource getConfigDir() {
-        if (configDir != null && !configDir.exists()) {
-            if(!configDir.getFile().mkdirs()) {
-                throw new RuntimeException("The directory " + configDir + " does not exist");
-            }
-        }
         return configDir;
     }
 
