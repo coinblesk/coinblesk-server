@@ -152,7 +152,6 @@ public class WalletService {
 
         blockChain.addWallet(wallet);
         peerGroup.addWallet(wallet);
-        installShutdownHook();
         peerGroup.start();
         final DownloadProgressTracker listener = new DownloadProgressTracker() {
             @Override
@@ -338,15 +337,6 @@ public class WalletService {
         } catch (Exception e) {
             LOG.error("cannot shutdown wallet in shutdown", e);
         }
-    }
-
-    private void installShutdownHook(/*final PeerGroup peerGroup, final BlockStore blockStore, 
-            final Wallet wallet*/) {
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            @Override public void run() {
-                shutdown();
-            }
-        });
     }
 
     public PeerGroup peerGroup() {
