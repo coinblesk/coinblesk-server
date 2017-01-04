@@ -18,7 +18,6 @@ package com.coinblesk.server.utilTest;
  */
 
 
-
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.ScriptBuilder;
@@ -30,8 +29,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
-import static org.bitcoinj.core.Coin.*;
 import static com.google.common.base.Preconditions.checkState;
+import static org.bitcoinj.core.Coin.COIN;
+import static org.bitcoinj.core.Coin.valueOf;
 
 public class FakeTxBuilder {
     /** Create a fake transaction, without change. */

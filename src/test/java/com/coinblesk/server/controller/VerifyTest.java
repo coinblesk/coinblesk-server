@@ -15,48 +15,32 @@
  */
 package com.coinblesk.server.controller;
 
-import com.coinblesk.json.v1.RefundTO;
 import com.coinblesk.json.v1.SignTO;
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.config.BeanConfig;
-import com.coinblesk.server.config.SecurityConfig;
-import com.coinblesk.server.service.WalletService;
-
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.VerifyTO;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.Client;
 import com.coinblesk.server.utilTest.ServerCalls;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.SerializeUtils;
-import com.coinblesk.util.Triple;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
-import com.github.springtestdbunit.annotation.DatabaseOperation;
+import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
-import java.util.Date;
-import java.util.List;
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.TransactionSignature;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.web.FilterChainProxy;
-import org.springframework.test.context.ContextConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestExecutionListeners;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
-import org.springframework.test.context.transaction.TransactionalTestExecutionListener;
-import org.springframework.test.context.web.WebAppConfiguration;
+import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+
+import java.util.Date;
+import java.util.List;
 
 //http://www.soroushjp.com/2014/12/20/bitcoin-multisig-the-hard-way-understanding-raw-multisignature-bitcoin-transactions/
 /**
@@ -64,12 +48,10 @@ import org.springframework.web.context.WebApplicationContext;
  * @author Thomas Bocek
  * @author Raphael Voellmy
  */
-@RunWith(SpringJUnit4ClassRunner.class)
-@TestExecutionListeners(
-            {DependencyInjectionTestExecutionListener.class, TransactionalTestExecutionListener.class,
-                DbUnitTestExecutionListener.class})
-@ContextConfiguration(classes = {BeanConfig.class, SecurityConfig.class})
-@WebAppConfiguration
+@SpringBootTest
+@RunWith(SpringRunner.class)
+@TestExecutionListeners( listeners = DbUnitTestExecutionListener.class,
+        mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
 public class VerifyTest {
 
     @Autowired
@@ -117,6 +99,8 @@ public class VerifyTest {
     }
 
     @Test
+    @DatabaseSetup("EmptyDatabase.xml")
+    @DatabaseTearDown("EmptyDatabase.xml")
     public void testVerify() throws Exception {
         Transaction txClient = BitcoinUtils.createTx(
                 params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
@@ -144,6 +128,8 @@ public class VerifyTest {
     }
     
     @Test
+    @DatabaseSetup("EmptyDatabase.xml")
+    @DatabaseTearDown("EmptyDatabase.xml")
     public void testVerifyDoubleSpending() throws Exception {
         Transaction txClient1 = BitcoinUtils.createTx(
                 params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
@@ -167,6 +153,8 @@ public class VerifyTest {
     }
     
     @Test
+    @DatabaseSetup("EmptyDatabase.xml")
+    @DatabaseTearDown("EmptyDatabase.xml")
     public void testVerifyDoubleSpending2() throws Exception {
         Transaction txClient1 = BitcoinUtils.createTx(
                 params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),

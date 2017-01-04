@@ -16,42 +16,35 @@
 package com.coinblesk.server.service;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.entity.Keys;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.utilTest.KeyTestUtil;
+import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
-
-import static org.junit.Assert.*;
-
-import java.util.List;
-
 import org.bitcoinj.core.ECKey;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestExecutionListeners;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
-import org.springframework.test.context.transaction.TransactionalTestExecutionListener;
-import org.springframework.test.context.web.WebAppConfiguration;
-import com.github.springtestdbunit.DbUnitTestExecutionListener;
+import org.springframework.test.context.junit4.SpringRunner;
+
+import java.util.List;
+
+import static org.junit.Assert.*;
 
 /**
  *
  * @author Thomas Bocek
  * @author Andreas Albrecht
  */
-@RunWith(SpringJUnit4ClassRunner.class)
-@TestExecutionListeners(
-            {DependencyInjectionTestExecutionListener.class, TransactionalTestExecutionListener.class,
-                DbUnitTestExecutionListener.class})
-@WebAppConfiguration
-@ContextConfiguration(classes = {BeanConfig.class})
+@SpringBootTest
+@RunWith(SpringRunner.class)
+@TestExecutionListeners( listeners = DbUnitTestExecutionListener.class,
+        mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
 public class KeyServiceTest {
     
     @BeforeClass
@@ -63,6 +56,8 @@ public class KeyServiceTest {
     private KeyService keyService;
 
     @Test
+    @DatabaseSetup("EmptyDatabase.xml")
+    @DatabaseTearDown("EmptyDatabase.xml")
     public void testAddKey() throws Exception {
         ECKey ecKeyClient = new ECKey();
         ECKey ecKeyServer = new ECKey();
@@ -77,6 +72,8 @@ public class KeyServiceTest {
     }
 
     @Test
+    @DatabaseSetup("EmptyDatabase.xml")
+    @DatabaseTearDown("EmptyDatabase.xml")
     public void testAddKey2() throws Exception {
         ECKey ecKeyClient = new ECKey();
         ECKey ecKeyServer = new ECKey();
@@ -102,9 +99,9 @@ public class KeyServiceTest {
 
     
     @Test
+    @DatabaseSetup("EmptyDatabase.xml")
     @DatabaseSetup("keys.xml")
-    @DatabaseTearDown("emptyAddresses.xml")
-    @DatabaseTearDown("emptyKeys.xml")
+    @DatabaseTearDown("EmptyDatabase.xml")
 	public void testGetTimeLockedAddress_EmptyResult() {
 		long lockTime = 123456;
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
@@ -119,9 +116,9 @@ public class KeyServiceTest {
 	}
 
     @Test
+    @DatabaseSetup("EmptyDatabase.xml")
     @DatabaseSetup("keys.xml")
-    @DatabaseTearDown("emptyAddresses.xml")
-    @DatabaseTearDown("emptyKeys.xml")
+    @DatabaseTearDown("EmptyDatabase.xml")
     public void testStoreAndGetTimeLockedAddress() {
     	long lockTime = 123456;
     	ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
@@ -141,9 +138,9 @@ public class KeyServiceTest {
     }
 
     @Test
+    @DatabaseSetup("EmptyDatabase.xml")
     @DatabaseSetup("keys.xml")
-    @DatabaseTearDown("emptyAddresses.xml")
-    @DatabaseTearDown("emptyKeys.xml")
+    @DatabaseTearDown("EmptyDatabase.xml")
     public void testStoreAndGetTimeLockedAddresses() {
     	ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
     	

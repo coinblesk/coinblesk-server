@@ -15,55 +15,41 @@
  */
 package com.coinblesk.server.controller;
 
-import com.coinblesk.server.config.AdminEmail;
-import com.coinblesk.server.config.BeanConfig;
-import com.coinblesk.server.config.SecurityConfig;
-import com.coinblesk.server.service.UserAccountService;
+import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.UserAccountStatusTO;
 import com.coinblesk.json.v1.UserAccountTO;
-import com.github.springtestdbunit.DbUnitTestExecutionListener;
-import javax.servlet.http.HttpSession;
+import com.coinblesk.server.config.AdminEmail;
+import com.coinblesk.server.service.UserAccountService;
+import com.coinblesk.util.SerializeUtils;
 import org.junit.Assert;
-import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.security.web.FilterChainProxy;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.TestExecutionListeners;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
-import org.springframework.test.context.transaction.TransactionalTestExecutionListener;
-import org.springframework.test.context.web.WebAppConfiguration;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import com.coinblesk.json.v1.Type;
-import com.coinblesk.util.SerializeUtils;
-import com.github.springtestdbunit.annotation.DatabaseOperation;
-import com.github.springtestdbunit.annotation.DatabaseTearDown;
-import org.junit.BeforeClass;
-import org.springframework.mock.web.MockHttpSession;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
+
+import javax.servlet.http.HttpSession;
+
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  *
  * @author draft
  */
 
-@RunWith(SpringJUnit4ClassRunner.class)
-@TestExecutionListeners({DependencyInjectionTestExecutionListener.class, TransactionalTestExecutionListener.class,
-    DbUnitTestExecutionListener.class})
-@ContextConfiguration(classes = {BeanConfig.class, SecurityConfig.class})
-@WebAppConfiguration
+@SpringBootTest
+@RunWith(SpringRunner.class)
 public class AuthTest {
 
     @Autowired
@@ -76,12 +62,7 @@ public class AuthTest {
     private AdminEmail adminEmail;
 
     private static MockMvc mockMvc;
-    
-    @BeforeClass
-    public static void beforeClass() {
-        System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk");
-    }
-    
+
     @Before
     public void setUp() {
          mockMvc = MockMvcBuilders
@@ -91,7 +72,6 @@ public class AuthTest {
     }
     
     @Test
-    @DatabaseTearDown(value = {"EmptyUser.xml"}, type = DatabaseOperation.DELETE_ALL)
     public void testCreateActivate() throws Exception {
 	mockMvc.perform(get("/v1/u/a/g").secure(true)).andExpect(status().is3xxRedirection());
         UserAccountTO userAccountTO = new UserAccountTO();
