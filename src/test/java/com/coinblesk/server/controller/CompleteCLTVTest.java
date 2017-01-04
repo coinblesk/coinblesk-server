@@ -124,8 +124,8 @@ public class CompleteCLTVTest {
     }
     
     @Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     public void testReceiveFunds() throws Exception {
     	Transaction tx = fundClient(client.getChangeAddress());
     	
@@ -139,8 +139,8 @@ public class CompleteCLTVTest {
     }
     
     @Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     /* provide 2 signatures -> spending should succeed */
     public void testSpend_BeforeLockTimeExpiry() throws Exception {
     	Transaction tx = BitcoinUtils.createTx(
@@ -173,8 +173,8 @@ public class CompleteCLTVTest {
     }
     
     @Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     /* provide 2 signatures, but in reversed order, should fail */
     public void testSpend_BeforeLockTimeExpiry_ReversedSignatures() throws Exception {
     	thrown.expect(ScriptException.class);
@@ -202,8 +202,8 @@ public class CompleteCLTVTest {
     }
     
     @Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     /* spending with single sig of client is possible if locktime and seqNr is set properly */
     public void testSpend_AfterLockTimeExpiry_SingleSig() throws Exception {
     	Transaction tx = BitcoinUtils.createTx(
@@ -229,8 +229,8 @@ public class CompleteCLTVTest {
     }
     
     @Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     /* spending with single sig of server should not be possible */
     public void testSpend_AfterLockTimeExpiry_SingleServerSig() throws Exception {
     	thrown.expect(ScriptException.class);
@@ -263,8 +263,8 @@ public class CompleteCLTVTest {
     }
     
     @Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	/* spending with single sig of client fails without lockTime */
 	public void testSpend_AfterLockTimeExpiry_SingleSig_LockTimeTooSmall() throws Exception {
 		thrown.expect(ScriptException.class);
@@ -293,8 +293,8 @@ public class CompleteCLTVTest {
 	}
 
 	@Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     /* spending with single sig of client fails without lockTime */
     public void testSpend_AfterLockTimeExpiry_SingleSig_MissingLockTime() throws Exception {
     	thrown.expect(ScriptException.class);
@@ -322,8 +322,8 @@ public class CompleteCLTVTest {
     }
     
     @Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     /* spending with single sig of client fails without seqNr */
     public void testSpend_AfterLockTimeExpiry_SingleSig_MissingSeqNr() throws Exception {
     	thrown.expect(ScriptException.class);
@@ -353,8 +353,8 @@ public class CompleteCLTVTest {
     }
     
     @Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     /* spending with single sig of client fails without seqNr */
     public void testSpend_AfterLockTimeExpiry_SingleSig_MissingSeqNrAndLockTime() throws Exception {
     	thrown.expect(ScriptException.class);
@@ -382,8 +382,8 @@ public class CompleteCLTVTest {
     }
 
 	@Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     public void testSpend_BeforeLockTime_MultipleInputs() throws Exception {
     	for (int i = 0; i < 5; ++i) {
     		client.createTimeLockedAddress();
@@ -416,8 +416,8 @@ public class CompleteCLTVTest {
     }
 	
 	@Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     public void testSpend_BeforeLockTime_DoubleSpend() throws Exception {
 		List<Transaction> clientTx = new ArrayList<>();
     	for (int i = 0; i < 2; ++i) {

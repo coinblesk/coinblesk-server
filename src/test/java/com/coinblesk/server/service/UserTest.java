@@ -52,10 +52,10 @@ public class UserTest {
     }
 
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @ExpectedDatabase(value = "UserTestAddUser.xml",
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @ExpectedDatabase(value = "/UserTestAddUser.xml",
             assertionMode = DatabaseAssertionMode.NON_STRICT_UNORDERED)
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testAddUser() throws Exception {
         UserAccount userAccount = new UserAccount();
         userAccount.setBalance(BigDecimal.ONE)
@@ -69,9 +69,9 @@ public class UserTest {
     }
 
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseSetup("UserTestGetUser.xml")
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseSetup("/UserTestGetUser.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testGetUser() throws Exception {
         UserAccount u1 = userAccountService.getByEmail("test");
         Assert.assertNull(u1);

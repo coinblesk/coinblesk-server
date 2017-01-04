@@ -87,8 +87,8 @@ public class SignTest {
     }
 
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testAddressEmpty() throws Exception {
         Client client = new Client(params, mockMvc);
         Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(), 0,
@@ -106,8 +106,8 @@ public class SignTest {
     }
 
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testAddressNotEnoughFunds() throws Exception {
         Client client = new Client(params, mockMvc);
         Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(1), client.p2shAddress(), 0,
@@ -122,8 +122,8 @@ public class SignTest {
     }
 
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testAddressOnlyDust() throws Exception {
         Client client = new Client(params, mockMvc);
         Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(700), client.p2shAddress(), 0,
@@ -137,10 +137,10 @@ public class SignTest {
     }
 
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @ExpectedDatabase(value = "TxTwice.xml",
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @ExpectedDatabase(value = "/TxTwice.xml",
             assertionMode = DatabaseAssertionMode.NON_STRICT_UNORDERED)
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testSignTwice() throws Exception {
         Client client = new Client(params, mockMvc);
         Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(), 0,
@@ -158,8 +158,8 @@ public class SignTest {
     }
 
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testServerSignatures() throws Exception {
         Client client = new Client(params, mockMvc);
         Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(123450),

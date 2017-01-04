@@ -56,8 +56,8 @@ public class KeyServiceTest {
     private KeyService keyService;
 
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testAddKey() throws Exception {
         ECKey ecKeyClient = new ECKey();
         ECKey ecKeyServer = new ECKey();
@@ -72,8 +72,8 @@ public class KeyServiceTest {
     }
 
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testAddKey2() throws Exception {
         ECKey ecKeyClient = new ECKey();
         ECKey ecKeyServer = new ECKey();
@@ -99,9 +99,9 @@ public class KeyServiceTest {
 
     
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseSetup("keys.xml")
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseSetup("/keys.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
 	public void testGetTimeLockedAddress_EmptyResult() {
 		long lockTime = 123456;
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
@@ -116,9 +116,9 @@ public class KeyServiceTest {
 	}
 
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseSetup("keys.xml")
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseSetup("/keys.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testStoreAndGetTimeLockedAddress() {
     	long lockTime = 123456;
     	ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
@@ -138,9 +138,9 @@ public class KeyServiceTest {
     }
 
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseSetup("keys.xml")
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseSetup("/keys.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testStoreAndGetTimeLockedAddresses() {
     	ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
     	

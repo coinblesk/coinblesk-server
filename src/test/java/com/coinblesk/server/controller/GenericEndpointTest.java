@@ -76,8 +76,8 @@ public class GenericEndpointTest {
     }
 
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testOldTime() throws Exception {
         Client client = new Client(params, mockMvc);
         Transaction t = sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
@@ -104,8 +104,8 @@ public class GenericEndpointTest {
     }
 
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testNewTime() throws Exception {
         Client client = new Client(params, mockMvc);
         Transaction t = sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
@@ -131,8 +131,8 @@ public class GenericEndpointTest {
     }
 
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testWrongSignature() throws Exception {
         Client client = new Client(params, mockMvc);
         Transaction t = sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
@@ -165,8 +165,8 @@ public class GenericEndpointTest {
     }
 
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testNotRegistered() throws Exception {
         Client client = new Client(params, mockMvc);
         Transaction t = sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());
@@ -199,8 +199,8 @@ public class GenericEndpointTest {
     }
 
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testIdempotent() throws Exception {
         Client client = new Client(params, mockMvc);
         Transaction t = sendFakeCoins(Coin.valueOf(123450), client.p2shAddress());

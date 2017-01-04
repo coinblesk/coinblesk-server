@@ -98,16 +98,16 @@ public class UserAccountServiceTest {
     }
 
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseTearDown(value = "EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testTransferFailed() {
         UserAccountTO result = userAccountService.transferP2SH(ecKeyClient, "test@test.test");
         Assert.assertFalse(result.isSuccess());
     }
     
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseTearDown(value = "EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testTransferSuccess() throws BlockStoreException, VerificationException, PrunedException {
         Block block = FakeTxBuilder.makeSolvedTestBlock(walletService.blockChain().getBlockStore(), cfg.getPotPrivateKeyAddress().toAddress(cfg.getNetworkParameters()));
         walletService.blockChain().add(block);

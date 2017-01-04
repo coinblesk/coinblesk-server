@@ -77,8 +77,8 @@ public class PaymentControllerTest {
     }
 
 	@Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testKeyExchange_NoContent() throws Exception {
 		mockMvc
 			.perform(post(URL_KEY_EXCHANGE).secure(true))
@@ -86,8 +86,8 @@ public class PaymentControllerTest {
 	}
 	
 	@Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testKeyExchange_EmptyRequest() throws Exception {
 	    KeyTO requestTO = new KeyTO();
 	    KeyTO response = requestKeyExchange(requestTO);
@@ -97,8 +97,8 @@ public class PaymentControllerTest {
 	}
     
 	@Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     public void testKeyExchange_NoPubKey() throws Exception {
     	KeyTO requestTO = new KeyTO();
     	requestTO.currentDate(System.currentTimeMillis());
@@ -110,8 +110,8 @@ public class PaymentControllerTest {
     }
     
     @Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     public void testKeyExchange_InvalidPubKey() throws Exception {
     	KeyTO requestTO = new KeyTO()
     		.currentDate(System.currentTimeMillis())
@@ -124,8 +124,8 @@ public class PaymentControllerTest {
     }
     
     @Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     public void testKeyExchange() throws Exception {
     	ECKey key = new ECKey();
     	KeyTO requestTO = new KeyTO()
@@ -144,8 +144,8 @@ public class PaymentControllerTest {
     }
     
     @Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     public void testKeyExchange_ExistingPubKey() throws Exception {
     	ECKey key = new ECKey();
     	KeyTO requestTO = new KeyTO()
@@ -179,8 +179,8 @@ public class PaymentControllerTest {
 	}
     
 	@Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_NoContent() throws Exception {
 		mockMvc
 			.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).secure(true))
@@ -188,8 +188,8 @@ public class PaymentControllerTest {
 	}
 	
 	@Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_EmptyRequest() throws Exception {
 	    TimeLockedAddressTO requestTO = new TimeLockedAddressTO();
 	    TimeLockedAddressTO response = requestCreateTimeLockedAddress(requestTO);
@@ -199,8 +199,8 @@ public class PaymentControllerTest {
 	}
 	
 	@Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_NoPublicKey() throws Exception {
 		ECKey clientKey = new ECKey();
 	    TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
@@ -214,8 +214,8 @@ public class PaymentControllerTest {
 	}
 
 	@Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_NoSignature() throws Exception {
         ECKey clientKey = new ECKey();
         TimeLockedAddressTO requestTO = createSignedTimeLockedAddressTO(clientKey);
@@ -227,8 +227,8 @@ public class PaymentControllerTest {
 	}
 	
 	@Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_WrongSignature() throws Exception {
         ECKey clientKey = new ECKey();
         ECKey wrongKey = new ECKey();
@@ -243,8 +243,8 @@ public class PaymentControllerTest {
 	}
 	
 	@Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_WrongECKey() throws Exception {
 		TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
 				.publicKey("helloworld".getBytes())
@@ -258,8 +258,8 @@ public class PaymentControllerTest {
 	}
 	
 	@Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     public void testCreateTimeLockedAddress_NewAddress_ClientUnknown() throws Exception {
         ECKey clientKey = new ECKey();
         assertNull( keyService.getByClientPublicKey(clientKey.getPubKey()) ); // not known yet
@@ -271,9 +271,9 @@ public class PaymentControllerTest {
     }
 	
 	@Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseSetup("keys.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseSetup("/keys.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_NoLockTime() throws Exception {
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 		TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
@@ -288,9 +288,9 @@ public class PaymentControllerTest {
 	}
 	
 	@Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseSetup("keys.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseSetup("/keys.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_LockTimeByBlock() throws Exception {
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 		long lockTime = Transaction.LOCKTIME_THRESHOLD-1000;
@@ -307,9 +307,9 @@ public class PaymentControllerTest {
 	}
 	
 	@Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseSetup("keys.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseSetup("/keys.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_LockTimeInPast() throws Exception {
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 		long lockTime = Utils.currentTimeSeconds()-1;
@@ -326,9 +326,9 @@ public class PaymentControllerTest {
 	}
 
 	@Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseSetup("keys.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseSetup("/keys.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_RequestTwice() throws Exception {
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 		long lockTime = Utils.currentTimeSeconds()+100;
@@ -360,9 +360,9 @@ public class PaymentControllerTest {
 	}
 
     @Test
-	@DatabaseSetup("EmptyDatabase.xml")
-	@DatabaseSetup("keys.xml")
-	@DatabaseTearDown("EmptyDatabase.xml")
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseSetup("/keys.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     public void testCreateTimeLockedAddress_NewAddress_ClientKnown() throws Exception {
     	// keys are already stored in DB
         ECKey clientKey = KeyTestUtil.ALICE_CLIENT;

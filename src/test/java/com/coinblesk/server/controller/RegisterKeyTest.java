@@ -66,8 +66,8 @@ public class RegisterKeyTest {
     }
 
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testRegister() throws Exception {
         //no object
         mockMvc.perform(post("/p/x").secure(true)).andExpect(status().is4xxClientError());

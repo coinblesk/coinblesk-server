@@ -99,8 +99,8 @@ public class VerifyTest {
     }
 
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testVerify() throws Exception {
         Transaction txClient = BitcoinUtils.createTx(
                 params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
@@ -128,8 +128,8 @@ public class VerifyTest {
     }
     
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testVerifyDoubleSpending() throws Exception {
         Transaction txClient1 = BitcoinUtils.createTx(
                 params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
@@ -153,8 +153,8 @@ public class VerifyTest {
     }
     
     @Test
-    @DatabaseSetup("EmptyDatabase.xml")
-    @DatabaseTearDown("EmptyDatabase.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testVerifyDoubleSpending2() throws Exception {
         Transaction txClient1 = BitcoinUtils.createTx(
                 params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
