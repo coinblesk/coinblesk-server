@@ -88,7 +88,7 @@ public class VerifyTest {
         merchant = new Client(appConfig.getNetworkParameters(), mockMvc);
         params = appConfig.getNetworkParameters();
 
-        funding = Client.sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(), 100,
+        funding = Client.sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(),
                 walletService.blockChain(), client.blockChain(), merchant.blockChain());
     }
 

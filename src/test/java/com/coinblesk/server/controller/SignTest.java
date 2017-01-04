@@ -91,7 +91,7 @@ public class SignTest {
     @DatabaseTearDown("/EmptyDatabase.xml")
     public void testAddressEmpty() throws Exception {
         Client client = new Client(params, mockMvc);
-        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(), 0,
+        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(),
                 walletService.blockChain());
         Coin amountToRequest = Coin.valueOf(9876);
         Date now = new Date();
@@ -110,7 +110,7 @@ public class SignTest {
     @DatabaseTearDown("/EmptyDatabase.xml")
     public void testAddressNotEnoughFunds() throws Exception {
         Client client = new Client(params, mockMvc);
-        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(1), client.p2shAddress(), 0,
+        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(1), client.p2shAddress(),
                 walletService.blockChain());
         Coin amountToRequest = Coin.valueOf(9876);
         Date now = new Date();
@@ -126,7 +126,7 @@ public class SignTest {
     @DatabaseTearDown("/EmptyDatabase.xml")
     public void testAddressOnlyDust() throws Exception {
         Client client = new Client(params, mockMvc);
-        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(700), client.p2shAddress(), 0,
+        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(700), client.p2shAddress(),
                 walletService.blockChain());
         Coin amountToRequest = Coin.valueOf(100);
         Date now = new Date();
@@ -143,7 +143,7 @@ public class SignTest {
     @DatabaseTearDown("/EmptyDatabase.xml")
     public void testSignTwice() throws Exception {
         Client client = new Client(params, mockMvc);
-        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(), 0,
+        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(),
                 walletService.blockChain());
         Date now = new Date();
         Coin amountToRequest = Coin.valueOf(9876);
@@ -163,7 +163,7 @@ public class SignTest {
     public void testServerSignatures() throws Exception {
         Client client = new Client(params, mockMvc);
         Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(123450),
-                client.p2shAddress(), 0, walletService.blockChain());
+                client.p2shAddress(), walletService.blockChain());
         Date now = new Date();
         Coin amountToRequest = Coin.valueOf(9876);
 

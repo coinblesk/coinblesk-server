@@ -388,7 +388,6 @@ public class CompleteCLTVTest {
     	for (int i = 0; i < 5; ++i) {
     		client.createTimeLockedAddress();
     		fundClient(client.getChangeAddress());
-    		Thread.sleep(500);
     	}
     	
     	for (Map.Entry<Address, Coin> b : client.getBalanceByAddresses().entrySet()) {
@@ -424,7 +423,6 @@ public class CompleteCLTVTest {
     		client.createTimeLockedAddress();
     		Transaction tx = fundClient(client.getChangeAddress());
     		clientTx.add(tx);
-    		Thread.sleep(500);
     	}
     	   	
     	List<TransactionOutput> utxo = new ArrayList<>(client.wallet().getUnspents());
@@ -482,7 +480,6 @@ public class CompleteCLTVTest {
     private Transaction sendFakeCoins(NetworkParameters params, Coin amount, Address to) throws Exception {
         Transaction tx = FakeTxBuilder.createFakeTx(params, amount, to);
         fakeBroadcast(tx);
-        Thread.sleep(250);
         return tx;
     }
     

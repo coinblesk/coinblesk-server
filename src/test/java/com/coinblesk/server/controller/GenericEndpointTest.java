@@ -292,7 +292,6 @@ public class GenericEndpointTest {
         BlockChain chain = walletService.blockChain();
         Block block = FakeTxBuilder.makeSolvedTestBlock(chain.getBlockStore().getChainHead().getHeader(), tx);
         chain.add(block);
-        Thread.sleep(250);
         return tx;
     }
 
