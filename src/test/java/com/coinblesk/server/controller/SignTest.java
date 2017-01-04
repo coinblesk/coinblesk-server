@@ -73,11 +73,6 @@ public class SignTest {
 
     private NetworkParameters params;
     
-    @BeforeClass
-    public static void beforeClass() {
-        System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk");
-    }
-
     @Before
     public void setUp() throws Exception {
         walletService.shutdown();

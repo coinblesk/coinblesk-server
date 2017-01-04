@@ -33,11 +33,6 @@ public class ForexExchangeRateServiceTest {
     @Autowired
     private ForexService forexExchangeRateService;
     
-    @BeforeClass
-    public static void beforeClass() {
-        System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk");
-    }
-
     @Test
     public void testForex() throws Exception {
         BigDecimal d = forexExchangeRateService.getExchangeRate("USD", "CHF");

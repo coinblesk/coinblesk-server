@@ -47,11 +47,6 @@ import static org.junit.Assert.*;
         mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
 public class KeyServiceTest {
     
-    @BeforeClass
-    public static void beforeClass() {
-        System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk");
-    }
-
     @Autowired
     private KeyService keyService;
 

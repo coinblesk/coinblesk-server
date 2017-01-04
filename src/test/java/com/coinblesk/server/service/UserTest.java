@@ -46,11 +46,6 @@ public class UserTest {
     @Autowired
     private UserAccountService userAccountService;
     
-    @BeforeClass
-    public static void beforeClass() {
-        System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk");
-    }
-
     @Test
     @DatabaseSetup("/EmptyDatabase.xml")
     @ExpectedDatabase(value = "/UserTestAddUser.xml",

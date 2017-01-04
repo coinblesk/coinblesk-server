@@ -46,11 +46,6 @@ public class ForexTest {
 
     private static MockMvc mockMvc;
     
-    @BeforeClass
-    public static void beforeClass() {
-        System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk");
-    }
-    
     @Before
     public void setUp() {
          mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();

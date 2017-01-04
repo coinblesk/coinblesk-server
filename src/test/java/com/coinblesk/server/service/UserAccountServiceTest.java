@@ -66,14 +66,14 @@ public class UserAccountServiceTest {
     final private ECKey ecKeyServer = new ECKey();
     
     private int counter = 0;
-    
+
     @Before
     public void before() throws IOException, UnreadableWalletException, BlockStoreException {
         System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk" + (counter++));
         if(counter > 0) {
             walletService.init();
         }
-        
+
         UserAccount userAccount = new UserAccount();
         userAccount.setBalance(BigDecimal.ONE)
                 .setCreationDate(new Date(1))

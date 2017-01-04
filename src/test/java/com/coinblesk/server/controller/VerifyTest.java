@@ -72,11 +72,6 @@ public class VerifyTest {
     
     private Transaction funding;
 
-    @BeforeClass
-    public static void beforeClass() {
-        System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk");
-    }
-
     @Before
     public void setUp() throws Exception {
         walletService.shutdown();
