@@ -16,15 +16,14 @@
 package com.coinblesk.server.controller;
 
 import com.coinblesk.bitcoin.BitcoinNet;
-import com.coinblesk.server.config.AdminEmail;
 import com.coinblesk.server.entity.UserAccount;
+import com.coinblesk.server.service.MailService;
 import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.UserAccountStatusTO;
 import com.coinblesk.json.v1.UserAccountTO;
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.config.UserEmail;
 import com.coinblesk.util.Pair;
 import java.net.URLEncoder;
 import java.util.Locale;
@@ -58,10 +57,7 @@ public class UserController {
     private UserAccountService userAccountService;
 
     @Autowired
-    private AdminEmail adminEmail;
-    
-    @Autowired
-    private UserEmail userEmail;
+    private MailService mailService;
     
     @Autowired
     private MessageSource messageSource;
@@ -96,12 +92,12 @@ public class UserController {
                     } else {
                         url = "http://bitcoin2-test.csg.uzh.ch/coinblesk-server/"+path;
                     }
-                    userEmail.send(pair.element1().getEmail(), 
+                    mailService.sendUserMail(pair.element1().getEmail(),
                             messageSource.getMessage("activation.email.title", null, locale), 
                             messageSource.getMessage("activation.email.text", new String[]{url}, locale));
                 } catch (Exception e) {
                     LOG.error("Mail send error", e);
-                    adminEmail.send("Coinblesk Error", "Unexpected Error: " + e);
+                    mailService.sendAdminMail("Coinblesk Error", "Unexpected Error: " + e);
                 }
             }
             return pair.element0();
@@ -121,7 +117,7 @@ public class UserController {
             if (!status.isSuccess()) {
                 LOG.error("Someone tried a link with an invalid token: {}/{}/{}", email, token, status.type()
                         .name());
-                adminEmail.send("Wrong Link?",
+                mailService.sendAdminMail("Wrong Link?",
                         "Someone tried a link with an invalid token: " + email + " / " + token + "/" + status
                         .type().name());
                 throw new BadRequestException("Wrong Link");
@@ -154,12 +150,12 @@ public class UserController {
                     } else {
                         url = "http://bitcoin2-test.csg.uzh.ch/coinblesk-server/"+path;
                     }
-                    userEmail.send(email, 
+                    mailService.sendUserMail(email,
                             messageSource.getMessage("forgot.email.title", null, locale), 
                             messageSource.getMessage("forgot.email.text", new String[]{url, password}, locale));
                 } catch (Exception e) {
                     LOG.error("Mail send error", e);
-                    adminEmail.send("Coinblesk Error", "Unexpected Error: " + e);
+                    mailService.sendAdminMail("Coinblesk Error", "Unexpected Error: " + e);
                 }
             }
             return pair.element0(); 
@@ -179,7 +175,7 @@ public class UserController {
             if (!status.isSuccess()) {
                 LOG.error("Someone tried a link with an invalid forget token: {}/{}/{}", email, forgetToken, status.type()
                         .name());
-                adminEmail.send("Wrong Link?",
+                mailService.sendAdminMail("Wrong Link?",
                         "Someone tried a link with an invalid forget token: " + email + " / " + forgetToken + "/" + status
                         .type().name());
                 throw new BadRequestException("Wrong Link");

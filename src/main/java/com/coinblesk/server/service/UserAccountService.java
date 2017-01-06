@@ -20,7 +20,6 @@ import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.UserAccountStatusTO;
 import com.coinblesk.json.v1.UserAccountTO;
-import com.coinblesk.server.config.AdminEmail;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.config.UserRole;
 import com.coinblesk.server.entity.Keys;
@@ -65,6 +64,9 @@ public class UserAccountService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private MailService mailService;
     
     @Autowired
     private AppConfig appConfig;
@@ -74,9 +76,6 @@ public class UserAccountService {
     
     @Autowired
     private KeyService keyService;
-    
-    @Autowired
-    private AdminEmail adminEmail;
 
     @Transactional(readOnly = true)
     public UserAccount getByEmail(String email) {
@@ -214,7 +213,7 @@ public class UserAccountService {
             return userAccountTO;
         } catch (CoinbleskException | InsufficientFunds e) {
             LOG.error("Cannot create transaction", e);
-            adminEmail.send("transfer-p2sh error", "Cannot create transaction: "+e.getMessage());
+            mailService.sendAdminMail("transfer-p2sh error", "Cannot create transaction: "+e.getMessage());
             return new UserAccountTO().type(Type.ACCOUNT_ERROR).message(e.getMessage());
         }
     }

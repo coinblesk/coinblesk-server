@@ -18,15 +18,18 @@ package com.coinblesk.server.controller;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.UserAccountStatusTO;
 import com.coinblesk.json.v1.UserAccountTO;
-import com.coinblesk.server.config.AdminEmail;
+import com.coinblesk.server.service.MailService;
 import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.util.SerializeUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -51,20 +54,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @RunWith(SpringRunner.class)
 public class AuthTest {
-
     @Autowired
     private WebApplicationContext webAppContext;
 
     @Autowired
     private UserAccountService userAccountService;
-    
-    @Autowired
-    private AdminEmail adminEmail;
+
+    @MockBean
+    private MailService mailService;
 
     private static MockMvc mockMvc;
 
     @Before
     public void setUp() {
+         MockitoAnnotations.initMocks(this);
          mockMvc = MockMvcBuilders
                  .webAppContextSetup(webAppContext)
                  .apply(springSecurity())
@@ -73,52 +76,56 @@ public class AuthTest {
     
     @Test
     public void testCreateActivate() throws Exception {
-	mockMvc.perform(get("/v1/u/a/g").secure(true)).andExpect(status().is3xxRedirection());
+        mockMvc.perform(get("/v1/u/a/g").secure(true)).andExpect(status().is3xxRedirection());
         UserAccountTO userAccountTO = new UserAccountTO();
         MvcResult res = mockMvc.perform(post("/v1/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
         UserAccountStatusTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
         Assert.assertEquals(Type.NO_EMAIL.nr(), status.type().nr());
-        
+
         userAccountTO.email("test-test.test");
         res = mockMvc.perform(post("/v1/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
         status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
         Assert.assertEquals(Type.INVALID_EMAIL.nr(), status.type().nr());
-        
+
         userAccountTO.email("test@test.test");
         res = mockMvc.perform(post("/v1/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
         status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
         Assert.assertEquals(Type.PASSWORD_TOO_SHORT.nr(), status.type().nr());
-        
+
         userAccountTO.password("1234");
         res = mockMvc.perform(post("/v1/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
         status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
         Assert.assertEquals(Type.PASSWORD_TOO_SHORT.nr(), status.type().nr());
-        
+
         userAccountTO.password("123456");
         res = mockMvc.perform(post("/v1/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
         status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
         Assert.assertTrue(status.isSuccess());
-        Assert.assertEquals(1, adminEmail.sentEmails());
-        
+        Mockito.verify(mailService, Mockito.times(1)).sendUserMail(Mockito.anyString(), Mockito.anyString(), Mockito.anyString());
+        Mockito.verify(mailService, Mockito.times(0)).sendAdminMail(Mockito.anyString(), Mockito.anyString());
+
         res = mockMvc.perform(post("/v1/u/c").secure(true).contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
         status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
         Assert.assertEquals(Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_NOT_ACTIVATED.nr(), status.type().nr());
-        Assert.assertEquals(2, adminEmail.sentEmails());
-        
-        //activate
+        Mockito.verify(mailService, Mockito.times(2)).sendUserMail(Mockito.anyString(), Mockito.anyString(), Mockito.anyString());
+        Mockito.verify(mailService, Mockito.times(0)).sendAdminMail(Mockito.anyString(), Mockito.anyString());
+
+        //activate with wrong token sends admin an email
         mockMvc.perform(get("/v1/u/v/test@test.test/blub").secure(true)).andExpect(status().is5xxServerError());
-        Assert.assertEquals(3, adminEmail.sentEmails());
-        
+        Mockito.verify(mailService, Mockito.times(2)).sendUserMail(Mockito.anyString(), Mockito.anyString(), Mockito.anyString());
+        Mockito.verify(mailService, Mockito.times(1)).sendAdminMail(Mockito.anyString(), Mockito.anyString());
+
         //get correct token
         String token = userAccountService.getToken("test@test.test");
         Assert.assertNotNull(token);
         mockMvc.perform(get("/v1/u/v/test@test.test/"+token).secure(true)).andExpect(status().isOk());
-        Assert.assertEquals(3, adminEmail.sentEmails());
-        
+        Mockito.verify(mailService, Mockito.times(2)).sendUserMail(Mockito.anyString(), Mockito.anyString(), Mockito.anyString());
+        Mockito.verify(mailService, Mockito.times(1)).sendAdminMail(Mockito.anyString(), Mockito.anyString());
+
         mockMvc.perform(get("/v1/u/a/g").secure(true).with(csrf())).andExpect(status().is3xxRedirection());
-        
+
         loginAndGetSessionFail("test@test.test", "12345");
-        
+
         HttpSession session = loginAndGetSession("test@test.test", "123456");
         res = mockMvc.perform(get("/v1/u/a/g").secure(true).with(csrf()).session((MockHttpSession) session)).andExpect(status().isOk()).andReturn();
         UserAccountTO uato = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountTO.class);

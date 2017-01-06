@@ -23,8 +23,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -43,7 +45,9 @@ import java.util.List;
 @TestExecutionListeners( listeners = DbUnitTestExecutionListener.class,
         mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
 public class UserAccountServiceTest {
-    
+    @MockBean
+    private MailService mailService;
+
     @Autowired
     private UserAccountService userAccountService;
     
@@ -102,6 +106,7 @@ public class UserAccountServiceTest {
     @DatabaseTearDown("/EmptyDatabase.xml")
     public void testTransferFailed() {
         UserAccountTO result = userAccountService.transferP2SH(ecKeyClient, "test@test.test");
+        Mockito.verify(mailService, Mockito.times(1)).sendAdminMail(Mockito.anyString(), Mockito.anyString());
         Assert.assertFalse(result.isSuccess());
     }
     
