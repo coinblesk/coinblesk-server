@@ -1,4 +1,7 @@
-## coinblesk-server
+[![Build Status](https://travis-ci.org/coinblesk/coinblesk-server.svg?branch=master)](https://travis-ci.org/coinblesk/coinblesk-server)
+
+
+# coinblesk-server
 
 A mobile Bitcoin payment solution with NFC support.
 
