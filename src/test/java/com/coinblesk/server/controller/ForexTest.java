@@ -19,7 +19,6 @@ import com.coinblesk.json.v1.ExchangeRateTO;
 import com.coinblesk.util.SerializeUtils;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
