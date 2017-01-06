@@ -108,7 +108,6 @@ public class CompleteCLTVTest {
 
     @After
     public void tearDown() {
-    	walletService.shutdown();
     	client.shutdownWallet();
     	
 		File[] walletFiles = tempDir.listFiles(new FilenameFilter() {
