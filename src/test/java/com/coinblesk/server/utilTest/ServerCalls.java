@@ -11,19 +11,16 @@ import com.coinblesk.json.v1.TxSig;
 import com.coinblesk.json.v1.VerifyTO;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
-import java.io.UnsupportedEncodingException;
-import java.util.Date;
-import java.util.List;
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionOutPoint;
+import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+
+import java.io.UnsupportedEncodingException;
+import java.util.Date;
+import java.util.List;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 

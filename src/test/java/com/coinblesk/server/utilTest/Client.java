@@ -20,24 +20,7 @@ import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
 import com.google.common.io.Files;
-import java.io.File;
-import java.io.FilenameFilter;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.BlockChain;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.PrunedException;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionOutPoint;
-import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.core.*;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscoveryException;
@@ -47,6 +30,15 @@ import org.bitcoinj.wallet.Wallet;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+
+import java.io.File;
+import java.io.FilenameFilter;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -208,8 +200,7 @@ public class Client {
         tmpDir.delete();
     }
     
-    public static Transaction sendFakeCoins(NetworkParameters params, Coin amount, Address to, int wait,
-            BlockChain... chains) 
+    public static Transaction sendFakeCoins(NetworkParameters params, Coin amount, Address to, BlockChain... chains)
             throws VerificationException, PrunedException, BlockStoreException, InterruptedException {
         Transaction tx = FakeTxBuilder.createFakeTx(params, amount, to);
         if(chains.length == 0) {
@@ -224,31 +215,8 @@ public class Client {
             }
             chain.add(b);
         }
-        //in case we need to wait for any kind of notification
-        if(wait > 0) {
-            Thread.sleep(wait);
-        }
+
         return tx;
     }
-    
-    public static Transaction sendFakeBroadcast(NetworkParameters params, Transaction tx, int wait, BlockChain... chains) 
-            throws BlockStoreException, VerificationException, PrunedException, InterruptedException {
-        Transaction tx2 = new Transaction(params, tx.unsafeBitcoinSerialize());
-        if(chains.length == 0) {
-            return tx2;
-        } 
-        final Block block = FakeTxBuilder.makeSolvedTestBlock(chains[0].getBlockStore().getChainHead().getHeader(), tx2);
-        for(BlockChain chain:chains) {
-            Block b = block.cloneAsHeader();
-            for(Transaction t:block.getTransactions()) {
-                b.addTransaction(new Transaction(params, t.unsafeBitcoinSerialize()));
-            }
-            System.out.println("block is:"+b);
-            chain.add(b);
-        }
-        Thread.sleep(wait);
-        return tx2;
-    }
 
-    
 }

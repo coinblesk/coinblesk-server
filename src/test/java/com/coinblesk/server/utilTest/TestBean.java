@@ -5,8 +5,9 @@
  */
 package com.coinblesk.server.utilTest;
 
-import javax.annotation.PostConstruct;
 import org.springframework.context.annotation.Configuration;
+
+import javax.annotation.PostConstruct;
 
 /**
  *

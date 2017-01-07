@@ -15,15 +15,14 @@
  */
 package com.coinblesk.server.utilTest;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
+import com.coinblesk.json.v1.BaseTO;
+import com.coinblesk.util.SerializeUtils;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-import com.coinblesk.json.v1.BaseTO;
-import com.coinblesk.util.SerializeUtils;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * 

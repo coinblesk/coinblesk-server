@@ -15,37 +15,11 @@
  */
 package com.coinblesk.server.controller;
 
-import static org.junit.Assert.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.util.Random;
-
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.Utils;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.web.FilterChainProxy;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.TestExecutionListeners;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
-import org.springframework.test.context.transaction.TransactionalTestExecutionListener;
-import org.springframework.test.context.web.WebAppConfiguration;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
-
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.json.v1.BaseTO;
 import com.coinblesk.json.v1.KeyTO;
 import com.coinblesk.json.v1.TimeLockedAddressTO;
 import com.coinblesk.json.v1.Type;
-import com.coinblesk.server.config.BeanConfig;
-import com.coinblesk.server.config.SecurityConfig;
 import com.coinblesk.server.service.KeyService;
 import com.coinblesk.server.utilTest.KeyTestUtil;
 import com.coinblesk.server.utilTest.RESTUtils;
@@ -54,24 +28,35 @@ import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.Utils;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestExecutionListeners;
+import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
+
+import java.util.Random;
+
+import static org.junit.Assert.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
 /**
  * 
  * @author Andreas Albrecht
  */
-@RunWith(SpringJUnit4ClassRunner.class)
-@TestExecutionListeners({
-	DependencyInjectionTestExecutionListener.class, 
-	TransactionalTestExecutionListener.class,
-    DbUnitTestExecutionListener.class})
-@ContextConfiguration(classes = {
-		BeanConfig.class, 
-		SecurityConfig.class})
-@WebAppConfiguration
-@DatabaseSetup("keys.xml")
-@DatabaseTearDown("emptyAddresses.xml")
-@DatabaseTearDown("emptyKeys.xml")
+@SpringBootTest
+@RunWith(SpringRunner.class)
+@TestExecutionListeners( listeners = DbUnitTestExecutionListener.class,
+		mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
 public class PaymentControllerTest {
 	
 	public static final String URL_KEY_EXCHANGE = "/v1/payment/key-exchange";
@@ -90,8 +75,10 @@ public class PaymentControllerTest {
     public void setUp() {
          mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();
     }
-    
-    	@Test
+
+	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testKeyExchange_NoContent() throws Exception {
 		mockMvc
 			.perform(post(URL_KEY_EXCHANGE).secure(true))
@@ -99,6 +86,8 @@ public class PaymentControllerTest {
 	}
 	
 	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testKeyExchange_EmptyRequest() throws Exception {
 	    KeyTO requestTO = new KeyTO();
 	    KeyTO response = requestKeyExchange(requestTO);
@@ -108,6 +97,8 @@ public class PaymentControllerTest {
 	}
     
 	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     public void testKeyExchange_NoPubKey() throws Exception {
     	KeyTO requestTO = new KeyTO();
     	requestTO.currentDate(System.currentTimeMillis());
@@ -119,6 +110,8 @@ public class PaymentControllerTest {
     }
     
     @Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     public void testKeyExchange_InvalidPubKey() throws Exception {
     	KeyTO requestTO = new KeyTO()
     		.currentDate(System.currentTimeMillis())
@@ -131,6 +124,8 @@ public class PaymentControllerTest {
     }
     
     @Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     public void testKeyExchange() throws Exception {
     	ECKey key = new ECKey();
     	KeyTO requestTO = new KeyTO()
@@ -149,6 +144,8 @@ public class PaymentControllerTest {
     }
     
     @Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     public void testKeyExchange_ExistingPubKey() throws Exception {
     	ECKey key = new ECKey();
     	KeyTO requestTO = new KeyTO()
@@ -182,6 +179,8 @@ public class PaymentControllerTest {
 	}
     
 	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_NoContent() throws Exception {
 		mockMvc
 			.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).secure(true))
@@ -189,6 +188,8 @@ public class PaymentControllerTest {
 	}
 	
 	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_EmptyRequest() throws Exception {
 	    TimeLockedAddressTO requestTO = new TimeLockedAddressTO();
 	    TimeLockedAddressTO response = requestCreateTimeLockedAddress(requestTO);
@@ -198,6 +199,8 @@ public class PaymentControllerTest {
 	}
 	
 	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_NoPublicKey() throws Exception {
 		ECKey clientKey = new ECKey();
 	    TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
@@ -211,6 +214,8 @@ public class PaymentControllerTest {
 	}
 
 	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_NoSignature() throws Exception {
         ECKey clientKey = new ECKey();
         TimeLockedAddressTO requestTO = createSignedTimeLockedAddressTO(clientKey);
@@ -222,6 +227,8 @@ public class PaymentControllerTest {
 	}
 	
 	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_WrongSignature() throws Exception {
         ECKey clientKey = new ECKey();
         ECKey wrongKey = new ECKey();
@@ -236,6 +243,8 @@ public class PaymentControllerTest {
 	}
 	
 	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_WrongECKey() throws Exception {
 		TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
 				.publicKey("helloworld".getBytes())
@@ -249,6 +258,8 @@ public class PaymentControllerTest {
 	}
 	
 	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     public void testCreateTimeLockedAddress_NewAddress_ClientUnknown() throws Exception {
         ECKey clientKey = new ECKey();
         assertNull( keyService.getByClientPublicKey(clientKey.getPubKey()) ); // not known yet
@@ -260,6 +271,9 @@ public class PaymentControllerTest {
     }
 	
 	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseSetup("/keys.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_NoLockTime() throws Exception {
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 		TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
@@ -274,6 +288,9 @@ public class PaymentControllerTest {
 	}
 	
 	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseSetup("/keys.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_LockTimeByBlock() throws Exception {
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 		long lockTime = Transaction.LOCKTIME_THRESHOLD-1000;
@@ -290,6 +307,9 @@ public class PaymentControllerTest {
 	}
 	
 	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseSetup("/keys.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_LockTimeInPast() throws Exception {
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 		long lockTime = Utils.currentTimeSeconds()-1;
@@ -304,8 +324,11 @@ public class PaymentControllerTest {
         assertNull(responseTO.timeLockedAddress());
         assertEquals(responseTO.type(), Type.LOCKTIME_ERROR);
 	}
-	
+
 	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseSetup("/keys.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_RequestTwice() throws Exception {
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 		long lockTime = Utils.currentTimeSeconds()+100;
@@ -335,8 +358,11 @@ public class PaymentControllerTest {
         // must receive same address
         assertEquals(address1, address2);
 	}
-    
+
     @Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseSetup("/keys.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     public void testCreateTimeLockedAddress_NewAddress_ClientKnown() throws Exception {
     	// keys are already stored in DB
         ECKey clientKey = KeyTestUtil.ALICE_CLIENT;

@@ -1,8 +1,44 @@
 package com.coinblesk.server.controller;
 
-import static org.junit.Assert.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.coinblesk.bitcoin.AddressCoinSelector;
+import com.coinblesk.bitcoin.TimeLockedAddress;
+import com.coinblesk.json.v1.KeyTO;
+import com.coinblesk.json.v1.SignVerifyTO;
+import com.coinblesk.json.v1.TimeLockedAddressTO;
+import com.coinblesk.json.v1.Type;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.service.KeyService;
+import com.coinblesk.server.service.WalletService;
+import com.coinblesk.server.utilTest.FakeTxBuilder;
+import com.coinblesk.server.utilTest.RESTUtils;
+import com.coinblesk.util.BitcoinUtils;
+import com.coinblesk.util.SerializeUtils;
+import com.github.springtestdbunit.DbUnitTestExecutionListener;
+import com.github.springtestdbunit.annotation.DatabaseSetup;
+import com.github.springtestdbunit.annotation.DatabaseTearDown;
+import com.google.common.io.Files;
+import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.TransactionSignature;
+import org.bitcoinj.kits.WalletAppKit;
+import org.bitcoinj.net.discovery.PeerDiscovery;
+import org.bitcoinj.net.discovery.PeerDiscoveryException;
+import org.bitcoinj.script.Script;
+import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletTransaction.Pool;
+import org.junit.*;
+import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.TestExecutionListeners;
+import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -14,75 +50,15 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.BlockChain;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.ScriptException;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionInput;
-import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.crypto.TransactionSignature;
-import org.bitcoinj.kits.WalletAppKit;
-import org.bitcoinj.net.discovery.PeerDiscovery;
-import org.bitcoinj.net.discovery.PeerDiscoveryException;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.WalletTransaction.Pool;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.security.web.FilterChainProxy;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.TestExecutionListeners;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
-import org.springframework.test.context.transaction.TransactionalTestExecutionListener;
-import org.springframework.test.context.web.WebAppConfiguration;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
-
-import com.coinblesk.bitcoin.AddressCoinSelector;
-import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.json.v1.KeyTO;
-import com.coinblesk.json.v1.SignVerifyTO;
-import com.coinblesk.json.v1.TimeLockedAddressTO;
-import com.coinblesk.json.v1.Type;
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.config.BeanConfig;
-import com.coinblesk.server.config.SecurityConfig;
-import com.coinblesk.server.service.KeyService;
-import com.coinblesk.server.service.WalletService;
-import com.coinblesk.server.utilTest.FakeTxBuilder;
-import com.coinblesk.server.utilTest.RESTUtils;
-import com.coinblesk.util.BitcoinUtils;
-import com.coinblesk.util.SerializeUtils;
-import com.github.springtestdbunit.DbUnitTestExecutionListener;
-import com.google.common.io.Files;
-import org.junit.Assert;
+import static org.junit.Assert.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
-@RunWith(SpringJUnit4ClassRunner.class)
-@TestExecutionListeners({
-	DependencyInjectionTestExecutionListener.class,
-	TransactionalTestExecutionListener.class,
-    DbUnitTestExecutionListener.class})
-@ContextConfiguration(classes = {
-		BeanConfig.class, 
-		SecurityConfig.class})
-@WebAppConfiguration
+@SpringBootTest
+@RunWith(SpringRunner.class)
+@TestExecutionListeners( listeners = DbUnitTestExecutionListener.class,
+		mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
 public class CompleteCLTVTest {
 	
 	private static final Logger Log = LoggerFactory.getLogger(CompleteCLTVTest.class);
@@ -132,7 +108,6 @@ public class CompleteCLTVTest {
 
     @After
     public void tearDown() {
-    	walletService.shutdown();
     	client.shutdownWallet();
     	
 		File[] walletFiles = tempDir.listFiles(new FilenameFilter() {
@@ -148,6 +123,8 @@ public class CompleteCLTVTest {
     }
     
     @Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     public void testReceiveFunds() throws Exception {
     	Transaction tx = fundClient(client.getChangeAddress());
     	
@@ -161,6 +138,8 @@ public class CompleteCLTVTest {
     }
     
     @Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     /* provide 2 signatures -> spending should succeed */
     public void testSpend_BeforeLockTimeExpiry() throws Exception {
     	Transaction tx = BitcoinUtils.createTx(
@@ -193,6 +172,8 @@ public class CompleteCLTVTest {
     }
     
     @Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     /* provide 2 signatures, but in reversed order, should fail */
     public void testSpend_BeforeLockTimeExpiry_ReversedSignatures() throws Exception {
     	thrown.expect(ScriptException.class);
@@ -220,6 +201,8 @@ public class CompleteCLTVTest {
     }
     
     @Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     /* spending with single sig of client is possible if locktime and seqNr is set properly */
     public void testSpend_AfterLockTimeExpiry_SingleSig() throws Exception {
     	Transaction tx = BitcoinUtils.createTx(
@@ -245,6 +228,8 @@ public class CompleteCLTVTest {
     }
     
     @Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     /* spending with single sig of server should not be possible */
     public void testSpend_AfterLockTimeExpiry_SingleServerSig() throws Exception {
     	thrown.expect(ScriptException.class);
@@ -277,6 +262,8 @@ public class CompleteCLTVTest {
     }
     
     @Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
 	/* spending with single sig of client fails without lockTime */
 	public void testSpend_AfterLockTimeExpiry_SingleSig_LockTimeTooSmall() throws Exception {
 		thrown.expect(ScriptException.class);
@@ -305,6 +292,8 @@ public class CompleteCLTVTest {
 	}
 
 	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     /* spending with single sig of client fails without lockTime */
     public void testSpend_AfterLockTimeExpiry_SingleSig_MissingLockTime() throws Exception {
     	thrown.expect(ScriptException.class);
@@ -332,6 +321,8 @@ public class CompleteCLTVTest {
     }
     
     @Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     /* spending with single sig of client fails without seqNr */
     public void testSpend_AfterLockTimeExpiry_SingleSig_MissingSeqNr() throws Exception {
     	thrown.expect(ScriptException.class);
@@ -361,6 +352,8 @@ public class CompleteCLTVTest {
     }
     
     @Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     /* spending with single sig of client fails without seqNr */
     public void testSpend_AfterLockTimeExpiry_SingleSig_MissingSeqNrAndLockTime() throws Exception {
     	thrown.expect(ScriptException.class);
@@ -388,11 +381,12 @@ public class CompleteCLTVTest {
     }
 
 	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     public void testSpend_BeforeLockTime_MultipleInputs() throws Exception {
     	for (int i = 0; i < 5; ++i) {
     		client.createTimeLockedAddress();
     		fundClient(client.getChangeAddress());
-    		Thread.sleep(500);
     	}
     	
     	for (Map.Entry<Address, Coin> b : client.getBalanceByAddresses().entrySet()) {
@@ -420,13 +414,14 @@ public class CompleteCLTVTest {
     }
 	
 	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
     public void testSpend_BeforeLockTime_DoubleSpend() throws Exception {
 		List<Transaction> clientTx = new ArrayList<>();
     	for (int i = 0; i < 2; ++i) {
     		client.createTimeLockedAddress();
     		Transaction tx = fundClient(client.getChangeAddress());
     		clientTx.add(tx);
-    		Thread.sleep(500);
     	}
     	   	
     	List<TransactionOutput> utxo = new ArrayList<>(client.wallet().getUnspents());
@@ -484,7 +479,6 @@ public class CompleteCLTVTest {
     private Transaction sendFakeCoins(NetworkParameters params, Coin amount, Address to) throws Exception {
         Transaction tx = FakeTxBuilder.createFakeTx(params, amount, to);
         fakeBroadcast(tx);
-        Thread.sleep(250);
         return tx;
     }
     

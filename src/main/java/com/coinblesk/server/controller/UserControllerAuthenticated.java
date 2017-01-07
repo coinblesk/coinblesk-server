@@ -16,7 +16,7 @@
 package com.coinblesk.server.controller;
 
 import com.coinblesk.json.v1.BaseTO;
-import com.coinblesk.server.config.AdminEmail;
+import com.coinblesk.server.service.MailService;
 import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.json.v1.Type;
@@ -52,7 +52,7 @@ public class UserControllerAuthenticated {
     private UserAccountService userAccountService;
 
     @Autowired
-    private AdminEmail adminEmail;
+    private MailService mailService;
 
     @RequestMapping(value = {"/delete", "/d"}, method = RequestMethod.PATCH,
             produces = "application/json; charset=UTF-8")
@@ -65,7 +65,7 @@ public class UserControllerAuthenticated {
             if (!status.isSuccess()) {
                 LOG.error("Someone tried a delete account with an invalid username: {}/{}", auth, status
                         .type().name());
-                adminEmail.send("Wrong Delete Account?",
+                mailService.sendAdminMail("Wrong Delete Account?",
                         "Someone tried a delete account with an invalid username: " + auth + "/" + status
                         .type().name());
             }
@@ -88,7 +88,7 @@ public class UserControllerAuthenticated {
             UserAccountTO userAccount = userAccountService.get(auth.getName());
             if (userAccount == null) {
                 LOG.error("Someone tried to access an account with an invalid username: {}", auth);
-                adminEmail.send("Wrong Account?",
+                mailService.sendAdminMail("Wrong Account?",
                         "Someone tried to access an account with an invalid username: " + auth);
                 return null;
             }

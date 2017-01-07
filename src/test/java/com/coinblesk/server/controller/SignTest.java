@@ -15,23 +15,19 @@
  */
 package com.coinblesk.server.controller;
 
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.config.BeanConfig;
-import com.coinblesk.server.config.SecurityConfig;
-import com.coinblesk.server.service.WalletService;
 import com.coinblesk.json.v1.SignTO;
 import com.coinblesk.json.v1.Type;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.Client;
 import com.coinblesk.server.utilTest.ServerCalls;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
-import com.github.springtestdbunit.annotation.DatabaseOperation;
+import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import com.github.springtestdbunit.annotation.ExpectedDatabase;
 import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
-import java.util.Date;
-import java.util.List;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
@@ -39,33 +35,28 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.web.FilterChainProxy;
-import org.springframework.test.context.ContextConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestExecutionListeners;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
-import org.springframework.test.context.transaction.TransactionalTestExecutionListener;
-import org.springframework.test.context.web.WebAppConfiguration;
+import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+
+import java.util.Date;
+import java.util.List;
 
 //http://www.soroushjp.com/2014/12/20/bitcoin-multisig-the-hard-way-understanding-raw-multisignature-bitcoin-transactions/
 /**
  *
  * @author Thomas Bocek
  */
-@RunWith(SpringJUnit4ClassRunner.class)
-@TestExecutionListeners(
-        {DependencyInjectionTestExecutionListener.class, TransactionalTestExecutionListener.class,
-            DbUnitTestExecutionListener.class})
-@ContextConfiguration(
-        classes = {BeanConfig.class, SecurityConfig.class})
-@WebAppConfiguration
+@SpringBootTest
+@RunWith(SpringRunner.class)
+@TestExecutionListeners( listeners = DbUnitTestExecutionListener.class,
+        mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
 public class SignTest {
 
     @Autowired
@@ -81,11 +72,6 @@ public class SignTest {
 
     private NetworkParameters params;
     
-    @BeforeClass
-    public static void beforeClass() {
-        System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk");
-    }
-
     @Before
     public void setUp() throws Exception {
         walletService.shutdown();
@@ -95,9 +81,11 @@ public class SignTest {
     }
 
     @Test
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testAddressEmpty() throws Exception {
         Client client = new Client(params, mockMvc);
-        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(), 0,
+        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(),
                 walletService.blockChain());
         Coin amountToRequest = Coin.valueOf(9876);
         Date now = new Date();
@@ -112,9 +100,11 @@ public class SignTest {
     }
 
     @Test
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testAddressNotEnoughFunds() throws Exception {
         Client client = new Client(params, mockMvc);
-        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(1), client.p2shAddress(), 0,
+        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(1), client.p2shAddress(),
                 walletService.blockChain());
         Coin amountToRequest = Coin.valueOf(9876);
         Date now = new Date();
@@ -126,9 +116,11 @@ public class SignTest {
     }
 
     @Test
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testAddressOnlyDust() throws Exception {
         Client client = new Client(params, mockMvc);
-        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(700), client.p2shAddress(), 0,
+        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(700), client.p2shAddress(),
                 walletService.blockChain());
         Coin amountToRequest = Coin.valueOf(100);
         Date now = new Date();
@@ -139,12 +131,13 @@ public class SignTest {
     }
 
     @Test
-    @DatabaseTearDown(value = {"EmptyTx.xml"}, type = DatabaseOperation.DELETE_ALL)
-    @ExpectedDatabase(value = "TxTwice.xml",
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @ExpectedDatabase(value = "/TxTwice.xml",
             assertionMode = DatabaseAssertionMode.NON_STRICT_UNORDERED)
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testSignTwice() throws Exception {
         Client client = new Client(params, mockMvc);
-        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(), 0,
+        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(),
                 walletService.blockChain());
         Date now = new Date();
         Coin amountToRequest = Coin.valueOf(9876);
@@ -159,11 +152,12 @@ public class SignTest {
     }
 
     @Test
-    @DatabaseTearDown(value = {"EmptyTx.xml"}, type = DatabaseOperation.DELETE_ALL)
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testServerSignatures() throws Exception {
         Client client = new Client(params, mockMvc);
         Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(123450),
-                client.p2shAddress(), 0, walletService.blockChain());
+                client.p2shAddress(), walletService.blockChain());
         Date now = new Date();
         Coin amountToRequest = Coin.valueOf(9876);
 

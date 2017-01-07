@@ -15,51 +15,41 @@
  */
 package com.coinblesk.server.service;
 
-import com.coinblesk.server.config.BeanConfig;
 import com.coinblesk.server.entity.UserAccount;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
-import com.github.springtestdbunit.annotation.DatabaseOperation;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import com.github.springtestdbunit.annotation.ExpectedDatabase;
 import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
-import java.math.BigDecimal;
-import java.util.Date;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestExecutionListeners;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
-import org.springframework.test.context.transaction.TransactionalTestExecutionListener;
-import org.springframework.test.context.web.WebAppConfiguration;
+import org.springframework.test.context.junit4.SpringRunner;
+
+import java.math.BigDecimal;
+import java.util.Date;
 
 /**
  *
  * @author Thomas Bocek
  */
-@RunWith(SpringJUnit4ClassRunner.class)
-@TestExecutionListeners(
-            {DependencyInjectionTestExecutionListener.class, TransactionalTestExecutionListener.class,
-                DbUnitTestExecutionListener.class})
-@WebAppConfiguration
-@ContextConfiguration(classes = {BeanConfig.class})
+@SpringBootTest
+@RunWith(SpringRunner.class)
+@TestExecutionListeners( listeners = DbUnitTestExecutionListener.class,
+        mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
 public class UserTest {
 
     @Autowired
-    UserAccountService userAccountService;
+    private UserAccountService userAccountService;
     
-    @BeforeClass
-    public static void beforeClass() {
-        System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk");
-    }
-
     @Test
-    @ExpectedDatabase(value = "UserTestAddUser.xml",
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @ExpectedDatabase(value = "/UserTestAddUser.xml",
             assertionMode = DatabaseAssertionMode.NON_STRICT_UNORDERED)
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testAddUser() throws Exception {
         UserAccount userAccount = new UserAccount();
         userAccount.setBalance(BigDecimal.ONE)
@@ -73,7 +63,9 @@ public class UserTest {
     }
 
     @Test
-    @DatabaseSetup("UserTestGetUser.xml")
+    @DatabaseSetup("/EmptyDatabase.xml")
+    @DatabaseSetup("/UserTestGetUser.xml")
+    @DatabaseTearDown("/EmptyDatabase.xml")
     public void testGetUser() throws Exception {
         UserAccount u1 = userAccountService.getByEmail("test");
         Assert.assertNull(u1);

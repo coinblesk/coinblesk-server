@@ -15,48 +15,32 @@
  */
 package com.coinblesk.server.controller;
 
-import static org.junit.Assert.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.web.FilterChainProxy;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.TestExecutionListeners;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
-import org.springframework.test.context.transaction.TransactionalTestExecutionListener;
-import org.springframework.test.context.web.WebAppConfiguration;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
-
 import com.coinblesk.bitcoin.BitcoinNet;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.VersionTO;
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.config.BeanConfig;
-import com.coinblesk.server.config.SecurityConfig;
 import com.coinblesk.server.utilTest.RESTUtils;
-import com.github.springtestdbunit.DbUnitTestExecutionListener;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
+
+import static org.junit.Assert.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * 
  * @author Andreas Albrecht
  *
  */
-@RunWith(SpringJUnit4ClassRunner.class)
-@TestExecutionListeners({
-	DependencyInjectionTestExecutionListener.class, 
-	TransactionalTestExecutionListener.class,
-    DbUnitTestExecutionListener.class})
-@ContextConfiguration(classes = { 
-		BeanConfig.class, 
-		SecurityConfig.class})
-@WebAppConfiguration
+@SpringBootTest
+@RunWith(SpringRunner.class)
 public class VersionControllerTest {
 	private static final String URL_VERSION = "/v1/version";
 	
