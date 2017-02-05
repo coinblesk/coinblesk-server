@@ -151,7 +151,9 @@ public class WalletService {
         blockChain.addWallet(wallet);
         peerGroup.addWallet(wallet);
 
-        peerGroup.start();
+        if (appConfig.getBitcoinNet() != BitcoinNet.UNITTEST) {
+            peerGroup.start();
+        }
 
         wallet.addTransactionConfidenceEventListener((wallet, tx) -> {
             if (tx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf() && !removed.contains(tx.getHash())) {
@@ -180,8 +182,11 @@ public class WalletService {
             }
 
         };
-        peerGroup.startBlockChainDownload(downloadListener);
-        downloadListener.await();
+
+        if (appConfig.getBitcoinNet() != BitcoinNet.UNITTEST) {
+            peerGroup.startBlockChainDownload(downloadListener);
+            downloadListener.await();
+        }
 
         // Broadcast pending transactions
         pendingTransactions();
