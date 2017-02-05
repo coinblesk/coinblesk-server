@@ -16,6 +16,9 @@
 package com.coinblesk.server.controller;
 
 import com.coinblesk.bitcoin.BitcoinNet;
+import com.coinblesk.server.auth.JWTConfigurer;
+import com.coinblesk.server.auth.TokenProvider;
+import com.coinblesk.server.dto.LoginDTO;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.service.MailService;
 import com.coinblesk.server.service.UserAccountService;
@@ -26,13 +29,23 @@ import com.coinblesk.json.v1.UserAccountTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.util.Pair;
 import java.net.URLEncoder;
+import java.util.Collections;
 import java.util.Locale;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -64,9 +77,35 @@ public class UserController {
     
     @Autowired
     private AppConfig cfg;
-    
+
     @Autowired
-    private PasswordEncoder passwordEncoder;
+    private TokenProvider tokenProvider;
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
+    @RequestMapping(value = {"/login", "/l"}, method = RequestMethod.POST,
+            consumes = "application/json; charset=UTF-8",
+            produces = "application/json; charset=UTF-8")
+    public ResponseEntity<?> login(@Valid @RequestBody LoginDTO loginDTO, HttpServletResponse response) {
+
+        UsernamePasswordAuthenticationToken authenticationToken =
+                new UsernamePasswordAuthenticationToken(loginDTO.getUsername().toLowerCase(Locale.ENGLISH),
+                        loginDTO.getPassword());
+
+        try {
+            Authentication authentication = this.authenticationManager.authenticate(authenticationToken);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            String jwt = tokenProvider.createToken(authentication);
+            response.addHeader(JWTConfigurer.AUTHORIZATION_HEADER, "Bearer " + jwt);
+
+            return ResponseEntity.ok(Collections.singletonMap("token", jwt));
+        } catch (AuthenticationException exception) {
+            return new ResponseEntity<>(Collections.singletonMap("AuthenticationException",
+                    exception.getLocalizedMessage()), HttpStatus.UNAUTHORIZED);
+        }
+    }
     
     //CRUD for the user
     @RequestMapping(value = {"/create", "/c"}, method = RequestMethod.POST,
@@ -86,12 +125,7 @@ public class UserController {
                 try {
                     LOG.debug("send email to {}", pair.element1().getEmail());
                     final String path = "v1/user/verify/"+URLEncoder.encode(pair.element1().getEmail(), "UTF-8")+"/"+pair.element1().getEmailToken();
-                    final String url;
-                    if(cfg.getBitcoinNet() == BitcoinNet.MAINNET) {
-                        url = "https://bitcoin.csg.uzh.ch/coinblesk-server/"+path;
-                    } else {
-                        url = "http://bitcoin2-test.csg.uzh.ch/coinblesk-server/"+path;
-                    }
+                    final String url = cfg.getUrl() + path;
                     mailService.sendUserMail(pair.element1().getEmail(),
                             messageSource.getMessage("activation.email.title", null, locale), 
                             messageSource.getMessage("activation.email.text", new String[]{url}, locale));

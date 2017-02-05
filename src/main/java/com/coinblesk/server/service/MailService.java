@@ -16,34 +16,40 @@ import java.util.Properties;
 public class MailService {
     private final static Logger LOG = LoggerFactory.getLogger(MailService.class);
 
-    @Value("${email.host:localhost}")
-    public String host;
+    @Value("${email.enabled}")
+    private boolean enabled;
 
-    @Value("${email.port:25}")
+    @Value("${email.host}")
+    private String host;
+
+    @Value("${email.protocol}")
+    private String protocol;
+
+    @Value("${email.port}")
     private int port;
 
-    @Value("${email.auth:false}")
+    @Value("${email.auth}")
     private boolean auth;
 
-    @Value("${email.starttls:false}")
+    @Value("${email.starttls}")
     private boolean starttls;
 
-    @Value("${email.debug:false}")
+    @Value("${email.debug}")
     private boolean debug;
 
-    @Value("${email.trust:}")
+    @Value("${email.trust}")
     private String trust;
 
-    @Value("${email.username:}")
+    @Value("${email.username}")
     private String username;
 
-    @Value("${email.password:}")
+    @Value("${email.password}")
     private String password;
 
-    @Value("${email.admin:bocek@ifi.uzh.ch}")
+    @Value("${email.admin}")
     private String admin;
 
-    @Value("${email.sendfrom:bitcoin@csg.uzh.ch}")
+    @Value("${email.sendfrom}")
     private String sendfrom;
 
     @Autowired
@@ -59,7 +65,7 @@ public class MailService {
         }
 
         Properties properties = new Properties();
-        properties.setProperty("mail.transport.protocol", "smtp");
+        properties.setProperty("mail.transport.protocol", this.protocol);
         properties.setProperty("mail.smtp.auth", Boolean.toString(this.auth));
         properties.setProperty("mail.smtp.starttls.enable", Boolean.toString(this.starttls));
         properties.setProperty("mail.debug", Boolean.toString(this.debug));
@@ -82,13 +88,18 @@ public class MailService {
     }
 
     private void sendMail(String recipient, String subject, String text) {
+        if (!this.enabled) {
+            LOG.info("Skipping sending mail to {} with body: \"{}\"", recipient, text);
+            return;
+        }
+
         SimpleMailMessage smm = new SimpleMailMessage();
         smm.setFrom(this.sendfrom);
         smm.setTo(recipient);
         smm.setSubject(subject);
         smm.setText(text);
         try {
-            LOG.debug("send mail to {}: {}", recipient, smm);
+            LOG.info("send mail to {}: {}", recipient, smm);
             javaMailService.send(smm);
         } catch (Exception e) {
             e.printStackTrace();

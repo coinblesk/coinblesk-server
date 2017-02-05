@@ -16,6 +16,7 @@
 package com.coinblesk.server.service;
 
 import com.coinblesk.server.entity.UserAccount;
+import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
@@ -23,11 +24,8 @@ import com.github.springtestdbunit.annotation.ExpectedDatabase;
 import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestExecutionListeners;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -36,11 +34,9 @@ import java.util.Date;
  *
  * @author Thomas Bocek
  */
-@SpringBootTest
-@RunWith(SpringRunner.class)
 @TestExecutionListeners( listeners = DbUnitTestExecutionListener.class,
         mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
-public class UserTest {
+public class UserTest extends CoinbleskTest {
 
     @Autowired
     private UserAccountService userAccountService;

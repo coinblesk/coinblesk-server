@@ -21,11 +21,11 @@ import com.coinblesk.json.v1.KeyTO;
 import com.coinblesk.json.v1.TimeLockedAddressTO;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.server.service.KeyService;
+import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.KeyTestUtil;
 import com.coinblesk.server.utilTest.RESTUtils;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.SerializeUtils;
-import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import org.bitcoinj.core.ECKey;
@@ -33,11 +33,7 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Utils;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.TestExecutionListeners;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -53,11 +49,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 
  * @author Andreas Albrecht
  */
-@SpringBootTest
-@RunWith(SpringRunner.class)
-@TestExecutionListeners( listeners = DbUnitTestExecutionListener.class,
-		mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
-public class PaymentControllerTest {
+public class PaymentControllerTest extends CoinbleskTest {
 	
 	public static final String URL_KEY_EXCHANGE = "/v1/payment/key-exchange";
 	public static final String URL_CREATE_TIME_LOCKED_ADDRESS = "/v1/payment/createTimeLockedAddress";

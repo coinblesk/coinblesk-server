@@ -15,55 +15,38 @@
  */
 package com.coinblesk.server.config;
 
-import com.coinblesk.json.v1.UserAccountStatusTO;
-import com.coinblesk.json.v1.UserAccountTO;
-import com.coinblesk.server.entity.UserAccount;
-import com.coinblesk.server.service.UserAccountService;
-import com.coinblesk.util.BitcoinUtils;
-import com.coinblesk.util.Pair;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.regex.Pattern;
+import com.coinblesk.server.auth.Http401UnauthorizedEntryPoint;
+import com.coinblesk.server.auth.JWTConfigurer;
 
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
+import com.coinblesk.server.auth.TokenProvider;
+import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.AuthenticationServiceException;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.authentication.AuthenticationFailureHandler;
-import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
-import org.springframework.security.web.csrf.CsrfFilter;
-import org.springframework.security.web.csrf.CsrfToken;
-import org.springframework.security.web.header.writers.frameoptions.XFrameOptionsHeaderWriter;
-import org.springframework.security.web.util.matcher.RequestMatcher;
+
 /**
  *
  * @author Thomas Bocek
  * @author Andreas Albrecht
+ * @author Sebastian Stephan
  */
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
-    private UserAccountService userAccountService;
+    private Http401UnauthorizedEntryPoint http401UnauthorizedEntryPoint;
+
+    @Autowired
+    private TokenProvider tokenProvider;
+
+    @Autowired
+    private UserDetailsService userDetailsService;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -83,66 +66,42 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         "/v?/admin/**",
         "/v?/a/**"};
 
+    @Autowired
+    public void configureGlobal(AuthenticationManagerBuilder auth) {
+        try {
+            auth
+                .userDetailsService(userDetailsService)
+                    .passwordEncoder(passwordEncoder);
+        } catch (Exception e) {
+            throw new BeanInitializationException("Security configuration failed", e);
+        }
+    }
+
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http
-                // Cross-site request forgery protection not needed when using JWT
-                .csrf().disable()
-
-                // Protected URLs
-                .authorizeRequests()
-                    .antMatchers("/").permitAll()
-                    .antMatchers(REQUIRE_ADMIN_ROLE).hasRole(UserRole.ADMIN.getRole())
-                    .antMatchers(REQUIRE_USER_ROLE).hasRole(UserRole.USER.getRole())
-
-                // Add default spring login-page at /login
-                .and()
-                .formLogin()
-
-                // Return 200 instead of the default 301 for a successful login
-                .successHandler(new SimpleUrlAuthenticationSuccessHandler(){
-                    @Override
-                    public void onAuthenticationSuccess(HttpServletRequest request,
-                                                        HttpServletResponse response, Authentication authentication)
-                            throws IOException, ServletException {
-                        clearAuthenticationAttributes(request);
-                    }
-                })
-
-                // Return 401 instead of the default 302 for a failed login
-                .failureHandler((request, response, exception) -> response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
-                        "Authentication Failed: " + exception.getMessage())) // return 401 instead 302
-
-
-                // Allow iframes from same origin (to enable h2-console)
-                .and()
-                .headers().frameOptions().sameOrigin();
-
+            .exceptionHandling()
+            .authenticationEntryPoint(http401UnauthorizedEntryPoint)
+        .and()
+            .csrf()
+            .disable()
+            .headers()
+            .frameOptions()
+            .sameOrigin()   // To allow h2 console
+        .and()
+            .sessionManagement()
+            .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        .and()
+            .authorizeRequests()
+            //.antMatchers("/").permitAll()
+            .antMatchers(REQUIRE_USER_ROLE).hasAuthority(UserRole.USER.getAuthority())
+            .antMatchers(REQUIRE_ADMIN_ROLE).hasAuthority(UserRole.ADMIN.getAuthority())
+        .and()
+            .apply(securityConfigurerAdapter());
     }
 
-    @Override
-    @Bean
-    protected AuthenticationManager authenticationManager() throws Exception {
-        return (final Authentication authentication) -> {
-            final String email = authentication.getPrincipal().toString();
-            final String password = authentication.getCredentials().toString();
-
-            final UserAccount userAccount = userAccountService.getByEmail(email);
-            if (userAccount == null) {
-                throw new BadCredentialsException("Wrong username/password");
-            }
-            if (userAccount.getEmailToken() != null) {
-                throw new AuthenticationServiceException("Email is not verified yet");
-            }
-            if (userAccount.isDeleted()) {
-                throw new AuthenticationServiceException("Account not active");
-            }
-            if (!passwordEncoder.matches(password, userAccount.getPassword())) {
-                throw new BadCredentialsException("Wrong username/password");
-            }
-            Collection<UserRole> roles = new ArrayList<UserRole>(1);
-            roles.add(userAccount.getUserRole());
-            return new UsernamePasswordAuthenticationToken(email, password, roles);
-        };
+    private JWTConfigurer securityConfigurerAdapter() {
+        return new JWTConfigurer(tokenProvider);
     }
+
 }

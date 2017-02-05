@@ -18,6 +18,7 @@ package com.coinblesk.server.service;
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.server.entity.Keys;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
+import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.KeyTestUtil;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
@@ -25,11 +26,8 @@ import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import org.bitcoinj.core.ECKey;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestExecutionListeners;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.List;
 
@@ -40,11 +38,9 @@ import static org.junit.Assert.*;
  * @author Thomas Bocek
  * @author Andreas Albrecht
  */
-@SpringBootTest
-@RunWith(SpringRunner.class)
 @TestExecutionListeners( listeners = DbUnitTestExecutionListener.class,
         mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
-public class KeyServiceTest {
+public class KeyServiceTest extends CoinbleskTest {
     
     @Autowired
     private KeyService keyService;

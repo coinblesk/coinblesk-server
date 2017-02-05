@@ -17,20 +17,16 @@ package com.coinblesk.server.controller;
 
 import com.coinblesk.json.v1.KeyTO;
 import com.coinblesk.json.v1.Type;
+import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.util.SerializeUtils;
-import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import org.bitcoinj.core.ECKey;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.TestExecutionListeners;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -43,11 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *
  * @author draft
  */
-@SpringBootTest
-@RunWith(SpringRunner.class)
-@TestExecutionListeners( listeners = DbUnitTestExecutionListener.class,
-        mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
-public class RegisterKeyTest {
+public class RegisterKeyTest extends CoinbleskTest {
 
     @Autowired
     private WebApplicationContext webAppContext;

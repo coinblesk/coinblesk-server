@@ -9,11 +9,11 @@ import com.coinblesk.json.v1.Type;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.service.KeyService;
 import com.coinblesk.server.service.WalletService;
+import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.FakeTxBuilder;
 import com.coinblesk.server.utilTest.RESTUtils;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.SerializeUtils;
-import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import com.google.common.io.Files;
@@ -27,14 +27,10 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletTransaction.Pool;
 import org.junit.*;
 import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.TestExecutionListeners;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -55,11 +51,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
-@SpringBootTest
-@RunWith(SpringRunner.class)
-@TestExecutionListeners( listeners = DbUnitTestExecutionListener.class,
-		mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
-public class CompleteCLTVTest {
+public class CompleteCLTVTest extends CoinbleskTest {
 	
 	private static final Logger Log = LoggerFactory.getLogger(CompleteCLTVTest.class);
 	
