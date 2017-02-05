@@ -68,7 +68,7 @@ public class UserAccountServiceTest extends CoinbleskTest {
     private int counter = 0;
 
     @Before
-    public void before() throws IOException, UnreadableWalletException, BlockStoreException {
+    public void before() throws IOException, UnreadableWalletException, BlockStoreException, InterruptedException {
         System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk" + (counter++));
         if(counter > 0) {
             walletService.init();
