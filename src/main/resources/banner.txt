@@ -9,16 +9,12 @@
    Used Configuration:
    --------------------------------------------
    spring.datasource.url                  = ${spring.datasource.url}
-   spring.datasource.platform             = ${spring.datasource.platform}
-   logging.level.root                     = ${logging.level.root}
    coinblesk.url                          = ${coinblesk.url}
    coinblesk.config.dir                   = ${coinblesk.config.dir}
-   security.jwt.secret                    = ${security.jwt.secret}
    security.jwt.validityInSeconds         = ${security.jwt.validityInSeconds}
    security.jwt.adminValidityInSeconds    = ${security.jwt.adminValidityInSeconds}
    bitcoin.net                            = ${bitcoin.net}
    bitcoin.minconf                        = ${bitcoin.minconf}
-   bitcoin.potprivkey                     = ${bitcoin.potprivkey}
    email.enabled                          = ${email.enabled}
    email.host                             = ${email.host}
    email.protocol                         = ${email.protocol}
@@ -28,7 +24,6 @@
    email.debug                            = ${email.debug}
    email.trust                            = ${email.trust}
    email.username                         = ${email.username}
-   email.password                         = ${email.password}
    email.admin                            = ${email.admin}
    email.sendfrom                         = ${email.sendfrom}
 
