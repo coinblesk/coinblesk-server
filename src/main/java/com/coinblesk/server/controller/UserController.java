@@ -178,12 +178,7 @@ public class UserController {
                     String forgotToken = pair.element1().message();
                     String password = pair.element1().password();
                     final String path = "v1/user/forgot-verify/"+URLEncoder.encode(email, "UTF-8")+"/"+forgotToken;
-                    final String url;
-                    if(cfg.getBitcoinNet() == BitcoinNet.MAINNET) {
-                        url = "https://bitcoin.csg.uzh.ch/coinblesk-server/"+path;
-                    } else {
-                        url = "http://bitcoin2-test.csg.uzh.ch/coinblesk-server/"+path;
-                    }
+                    final String url = cfg.getUrl() + path;
                     mailService.sendUserMail(email,
                             messageSource.getMessage("forgot.email.title", null, locale), 
                             messageSource.getMessage("forgot.email.text", new String[]{url, password}, locale));
