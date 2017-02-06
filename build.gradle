@@ -73,6 +73,9 @@ dependencies {
     // (includes transfer-objects)
     compile 'com.coinblesk:coinblesk-shared-resources:1.4.71'
 
+    // JWT Authentication
+    compile('io.jsonwebtoken:jjwt:0.6.0')
+
     // Misc
     compile 'org.apache.commons:commons-lang3:3.5'
 

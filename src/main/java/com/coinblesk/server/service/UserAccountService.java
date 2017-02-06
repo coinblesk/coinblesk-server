@@ -31,6 +31,7 @@ import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
@@ -53,7 +54,7 @@ public class UserAccountService {
     private final static SecureRandom random = new SecureRandom();
 
     //as senn in: http://www.mkyong.com/regular-expressions/how-to-validate-email-address-with-regular-expression/
-    private static final String EMAIL_PATTERN
+    public static final String EMAIL_PATTERN
             = "^[_A-Za-z0-9-\\+]+(\\.[_A-Za-z0-9-]+)*@"
             + "[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$";
     
@@ -108,7 +109,7 @@ public class UserAccountService {
     //call this for testing only directy!!
     @Transactional(readOnly = false)
     public Pair<UserAccountStatusTO, UserAccount> createEntity(final UserAccountTO userAccountTO) {
-        final String email = userAccountTO.email();
+        final String email = userAccountTO.email().toLowerCase(Locale.ENGLISH);
         final UserAccount found = repository.findByEmail(email);
         if (found != null) {
             if (found.getEmailToken() != null) {
@@ -118,7 +119,7 @@ public class UserAccountService {
         }
         //convert TO to Entity
         UserAccount userAccount = new UserAccount();
-        userAccount.setEmail(userAccountTO.email());
+        userAccount.setEmail(email);
         userAccount.setPassword(passwordEncoder.encode(userAccountTO.password()));
         userAccount.setCreationDate(new Date());
         userAccount.setDeleted(false);

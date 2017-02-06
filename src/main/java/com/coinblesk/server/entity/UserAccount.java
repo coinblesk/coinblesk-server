@@ -170,6 +170,10 @@ public class UserAccount implements Serializable {
     	this.userRole = userRole;
     	return this;
     }
+
+    public boolean isEmailVerified() {
+        return this.emailToken == null;
+    }
     
     @Override
     public String toString() {

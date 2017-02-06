@@ -10,6 +10,7 @@ import com.coinblesk.json.v1.UserAccountTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.entity.Keys;
 import com.coinblesk.server.entity.UserAccount;
+import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.FakeTxBuilder;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
@@ -22,14 +23,11 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.TestExecutionListeners;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -40,11 +38,9 @@ import java.util.List;
  *
  * @author Thomas Bocek
  */
-@SpringBootTest
-@RunWith(SpringRunner.class)
 @TestExecutionListeners( listeners = DbUnitTestExecutionListener.class,
         mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
-public class UserAccountServiceTest {
+public class UserAccountServiceTest extends CoinbleskTest {
     @MockBean
     private MailService mailService;
 
@@ -72,7 +68,7 @@ public class UserAccountServiceTest {
     private int counter = 0;
 
     @Before
-    public void before() throws IOException, UnreadableWalletException, BlockStoreException {
+    public void before() throws IOException, UnreadableWalletException, BlockStoreException, InterruptedException {
         System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk" + (counter++));
         if(counter > 0) {
             walletService.init();

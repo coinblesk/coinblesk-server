@@ -56,17 +56,29 @@ public class AppConfig {
                 SUPPORTED_CLIENT_VERSIONS.add("2.3"); // TO versioning release
 	}
 
-    @Value("${coinblesk.config.dir:./build/coinblesk}")
+	@Value("${coinblesk.url}")
+    private String url;
+
+    @Value("${coinblesk.config.dir}")
     private FileSystemResource configDir;
 
-    @Value("${bitcoin.net:unittest}")
+    @Value("${bitcoin.net}")
     private String bitcoinNet;
 
-    @Value("${bitcoin.minconf:1}")
+    @Value("${bitcoin.minconf}")
     private int minConf;
-    
+
+    @Value("${security.jwt.secret}")
+    private String jwtSecret;
+
+    @Value("${security.jwt.validityInSeconds}")
+    private Long jwtValidityInSeconds;
+
+    @Value("${security.jwt.adminValidityInSeconds}")
+    private Long jwtAdminValidityInSeconds;
+
     //this private key is just use for unit tests
-    @Value("${bitcoin.potprivkey:97324063353421115888582782536755703931560774174498831848725083330146537953701}")
+    @Value("${bitcoin.potprivkey}")
     private BigInteger potPrivateKeyAddress;
 
     static {
@@ -104,5 +116,21 @@ public class AppConfig {
         ECKey ecKey = ECKey.fromPrivate(potPrivateKeyAddress);
         LOG.debug("Pot address is: {}", ecKey.toAddress(getNetworkParameters()));
         return ecKey;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public String getJwtSecret() {
+        return jwtSecret;
+    }
+
+    public Long getJwtValidityInSeconds() {
+        return jwtValidityInSeconds;
+    }
+
+    public Long getJwtAdminValidityInSeconds() {
+        return jwtAdminValidityInSeconds;
     }
 }

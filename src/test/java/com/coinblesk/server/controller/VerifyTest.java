@@ -21,10 +21,10 @@ import com.coinblesk.json.v1.VerifyTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.Client;
+import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.ServerCalls;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.SerializeUtils;
-import com.github.springtestdbunit.DbUnitTestExecutionListener;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import org.bitcoinj.core.*;
@@ -33,11 +33,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.TestExecutionListeners;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -51,11 +47,7 @@ import java.util.List;
  * @author Thomas Bocek
  * @author Raphael Voellmy
  */
-@SpringBootTest
-@RunWith(SpringRunner.class)
-@TestExecutionListeners( listeners = DbUnitTestExecutionListener.class,
-        mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
-public class VerifyTest {
+public class VerifyTest extends CoinbleskTest {
 
     @Autowired
     private WebApplicationContext webAppContext;

@@ -102,23 +102,25 @@ public class WalletService {
     private Set<Sha256Hash> removed = Collections.synchronizedSet(new HashSet<Sha256Hash>());
 
     @PostConstruct
-    public void init() throws IOException, UnreadableWalletException, BlockStoreException {
+    public void init() throws IOException, UnreadableWalletException, BlockStoreException, InterruptedException {
         final NetworkParameters params = appConfig.getNetworkParameters();
-        //create directory if necessary
+
+        // Create config directory if necessary
         final File directory = appConfig.getConfigDir().getFile();
         if (!directory.exists()) {
             if (!directory.mkdirs()) {
                 throw new IOException("Could not create directory " + directory.getAbsolutePath());
             }
         }
-        //locations
+        // Init chain and wallet files
         final File chainFile = new File(directory, "coinblesk2-" + appConfig.getBitcoinNet() + ".spvchain");
         final File walletFile = new File(directory, "coinblesk2-" + appConfig.getBitcoinNet() + ".wallet");
 
+        // Delete chain and wallet file when using UNITTEST network
         if (appConfig.getBitcoinNet() == BitcoinNet.UNITTEST) {
             chainFile.delete();
             walletFile.delete();
-            LOG.debug("Deleted file {} and {}", chainFile.getName(), walletFile.getName());
+            LOG.info("Deleted file {} and {}", chainFile.getName(), walletFile.getName());
         }
 
         if (walletFile.exists()) {
@@ -130,9 +132,8 @@ public class WalletService {
             //TODO: add keychaingroup for restoring wallet
             wallet = new Wallet(params);
         }
-        //TODO: do we nood this?
-        //wallet.currentAddress(KeyChain.KeyPurpose.RECEIVE_FUNDS);
         wallet.autosaveToFile(walletFile, 5, TimeUnit.SECONDS, null);
+
         walletWatchKeysP2SH(params);
         walletWatchKeysCLTV(params);
         walletWatchKeysPot(params);
@@ -141,22 +142,33 @@ public class WalletService {
         blockChain = new BlockChain(params, blockStore);
         peerGroup = new PeerGroup(params, blockChain);
 
-        if (appConfig.getBitcoinNet() == BitcoinNet.UNITTEST) {
-            peerGroup.addAddress(new PeerAddress(InetAddress.getLocalHost(), params.getPort()));
-        } else {
-            //peerGroup handles the shutdown for us
-            //params have the seed nodes to connect to the network
+        // TODO: let a config parameter define the address of the coinblesk fullnode and use that instead
+        if (appConfig.getBitcoinNet() != BitcoinNet.UNITTEST) {
             DnsDiscovery discovery = new DnsDiscovery(params);
             peerGroup.addPeerDiscovery(discovery);
         }
 
         blockChain.addWallet(wallet);
         peerGroup.addWallet(wallet);
-        peerGroup.start();
-        final DownloadProgressTracker listener = new DownloadProgressTracker() {
+
+        if (appConfig.getBitcoinNet() != BitcoinNet.UNITTEST) {
+            peerGroup.start();
+        }
+
+        wallet.addTransactionConfidenceEventListener((wallet, tx) -> {
+            if (tx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf() && !removed.contains(tx.getHash())) {
+                LOG.debug("remove tx we got from the network {}", tx);
+                transactionService.removeTransaction(tx);
+                txQueueService.removeTx(tx);
+                removed.add(tx.getHash());
+            }
+        });
+
+        // Download block chain (blocking)
+        final DownloadProgressTracker downloadListener = new DownloadProgressTracker() {
             @Override
             protected void doneDownload() {
-                LOG.debug("downloading done");
+                LOG.info("downloading done");
                 //once we downloaded all the blocks we need to broadcast the stored approved tx
                 List<Transaction> txs = transactionService.listApprovedTransactions(params);
                 for(Transaction tx:txs) {
@@ -166,24 +178,20 @@ public class WalletService {
 
             @Override
             protected void progress(double pct, int blocksSoFar, Date date) {
-                LOG.debug("downloading: {}%", (int)pct);
+                LOG.info("downloading: {}%", (int)pct);
             }
-            
+
         };
-        peerGroup.startBlockChainDownload(listener);
-        wallet.addTransactionConfidenceEventListener(new TransactionConfidenceEventListener() {
-            @Override
-		public void onTransactionConfidenceChanged(Wallet wallet, Transaction tx) {
-                if (tx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf() && !removed.contains(tx.getHash())) {
-                    LOG.debug("remove tx we got from the network {}", tx);
-                    transactionService.removeTransaction(tx);
-                    txQueueService.removeTx(tx);
-                    removed.add(tx.getHash());
-                }
-            }
-        });
+
+        if (appConfig.getBitcoinNet() != BitcoinNet.UNITTEST) {
+            peerGroup.startBlockChainDownload(downloadListener);
+            downloadListener.await();
+        }
+
+        // Broadcast pending transactions
         pendingTransactions();
-        LOG.debug("wallet init done.");
+
+        LOG.info("wallet init done.");
     } 
 
 	private void walletWatchKeysP2SH(final NetworkParameters params) {
@@ -197,7 +205,7 @@ public class WalletService {
             sb.append(script.getToAddress(params)).append("\n");
         }
         wallet.addWatchedScripts(scripts);
-        LOG.debug("walletWatchKeysP2SH:\n{}", sb.toString());
+        LOG.info("walletWatchKeysP2SH:\n{}", sb.toString());
     }
     
     private void walletWatchKeysCLTV(final NetworkParameters params) {
@@ -208,13 +216,13 @@ public class WalletService {
         		sb.append(address.toAddress(params)).append("\n");
         	}
         }
-        LOG.debug("walletWatchKeysCLTV:\n{}", sb.toString());
+        LOG.info("walletWatchKeysCLTV:\n{}", sb.toString());
     }
     
     private void walletWatchKeysPot(final NetworkParameters params) {
         ECKey potAddress = appConfig.getPotPrivateKeyAddress();
         wallet.addWatchedAddress(potAddress.toAddress(params), 0);
-        LOG.debug("walletWatchKeysPot: {}", potAddress.toAddress(params));
+        LOG.info("walletWatchKeysPot: {}", potAddress.toAddress(params));
     }
     
     public List<TransactionOutput> potTransactionOutput(final NetworkParameters params) {
@@ -314,6 +322,7 @@ public class WalletService {
     public void shutdown() {
         try {
             if (peerGroup != null && peerGroup.isRunning()) {
+                LOG.info("stopping peer group...");
                 peerGroup.stop();
                 peerGroup = null;
             }
@@ -322,6 +331,7 @@ public class WalletService {
         }
         try {
             if (blockStore != null) {
+                LOG.info("closing block store...");
                 blockStore.close();
                 blockStore = null;
             }
@@ -331,6 +341,7 @@ public class WalletService {
         try {
             if (wallet != null) {
             	// TODO: the method name is misleading, it stops auto-save, but does not save.
+                LOG.info("shutdown wallet...");
             	wallet.shutdownAutosaveAndWait();
                 wallet = null;
             }

@@ -19,13 +19,11 @@ import com.coinblesk.bitcoin.BitcoinNet;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.VersionTO;
 import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.RESTUtils;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -39,9 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * @author Andreas Albrecht
  *
  */
-@SpringBootTest
-@RunWith(SpringRunner.class)
-public class VersionControllerTest {
+public class VersionControllerTest extends CoinbleskTest {
 	private static final String URL_VERSION = "/v1/version";
 	
 	private static final String SUPPORTED_CLIENT_VERSION;
