@@ -14,6 +14,7 @@
    security.jwt.validityInSeconds         = ${security.jwt.validityInSeconds}
    security.jwt.adminValidityInSeconds    = ${security.jwt.adminValidityInSeconds}
    bitcoin.net                            = ${bitcoin.net}
+   bitcoin.firstSeedNode                  = ${bitcoin.firstSeedNode}
    bitcoin.minconf                        = ${bitcoin.minconf}
    email.enabled                          = ${email.enabled}
    email.host                             = ${email.host}

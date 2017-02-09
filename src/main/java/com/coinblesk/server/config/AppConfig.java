@@ -65,6 +65,9 @@ public class AppConfig {
     @Value("${bitcoin.net}")
     private String bitcoinNet;
 
+    @Value("${bitcoin.firstSeedNode}")
+    private String firstSeedNode;
+
     @Value("${bitcoin.minconf}")
     private int minConf;
 
@@ -132,5 +135,9 @@ public class AppConfig {
 
     public Long getJwtAdminValidityInSeconds() {
         return jwtAdminValidityInSeconds;
+    }
+
+    public String getFirstSeedNode() {
+        return firstSeedNode;
     }
 }

@@ -39,6 +39,7 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBroadcast;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
+import org.apache.commons.lang3.ArrayUtils;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
 import org.bitcoinj.net.discovery.DnsDiscovery;
@@ -142,9 +143,10 @@ public class WalletService {
         blockChain = new BlockChain(params, blockStore);
         peerGroup = new PeerGroup(params, blockChain);
 
-        // TODO: let a config parameter define the address of the coinblesk fullnode and use that instead
-        if (appConfig.getBitcoinNet() != BitcoinNet.UNITTEST) {
-            DnsDiscovery discovery = new DnsDiscovery(params);
+        // Add own fullnode to list of seeds
+        String[] seeds = ArrayUtils.addAll(new String[] {appConfig.getFirstSeedNode()},params.getDnsSeeds());
+        if (appConfig.getBitcoinNet() != BitcoinNet.MAINNET) {
+            DnsDiscovery discovery = new DnsDiscovery(seeds, params);
             peerGroup.addPeerDiscovery(discovery);
         }
 
