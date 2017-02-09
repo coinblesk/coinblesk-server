@@ -201,7 +201,7 @@ public class WalletService {
     	StringBuilder sb = new StringBuilder();
         for (Keys key : keyService.allKeys()) {
         	for (TimeLockedAddressEntity address : key.timeLockedAddresses()) {
-        		wallet.addWatchedAddress(address.toAddress(params), 0);
+        		wallet.addWatchedAddress(address.toAddress(params), address.getTimeCreated());
         		sb.append(address.toAddress(params)).append("\n");
         	}
         }
