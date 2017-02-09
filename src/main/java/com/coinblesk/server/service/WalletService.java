@@ -223,7 +223,7 @@ public class WalletService {
     
     private void walletWatchKeysPot(final NetworkParameters params) {
         ECKey potAddress = appConfig.getPotPrivateKeyAddress();
-        wallet.addWatchedAddress(potAddress.toAddress(params), 0);
+        wallet.addWatchedAddress(potAddress.toAddress(params), appConfig.getPotCreationTime());
         LOG.info("walletWatchKeysPot: {}", potAddress.toAddress(params));
     }
     

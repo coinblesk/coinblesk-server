@@ -16,6 +16,7 @@
    bitcoin.net                            = ${bitcoin.net}
    bitcoin.firstSeedNode                  = ${bitcoin.firstSeedNode}
    bitcoin.minconf                        = ${bitcoin.minconf}
+   bitcoin.potCreationTime                = ${bitcoin.potCreationTime}
    email.enabled                          = ${email.enabled}
    email.host                             = ${email.host}
    email.protocol                         = ${email.protocol}

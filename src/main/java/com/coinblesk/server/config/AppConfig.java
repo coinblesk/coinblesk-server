@@ -84,6 +84,9 @@ public class AppConfig {
     @Value("${bitcoin.potprivkey}")
     private BigInteger potPrivateKeyAddress;
 
+    @Value("${bitcoin.potCreationTime}")
+    private Long potCreationTime;
+
     static {
         TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
     }
@@ -135,6 +138,10 @@ public class AppConfig {
 
     public Long getJwtAdminValidityInSeconds() {
         return jwtAdminValidityInSeconds;
+    }
+
+    public Long getPotCreationTime() {
+        return potCreationTime;
     }
 
     public String getFirstSeedNode() {
