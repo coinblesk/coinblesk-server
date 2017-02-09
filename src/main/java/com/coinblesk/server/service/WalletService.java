@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -34,6 +34,7 @@ import org.bitcoinj.script.Script;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
+import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
@@ -41,6 +42,7 @@ import org.bitcoinj.wallet.WalletTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -144,25 +146,20 @@ public class WalletService {
             peerGroup.start();
         }
 
-        wallet.addTransactionConfidenceEventListener((wallet, tx) -> {
-            if (tx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf() && !removed.contains(tx.getHash())) {
-                LOG.debug("remove tx we got from the network {}", tx);
-                transactionService.removeTransaction(tx);
-                txQueueService.removeTx(tx);
-                removed.add(tx.getHash());
-            }
-        });
-
         // Download block chain (blocking)
         final DownloadProgressTracker downloadListener = new DownloadProgressTracker() {
             @Override
             protected void doneDownload() {
                 LOG.info("downloading done");
+
                 //once we downloaded all the blocks we need to broadcast the stored approved tx
                 List<Transaction> txs = transactionService.listApprovedTransactions(params);
                 for(Transaction tx:txs) {
                     broadcast(tx);
                 }
+
+                // Be notified when the confidence of relevant transactions change (number of confirmations).
+                addConficenceChangedHandler();
             }
 
             @Override
@@ -212,6 +209,47 @@ public class WalletService {
         ECKey potAddress = appConfig.getPotPrivateKeyAddress();
         wallet.addWatchedAddress(potAddress.toAddress(params), appConfig.getPotCreationTime());
         LOG.info("walletWatchKeysPot: {}", potAddress.toAddress(params));
+    }
+
+    /***
+     * Add a listener for when a transaction we are watching's confidence changed due to a new block.
+     *
+     * After the transaction is {bitcoin.minconf} blocks deep, we remove the tx from the
+     * database, as it is considered safe.
+     *
+     * The method should only be called after complete download of the blockchain, since the handler is called for
+     * every block and transaction we are watching, which will result in high CPU and memory consumption and might
+     * exceed the JVM memory limit. After download is complete, blocks arrive only sporadically and this is not a
+     * problem.
+     */
+    private void addConficenceChangedHandler() {
+        // Use a custom thread pool to speed up the processing of transactions. Queue is blocking and limited to 10'000
+        // to avoid memory exhaustion. After threshold is reached, the CallerRunsPolicy() forces blocking behavior.
+        ContextPropagatingThreadFactory factory = new ContextPropagatingThreadFactory("listenerFactory");
+        Executor listenerExecutor = new ThreadPoolExecutor(Runtime.getRuntime().availableProcessors(), Runtime.getRuntime().availableProcessors(),
+                0L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<Runnable>(10000),
+                factory, new ThreadPoolExecutor.CallerRunsPolicy());
+
+        wallet.addTransactionConfidenceEventListener(listenerExecutor, (wallet, tx) -> {
+            if (tx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf() && !removed.contains(tx.getHash())) {
+                LOG.debug("remove tx we got from the network {}", tx);
+
+                try {
+                    transactionService.removeTransaction(tx);
+                } catch (EmptyResultDataAccessException e) {
+                    LOG.debug("tx was not in tx table {}", tx);
+                }
+
+                try {
+                    txQueueService.removeTx(tx);
+                } catch (EmptyResultDataAccessException e) {
+                    LOG.debug("tx was not in txqueue table {}", tx);
+                }
+
+                removed.add(tx.getHash());
+            }
+        });
     }
     
     public List<TransactionOutput> potTransactionOutput(final NetworkParameters params) {
