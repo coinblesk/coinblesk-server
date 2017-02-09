@@ -120,7 +120,7 @@ public class AppConfig {
         }
         
         ECKey ecKey = ECKey.fromPrivate(potPrivateKeyAddress);
-        LOG.debug("Pot address is: {}", ecKey.toAddress(getNetworkParameters()));
+        LOG.info("Pot address is: {}", ecKey.toAddress(getNetworkParameters()));
         return ecKey;
     }
 
