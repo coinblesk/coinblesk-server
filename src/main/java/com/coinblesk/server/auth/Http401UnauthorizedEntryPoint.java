@@ -28,6 +28,7 @@ public class Http401UnauthorizedEntryPoint implements AuthenticationEntryPoint {
             ServletException {
 
         log.debug("Pre-authenticated entry point called. Rejecting access");
+        response.setHeader("WWW-Authenticate", "Bearer token_type=\"JWT\"");
         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Access denied");
     }
 }
