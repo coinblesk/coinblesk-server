@@ -57,6 +57,14 @@ springBoot {
     executable = true
 }
 
+jar {
+    manifest {
+        attributes(
+                'Version': project.version
+        )
+    }
+}
+
 dependencies {
     // Spring Boot
     compile 'org.springframework.boot:spring-boot-starter-web'

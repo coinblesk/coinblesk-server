@@ -102,7 +102,7 @@ public class VersionController {
 	/**
 	 * Extracts the Version property from the manifest.
 	 * 
-	 * @return the version iff run as war packaged application. Otherwise, (UNKNOWN) is returned.
+	 * @return the version iff run as jar packaged application. Otherwise, (UNKNOWN) is returned.
 	 * @throws CoinbleskException
 	 */
 	private String getServerVersion() throws CoinbleskException {
@@ -111,9 +111,9 @@ public class VersionController {
     	final String defaultVersion = "(UNKNOWN)";
     	InputStream inputStream = null;
 		try {
-			inputStream = context.getResourceAsStream("/META-INF/MANIFEST.MF");
+			inputStream = context.getClassLoader().getResourceAsStream("/META-INF/MANIFEST.MF");
 			if (inputStream == null) {
-				LOG.warn("Manifest resource not found (inputStream=null, maybe not run as war file?).");
+				LOG.warn("Manifest resource not found (inputStream=null, maybe not run as jar file?).");
 				return defaultVersion;
 			}
 			
