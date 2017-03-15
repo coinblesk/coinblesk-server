@@ -18,11 +18,26 @@ public class SwaggerConfig {
 
 	@Bean
 	public Docket api() {
-		return new Docket(SWAGGER_2).select().apis(RequestHandlerSelectors.any()).paths(PathSelectors.regex("/v[12]/.*")).build().apiInfo(apiInfo());
+		return new Docket(SWAGGER_2).select()
+									.apis(RequestHandlerSelectors.any())
+									.paths(PathSelectors.regex("/v[12]/.*"))
+									.build()
+									.apiInfo(apiInfo());
 	}
 
 	private ApiInfo apiInfo() {
-		ApiInfo apiInfo = new ApiInfo("REST API", "API for Android and Web", "", "", new Contact("Peter", "url", "email"), "", "");
+		ApiInfo apiInfo = new ApiInfo(
+				"Coinblesk Server REST API",
+				"REST API for the Android App and the Web Interface",
+				"",
+				"",
+				new Contact(
+						"Communication Systems Research Group CSG, University of Zurich",
+						"https://bitcoin.csg.uzh.ch",
+						"bocek@ifi.uzh.ch"),
+				"",
+				"");
+
 		return apiInfo;
 	}
 
