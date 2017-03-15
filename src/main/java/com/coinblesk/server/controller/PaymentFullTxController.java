@@ -15,16 +15,15 @@
  */
 package com.coinblesk.server.controller;
 
+import com.coinblesk.server.utils.ApiVersion;
+import com.coinblesk.json.v1.SignTO;
+import com.coinblesk.json.v1.VerifyTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
-
-import com.coinblesk.json.v1.SignTO;
-import com.coinblesk.json.v1.VerifyTO;
-import com.coinblesk.server.utils.ApiVersion;
 
 /**
  * @deprecated This class is here for compatibility reasons
@@ -33,16 +32,15 @@ import com.coinblesk.server.utils.ApiVersion;
  * @author Thomas Bocek
  *
  */
-@Deprecated
 @RestController
-@RequestMapping(value = "/full-payment")
+@RequestMapping(value = {"/full-payment", "/f"})
 @ApiVersion({"v1", ""})
 public class PaymentFullTxController {
 
     @Autowired
     private PaymentController paymentController;
 
-    @RequestMapping(value = "/sign", method = RequestMethod.POST,
+    @RequestMapping(value = {"/sign", "/s"}, method = RequestMethod.POST,
             consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
     @ResponseBody
@@ -50,7 +48,7 @@ public class PaymentFullTxController {
         return paymentController.sign(input);
     }
 
-    @RequestMapping(value = "/verify", method = RequestMethod.POST,
+    @RequestMapping(value = {"/verify", "/v"}, method = RequestMethod.POST,
             consumes = "application/json; charset=UTF-8",
             produces = "application/json; charset=UTF-8")
     @ResponseBody

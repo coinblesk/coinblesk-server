@@ -15,9 +15,15 @@
  */
 package com.coinblesk.server.controller;
 
+import com.coinblesk.json.v1.BaseTO;
+import com.coinblesk.server.service.MailService;
+import com.coinblesk.server.service.UserAccountService;
+import com.coinblesk.server.utils.ApiVersion;
+import com.coinblesk.json.v1.Type;
+import com.coinblesk.json.v1.UserAccountStatusTO;
+import com.coinblesk.json.v1.UserAccountTO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.bitcoinj.core.ECKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,20 +37,12 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.coinblesk.json.v1.BaseTO;
-import com.coinblesk.json.v1.Type;
-import com.coinblesk.json.v1.UserAccountStatusTO;
-import com.coinblesk.json.v1.UserAccountTO;
-import com.coinblesk.server.service.MailService;
-import com.coinblesk.server.service.UserAccountService;
-import com.coinblesk.server.utils.ApiVersion;
-
 /**
  *
  * @author Thomas Bocek
  */
 @RestController
-@RequestMapping(value = "/user/auth")
+@RequestMapping(value = {"/user/a", "/user/auth", "/u/auth", "/u/a"})
 @ApiVersion({"v1"})
 public class UserControllerAuthenticated {
 
@@ -56,7 +54,7 @@ public class UserControllerAuthenticated {
     @Autowired
     private MailService mailService;
 
-    @RequestMapping(value = "/delete", method = RequestMethod.PATCH,
+    @RequestMapping(value = {"/delete", "/d"}, method = RequestMethod.PATCH,
             produces = "application/json; charset=UTF-8")
     @ResponseBody
     public UserAccountStatusTO deleteAccount() {
@@ -79,14 +77,14 @@ public class UserControllerAuthenticated {
         }
     }
 
-    @RequestMapping(value = "/get", method = RequestMethod.GET,
+    @RequestMapping(value = {"/get", "/g"}, method = RequestMethod.GET,
             produces = "application/json; charset=UTF-8")
     @ResponseBody
     public UserAccountTO getAccount() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         LOG.debug("Get account for {}", auth.getName());
         try {
-
+            
             UserAccountTO userAccount = userAccountService.get(auth.getName());
             if (userAccount == null) {
                 LOG.error("Someone tried to access an account with an invalid username: {}", auth);
@@ -101,8 +99,8 @@ public class UserControllerAuthenticated {
             return new UserAccountTO().type(Type.SERVER_ERROR).message(e.getMessage());
         }
     }
-
-    @RequestMapping(value = "/transfer-p2sh", method = RequestMethod.POST,
+    
+    @RequestMapping(value = {"/transfer-p2sh", "/t"}, method = RequestMethod.POST,
             produces = "application/json; charset=UTF-8")
     @ResponseBody
     public UserAccountTO transferToP2SH(@RequestBody BaseTO request) {
@@ -115,14 +113,14 @@ public class UserControllerAuthenticated {
                 LOG.debug("Transfer P2SH success for {}, tx:{}", auth.getName(), status.message());
                 return status;
             } else {
-                return new UserAccountTO().type(Type.ACCOUNT_ERROR);
+                return new UserAccountTO().type(Type.ACCOUNT_ERROR); 
             }
         } catch (Exception e) {
             LOG.error("User create error", e);
             return new UserAccountTO().type(Type.SERVER_ERROR).message(e.getMessage());
         }
     }
-
+    
     @RequestMapping(value="/logout", method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
     public UserAccountStatusTO logout (HttpServletRequest request, HttpServletResponse response) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -132,13 +130,13 @@ public class UserControllerAuthenticated {
         }
         return new UserAccountStatusTO().setSuccess();
     }
-
-    @RequestMapping(value="/change-password", method = RequestMethod.POST,
-            produces = "application/json; charset=UTF-8",
+    
+    @RequestMapping(value="/change-password", method = RequestMethod.POST, 
+            produces = "application/json; charset=UTF-8", 
             consumes = "application/json; charset=UTF-8")
     public UserAccountStatusTO changePassword (
-            @RequestBody UserAccountTO to,
-            HttpServletRequest request,
+            @RequestBody UserAccountTO to, 
+            HttpServletRequest request, 
             HttpServletResponse response) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         LOG.debug("Change password account for {}", auth.getName());
@@ -148,7 +146,7 @@ public class UserControllerAuthenticated {
         } else {
             return new UserAccountStatusTO().type(Type.ACCOUNT_ERROR);
         }
-
+        
     }
-
+    
 }

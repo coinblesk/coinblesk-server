@@ -16,7 +16,6 @@
 package com.coinblesk.server.controller;
 
 import java.math.BigDecimal;
-import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,18 +28,19 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.coinblesk.json.v1.ExchangeRateTO;
-import com.coinblesk.json.v1.Type;
 import com.coinblesk.server.service.ForexService;
 import com.coinblesk.server.utils.ApiVersion;
+import com.coinblesk.json.v1.ExchangeRateTO;
+import com.coinblesk.json.v1.Type;
+import java.util.regex.Pattern;
 
 /**
  * Controller for client http requests regarding Transactions between two UserAccounts.
  *
  */
 @RestController
-// -> /wallet is for v1 only and should not be used anymore
-@RequestMapping({"/wallet", "/forex"})
+// -> /wallet and /w is for v1 only and should not be used anymore
+@RequestMapping({"/wallet", "/w", "/forex", "/x"})
 @ApiVersion({"v1", ""})
 public class ForexController {
 
@@ -48,14 +48,14 @@ public class ForexController {
 
     @Autowired
     private ForexService forexExchangeRateService;
-
-    @RequestMapping(value = "/exchangeRate/{symbol}",
+    
+    @RequestMapping(value = {"/exchangeRate/{symbol}", "/x/{symbol}"},
             method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
     @ResponseBody
     public ResponseEntity<ExchangeRateTO> forexExchangeRate(@PathVariable(value = "symbol") String symbol) {
         return forexExchangeRate(symbol, "USD");
     }
-
+            
 
     /**
      * Returns up to date exchangerate BTC/CHF
@@ -63,14 +63,14 @@ public class ForexController {
      * @return CustomResponseObject with exchangeRate BTC/CHF as a String
      */
     @RequestMapping(
-            value = "/rate/{from}-{to}",
-            method = RequestMethod.GET,
+    		value = {"/rate/{from}-{to}", "/r/{from}-{to}"},
+            method = RequestMethod.GET, 
             produces = "application/json; charset=UTF-8")
     @ApiVersion({"v2"})
     @ResponseBody
     public ResponseEntity<ExchangeRateTO> forexExchangeRate(
-                       @PathVariable(value = "from") String from,
-                       @PathVariable(value = "to") String to) {
+					    		@PathVariable(value = "from") String from,
+					            @PathVariable(value = "to") String to) {
         LOG.debug("{exchange-rate} - Received exchange rate request for currency {}/{}", from, to);
         ExchangeRateTO output = new ExchangeRateTO();
         try {
