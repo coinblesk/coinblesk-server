@@ -48,7 +48,7 @@ import com.coinblesk.util.Pair;
  */
 
 @Controller
-@RequestMapping(value = {"/admin", "/a"})
+@RequestMapping(value = "/admin")
 @ApiVersion({"v1", ""})
 public class AdminController {
 
@@ -56,45 +56,45 @@ public class AdminController {
 
     @Autowired
     ServletContext context;
-    
+
     @Autowired
     private WalletService walletService;
 
-    @RequestMapping(method=RequestMethod.GET)
+    @RequestMapping(method = RequestMethod.GET)
     public ModelAndView overview() {
     	Map<String, Object> model = new HashMap<>();
     	model.put("info", info());
     	ModelAndView mw = new ModelAndView("admin/overview", model);
     	return mw;
     }
-    
-    @RequestMapping(value = {"users"}, method=RequestMethod.GET)
+
+    @RequestMapping(value = "/users", method = RequestMethod.GET)
     public ModelAndView users() {
     	ModelAndView mw = new ModelAndView("admin/users");
     	return mw;
     }
-    
-    @RequestMapping(value = {"tasks"}, method=RequestMethod.GET)
+
+    @RequestMapping(value = "/tasks", method = RequestMethod.GET)
     public ModelAndView tasks() {
     	ModelAndView mw = new ModelAndView("admin/tasks");
     	return mw;
     }
-    
-    @RequestMapping(value = {"/balance", "/b"}, method=RequestMethod.GET)
+
+    @RequestMapping(value = "/balance", method = RequestMethod.GET)
     @ResponseBody
     public Coin balance() {
     	return walletService.getBalance();
     }
-    
-    @RequestMapping(value = {"/addresses", "/a"}, method=RequestMethod.GET)
+
+    @RequestMapping(value = "/addresses", method = RequestMethod.GET)
     @ResponseBody
     public Map<Address, Coin> addresses() {
     	Map<Address, Coin> addressBalances = walletService.getBalanceByAddresses();
     	LOG.debug("Total addresses: " + addressBalances.size());
     	return addressBalances;
     }
-    
-    @RequestMapping(value = {"/utxo", "/u"}, method=RequestMethod.GET)
+
+    @RequestMapping(value = "/utxo", method = RequestMethod.GET)
     @ResponseBody
     public List<Pair<String, String>> utxo() {
     	// cannot return utxo due to GSON recursion
@@ -105,8 +105,8 @@ public class AdminController {
     	}
     	return txOuts;
     }
-    
-    @RequestMapping(value = {"/info", "/i"}, method = RequestMethod.GET)
+
+    @RequestMapping(value = "/info", method = RequestMethod.GET)
     @ResponseBody
     public String info() {
         LOG.debug("Info called");
