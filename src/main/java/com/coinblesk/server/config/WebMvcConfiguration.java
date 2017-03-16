@@ -15,17 +15,14 @@
  */
 package com.coinblesk.server.config;
 
-import com.coinblesk.server.utils.ApiVersionRequestMappingHandlerMapping;
-import com.coinblesk.util.SerializeUtils;
 import java.util.List;
-import org.springframework.context.annotation.Bean;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.GsonHttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
-import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.ViewResolverRegistry;
@@ -33,15 +30,18 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
+import com.coinblesk.server.utils.ApiVersionRequestMappingHandlerMapping;
+import com.coinblesk.util.SerializeUtils;
+
 @Configuration
 @EnableWebMvc
 public class WebMvcConfiguration extends WebMvcConfigurerAdapter {
-    
+
     @Bean
     public RequestMappingHandlerMapping requestMappingHandlerMapping() {
         return new ApiVersionRequestMappingHandlerMapping();
     }
-    
+
     @Override
     public void configureMessageConverters(List<HttpMessageConverter< ?>> converters) {
         GsonHttpMessageConverter gsonHttpMessageConverter = new GsonHttpMessageConverter();
@@ -74,5 +74,9 @@ public class WebMvcConfiguration extends WebMvcConfigurerAdapter {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/static/**").addResourceLocations("/static/");
+
+        // swagger configuration:
+        registry.addResourceHandler("swagger-ui.html").addResourceLocations("classpath:/META-INF/resources/");
+        registry.addResourceHandler("/webjars/**").addResourceLocations("classpath:/META-INF/resources/webjars/");
     }
 }
