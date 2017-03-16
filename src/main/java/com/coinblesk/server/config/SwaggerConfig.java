@@ -21,13 +21,27 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2;
 public class SwaggerConfig {
 
 	@Bean
-	public Docket api() {
+	public Docket fullApi() {
 		return new Docket(SWAGGER_2)
-				.groupName("full-api")
+				.groupName("whole-api")
 				.apiInfo(apiInfo())
 				.select()
 				.apis(any())
-				.paths(regex("/v[12]/.*"))
+				.paths(regex("^/v[12]/.*$"))
+				.build()
+				.securitySchemes(apiKeys());
+	}
+
+	@Bean
+	// filters out everything with a single character between slashes /./ or at the end /.$
+	// for adaption see: https://regex101.com/r/goXnVF/1
+	public Docket noShortFormsApi() {
+		return new Docket(SWAGGER_2)
+				.groupName("no-short-forms-api")
+				.apiInfo(apiInfo())
+				.select()
+				.apis(any())
+				.paths(regex("^\\/v[12]((?!\\/.(\\/|$)).)+$"))
 				.build()
 				.securitySchemes(apiKeys());
 	}
