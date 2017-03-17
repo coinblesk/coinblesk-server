@@ -38,83 +38,83 @@ import java.util.List;
  *
  * @author Thomas Bocek
  */
-@TestExecutionListeners( listeners = DbUnitTestExecutionListener.class,
-        mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
+@TestExecutionListeners(listeners = DbUnitTestExecutionListener.class, mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
 public class UserAccountServiceTest extends CoinbleskTest {
-    @MockBean
-    private MailService mailService;
+	@MockBean
+	private MailService mailService;
 
-    @Autowired
-    private UserAccountService userAccountService;
-    
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    
-    @Autowired
-    private TxQueueService txQueueService;
-    
-    @Autowired
-    private KeyService keyService;
-    
-    @Autowired
-    private WalletService walletService;
-    
-    @Autowired
-    private AppConfig cfg;
+	@Autowired
+	private UserAccountService userAccountService;
 
-    final private ECKey ecKeyClient = new ECKey();
-    final private ECKey ecKeyServer = new ECKey();
-    
-    private int counter = 0;
+	@Autowired
+	private PasswordEncoder passwordEncoder;
 
-    @Before
-    public void before() throws IOException, UnreadableWalletException, BlockStoreException, InterruptedException {
-        System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk" + (counter++));
-        if(counter > 0) {
-            walletService.init();
-        }
+	@Autowired
+	private TxQueueService txQueueService;
 
-        UserAccount userAccount = new UserAccount();
-        userAccount.setBalance(BigDecimal.ONE)
-                .setCreationDate(new Date(1))
-                .setDeleted(false)
-                .setEmail("test@test.test")
-                .setEmailToken(null)
-                .setPassword(passwordEncoder.encode("test"))
-                .setUsername("blib");
-        userAccountService.save(userAccount);
-        
-        Keys keys = keyService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
-                ecKeyServer.getPrivKeyBytes()).element1();
-        
-        TimeLockedAddress address = new TimeLockedAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(), 123456);
-        
-        keyService.storeTimeLockedAddress(keys, address);
-    }
-    
-    @After
-    public void after() {
-        walletService.shutdown();
-    }
+	@Autowired
+	private KeyService keyService;
 
-    @Test
-    @DatabaseSetup("/EmptyDatabase.xml")
-    @DatabaseTearDown("/EmptyDatabase.xml")
-    public void testTransferFailed() {
-        UserAccountTO result = userAccountService.transferP2SH(ecKeyClient, "test@test.test");
-        Mockito.verify(mailService, Mockito.times(1)).sendAdminMail(Mockito.anyString(), Mockito.anyString());
-        Assert.assertFalse(result.isSuccess());
-    }
-    
-    @Test
-    @DatabaseSetup("/EmptyDatabase.xml")
-    @DatabaseTearDown("/EmptyDatabase.xml")
-    public void testTransferSuccess() throws BlockStoreException, VerificationException, PrunedException {
-        Block block = FakeTxBuilder.makeSolvedTestBlock(walletService.blockChain().getBlockStore(), cfg.getPotPrivateKeyAddress().toAddress(cfg.getNetworkParameters()));
-        walletService.blockChain().add(block);
-        UserAccountTO result = userAccountService.transferP2SH(ecKeyClient, "test@test.test");
-        Assert.assertTrue(result.isSuccess());
-        List<Transaction> list = txQueueService.all(UnitTestParams.get());
-        Assert.assertEquals(1, list.size());
-    }
+	@Autowired
+	private WalletService walletService;
+
+	@Autowired
+	private AppConfig cfg;
+
+	final private ECKey ecKeyClient = new ECKey();
+	final private ECKey ecKeyServer = new ECKey();
+
+	private int counter = 0;
+
+	@Before
+	public void before() throws IOException, UnreadableWalletException, BlockStoreException, InterruptedException {
+		System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk" + (counter++));
+		if (counter > 0) {
+			walletService.init();
+		}
+
+		UserAccount userAccount = new UserAccount();
+		userAccount	.setBalance(BigDecimal.ONE)
+					.setCreationDate(new Date(1))
+					.setDeleted(false)
+					.setEmail("test@test.test")
+					.setEmailToken(null)
+					.setPassword(passwordEncoder.encode("test"))
+					.setUsername("blib");
+		userAccountService.save(userAccount);
+
+		Keys keys = keyService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
+				ecKeyServer.getPrivKeyBytes()).element1();
+
+		TimeLockedAddress address = new TimeLockedAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(), 123456);
+
+		keyService.storeTimeLockedAddress(keys, address);
+	}
+
+	@After
+	public void after() {
+		walletService.shutdown();
+	}
+
+	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
+	public void testTransferFailed() {
+		UserAccountTO result = userAccountService.transferP2SH(ecKeyClient, "test@test.test");
+		Mockito.verify(mailService, Mockito.times(1)).sendAdminMail(Mockito.anyString(), Mockito.anyString());
+		Assert.assertFalse(result.isSuccess());
+	}
+
+	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
+	public void testTransferSuccess() throws BlockStoreException, VerificationException, PrunedException {
+		Block block = FakeTxBuilder.makeSolvedTestBlock(walletService.blockChain().getBlockStore(),
+				cfg.getPotPrivateKeyAddress().toAddress(cfg.getNetworkParameters()));
+		walletService.blockChain().add(block);
+		UserAccountTO result = userAccountService.transferP2SH(ecKeyClient, "test@test.test");
+		Assert.assertTrue(result.isSuccess());
+		List<Transaction> list = txQueueService.all(UnitTestParams.get());
+		Assert.assertEquals(1, list.size());
+	}
 }

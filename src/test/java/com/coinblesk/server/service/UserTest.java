@@ -34,38 +34,36 @@ import java.util.Date;
  *
  * @author Thomas Bocek
  */
-@TestExecutionListeners( listeners = DbUnitTestExecutionListener.class,
-        mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
+@TestExecutionListeners(listeners = DbUnitTestExecutionListener.class, mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
 public class UserTest extends CoinbleskTest {
 
-    @Autowired
-    private UserAccountService userAccountService;
-    
-    @Test
-    @DatabaseSetup("/EmptyDatabase.xml")
-    @ExpectedDatabase(value = "/UserTestAddUser.xml",
-            assertionMode = DatabaseAssertionMode.NON_STRICT_UNORDERED)
-    @DatabaseTearDown("/EmptyDatabase.xml")
-    public void testAddUser() throws Exception {
-        UserAccount userAccount = new UserAccount();
-        userAccount.setBalance(BigDecimal.ONE)
-                .setCreationDate(new Date(1))
-                .setDeleted(false)
-                .setEmail("test@test.test")
-                .setEmailToken(null)
-                .setPassword("blub")
-                .setUsername("blib");
-        userAccountService.save(userAccount);
-    }
+	@Autowired
+	private UserAccountService userAccountService;
 
-    @Test
-    @DatabaseSetup("/EmptyDatabase.xml")
-    @DatabaseSetup("/UserTestGetUser.xml")
-    @DatabaseTearDown("/EmptyDatabase.xml")
-    public void testGetUser() throws Exception {
-        UserAccount u1 = userAccountService.getByEmail("test");
-        Assert.assertNull(u1);
-        UserAccount u2 = userAccountService.getByEmail("test@test.test");
-        Assert.assertEquals("blub", u2.getPassword());
-    }
+	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@ExpectedDatabase(value = "/UserTestAddUser.xml", assertionMode = DatabaseAssertionMode.NON_STRICT_UNORDERED)
+	@DatabaseTearDown("/EmptyDatabase.xml")
+	public void testAddUser() throws Exception {
+		UserAccount userAccount = new UserAccount();
+		userAccount.setBalance(BigDecimal.ONE)
+			.setCreationDate(new Date(1))
+			.setDeleted(false)
+			.setEmail("test@test.test")
+			.setEmailToken(null)
+			.setPassword("blub")
+			.setUsername("blib");
+		userAccountService.save(userAccount);
+	}
+
+	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseSetup("/UserTestGetUser.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
+	public void testGetUser() throws Exception {
+		UserAccount u1 = userAccountService.getByEmail("test");
+		Assert.assertNull(u1);
+		UserAccount u2 = userAccountService.getByEmail("test@test.test");
+		Assert.assertEquals("blub", u2.getPassword());
+	}
 }

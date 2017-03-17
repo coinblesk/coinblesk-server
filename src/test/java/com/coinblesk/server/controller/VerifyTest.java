@@ -49,135 +49,128 @@ import java.util.List;
  */
 public class VerifyTest extends CoinbleskTest {
 
-    @Autowired
-    private WebApplicationContext webAppContext;
+	@Autowired
+	private WebApplicationContext webAppContext;
 
-    @Autowired
-    private AppConfig appConfig;
+	@Autowired
+	private AppConfig appConfig;
 
-    @Autowired
-    private WalletService walletService;
+	@Autowired
+	private WalletService walletService;
 
-    private static MockMvc mockMvc;
+	private static MockMvc mockMvc;
 
-    private NetworkParameters params;
+	private NetworkParameters params;
 
-    private Client client;
-    private Client merchant;
-    
-    private Transaction funding;
+	private Client client;
+	private Client merchant;
 
-    @Before
-    public void setUp() throws Exception {
-        walletService.shutdown();
-        mockMvc = MockMvcBuilders
-                .webAppContextSetup(webAppContext)
-                .build();
-        walletService.init();
-        client = new Client(appConfig.getNetworkParameters(), mockMvc);
-        merchant = new Client(appConfig.getNetworkParameters(), mockMvc);
-        params = appConfig.getNetworkParameters();
+	private Transaction funding;
 
-        funding = Client.sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(),
-                walletService.blockChain(), client.blockChain(), merchant.blockChain());
-    }
+	@Before
+	public void setUp() throws Exception {
+		walletService.shutdown();
+		mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();
+		walletService.init();
+		client = new Client(appConfig.getNetworkParameters(), mockMvc);
+		merchant = new Client(appConfig.getNetworkParameters(), mockMvc);
+		params = appConfig.getNetworkParameters();
 
-    @After
-    public void tearDown() {
-        client.deleteWallet();
-        merchant.deleteWallet();
-    }
+		funding = Client.sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(), walletService.blockChain(),
+				client.blockChain(), merchant.blockChain());
+	}
 
-    @Test
-    @DatabaseSetup("/EmptyDatabase.xml")
-    @DatabaseTearDown("/EmptyDatabase.xml")
-    public void testVerify() throws Exception {
-        Transaction txClient = BitcoinUtils.createTx(
-                params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
-                9876, true);
-        
-        SignTO status = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
-                merchant.p2shAddress(), 9876, client, new Date());
-        Assert.assertTrue(status.isSuccess());
-        
-        List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(txClient, client.redeemScript(), client.ecKey());
-        
-        Transaction txVerification = BitcoinUtils.createTx(params, client.outpoints(funding), client.redeemScript(),
-                    client.p2shAddress(), merchant.p2shAddress(), 9876, true);
-        Assert.assertTrue(SerializeUtils.verifyTxSignatures(txVerification, clientSigs, client.redeemScript(), client.ecKey()));
-        
-        VerifyTO verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), 
-                merchant.p2shAddress(), 9876, client, SerializeUtils.serializeSignatures(clientSigs),
-                status.signatures(), new Date());
-        Assert.assertTrue(verify.isSuccess());
-        
-        verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), 
-                merchant.p2shAddress(), 9876, client, SerializeUtils.serializeSignatures(clientSigs),
-                status.signatures(), new Date());
-        Assert.assertTrue(verify.isSuccess());        
-    }
-    
-    @Test
-    @DatabaseSetup("/EmptyDatabase.xml")
-    @DatabaseTearDown("/EmptyDatabase.xml")
-    public void testVerifyDoubleSpending() throws Exception {
-        Transaction txClient1 = BitcoinUtils.createTx(
-                params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
-                9876, true);
-        Address unknown = new ECKey().toAddress(params);
-        
-        SignTO status1 = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
-                merchant.p2shAddress(), 9876, client, new Date());
-        Assert.assertTrue(status1.isSuccess());
-        SignTO status2 = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
-                unknown, 9876, client, new Date());
-        Assert.assertTrue(status2.isSuccess());
-        
-        List<TransactionSignature> clientSigs1 = BitcoinUtils.partiallySign(txClient1, client.redeemScript(), client.ecKey());
-        
-        VerifyTO verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), 
-                merchant.p2shAddress(), 9876, client, SerializeUtils.serializeSignatures(clientSigs1),
-                status1.signatures(), new Date());
-        Assert.assertTrue(verify.isSuccess());
-        Assert.assertEquals(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT, verify.type());
-    }
-    
-    @Test
-    @DatabaseSetup("/EmptyDatabase.xml")
-    @DatabaseTearDown("/EmptyDatabase.xml")
-    public void testVerifyDoubleSpending2() throws Exception {
-        Transaction txClient1 = BitcoinUtils.createTx(
-                params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), merchant.p2shAddress(),
-                9876, true);
-        Address unknown = new ECKey().toAddress(params);
-        Transaction txClient2 = BitcoinUtils.createTx(
-                params,  client.outpoints(funding), client.redeemScript(), client.p2shAddress(), unknown,
-                9876, true);
-        
-        Assert.assertFalse(txClient1.getHash().equals(txClient2.getHash()));
-        
-        SignTO status1 = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
-                merchant.p2shAddress(), 9876, client, new Date());
-        Assert.assertTrue(status1.isSuccess());
-        
-        
-        List<TransactionSignature> clientSigs1 = BitcoinUtils.partiallySign(txClient1, client.redeemScript(), client.ecKey());
-        List<TransactionSignature> clientSigs2 = BitcoinUtils.partiallySign(txClient2, client.redeemScript(), client.ecKey());
-        
-        VerifyTO verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), 
-                merchant.p2shAddress(), 9876, client, SerializeUtils.serializeSignatures(clientSigs1),
-                status1.signatures(), new Date());
-        Assert.assertTrue(verify.isSuccess());
-        Assert.assertEquals(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT, verify.type());
-        
-        SignTO status2 = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
-                unknown, 9876, client, new Date());
-        Assert.assertTrue(status2.isSuccess());
-        
-        verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), 
-                unknown, 9876, client, SerializeUtils.serializeSignatures(clientSigs2),
-                status2.signatures(), new Date());
-        Assert.assertTrue(verify.isSuccess());        
-        Assert.assertEquals(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT, verify.type());
-    }
+	@After
+	public void tearDown() {
+		client.deleteWallet();
+		merchant.deleteWallet();
+	}
+
+	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
+	public void testVerify() throws Exception {
+		Transaction txClient = BitcoinUtils.createTx(params, client.outpoints(funding), client.redeemScript(),
+				client.p2shAddress(), merchant.p2shAddress(), 9876, true);
+
+		SignTO status = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding), merchant.p2shAddress(), 9876,
+				client, new Date());
+		Assert.assertTrue(status.isSuccess());
+
+		List<TransactionSignature> clientSigs = BitcoinUtils.partiallySign(txClient, client.redeemScript(),
+				client.ecKey());
+
+		Transaction txVerification = BitcoinUtils.createTx(params, client.outpoints(funding), client.redeemScript(),
+				client.p2shAddress(), merchant.p2shAddress(), 9876, true);
+		Assert.assertTrue(
+				SerializeUtils.verifyTxSignatures(txVerification, clientSigs, client.redeemScript(), client.ecKey()));
+
+		VerifyTO verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), merchant.p2shAddress(),
+				9876, client, SerializeUtils.serializeSignatures(clientSigs), status.signatures(), new Date());
+		Assert.assertTrue(verify.isSuccess());
+
+		verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), merchant.p2shAddress(), 9876,
+				client, SerializeUtils.serializeSignatures(clientSigs), status.signatures(), new Date());
+		Assert.assertTrue(verify.isSuccess());
+	}
+
+	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
+	public void testVerifyDoubleSpending() throws Exception {
+		Transaction txClient1 = BitcoinUtils.createTx(params, client.outpoints(funding), client.redeemScript(),
+				client.p2shAddress(), merchant.p2shAddress(), 9876, true);
+		Address unknown = new ECKey().toAddress(params);
+
+		SignTO status1 = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding), merchant.p2shAddress(), 9876,
+				client, new Date());
+		Assert.assertTrue(status1.isSuccess());
+		SignTO status2 = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding), unknown, 9876, client,
+				new Date());
+		Assert.assertTrue(status2.isSuccess());
+
+		List<TransactionSignature> clientSigs1 = BitcoinUtils.partiallySign(txClient1, client.redeemScript(),
+				client.ecKey());
+
+		VerifyTO verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), merchant.p2shAddress(),
+				9876, client, SerializeUtils.serializeSignatures(clientSigs1), status1.signatures(), new Date());
+		Assert.assertTrue(verify.isSuccess());
+		Assert.assertEquals(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT, verify.type());
+	}
+
+	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
+	public void testVerifyDoubleSpending2() throws Exception {
+		Transaction txClient1 = BitcoinUtils.createTx(params, client.outpoints(funding), client.redeemScript(),
+				client.p2shAddress(), merchant.p2shAddress(), 9876, true);
+		Address unknown = new ECKey().toAddress(params);
+		Transaction txClient2 = BitcoinUtils.createTx(params, client.outpoints(funding), client.redeemScript(),
+				client.p2shAddress(), unknown, 9876, true);
+
+		Assert.assertFalse(txClient1.getHash().equals(txClient2.getHash()));
+
+		SignTO status1 = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding), merchant.p2shAddress(), 9876,
+				client, new Date());
+		Assert.assertTrue(status1.isSuccess());
+
+		List<TransactionSignature> clientSigs1 = BitcoinUtils.partiallySign(txClient1, client.redeemScript(),
+				client.ecKey());
+		List<TransactionSignature> clientSigs2 = BitcoinUtils.partiallySign(txClient2, client.redeemScript(),
+				client.ecKey());
+
+		VerifyTO verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), merchant.p2shAddress(),
+				9876, client, SerializeUtils.serializeSignatures(clientSigs1), status1.signatures(), new Date());
+		Assert.assertTrue(verify.isSuccess());
+		Assert.assertEquals(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT, verify.type());
+
+		SignTO status2 = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding), unknown, 9876, client,
+				new Date());
+		Assert.assertTrue(status2.isSuccess());
+
+		verify = ServerCalls.verifyServerCall(mockMvc, client.outpointsRaw(funding), unknown, 9876, client,
+				SerializeUtils.serializeSignatures(clientSigs2), status2.signatures(), new Date());
+		Assert.assertTrue(verify.isSuccess());
+		Assert.assertEquals(Type.SUCCESS_BUT_NO_INSTANT_PAYMENT, verify.type());
+	}
 }

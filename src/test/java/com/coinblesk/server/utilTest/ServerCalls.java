@@ -30,117 +30,112 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 public class ServerCalls {
 
-    public static VerifyTO verifyServerCall(MockMvc mockMvc,
-            List<Pair<byte[], Long>> outpointCoinPair, Address to, long amount, Client client,
-            List<TxSig> clientSigs,
-            List<TxSig> serverSigs, Date date) throws UnsupportedEncodingException, Exception {
-        VerifyTO cs = verifyServerCallInput(outpointCoinPair, to, amount, client.ecKey(), clientSigs,
-                serverSigs, date);
-        return verifyServerCallOutput(mockMvc, cs);
-    }
+	public static VerifyTO verifyServerCall(MockMvc mockMvc,
+			List<Pair<byte[], Long>> outpointCoinPair, Address to, long amount, Client client,
+			List<TxSig> clientSigs,
+			List<TxSig> serverSigs, Date date) throws UnsupportedEncodingException, Exception {
+		VerifyTO cs = verifyServerCallInput(outpointCoinPair, to, amount, client.ecKey(), clientSigs,
+				serverSigs, date);
+		return verifyServerCallOutput(mockMvc, cs);
+	}
 
-    public static VerifyTO verifyServerCallInput(List<Pair<byte[], Long>> outpointCoinPair, Address to,
-            long amount, ECKey client, List<TxSig> clientSigs, List<TxSig> serverSigs, Date date) throws Exception {
-        VerifyTO prepareHalfSignTO = new VerifyTO()
-                .outpointsCoinPair(outpointCoinPair)
-                .amountToSpend(amount)
-                .p2shAddressTo(to.toString())
-                .publicKey(client.getPubKey())
-                .serverSignatures(serverSigs)
-                .clientSignatures(clientSigs)
-                .currentDate(date.getTime());
-        SerializeUtils.signJSON(prepareHalfSignTO, client);
-        return prepareHalfSignTO;
-    }
+	public static VerifyTO verifyServerCallInput(List<Pair<byte[], Long>> outpointCoinPair, Address to,
+			long amount, ECKey client, List<TxSig> clientSigs, List<TxSig> serverSigs, Date date) throws Exception {
+			VerifyTO prepareHalfSignTO = new VerifyTO()
+				.outpointsCoinPair(outpointCoinPair)
+				.amountToSpend(amount)
+				.p2shAddressTo(to.toString())
+				.publicKey(client.getPubKey())
+				.serverSignatures(serverSigs)
+				.clientSignatures(clientSigs)
+				.currentDate(date.getTime());
+		SerializeUtils.signJSON(prepareHalfSignTO, client);
+		return prepareHalfSignTO;
+	}
 
-    public static VerifyTO verifyServerCall(
-            MockMvc mockMvc, ECKey client, Address p2shAddressTo, Transaction fullTx, Date now) throws UnsupportedEncodingException, Exception {
-        VerifyTO cs = verifyServerCallInput(client, p2shAddressTo, fullTx, now);
-        return verifyServerCallOutput(mockMvc, cs);
-    }
+	public static VerifyTO verifyServerCall(MockMvc mockMvc, ECKey client, Address p2shAddressTo, Transaction fullTx,
+			Date now) throws UnsupportedEncodingException, Exception {
+		VerifyTO cs = verifyServerCallInput(client, p2shAddressTo, fullTx, now);
+		return verifyServerCallOutput(mockMvc, cs);
+	}
 
-    public static VerifyTO verifyServerCallInput(
-            ECKey client, Address p2shAddressTo, Transaction fullTx, Date now) throws UnsupportedEncodingException, Exception {
-        VerifyTO cs = new VerifyTO()
-                .publicKey(client.getPubKey())
-                .transaction(fullTx.unsafeBitcoinSerialize())
-                .currentDate(now.getTime());
-        SerializeUtils.signJSON(cs, client);
-        return cs;
-    }
+	public static VerifyTO verifyServerCallInput(ECKey client, Address p2shAddressTo, Transaction fullTx, Date now)
+			throws UnsupportedEncodingException, Exception {
+		VerifyTO cs = new VerifyTO().publicKey(client.getPubKey())
+									.transaction(fullTx.unsafeBitcoinSerialize())
+									.currentDate(now.getTime());
+		SerializeUtils.signJSON(cs, client);
+		return cs;
+	}
 
-    public static VerifyTO verifyServerCallOutput(MockMvc mockMvc, VerifyTO cs) throws Exception {
-        MvcResult res = mockMvc.perform(post("/v2/p/v").secure(true).
-                contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(cs))).andExpect(
-                status().isOk()).andReturn();
-        return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), VerifyTO.class);
-    }
+	public static VerifyTO verifyServerCallOutput(MockMvc mockMvc, VerifyTO cs) throws Exception {
+		MvcResult res = mockMvc.perform(post("/v2/p/v").secure(true).contentType(MediaType.APPLICATION_JSON).content(
+				SerializeUtils.GSON.toJson(cs))).andExpect(status().isOk()).andReturn();
+		return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), VerifyTO.class);
+	}
 
-    public static RefundTO refundServerCall(NetworkParameters params, MockMvc mockMvc, ECKey client,
-            List<Pair<TransactionOutPoint, Coin>> refundClientOutpoints,
-            List<TransactionSignature> partiallySignedRefundClient, Date date, long lockTime) throws Exception {
-        RefundTO refundP2shTO = refundServerCallInput(params, client, refundClientOutpoints,
-                partiallySignedRefundClient, date, lockTime);
-        return refundServerCallOutput(mockMvc, refundP2shTO);
-    }
+	public static RefundTO refundServerCall(NetworkParameters params, MockMvc mockMvc, ECKey client,
+			List<Pair<TransactionOutPoint, Coin>> refundClientOutpoints,
+			List<TransactionSignature> partiallySignedRefundClient, Date date, long lockTime) throws Exception {
+		RefundTO refundP2shTO = refundServerCallInput(params, client, refundClientOutpoints,
+				partiallySignedRefundClient, date, lockTime);
+		return refundServerCallOutput(mockMvc, refundP2shTO);
+	}
 
-    public static RefundTO refundServerCallInput(NetworkParameters params, ECKey client,
-            List<Pair<TransactionOutPoint, Coin>> refundClientOutpoints,
-            List<TransactionSignature> partiallySignedRefundClient, Date date, long lockTimeSeconds) throws Exception {
-        RefundTO refundP2shTO = new RefundTO()
-                .publicKey(client.getPubKey())
-                .outpointsCoinPair(SerializeUtils.serializeOutPointsCoin(refundClientOutpoints))
-                .clientSignatures(SerializeUtils.serializeSignatures(partiallySignedRefundClient))
-                .refundSendTo(client.toAddress(params).toString())
-                .lockTimeSeconds(lockTimeSeconds)
-                .currentDate(date.getTime());
-        SerializeUtils.signJSON(refundP2shTO, client);
-        return refundP2shTO;
-    }
+	public static RefundTO refundServerCallInput(NetworkParameters params, ECKey client,
+			List<Pair<TransactionOutPoint, Coin>> refundClientOutpoints,
+			List<TransactionSignature> partiallySignedRefundClient, Date date, long lockTimeSeconds) throws Exception {
+		RefundTO refundP2shTO = new RefundTO()	.publicKey(client.getPubKey())
+												.outpointsCoinPair(
+														SerializeUtils.serializeOutPointsCoin(refundClientOutpoints))
+												.clientSignatures(
+														SerializeUtils.serializeSignatures(partiallySignedRefundClient))
+												.refundSendTo(client.toAddress(params).toString())
+												.lockTimeSeconds(lockTimeSeconds)
+												.currentDate(date.getTime());
+		SerializeUtils.signJSON(refundP2shTO, client);
+		return refundP2shTO;
+	}
 
-    public static RefundTO refundServerCallOutput(MockMvc mockMvc, RefundTO refundP2shTO) throws Exception {
-        MvcResult res = mockMvc.perform(post("/p/r").secure(true).
-                contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(refundP2shTO)))
-                .andExpect(status().isOk()).andReturn();
-        return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), RefundTO.class);
-    }
+	public static RefundTO refundServerCallOutput(MockMvc mockMvc, RefundTO refundP2shTO) throws Exception {
+		MvcResult res = mockMvc.perform(post("/p/r").secure(true).contentType(MediaType.APPLICATION_JSON).content(
+				SerializeUtils.GSON.toJson(refundP2shTO))).andExpect(status().isOk()).andReturn();
+		return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), RefundTO.class);
+	}
 
-    public static SignTO signServerCall(MockMvc mockMvc, List<Pair<byte[], Long>> outpointCoinPair, Address to,
-            long amount, Client client, Date date) throws Exception {
-        SignTO prepareHalfSignTO = signServerCallInput(outpointCoinPair, to, amount, client.ecKey(), date);
-        return signServerCallOutput(mockMvc, prepareHalfSignTO);
-    }
+	public static SignTO signServerCall(MockMvc mockMvc, List<Pair<byte[], Long>> outpointCoinPair, Address to,
+			long amount, Client client, Date date) throws Exception {
+		SignTO prepareHalfSignTO = signServerCallInput(outpointCoinPair, to, amount, client.ecKey(), date);
+		return signServerCallOutput(mockMvc, prepareHalfSignTO);
+	}
 
-    public static SignTO signServerCallInput(List<Pair<byte[], Long>> outpointCoinPair, Address to,
-            long amount, ECKey client, Date date) throws Exception {
-        SignTO prepareHalfSignTO = new SignTO()
-                .outpointsCoinPair(outpointCoinPair)
-                .amountToSpend(amount)
-                .p2shAddressTo(to.toString())
-                .publicKey(client.getPubKey())
-                .currentDate(date.getTime());
-        SerializeUtils.signJSON(prepareHalfSignTO, client);
-        return prepareHalfSignTO;
-    }
+	public static SignTO signServerCallInput(List<Pair<byte[], Long>> outpointCoinPair, Address to, long amount,
+			ECKey client, Date date) throws Exception {
+		SignTO prepareHalfSignTO = new SignTO()	.outpointsCoinPair(outpointCoinPair)
+												.amountToSpend(amount)
+												.p2shAddressTo(to.toString())
+												.publicKey(client.getPubKey())
+												.currentDate(date.getTime());
+		SerializeUtils.signJSON(prepareHalfSignTO, client);
+		return prepareHalfSignTO;
+	}
 
-    public static SignTO signServerCall(MockMvc mockMvc, Transaction tx, Client client, Date date) throws Exception {
-        SignTO prepareHalfSignTO = signServerCallInput(tx, client.ecKey(), date);
-        return signServerCallOutput(mockMvc, prepareHalfSignTO);
-    }
+	public static SignTO signServerCall(MockMvc mockMvc, Transaction tx, Client client, Date date) throws Exception {
+		SignTO prepareHalfSignTO = signServerCallInput(tx, client.ecKey(), date);
+		return signServerCallOutput(mockMvc, prepareHalfSignTO);
+	}
 
-    public static SignTO signServerCallInput(Transaction tx, ECKey client, Date date) throws Exception {
-        SignTO prepareHalfSignTO = new SignTO()
-                .transaction(tx.unsafeBitcoinSerialize())
-                .publicKey(client.getPubKey())
-                .currentDate(date.getTime());
-        SerializeUtils.signJSON(prepareHalfSignTO, client);
-        return prepareHalfSignTO;
-    }
+	public static SignTO signServerCallInput(Transaction tx, ECKey client, Date date) throws Exception {
+		SignTO prepareHalfSignTO = new SignTO()	.transaction(tx.unsafeBitcoinSerialize())
+												.publicKey(client.getPubKey())
+												.currentDate(date.getTime());
+		SerializeUtils.signJSON(prepareHalfSignTO, client);
+		return prepareHalfSignTO;
+	}
 
-    public static SignTO signServerCallOutput(MockMvc mockMvc, SignTO prepareHalfSignTO) throws Exception {
-        MvcResult res = mockMvc.perform(post("/v2/p/s").secure(true).
-                contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(prepareHalfSignTO)))
-                .andExpect(status().isOk()).andReturn();
-        return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), SignTO.class);
-    }
+	public static SignTO signServerCallOutput(MockMvc mockMvc, SignTO prepareHalfSignTO) throws Exception {
+		MvcResult res = mockMvc.perform(post("/v2/p/s").secure(true).contentType(MediaType.APPLICATION_JSON).content(
+				SerializeUtils.GSON.toJson(prepareHalfSignTO))).andExpect(status().isOk()).andReturn();
+		return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), SignTO.class);
+	}
 }

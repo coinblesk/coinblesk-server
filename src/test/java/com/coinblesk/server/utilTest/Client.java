@@ -48,175 +48,172 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 public class Client {
 
-    
+	final private ECKey ecKey;
+	final private ECKey ecKeyServer;
+	final private Script p2shScript;
+	final private Script redeemScript;
+	final private Address p2shAddress;
+	final private NetworkParameters params;
+	final private WalletAppKit clientAppKit;
+	final private File tmpDir;
 
-    final private ECKey ecKey;
-    final private ECKey ecKeyServer;
-    final private Script p2shScript;
-    final private Script redeemScript;
-    final private Address p2shAddress;
-    final private NetworkParameters params;
-    final private WalletAppKit clientAppKit;
-    final private File tmpDir;
+	public Client(NetworkParameters params, MockMvc mockMvc) throws Exception {
+		this.params = params;
+		this.ecKey = new ECKey();
+		this.ecKeyServer = register(ecKey, mockMvc);
+		this.p2shScript = createP2SHScript(ecKey, ecKeyServer);
+		this.redeemScript = createRedeemScript(ecKey, ecKeyServer);
+		this.p2shAddress = p2shScript.getToAddress(params);
+		this.tmpDir = Files.createTempDir();
+		this.clientAppKit = createAppKit();
+	}
 
-    public Client(NetworkParameters params, MockMvc mockMvc) throws Exception {
-        this.params = params;
-        this.ecKey = new ECKey();
-        this.ecKeyServer = register(ecKey, mockMvc);
-        this.p2shScript = createP2SHScript(ecKey, ecKeyServer);
-        this.redeemScript = createRedeemScript(ecKey, ecKeyServer);
-        this.p2shAddress = p2shScript.getToAddress(params);
-        this.tmpDir = Files.createTempDir();
-        this.clientAppKit = createAppKit();
-    }
+	public Client(NetworkParameters params, ECKey ecKeyClient, ECKey ecKeyServer) throws Exception {
+		this.params = params;
+		this.ecKey = ecKeyClient;
+		this.ecKeyServer = ecKeyServer;
+		this.p2shScript = createP2SHScript(ecKey, ecKeyServer);
+		this.redeemScript = createRedeemScript(ecKey, ecKeyServer);
+		this.p2shAddress = p2shScript.getToAddress(params);
+		this.tmpDir = Files.createTempDir();
+		this.clientAppKit = createAppKit();
+	}
 
-    public Client(NetworkParameters params, ECKey ecKeyClient, ECKey ecKeyServer) throws Exception {
-        this.params = params;
-        this.ecKey = ecKeyClient;
-        this.ecKeyServer = ecKeyServer;
-        this.p2shScript = createP2SHScript(ecKey, ecKeyServer);
-        this.redeemScript = createRedeemScript(ecKey, ecKeyServer);
-        this.p2shAddress = p2shScript.getToAddress(params);
-        this.tmpDir = Files.createTempDir();
-        this.clientAppKit = createAppKit();
-    }
-    
-    private WalletAppKit createAppKit() {
-        final WalletAppKit walletAppKit = new WalletAppKit(params, tmpDir, p2shAddress.toString());
-        walletAppKit.setDiscovery(new PeerDiscovery() {
-            @Override
-            public void shutdown() {
-            }
+	private WalletAppKit createAppKit() {
+		final WalletAppKit walletAppKit = new WalletAppKit(params, tmpDir, p2shAddress.toString());
+		walletAppKit.setDiscovery(new PeerDiscovery() {
+			@Override
+			public void shutdown() {
+			}
 
 			@Override
 			public InetSocketAddress[] getPeers(long services, long timeoutValue, TimeUnit timeoutUnit)
 					throws PeerDiscoveryException {
 				return new InetSocketAddress[0];
 			}
-        });
-        walletAppKit.setBlockingStartup(false);
-        walletAppKit.startAsync().awaitRunning();
-        walletAppKit.wallet().addWatchedAddress(ecKey.toAddress(params));
-        walletAppKit.wallet().addWatchedAddress(p2shAddress);
-        return walletAppKit;
-    }
-    
-    
+		});
+		walletAppKit.setBlockingStartup(false);
+		walletAppKit.startAsync().awaitRunning();
+		walletAppKit.wallet().addWatchedAddress(ecKey.toAddress(params));
+		walletAppKit.wallet().addWatchedAddress(p2shAddress);
+		return walletAppKit;
+	}
 
-    public ECKey ecKey() {
-        return ecKey;
-    }
+	public ECKey ecKey() {
+		return ecKey;
+	}
 
-    public ECKey ecKeyServer() {
-        return ecKeyServer;
-    }
+	public ECKey ecKeyServer() {
+		return ecKeyServer;
+	}
 
-    public Script p2shScript() {
-        return p2shScript;
-    }
+	public Script p2shScript() {
+		return p2shScript;
+	}
 
-    public Script redeemScript() {
-        return redeemScript;
-    }
+	public Script redeemScript() {
+		return redeemScript;
+	}
 
-    public Address p2shAddress() {
-        return p2shAddress;
-    }
-    
-    public BlockChain blockChain() {
-        return clientAppKit.chain();
-    }
+	public Address p2shAddress() {
+		return p2shAddress;
+	}
 
-    private Script createP2SHScript(ECKey ecKeyClient, ECKey ecKeyServer) {
-        final List<ECKey> keys = new ArrayList<>();
-        keys.add(ecKeyClient);
-        keys.add(ecKeyServer);
-        return BitcoinUtils.createP2SHOutputScript(2, keys);
-    }
+	public BlockChain blockChain() {
+		return clientAppKit.chain();
+	}
 
-    public boolean clientFirst() {
-        final List<ECKey> keys = new ArrayList<>();
-        keys.add(ecKey);
-        keys.add(ecKeyServer);
-        Collections.sort(keys, ECKey.PUBKEY_COMPARATOR);
-        return BitcoinUtils.clientFirst(keys, ecKey);
-    }
+	private Script createP2SHScript(ECKey ecKeyClient, ECKey ecKeyServer) {
+		final List<ECKey> keys = new ArrayList<>();
+		keys.add(ecKeyClient);
+		keys.add(ecKeyServer);
+		return BitcoinUtils.createP2SHOutputScript(2, keys);
+	}
 
-    private Script createRedeemScript(ECKey ecKeyClient, ECKey ecKeyServer) {
-        final List<ECKey> keys = new ArrayList<>();
-        keys.add(ecKeyClient);
-        keys.add(ecKeyServer);
-        Collections.sort(keys, ECKey.PUBKEY_COMPARATOR);
-        return BitcoinUtils.createRedeemScript(2, keys);
-    }
+	public boolean clientFirst() {
+		final List<ECKey> keys = new ArrayList<>();
+		keys.add(ecKey);
+		keys.add(ecKeyServer);
+		Collections.sort(keys, ECKey.PUBKEY_COMPARATOR);
+		return BitcoinUtils.clientFirst(keys, ecKey);
+	}
 
-    private ECKey register(ECKey ecKeyClient, MockMvc mockMvc) throws Exception {
-        KeyTO keyTO = new KeyTO().publicKey(ecKeyClient.getPubKey());
-        MvcResult res = mockMvc.perform(post("/p/x").secure(true).
-                contentType(MediaType.APPLICATION_JSON).content(SerializeUtils.GSON.toJson(keyTO))).andExpect(
-                status().isOk()).andReturn();
-        KeyTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
-        return ECKey.fromPublicOnly(status.publicKey());
-    }
-    
-    
-    
-    public List<Pair<byte[], Long>> outpointsRaw(Transaction funding) {
-        List<Pair<byte[], Long>> retVal = new ArrayList<>(funding.getOutputs().size());
-        for(TransactionOutput output:funding.getOutputs()) {
-            if(p2shAddress.equals(output.getAddressFromP2SH(params))) {
-                retVal.add(new Pair<>(
-                    output.getOutPointFor().unsafeBitcoinSerialize(), output.getValue().getValue()));
-            }
-        }
-        return retVal;
-    }
-    
-    public List<Pair<TransactionOutPoint, Coin>> outpoints(Transaction funding) {
-        List<Pair<TransactionOutPoint, Coin>> retVal = new ArrayList<>(funding.getOutputs().size());
-        for(TransactionOutput output:funding.getOutputs()) {
-            if(p2shAddress.equals(output.getAddressFromP2SH(params))) {
-                retVal.add(new Pair<>(
-                    output.getOutPointFor(), output.getValue()));
-            }
-        }
-        return retVal;
-    }
-    
-    public Wallet wallet() {
-        return clientAppKit.wallet();
-    }
+	private Script createRedeemScript(ECKey ecKeyClient, ECKey ecKeyServer) {
+		final List<ECKey> keys = new ArrayList<>();
+		keys.add(ecKeyClient);
+		keys.add(ecKeyServer);
+		Collections.sort(keys, ECKey.PUBKEY_COMPARATOR);
+		return BitcoinUtils.createRedeemScript(2, keys);
+	}
 
-    public void deleteWallet() {
-        File[] walletFiles = tmpDir.listFiles(new FilenameFilter() {
-            @Override
-            public boolean accept(File dir, String name) {
-                return name.startsWith(p2shAddress.toString());
-            }
-        });
-        for (File f : walletFiles) {
-            f.delete();
-        }
-        tmpDir.delete();
-    }
-    
-    public static Transaction sendFakeCoins(NetworkParameters params, Coin amount, Address to, BlockChain... chains)
-            throws VerificationException, PrunedException, BlockStoreException, InterruptedException {
-        Transaction tx = FakeTxBuilder.createFakeTx(params, amount, to);
-        if(chains.length == 0) {
-            return tx;
-        }
-        final Block block = FakeTxBuilder.makeSolvedTestBlock(
-                chains[0].getBlockStore().getChainHead().getHeader(), tx);
-        for(BlockChain chain:chains) {
-            Block b = block.cloneAsHeader();
-            for(Transaction t:block.getTransactions()) {
-                b.addTransaction(new Transaction(params, t.unsafeBitcoinSerialize()));
-            }
-            chain.add(b);
-        }
+	private ECKey register(ECKey ecKeyClient, MockMvc mockMvc) throws Exception {
+		KeyTO keyTO = new KeyTO().publicKey(ecKeyClient.getPubKey());
+		MvcResult res = mockMvc.perform(post("/p/x")
+				.secure(true)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(SerializeUtils.GSON.toJson(keyTO)))
+				.andExpect(status().isOk())
+				.andReturn();
+		KeyTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
+		return ECKey.fromPublicOnly(status.publicKey());
+	}
 
-        return tx;
-    }
+	public List<Pair<byte[], Long>> outpointsRaw(Transaction funding) {
+		List<Pair<byte[], Long>> retVal = new ArrayList<>(funding.getOutputs().size());
+		for (TransactionOutput output : funding.getOutputs()) {
+			if (p2shAddress.equals(output.getAddressFromP2SH(params))) {
+				retVal.add(new Pair<>(output.getOutPointFor().unsafeBitcoinSerialize(),
+						output.getValue().getValue()));
+			}
+		}
+		return retVal;
+	}
+
+	public List<Pair<TransactionOutPoint, Coin>> outpoints(Transaction funding) {
+		List<Pair<TransactionOutPoint, Coin>> retVal = new ArrayList<>(funding.getOutputs().size());
+		for (TransactionOutput output : funding.getOutputs()) {
+			if (p2shAddress.equals(output.getAddressFromP2SH(params))) {
+				retVal.add(new Pair<>(output.getOutPointFor(), output.getValue()));
+			}
+		}
+		return retVal;
+	}
+
+	public Wallet wallet() {
+		return clientAppKit.wallet();
+	}
+
+	public void deleteWallet() {
+		File[] walletFiles = tmpDir.listFiles(new FilenameFilter() {
+			@Override
+			public boolean accept(File dir, String name) {
+				return name.startsWith(p2shAddress.toString());
+			}
+		});
+		for (File f : walletFiles) {
+			f.delete();
+		}
+		tmpDir.delete();
+	}
+
+	public static Transaction sendFakeCoins(NetworkParameters params, Coin amount, Address to, BlockChain... chains)
+			throws VerificationException, PrunedException, BlockStoreException, InterruptedException {
+		
+		Transaction tx = FakeTxBuilder.createFakeTx(params, amount, to);
+		if (chains.length == 0) {
+			return tx;
+		}
+		final Block block = FakeTxBuilder.makeSolvedTestBlock(
+				chains[0].getBlockStore().getChainHead().getHeader(), tx);
+		for (BlockChain chain : chains) {
+			Block b = block.cloneAsHeader();
+			for (Transaction t : block.getTransactions()) {
+				b.addTransaction(new Transaction(params, t.unsafeBitcoinSerialize()));
+			}
+			chain.add(b);
+		}
+
+		return tx;
+	}
 
 }

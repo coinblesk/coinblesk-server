@@ -15,8 +15,8 @@ import javax.annotation.PostConstruct;
  */
 @Configuration
 public class TestBean {
-    @PostConstruct 
-    public void init() {
-        System.setProperty("db.injectCredentials", "false");
-    }
+	@PostConstruct
+	public void init() {
+		System.setProperty("db.injectCredentials", "false");
+	}
 }
