@@ -15,6 +15,12 @@
  */
 package com.coinblesk.server.controller;
 
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
+import static org.springframework.web.bind.annotation.RequestMethod.GET;
+import static org.springframework.web.bind.annotation.RequestMethod.POST;
+
 import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.Locale;
@@ -37,7 +43,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -60,7 +65,7 @@ import com.coinblesk.util.Pair;
  * @author Thomas Bocek
  */
 @RestController
-@RequestMapping(value = { "/user", "/u" })
+@RequestMapping(value = "/user")
 @ApiVersion({ "v1", "" })
 public class UserController {
 
@@ -84,8 +89,11 @@ public class UserController {
 	@Autowired
 	private AuthenticationManager authenticationManager;
 
-	@RequestMapping(value = { "/login",
-			"/l" }, method = RequestMethod.POST, consumes = "application/json; charset=UTF-8", produces = "application/json; charset=UTF-8")
+	@RequestMapping(
+			value = "/login",
+			method = POST,
+			consumes = APPLICATION_JSON_UTF8_VALUE,
+			produces = APPLICATION_JSON_UTF8_VALUE)
 	public ResponseEntity<?> login(@Valid @RequestBody LoginDTO loginDTO, HttpServletResponse response) {
 
 		UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
@@ -107,8 +115,10 @@ public class UserController {
 	}
 
 	// CRUD for the user
-	@RequestMapping(value = { "/create",
-			"/c" }, method = RequestMethod.POST, consumes = "application/json; charset=UTF-8", produces = "application/json; charset=UTF-8")
+	@RequestMapping(value = "/create",
+			method = POST,
+			consumes = APPLICATION_JSON_UTF8_VALUE,
+			produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public UserAccountStatusTO createAccount(Locale locale, @RequestBody UserAccountTO userAccount) {
 		LOG.debug("Create account for {}", userAccount.email());
@@ -142,7 +152,9 @@ public class UserController {
 		}
 	}
 
-	@RequestMapping(value = { "/verify/{email}/{token}", "/v/{email}/{token}" }, method = RequestMethod.GET)
+	@RequestMapping(
+			value = "/verify/{email}/{token}",
+			method = GET)
 	@ResponseBody
 	public String verifyEmail(@PathVariable(value = "email") String email, @PathVariable(value = "token") String token,
 			HttpServletRequest request) {
@@ -169,7 +181,9 @@ public class UserController {
 	}
 
 	// http://stackoverflow.com/questions/16332092/spring-mvc-pathvariable-with-dot-is-getting-truncated
-	@RequestMapping(value = { "/forgot/{email:.+}", "/f/{email:.+}" }, method = RequestMethod.GET)
+	@RequestMapping(
+			value = "/forgot/{email:.+}",
+			method = GET)
 	@ResponseBody
 	public UserAccountStatusTO forgot(Locale locale, @PathVariable(value = "email") String email,
 			HttpServletRequest request) {
@@ -200,8 +214,9 @@ public class UserController {
 		}
 	}
 
-	@RequestMapping(value = { "/forgot-verify/{email}/{forgot-token}",
-			"/fv/{email}/{forgot-token}" }, method = RequestMethod.GET)
+	@RequestMapping(
+			value = "/forgot-verify/{email}/{forgot-token}",
+			method = GET)
 	@ResponseBody
 	public String forgotVerifyEmail(@PathVariable(value = "email") String email,
 			@PathVariable(value = "forgot-token") String forgetToken, HttpServletRequest request) {
@@ -228,7 +243,7 @@ public class UserController {
 		}
 	}
 
-	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
+	@ResponseStatus(value = BAD_REQUEST)
 	public class BadRequestException extends RuntimeException {
 
 		public BadRequestException(String reason) {
@@ -236,7 +251,7 @@ public class UserController {
 		}
 	}
 
-	@ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
+	@ResponseStatus(value = INTERNAL_SERVER_ERROR)
 	public class InternalServerErrorException extends RuntimeException {
 
 		public InternalServerErrorException(Throwable t) {

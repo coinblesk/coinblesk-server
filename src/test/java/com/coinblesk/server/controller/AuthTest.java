@@ -15,16 +15,14 @@
  */
 package com.coinblesk.server.controller;
 
-import com.coinblesk.json.v1.Type;
-import com.coinblesk.json.v1.UserAccountStatusTO;
-import com.coinblesk.json.v1.UserAccountTO;
-import com.coinblesk.server.service.MailService;
-import com.coinblesk.server.service.UserAccountService;
-import com.coinblesk.server.utilTest.CoinbleskTest;
-import com.coinblesk.util.SerializeUtils;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
-import io.jsonwebtoken.Jwts;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.Date;
+
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Before;
@@ -40,13 +38,17 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.util.Date;
+import com.coinblesk.json.v1.Type;
+import com.coinblesk.json.v1.UserAccountStatusTO;
+import com.coinblesk.json.v1.UserAccountTO;
+import com.coinblesk.server.service.MailService;
+import com.coinblesk.server.service.UserAccountService;
+import com.coinblesk.server.utilTest.CoinbleskTest;
+import com.coinblesk.util.SerializeUtils;
 
-import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.Jwts;
 
 /**
  *
@@ -75,7 +77,7 @@ public class AuthTest extends CoinbleskTest {
 	public void testCreateActivate() throws Exception {
 		mockMvc.perform(get("/v1/u/a/g")).andExpect(status().is4xxClientError());
 		UserAccountTO userAccountTO = new UserAccountTO();
-		MvcResult res = mockMvc	.perform(post("/v1/u/c").contentType(MediaType.APPLICATION_JSON)
+		MvcResult res = mockMvc	.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
 								.content(SerializeUtils.GSON.toJson(userAccountTO)))
 								.andExpect(status().isOk())
 								.andReturn();
@@ -84,7 +86,7 @@ public class AuthTest extends CoinbleskTest {
 		Assert.assertEquals(Type.NO_EMAIL.nr(), status.type().nr());
 
 		userAccountTO.email("test-test.test");
-		res = mockMvc	.perform(post("/v1/u/c").contentType(MediaType.APPLICATION_JSON)
+		res = mockMvc	.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
 						.content(SerializeUtils.GSON.toJson(userAccountTO)))
 						.andExpect(status().isOk())
 						.andReturn();
@@ -92,7 +94,7 @@ public class AuthTest extends CoinbleskTest {
 		Assert.assertEquals(Type.INVALID_EMAIL.nr(), status.type().nr());
 
 		userAccountTO.email("test@test.test");
-		res = mockMvc	.perform(post("/v1/u/c").contentType(MediaType.APPLICATION_JSON)
+		res = mockMvc	.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
 						.content(SerializeUtils.GSON.toJson(userAccountTO)))
 						.andExpect(status().isOk())
 						.andReturn();
@@ -100,7 +102,7 @@ public class AuthTest extends CoinbleskTest {
 		Assert.assertEquals(Type.PASSWORD_TOO_SHORT.nr(), status.type().nr());
 
 		userAccountTO.password("1234");
-		res = mockMvc	.perform(post("/v1/u/c").contentType(MediaType.APPLICATION_JSON)
+		res = mockMvc	.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
 						.content(SerializeUtils.GSON.toJson(userAccountTO)))
 						.andExpect(status().isOk())
 						.andReturn();
@@ -108,7 +110,7 @@ public class AuthTest extends CoinbleskTest {
 		Assert.assertEquals(Type.PASSWORD_TOO_SHORT.nr(), status.type().nr());
 
 		userAccountTO.password("123456");
-		res = mockMvc	.perform(post("/v1/u/c").contentType(MediaType.APPLICATION_JSON)
+		res = mockMvc	.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
 						.content(SerializeUtils.GSON.toJson(userAccountTO)))
 						.andExpect(status().isOk())
 						.andReturn();
@@ -118,7 +120,7 @@ public class AuthTest extends CoinbleskTest {
 				Mockito.anyString());
 		Mockito.verify(mailService, Mockito.times(0)).sendAdminMail(Mockito.anyString(), Mockito.anyString());
 
-		res = mockMvc	.perform(post("/v1/u/c").contentType(MediaType.APPLICATION_JSON)
+		res = mockMvc	.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
 						.content(SerializeUtils.GSON.toJson(userAccountTO)))
 						.andExpect(status().isOk())
 						.andReturn();
@@ -129,7 +131,7 @@ public class AuthTest extends CoinbleskTest {
 		Mockito.verify(mailService, Mockito.times(0)).sendAdminMail(Mockito.anyString(), Mockito.anyString());
 
 		// activate with wrong token sends admin an email
-		mockMvc.perform(get("/v1/u/v/test@test.test/blub")).andExpect(status().is5xxServerError());
+		mockMvc.perform(get("/v1/user/verify/test@test.test/blub")).andExpect(status().is5xxServerError());
 		Mockito.verify(mailService, Mockito.times(2)).sendUserMail(Mockito.anyString(), Mockito.anyString(),
 				Mockito.anyString());
 		Mockito.verify(mailService, Mockito.times(1)).sendAdminMail(Mockito.anyString(), Mockito.anyString());
@@ -137,7 +139,7 @@ public class AuthTest extends CoinbleskTest {
 		// get correct token
 		String token = userAccountService.getToken("test@test.test");
 		Assert.assertNotNull(token);
-		mockMvc.perform(get("/v1/u/v/test@test.test/" + token)).andExpect(status().isOk());
+		mockMvc.perform(get("/v1/user/verify/test@test.test/" + token)).andExpect(status().isOk());
 		Mockito.verify(mailService, Mockito.times(2)).sendUserMail(Mockito.anyString(), Mockito.anyString(),
 				Mockito.anyString());
 		Mockito.verify(mailService, Mockito.times(1)).sendAdminMail(Mockito.anyString(), Mockito.anyString());
