@@ -64,7 +64,10 @@ public class ForexController {
 	 *
 	 * @return CustomResponseObject with exchangeRate BTC/CHF as a String
 	 */
-	@RequestMapping(value = "/rate/{from}-{to}", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(
+			value = "/rate/{from}-{to}",
+			method = GET,
+			produces = APPLICATION_JSON_UTF8_VALUE)
 	@ApiVersion({ "v2" })
 	@ResponseBody
 	public ResponseEntity<ExchangeRateTO> forexExchangeRate(@PathVariable(value = "from") String from,
