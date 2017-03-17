@@ -1,5 +1,56 @@
 package com.coinblesk.server.controller;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.io.File;
+import java.io.FilenameFilter;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Block;
+import org.bitcoinj.core.BlockChain;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.ScriptException;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionInput;
+import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.crypto.TransactionSignature;
+import org.bitcoinj.kits.WalletAppKit;
+import org.bitcoinj.net.discovery.PeerDiscovery;
+import org.bitcoinj.net.discovery.PeerDiscoveryException;
+import org.bitcoinj.script.Script;
+import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletTransaction.Pool;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
+
 import com.coinblesk.bitcoin.AddressCoinSelector;
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.json.v1.KeyTO;
@@ -17,38 +68,6 @@ import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import com.google.common.io.Files;
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.TransactionSignature;
-import org.bitcoinj.kits.WalletAppKit;
-import org.bitcoinj.net.discovery.PeerDiscovery;
-import org.bitcoinj.net.discovery.PeerDiscoveryException;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.WalletTransaction.Pool;
-import org.junit.*;
-import org.junit.rules.ExpectedException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
-
-import java.io.File;
-import java.io.FilenameFilter;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
-import static org.junit.Assert.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 public class CompleteCLTVTest extends CoinbleskTest {
 
@@ -163,7 +182,7 @@ public class CompleteCLTVTest extends CoinbleskTest {
 	public void testSpend_BeforeLockTimeExpiry_ReversedSignatures() throws Exception {
 		thrown.expect(ScriptException.class);
 		// checksigverify is used for the server sig (before client)
-		thrown.expectMessage("Script failed OP_CHECKSIGVERIFY"); 
+		thrown.expectMessage("Script failed OP_CHECKSIGVERIFY");
 
 		Transaction tx = BitcoinUtils.createTx(
 				params,
@@ -449,9 +468,9 @@ public class CompleteCLTVTest extends CoinbleskTest {
 	}
 
 	/*******************************
-	 * 
+	 *
 	 * BLOCKCHAIN implementation
-	 * 
+	 *
 	 *******************************/
 
 	private Transaction fundClient(Address addressTo) throws Exception {
@@ -497,9 +516,9 @@ public class CompleteCLTVTest extends CoinbleskTest {
 	 */
 
 	/*******************************
-	 * 
+	 *
 	 * CLIENT implementation
-	 * 
+	 *
 	 *******************************/
 
 	private static class Client {
@@ -632,9 +651,10 @@ public class CompleteCLTVTest extends CoinbleskTest {
 
 		public TimeLockedAddress createTimeLockedAddress() throws Exception {
 			long locktime = (System.currentTimeMillis() + 5000L) / 1000L;
-			TimeLockedAddressTO requestTO = new TimeLockedAddressTO()	.currentDate(System.currentTimeMillis())
-																		.lockTime(locktime)
-																		.publicKey(clientKey.getPubKey());
+			TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
+					.currentDate(System.currentTimeMillis())
+					.lockTime(locktime)
+					.publicKey(clientKey.getPubKey());
 			SerializeUtils.signJSON(requestTO, clientKey);
 			MvcResult res = mockMvc.perform(
 					post(PaymentControllerTest.URL_CREATE_TIME_LOCKED_ADDRESS)

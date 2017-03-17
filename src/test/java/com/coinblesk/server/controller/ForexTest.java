@@ -50,9 +50,10 @@ public class ForexTest extends CoinbleskTest {
 
 	@Test
 	public void testV1() throws Exception {
-		MvcResult res = mockMvc	.perform(get("/forex/exchangeRate/CHF").secure(true))
-								.andExpect(status().isOk())
-								.andReturn();
+		MvcResult res = mockMvc
+				.perform(get("/forex/exchangeRate/CHF").secure(true))
+				.andExpect(status().isOk())
+				.andReturn();
 		ExchangeRateTO rate = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
 				ExchangeRateTO.class);
 		System.out.println("rate is: " + rate.rate() + "/" + rate.name());
@@ -61,9 +62,10 @@ public class ForexTest extends CoinbleskTest {
 
 	@Test
 	public void testV2() throws Exception {
-		MvcResult res = mockMvc	.perform(get("/v2/forex/rate/CHF-EUR").secure(true))
-								.andExpect(status().isOk())
-								.andReturn();
+		MvcResult res = mockMvc
+				.perform(get("/v2/forex/rate/CHF-EUR").secure(true))
+				.andExpect(status().isOk())
+				.andReturn();
 		ExchangeRateTO rate = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
 				ExchangeRateTO.class);
 		System.out.println("rate is: " + rate.rate() + "/" + rate.name());

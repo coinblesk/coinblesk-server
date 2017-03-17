@@ -41,10 +41,8 @@ import org.bitcoinj.script.Script;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -136,8 +134,9 @@ public class PaymentController {
 			// Input is OK: create and return address
 			final TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), serverKey.getPubKey(),
 					lockTime);
-			TimeLockedAddressTO responseTO = new TimeLockedAddressTO()	.currentDate(startTime.toEpochMilli())
-																		.timeLockedAddress(address);
+			TimeLockedAddressTO responseTO = new TimeLockedAddressTO()
+					.currentDate(startTime.toEpochMilli())
+					.timeLockedAddress(address);
 
 			// save if not exists
 			if (!keyService.addressExists(address.getAddressHash())) {
@@ -277,9 +276,10 @@ public class PaymentController {
 			return responseTO;
 		} catch (Exception e) {
 			LOG.error("{} - clientPubKey={} - SERVER_ERROR: ", tag, clientPubKeyHex, e);
-			return new SignVerifyTO()	.currentDate(System.currentTimeMillis())
-										.type(Type.SERVER_ERROR)
-										.message(e.getMessage());
+			return new SignVerifyTO()
+					.currentDate(System.currentTimeMillis())
+					.type(Type.SERVER_ERROR)
+					.message(e.getMessage());
 		} finally {
 			LOG.debug("{} - clientPubKey={} - finished in {} ms", tag, clientPubKeyHex,
 					Duration.between(startTime, Instant.now()).toMillis());

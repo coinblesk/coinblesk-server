@@ -5,17 +5,16 @@
  */
 package com.coinblesk.server.service;
 
-import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.json.v1.UserAccountTO;
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.entity.Keys;
-import com.coinblesk.server.entity.UserAccount;
-import com.coinblesk.server.utilTest.CoinbleskTest;
-import com.coinblesk.server.utilTest.FakeTxBuilder;
-import com.github.springtestdbunit.DbUnitTestExecutionListener;
-import com.github.springtestdbunit.annotation.DatabaseSetup;
-import com.github.springtestdbunit.annotation.DatabaseTearDown;
-import org.bitcoinj.core.*;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.List;
+
+import org.bitcoinj.core.Block;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.PrunedException;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.wallet.UnreadableWalletException;
@@ -29,10 +28,16 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.TestExecutionListeners;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.Date;
-import java.util.List;
+import com.coinblesk.bitcoin.TimeLockedAddress;
+import com.coinblesk.json.v1.UserAccountTO;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.entity.Keys;
+import com.coinblesk.server.entity.UserAccount;
+import com.coinblesk.server.utilTest.CoinbleskTest;
+import com.coinblesk.server.utilTest.FakeTxBuilder;
+import com.github.springtestdbunit.DbUnitTestExecutionListener;
+import com.github.springtestdbunit.annotation.DatabaseSetup;
+import com.github.springtestdbunit.annotation.DatabaseTearDown;
 
 /**
  *
@@ -74,13 +79,14 @@ public class UserAccountServiceTest extends CoinbleskTest {
 		}
 
 		UserAccount userAccount = new UserAccount();
-		userAccount	.setBalance(BigDecimal.ONE)
-					.setCreationDate(new Date(1))
-					.setDeleted(false)
-					.setEmail("test@test.test")
-					.setEmailToken(null)
-					.setPassword(passwordEncoder.encode("test"))
-					.setUsername("blib");
+		userAccount
+				.setBalance(BigDecimal.ONE)
+				.setCreationDate(new Date(1))
+				.setDeleted(false)
+				.setEmail("test@test.test")
+				.setEmailToken(null)
+				.setPassword(passwordEncoder.encode("test"))
+				.setUsername("blib");
 		userAccountService.save(userAccount);
 
 		Keys keys = keyService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),

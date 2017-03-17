@@ -77,53 +77,59 @@ public class AuthTest extends CoinbleskTest {
 	public void testCreateActivate() throws Exception {
 		mockMvc.perform(get("/v1/user/auth/get")).andExpect(status().is4xxClientError());
 		UserAccountTO userAccountTO = new UserAccountTO();
-		MvcResult res = mockMvc	.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
-								.content(SerializeUtils.GSON.toJson(userAccountTO)))
-								.andExpect(status().isOk())
-								.andReturn();
+		MvcResult res = mockMvc
+				.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
+				.content(SerializeUtils.GSON.toJson(userAccountTO)))
+				.andExpect(status().isOk())
+				.andReturn();
 		UserAccountStatusTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
 				UserAccountStatusTO.class);
 		Assert.assertEquals(Type.NO_EMAIL.nr(), status.type().nr());
 
 		userAccountTO.email("test-test.test");
-		res = mockMvc	.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
-						.content(SerializeUtils.GSON.toJson(userAccountTO)))
-						.andExpect(status().isOk())
-						.andReturn();
+		res = mockMvc
+				.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
+				.content(SerializeUtils.GSON.toJson(userAccountTO)))
+				.andExpect(status().isOk())
+				.andReturn();
 		status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
 		Assert.assertEquals(Type.INVALID_EMAIL.nr(), status.type().nr());
 
 		userAccountTO.email("test@test.test");
-		res = mockMvc	.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
-						.content(SerializeUtils.GSON.toJson(userAccountTO)))
-						.andExpect(status().isOk())
-						.andReturn();
+		res = mockMvc
+				.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
+				.content(SerializeUtils.GSON.toJson(userAccountTO)))
+				.andExpect(status().isOk())
+				.andReturn();
 		status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
 		Assert.assertEquals(Type.PASSWORD_TOO_SHORT.nr(), status.type().nr());
 
 		userAccountTO.password("1234");
-		res = mockMvc	.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
-						.content(SerializeUtils.GSON.toJson(userAccountTO)))
-						.andExpect(status().isOk())
-						.andReturn();
+		res = mockMvc
+				.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
+				.content(SerializeUtils.GSON.toJson(userAccountTO)))
+				.andExpect(status().isOk())
+				.andReturn();
 		status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
 		Assert.assertEquals(Type.PASSWORD_TOO_SHORT.nr(), status.type().nr());
 
 		userAccountTO.password("123456");
-		res = mockMvc	.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
-						.content(SerializeUtils.GSON.toJson(userAccountTO)))
-						.andExpect(status().isOk())
-						.andReturn();
+		res = mockMvc
+				.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
+				.content(SerializeUtils.GSON.toJson(userAccountTO)))
+				.andExpect(status().isOk())
+				.andReturn();
 		status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
 		Assert.assertTrue(status.isSuccess());
 		Mockito.verify(mailService, Mockito.times(1)).sendUserMail(Mockito.anyString(), Mockito.anyString(),
 				Mockito.anyString());
 		Mockito.verify(mailService, Mockito.times(0)).sendAdminMail(Mockito.anyString(), Mockito.anyString());
 
-		res = mockMvc	.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
-						.content(SerializeUtils.GSON.toJson(userAccountTO)))
-						.andExpect(status().isOk())
-						.andReturn();
+		res = mockMvc
+				.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
+				.content(SerializeUtils.GSON.toJson(userAccountTO)))
+				.andExpect(status().isOk())
+				.andReturn();
 		status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
 		Assert.assertEquals(Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_NOT_ACTIVATED.nr(), status.type().nr());
 		Mockito.verify(mailService, Mockito.times(2)).sendUserMail(Mockito.anyString(), Mockito.anyString(),
@@ -166,20 +172,24 @@ public class AuthTest extends CoinbleskTest {
 		Assert.assertEquals(claims.getBody().get("auth", String.class), "ROLE_USER");
 
 		// Get user profile with valid JWT
-		res = mockMvc	.perform(get("/v1/user/auth/get").header("Authorization", authorizationToken))
-						.andExpect(status().isOk())
-						.andReturn();
+		res = mockMvc
+				.perform(get("/v1/user/auth/get").header("Authorization", authorizationToken))
+				.andExpect(status().isOk())
+				.andReturn();
 		UserAccountTO uato = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountTO.class);
 		Assert.assertEquals("test@test.test", uato.email());
 	}
 
 	private String loginAndGetToken(String username, String password) throws Exception {
-		return mockMvc.perform(post("/user/login").contentType(MediaType.APPLICATION_JSON).content(
-				"{\"username\":\"test@test.test\",\"password\":\"123456\"}"))
-						.andExpect(status().isOk())
-						.andExpect(header().string("Authorization", Matchers.not(Matchers.isEmptyOrNullString())))
-						.andReturn()
-						.getResponse()
-						.getHeader("Authorization");
+		return mockMvc
+				.perform(
+						post("/user/login")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"username\":\"test@test.test\",\"password\":\"123456\"}"))
+				.andExpect(status().isOk())
+				.andExpect(header().string("Authorization", Matchers.not(Matchers.isEmptyOrNullString())))
+				.andReturn()
+				.getResponse()
+				.getHeader("Authorization");
 	}
 }

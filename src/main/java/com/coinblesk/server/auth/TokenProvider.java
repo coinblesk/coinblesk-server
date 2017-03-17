@@ -63,12 +63,13 @@ public class TokenProvider {
 			validity = new Date(now + this.tokenValidityInMilliseconds);
 		}
 
-		return Jwts	.builder()
-					.setSubject(authentication.getName())
-					.claim(AUTHORITIES_KEY, authorities)
-					.signWith(SignatureAlgorithm.HS256, secretKey)
-					.setExpiration(validity)
-					.compact();
+		return Jwts
+				.builder()
+				.setSubject(authentication.getName())
+				.claim(AUTHORITIES_KEY, authorities)
+				.signWith(SignatureAlgorithm.HS256, secretKey)
+				.setExpiration(validity)
+				.compact();
 	}
 
 	public Authentication getAuthentication(String token) {
