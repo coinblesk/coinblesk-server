@@ -15,11 +15,6 @@
  */
 package com.coinblesk.server.config;
 
-import com.coinblesk.server.auth.Http401UnauthorizedEntryPoint;
-import com.coinblesk.server.auth.JWTConfigurer;
-
-
-import com.coinblesk.server.auth.TokenProvider;
 import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -30,6 +25,10 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import com.coinblesk.server.auth.Http401UnauthorizedEntryPoint;
+import com.coinblesk.server.auth.JWTConfigurer;
+import com.coinblesk.server.auth.TokenProvider;
+
 /**
  *
  * @author Thomas Bocek
@@ -39,69 +38,55 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-    @Autowired
-    private Http401UnauthorizedEntryPoint http401UnauthorizedEntryPoint;
+	@Autowired
+	private Http401UnauthorizedEntryPoint http401UnauthorizedEntryPoint;
 
-    @Autowired
-    private TokenProvider tokenProvider;
+	@Autowired
+	private TokenProvider tokenProvider;
 
-    @Autowired
-    private UserDetailsService userDetailsService;
+	@Autowired
+	private UserDetailsService userDetailsService;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+	@Autowired
+	private PasswordEncoder passwordEncoder;
 
-    final private static String[] REQUIRE_USER_ROLE = {
-        "/user/a/**",
-        "/user/auth/**",
-        "/u/auth/**",
-        "/u/a/**",
-        "/v?/user/a/**",
-        "/v?/user/auth/**",
-        "/v?/u/auth/**",
-        "/v?/u/a/**" };
-    final private static String[] REQUIRE_ADMIN_ROLE = {
-        "/admin/**",
-        "/a/**",
-        "/v?/admin/**",
-        "/v?/a/**"};
+	final private static String[] REQUIRE_USER_ROLE = { "/user/auth/**", "/v?/user/auth/**"};
+	final private static String[] REQUIRE_ADMIN_ROLE = { "/admin/**", "/v?/admin/**" };
 
-    @Autowired
-    public void configureGlobal(AuthenticationManagerBuilder auth) {
-        try {
-            auth
-                .userDetailsService(userDetailsService)
-                    .passwordEncoder(passwordEncoder);
-        } catch (Exception e) {
-            throw new BeanInitializationException("Security configuration failed", e);
-        }
-    }
+	@Autowired
+	public void configureGlobal(AuthenticationManagerBuilder auth) {
+		try {
+			auth.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder);
+		} catch (Exception e) {
+			throw new BeanInitializationException("Security configuration failed", e);
+		}
+	}
 
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        http
-            .exceptionHandling()
-            .authenticationEntryPoint(http401UnauthorizedEntryPoint)
-        .and()
-            .csrf()
-            .disable()
-            .headers()
-            .frameOptions()
-            .sameOrigin()   // To allow h2 console
-        .and()
-            .sessionManagement()
-            .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-        .and()
-            .authorizeRequests()
-            //.antMatchers("/").permitAll()
-            .antMatchers(REQUIRE_USER_ROLE).hasAuthority(UserRole.USER.getAuthority())
-            .antMatchers(REQUIRE_ADMIN_ROLE).hasAuthority(UserRole.ADMIN.getAuthority())
-        .and()
-            .apply(securityConfigurerAdapter());
-    }
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+		http
+			.exceptionHandling()
+			.authenticationEntryPoint(http401UnauthorizedEntryPoint)
+		.and()
+			.csrf()
+			.disable()
+			.headers()
+			.frameOptions()
+			.sameOrigin() // To allow h2 console
+		.and()
+			.sessionManagement()
+			.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+		.and()
+			.authorizeRequests()
+			// .antMatchers("/").permitAll()
+			.antMatchers(REQUIRE_USER_ROLE).hasAuthority(UserRole.USER.getAuthority())
+			.antMatchers(REQUIRE_ADMIN_ROLE).hasAuthority(UserRole.ADMIN.getAuthority())
+		.and()
+			.apply(securityConfigurerAdapter());
+	}
 
-    private JWTConfigurer securityConfigurerAdapter() {
-        return new JWTConfigurer(tokenProvider);
-    }
+	private JWTConfigurer securityConfigurerAdapter() {
+		return new JWTConfigurer(tokenProvider);
+	}
 
 }
