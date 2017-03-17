@@ -15,6 +15,9 @@
  */
 package com.coinblesk.server.controller;
 
+import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
+import static org.springframework.web.bind.annotation.RequestMethod.POST;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
@@ -28,7 +31,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -43,7 +45,7 @@ import com.coinblesk.util.CoinbleskException;
  * @author Andreas Albrecht
  */
 @RestController
-@RequestMapping(value = { "/version", "/v" })
+@RequestMapping(value = "/version")
 @ApiVersion({ "v1" })
 public class VersionController {
 
@@ -55,8 +57,11 @@ public class VersionController {
 	@Autowired
 	private AppConfig appConfig;
 
-	@RequestMapping(value = {
-			"" }, method = RequestMethod.POST, consumes = "application/json; charset=UTF-8", produces = "application/json; charset=UTF-8")
+	@RequestMapping(
+			value = "",
+			method = POST,
+			consumes = APPLICATION_JSON_UTF8_VALUE,
+			produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public VersionTO version(@RequestBody VersionTO input) {
 		final String tag = "{version}";
