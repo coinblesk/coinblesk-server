@@ -39,57 +39,47 @@ import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.util.CoinbleskException;
 
-
 /**
  * @author Andreas Albrecht
  */
 @RestController
-@RequestMapping(value = {"/version", "/v"})
-@ApiVersion({"v1"})
+@RequestMapping(value = { "/version", "/v" })
+@ApiVersion({ "v1" })
 public class VersionController {
-	
+
 	private final static Logger LOG = LoggerFactory.getLogger(VersionController.class);
-		
+
 	@Autowired
-    private ServletContext context;
-	
+	private ServletContext context;
+
 	@Autowired
 	private AppConfig appConfig;
-	
-	@RequestMapping(
-    		value = {""},
-    		method = RequestMethod.POST,
-    		consumes = "application/json; charset=UTF-8",
-            produces = "application/json; charset=UTF-8")
-    @ResponseBody
-    public VersionTO version(@RequestBody VersionTO input) {
+
+	@RequestMapping(value = {
+			"" }, method = RequestMethod.POST, consumes = "application/json; charset=UTF-8", produces = "application/json; charset=UTF-8")
+	@ResponseBody
+	public VersionTO version(@RequestBody VersionTO input) {
 		final String tag = "{version}";
 		final Instant startTime = Instant.now();
-		
+
 		try {
 			final String serverVersion = getServerVersion();
 			final BitcoinNet serverNetwork = appConfig.getBitcoinNet();
 			final String clientVersion = input.clientVersion();
 			final BitcoinNet clientNetwork = input.bitcoinNet();
-						
+
 			if (clientVersion == null || clientVersion.isEmpty() || clientNetwork == null) {
 				return new VersionTO().type(Type.INPUT_MISMATCH);
 			}
-			
-			final boolean isSupported = isVersionSupported(clientVersion) && 
-										isNetworkSupported(clientNetwork);
-			LOG.debug("{} - serverVersion={}, serverNetwork={}, clientVersion={}, clientNetwork={}, isSupported={}", 
+
+			final boolean isSupported = isVersionSupported(clientVersion) && isNetworkSupported(clientNetwork);
+			LOG.debug("{} - serverVersion={}, serverNetwork={}, clientVersion={}, clientNetwork={}, isSupported={}",
 					tag, serverVersion, serverNetwork, clientVersion, clientNetwork, isSupported);
-			
-			return new VersionTO()
-					.bitcoinNet(serverNetwork)
-					.setSupported(isSupported)
-					.setSuccess();
+
+			return new VersionTO().bitcoinNet(serverNetwork).setSupported(isSupported).setSuccess();
 		} catch (Exception e) {
 			LOG.error("{} - failed with exception: ", tag, e);
-			return new VersionTO()
-					.type(Type.SERVER_ERROR)
-					.message(e.getMessage());
+			return new VersionTO().type(Type.SERVER_ERROR).message(e.getMessage());
 		} finally {
 			LOG.debug("{} - finished in {} ms", tag, Duration.between(startTime, Instant.now()).toMillis());
 		}
@@ -101,22 +91,23 @@ public class VersionController {
 
 	/**
 	 * Extracts the Version property from the manifest.
-	 * 
-	 * @return the version iff run as war packaged application. Otherwise, (UNKNOWN) is returned.
+	 *
+	 * @return the version iff run as war packaged application. Otherwise,
+	 *         (UNKNOWN) is returned.
 	 * @throws CoinbleskException
 	 */
 	private String getServerVersion() throws CoinbleskException {
-        // see: build.gradle
-    	final String versionKey = "Version";
-    	final String defaultVersion = "(UNKNOWN)";
-    	InputStream inputStream = null;
+		// see: build.gradle
+		final String versionKey = "Version";
+		final String defaultVersion = "(UNKNOWN)";
+		InputStream inputStream = null;
 		try {
 			inputStream = context.getResourceAsStream("/META-INF/MANIFEST.MF");
 			if (inputStream == null) {
 				LOG.warn("Manifest resource not found (inputStream=null, maybe not run as war file?).");
 				return defaultVersion;
 			}
-			
+
 			Properties prop = new Properties();
 			prop.load(inputStream);
 			if (prop.containsKey(versionKey)) {
@@ -135,7 +126,7 @@ public class VersionController {
 				}
 			}
 		}
-        return defaultVersion;
+		return defaultVersion;
 	}
 
 	private boolean isVersionSupported(String clientVersion) {
