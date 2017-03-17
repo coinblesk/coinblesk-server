@@ -15,6 +15,11 @@
  */
 package com.coinblesk.server.controller;
 
+import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
+import static org.springframework.web.bind.annotation.RequestMethod.GET;
+import static org.springframework.web.bind.annotation.RequestMethod.PATCH;
+import static org.springframework.web.bind.annotation.RequestMethod.POST;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -27,7 +32,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -44,7 +48,7 @@ import com.coinblesk.server.utils.ApiVersion;
  * @author Thomas Bocek
  */
 @RestController
-@RequestMapping(value = { "/user/a", "/user/auth", "/u/auth", "/u/a" })
+@RequestMapping(value = "/user/auth")
 @ApiVersion({ "v1" })
 public class UserControllerAuthenticated {
 
@@ -56,8 +60,10 @@ public class UserControllerAuthenticated {
 	@Autowired
 	private MailService mailService;
 
-	@RequestMapping(value = { "/delete",
-			"/d" }, method = RequestMethod.PATCH, produces = "application/json; charset=UTF-8")
+	@RequestMapping(
+			value = "/delete",
+			method = PATCH,
+			produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public UserAccountStatusTO deleteAccount() {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -74,13 +80,17 @@ public class UserControllerAuthenticated {
 			}
 			LOG.debug("Delete account success for {}", auth.getName());
 			return status;
+
 		} catch (Exception e) {
 			LOG.error("User create error", e);
 			return new UserAccountStatusTO().type(Type.SERVER_ERROR).message(e.getMessage());
 		}
 	}
 
-	@RequestMapping(value = { "/get", "/g" }, method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
+	@RequestMapping(
+			value = "/get",
+			method = GET,
+			produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public UserAccountTO getAccount() {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -102,8 +112,10 @@ public class UserControllerAuthenticated {
 		}
 	}
 
-	@RequestMapping(value = { "/transfer-p2sh",
-			"/t" }, method = RequestMethod.POST, produces = "application/json; charset=UTF-8")
+	@RequestMapping(
+			value = "/transfer-p2sh",
+			method = POST,
+			produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public UserAccountTO transferToP2SH(@RequestBody BaseTO request) {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -123,7 +135,10 @@ public class UserControllerAuthenticated {
 		}
 	}
 
-	@RequestMapping(value = "/logout", method = RequestMethod.GET, produces = "application/json; charset=UTF-8")
+	@RequestMapping(
+			value = "/logout",
+			method = GET,
+			produces = APPLICATION_JSON_UTF8_VALUE)
 	public UserAccountStatusTO logout(HttpServletRequest request, HttpServletResponse response) {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		LOG.debug("Logout account for {}", auth.getName());
@@ -133,7 +148,11 @@ public class UserControllerAuthenticated {
 		return new UserAccountStatusTO().setSuccess();
 	}
 
-	@RequestMapping(value = "/change-password", method = RequestMethod.POST, produces = "application/json; charset=UTF-8", consumes = "application/json; charset=UTF-8")
+	@RequestMapping(
+			value = "/change-password",
+			method = POST,
+			produces = APPLICATION_JSON_UTF8_VALUE,
+			consumes = APPLICATION_JSON_UTF8_VALUE)
 	public UserAccountStatusTO changePassword(@RequestBody UserAccountTO to, HttpServletRequest request,
 			HttpServletResponse response) {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();

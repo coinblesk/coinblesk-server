@@ -75,7 +75,7 @@ public class AuthTest extends CoinbleskTest {
 
 	@Test
 	public void testCreateActivate() throws Exception {
-		mockMvc.perform(get("/v1/u/a/g")).andExpect(status().is4xxClientError());
+		mockMvc.perform(get("/v1/user/auth/get")).andExpect(status().is4xxClientError());
 		UserAccountTO userAccountTO = new UserAccountTO();
 		MvcResult res = mockMvc	.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
 								.content(SerializeUtils.GSON.toJson(userAccountTO)))
@@ -144,7 +144,7 @@ public class AuthTest extends CoinbleskTest {
 				Mockito.anyString());
 		Mockito.verify(mailService, Mockito.times(1)).sendAdminMail(Mockito.anyString(), Mockito.anyString());
 
-		mockMvc.perform(get("/v1/u/a/g")).andExpect(status().is4xxClientError());
+		mockMvc.perform(get("/v1/user/auth/get")).andExpect(status().is4xxClientError());
 
 		// Wrong password fails
 		mockMvc.perform(post("/user/login").contentType(MediaType.APPLICATION_JSON)
@@ -166,7 +166,7 @@ public class AuthTest extends CoinbleskTest {
 		Assert.assertEquals(claims.getBody().get("auth", String.class), "ROLE_USER");
 
 		// Get user profile with valid JWT
-		res = mockMvc	.perform(get("/v1/u/a/g").header("Authorization", authorizationToken))
+		res = mockMvc	.perform(get("/v1/user/auth/get").header("Authorization", authorizationToken))
 						.andExpect(status().isOk())
 						.andReturn();
 		UserAccountTO uato = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountTO.class);
