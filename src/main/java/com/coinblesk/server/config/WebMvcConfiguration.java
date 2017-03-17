@@ -37,46 +37,46 @@ import com.coinblesk.util.SerializeUtils;
 @EnableWebMvc
 public class WebMvcConfiguration extends WebMvcConfigurerAdapter {
 
-    @Bean
-    public RequestMappingHandlerMapping requestMappingHandlerMapping() {
-        return new ApiVersionRequestMappingHandlerMapping();
-    }
+	@Bean
+	public RequestMappingHandlerMapping requestMappingHandlerMapping() {
+		return new ApiVersionRequestMappingHandlerMapping();
+	}
 
-    @Override
-    public void configureMessageConverters(List<HttpMessageConverter< ?>> converters) {
-        GsonHttpMessageConverter gsonHttpMessageConverter = new GsonHttpMessageConverter();
-        gsonHttpMessageConverter.setGson(SerializeUtils.GSON);
-        converters.add(gsonHttpMessageConverter);
-    }
+	@Override
+	public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
+		GsonHttpMessageConverter gsonHttpMessageConverter = new GsonHttpMessageConverter();
+		gsonHttpMessageConverter.setGson(SerializeUtils.GSON);
+		converters.add(gsonHttpMessageConverter);
+	}
 
-    @Override
-    public void addViewControllers(ViewControllerRegistry registry) {
-    	registry.addViewController("/login").setViewName("login");
-        registry.setOrder(Ordered.HIGHEST_PRECEDENCE);
-    }
+	@Override
+	public void addViewControllers(ViewControllerRegistry registry) {
+		registry.addViewController("/login").setViewName("login");
+		registry.setOrder(Ordered.HIGHEST_PRECEDENCE);
+	}
 
-    @Override
-    public void configureViewResolvers(ViewResolverRegistry registry) {
-        InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
-        //no need for JSP
-        //viewResolver.setViewClass(JstlView.class);
-        //viewResolver.setPrefix("/WEB-INF/views/");
-        //viewResolver.setSuffix(".jsp");
-        viewResolver.setPrefix("/static/");
-        viewResolver.setSuffix(".html");
+	@Override
+	public void configureViewResolvers(ViewResolverRegistry registry) {
+		InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
+		// no need for JSP
+		// viewResolver.setViewClass(JstlView.class);
+		// viewResolver.setPrefix("/WEB-INF/views/");
+		// viewResolver.setSuffix(".jsp");
+		viewResolver.setPrefix("/static/");
+		viewResolver.setSuffix(".html");
 
-        registry.viewResolver(viewResolver);
-}
+		registry.viewResolver(viewResolver);
+	}
 
-    /**
-     * Configure ResourceHandlers to serve static resources like CSS/ Javascript etc...
-     */
-    @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/static/**").addResourceLocations("/static/");
+	/**
+	 * Configure ResourceHandlers to serve static resources like CSS/ Javascript etc...
+	 */
+	@Override
+	public void addResourceHandlers(ResourceHandlerRegistry registry) {
+		registry.addResourceHandler("/static/**").addResourceLocations("/static/");
 
-        // swagger configuration:
-        registry.addResourceHandler("swagger-ui.html").addResourceLocations("classpath:/META-INF/resources/");
-        registry.addResourceHandler("/webjars/**").addResourceLocations("classpath:/META-INF/resources/webjars/");
-    }
+		// swagger configuration:
+		registry.addResourceHandler("swagger-ui.html").addResourceLocations("classpath:/META-INF/resources/");
+		registry.addResourceHandler("/webjars/**").addResourceLocations("classpath:/META-INF/resources/webjars/");
+	}
 }
