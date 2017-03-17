@@ -15,57 +15,57 @@
  */
 package com.coinblesk.server.config;
 
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
+import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
-
-import com.coinblesk.server.service.ForexService;
-import org.springframework.context.MessageSource;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
+
+import com.coinblesk.server.service.ForexService;
 
 @Configuration
 @ComponentScan("com.coinblesk.server")
 @EnableScheduling
 public class BeanConfig {
 
-    @Bean
-    public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
-        return new PropertySourcesPlaceholderConfigurer();
-    }
+	@Bean
+	public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
+		return new PropertySourcesPlaceholderConfigurer();
+	}
 
-    @Bean
-    public static ForexService.ForexTask forexTask() {
-        return new ForexService.ForexTask();
-    }
+	@Bean
+	public static ForexService.ForexTask forexTask() {
+		return new ForexService.ForexTask();
+	}
 
-    @Bean
-    public static TaskScheduler taskScheduler() {
-        return new ThreadPoolTaskScheduler();
-    }
+	@Bean
+	public static TaskScheduler taskScheduler() {
+		return new ThreadPoolTaskScheduler();
+	}
 
-    @Bean
-    public static PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-    
-    @Bean
-    public MessageSource messageSource() {
-        ResourceBundleMessageSource result = new ResourceBundleMessageSource();
-        result.setBasename("messages");
-        result.setFallbackToSystemLocale(false);
-        return result;
-    }
-    
-    @Bean
-    public LocaleResolver localeResolver() {
-        return new AcceptHeaderLocaleResolver();
-    }
+	@Bean
+	public static PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+	@Bean
+	public MessageSource messageSource() {
+		ResourceBundleMessageSource result = new ResourceBundleMessageSource();
+		result.setBasename("messages");
+		result.setFallbackToSystemLocale(false);
+		return result;
+	}
+
+	@Bean
+	public LocaleResolver localeResolver() {
+		return new AcceptHeaderLocaleResolver();
+	}
 }
