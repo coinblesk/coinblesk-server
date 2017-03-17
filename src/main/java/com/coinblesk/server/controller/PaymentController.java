@@ -15,6 +15,10 @@
  */
 package com.coinblesk.server.controller;
 
+import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
+import static org.springframework.web.bind.annotation.RequestMethod.GET;
+import static org.springframework.web.bind.annotation.RequestMethod.POST;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -37,6 +41,7 @@ import org.bitcoinj.script.Script;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -74,7 +79,7 @@ import com.coinblesk.util.SerializeUtils;
  *
  */
 @RestController
-@RequestMapping(value = { "/payment", "/p" })
+@RequestMapping(value = "/payment")
 @ApiVersion({ "v1", "" })
 public class PaymentController {
 
@@ -93,8 +98,10 @@ public class PaymentController {
 	@Autowired
 	private TransactionService txService;
 
-	@RequestMapping(value = { "/createTimeLockedAddress",
-			"/ctla" }, method = RequestMethod.POST, consumes = "application/json; charset=UTF-8", produces = "application/json; charset=UTF-8")
+	@RequestMapping(value = "/createTimeLockedAddress",
+			method = POST,
+			consumes = APPLICATION_JSON_UTF8_VALUE,
+			produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public TimeLockedAddressTO createTimeLockedAddress(@RequestBody TimeLockedAddressTO input) {
 		final String tag = "{createTimeLockedAddress}";
@@ -158,8 +165,11 @@ public class PaymentController {
 		}
 	}
 
-	@RequestMapping(value = { "/signverify",
-			"/sv" }, method = RequestMethod.POST, consumes = "application/json; charset=UTF-8", produces = "application/json; charset=UTF-8")
+	@RequestMapping(
+			value = "/signverify",
+			method = POST,
+			consumes = APPLICATION_JSON_UTF8_VALUE,
+			produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public SignVerifyTO signVerify(@RequestBody SignVerifyTO request) {
 		final String tag = "{signverify}";
@@ -313,8 +323,10 @@ public class PaymentController {
 	 * with this UUID for subsequent calls.
 	 *
 	 */
-	@RequestMapping(value = { "/key-exchange",
-			"/x" }, method = RequestMethod.POST, consumes = "application/json; charset=UTF-8", produces = "application/json; charset=UTF-8")
+	@RequestMapping(value = "/key-exchange",
+			method = POST,
+			consumes = APPLICATION_JSON_UTF8_VALUE,
+			produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public KeyTO keyExchange(@RequestBody KeyTO input) {
 		final long startTime = System.currentTimeMillis();
@@ -362,8 +374,11 @@ public class PaymentController {
 		}
 	}
 
-	@RequestMapping(value = { "/balance",
-			"/b" }, method = RequestMethod.GET, consumes = "application/json; charset=UTF-8", produces = "application/json; charset=UTF-8")
+	@RequestMapping(
+			value = "/balance",
+			method = GET,
+			consumes = APPLICATION_JSON_UTF8_VALUE,
+			produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public BalanceTO balance(@RequestBody BalanceTO input) {
 		final long start = System.currentTimeMillis();
@@ -395,8 +410,11 @@ public class PaymentController {
 		}
 	}
 
-	@RequestMapping(value = { "/refund",
-			"/r" }, method = RequestMethod.POST, consumes = "application/json; charset=UTF-8", produces = "application/json; charset=UTF-8")
+	@RequestMapping(
+			value = "/refund",
+			method = POST,
+			consumes = APPLICATION_JSON_UTF8_VALUE,
+			produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public RefundTO refund(@RequestBody RefundTO input) {
 		final long start = System.currentTimeMillis();
@@ -482,8 +500,10 @@ public class PaymentController {
 		}
 	}
 
-	@RequestMapping(value = { "/sign",
-			"/s" }, method = RequestMethod.POST, consumes = "application/json; charset=UTF-8", produces = "application/json; charset=UTF-8")
+	@RequestMapping(value = "/sign",
+			method = POST,
+			consumes = APPLICATION_JSON_UTF8_VALUE,
+			produces = APPLICATION_JSON_UTF8_VALUE)
 	@ApiVersion("v2")
 	@ResponseBody
 	public SignTO sign(@RequestBody SignTO input) {
@@ -570,8 +590,11 @@ public class PaymentController {
 		}
 	}
 
-	@RequestMapping(value = { "/verify",
-			"/v" }, method = RequestMethod.POST, consumes = "application/json; charset=UTF-8", produces = "application/json; charset=UTF-8")
+	@RequestMapping(
+			value = "/verify",
+			method = POST,
+			consumes = APPLICATION_JSON_UTF8_VALUE,
+			produces = APPLICATION_JSON_UTF8_VALUE)
 	@ApiVersion("v2")
 	@ResponseBody
 	public VerifyTO verify(@RequestBody VerifyTO input) {

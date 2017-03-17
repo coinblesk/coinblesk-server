@@ -15,12 +15,28 @@
  */
 package com.coinblesk.server.utilTest;
 
-import com.coinblesk.json.v1.KeyTO;
-import com.coinblesk.util.BitcoinUtils;
-import com.coinblesk.util.Pair;
-import com.coinblesk.util.SerializeUtils;
-import com.google.common.io.Files;
-import org.bitcoinj.core.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.io.File;
+import java.io.FilenameFilter;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Block;
+import org.bitcoinj.core.BlockChain;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.PrunedException;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionOutPoint;
+import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscoveryException;
@@ -31,16 +47,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-import java.io.File;
-import java.io.FilenameFilter;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.coinblesk.json.v1.KeyTO;
+import com.coinblesk.util.BitcoinUtils;
+import com.coinblesk.util.Pair;
+import com.coinblesk.util.SerializeUtils;
+import com.google.common.io.Files;
 
 /**
  *
@@ -148,7 +159,7 @@ public class Client {
 
 	private ECKey register(ECKey ecKeyClient, MockMvc mockMvc) throws Exception {
 		KeyTO keyTO = new KeyTO().publicKey(ecKeyClient.getPubKey());
-		MvcResult res = mockMvc.perform(post("/p/x")
+		MvcResult res = mockMvc.perform(post("/payment/key-exchange")
 				.secure(true)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(SerializeUtils.GSON.toJson(keyTO)))
@@ -198,7 +209,7 @@ public class Client {
 
 	public static Transaction sendFakeCoins(NetworkParameters params, Coin amount, Address to, BlockChain... chains)
 			throws VerificationException, PrunedException, BlockStoreException, InterruptedException {
-		
+
 		Transaction tx = FakeTxBuilder.createFakeTx(params, amount, to);
 		if (chains.length == 0) {
 			return tx;

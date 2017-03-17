@@ -5,24 +5,30 @@
  */
 package com.coinblesk.server.utilTest;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.io.UnsupportedEncodingException;
+import java.util.Date;
+import java.util.List;
+
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionOutPoint;
+import org.bitcoinj.crypto.TransactionSignature;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+
 import com.coinblesk.json.v1.RefundTO;
 import com.coinblesk.json.v1.SignTO;
 import com.coinblesk.json.v1.TxSig;
 import com.coinblesk.json.v1.VerifyTO;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
-import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.TransactionSignature;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
-
-import java.io.UnsupportedEncodingException;
-import java.util.Date;
-import java.util.List;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  *
@@ -69,7 +75,7 @@ public class ServerCalls {
 	}
 
 	public static VerifyTO verifyServerCallOutput(MockMvc mockMvc, VerifyTO cs) throws Exception {
-		MvcResult res = mockMvc.perform(post("/v2/p/v").secure(true).contentType(MediaType.APPLICATION_JSON).content(
+		MvcResult res = mockMvc.perform(post("/v2/payment/verify").secure(true).contentType(MediaType.APPLICATION_JSON).content(
 				SerializeUtils.GSON.toJson(cs))).andExpect(status().isOk()).andReturn();
 		return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), VerifyTO.class);
 	}
@@ -98,7 +104,7 @@ public class ServerCalls {
 	}
 
 	public static RefundTO refundServerCallOutput(MockMvc mockMvc, RefundTO refundP2shTO) throws Exception {
-		MvcResult res = mockMvc.perform(post("/p/r").secure(true).contentType(MediaType.APPLICATION_JSON).content(
+		MvcResult res = mockMvc.perform(post("/payment/refund").secure(true).contentType(MediaType.APPLICATION_JSON).content(
 				SerializeUtils.GSON.toJson(refundP2shTO))).andExpect(status().isOk()).andReturn();
 		return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), RefundTO.class);
 	}
@@ -134,7 +140,7 @@ public class ServerCalls {
 	}
 
 	public static SignTO signServerCallOutput(MockMvc mockMvc, SignTO prepareHalfSignTO) throws Exception {
-		MvcResult res = mockMvc.perform(post("/v2/p/s").secure(true).contentType(MediaType.APPLICATION_JSON).content(
+		MvcResult res = mockMvc.perform(post("/v2/payment/sign").secure(true).contentType(MediaType.APPLICATION_JSON).content(
 				SerializeUtils.GSON.toJson(prepareHalfSignTO))).andExpect(status().isOk()).andReturn();
 		return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), SignTO.class);
 	}
