@@ -15,9 +15,9 @@
  */
 package com.coinblesk.server.controller;
 
-import com.coinblesk.json.v1.ExchangeRateTO;
-import com.coinblesk.server.utilTest.CoinbleskTest;
-import com.coinblesk.util.SerializeUtils;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,8 +27,9 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.coinblesk.json.v1.ExchangeRateTO;
+import com.coinblesk.server.utilTest.CoinbleskTest;
+import com.coinblesk.util.SerializeUtils;
 
 /**
  *
@@ -36,29 +37,38 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 
 public class ForexTest extends CoinbleskTest {
-    @Autowired
-    private WebApplicationContext webAppContext;
 
-    private static MockMvc mockMvc;
-    
-    @Before
-    public void setUp() {
-         mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();
-    }
-    
-    @Test
-    public void testV1() throws Exception {
-        MvcResult res = mockMvc.perform(get("/w/x/CHF").secure(true)).andExpect(status().isOk()).andReturn();
-        ExchangeRateTO rate = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), ExchangeRateTO.class);
-        System.out.println("rate is: " + rate.rate()+"/"+rate.name());
-        Assert.assertNotNull(rate);
-    }
-    
-    @Test
-    public void testV2() throws Exception {
-        MvcResult res = mockMvc.perform(get("/v2/x/r/CHF-EUR").secure(true)).andExpect(status().isOk()).andReturn();
-        ExchangeRateTO rate = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), ExchangeRateTO.class);
-        System.out.println("rate is: " + rate.rate()+"/"+rate.name());
-        Assert.assertNotNull(rate);
-    }
+	@Autowired
+	private WebApplicationContext webAppContext;
+
+	private static MockMvc mockMvc;
+
+	@Before
+	public void setUp() {
+		mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();
+	}
+
+	@Test
+	public void testV1() throws Exception {
+		MvcResult res = mockMvc
+				.perform(get("/forex/exchangeRate/CHF").secure(true))
+				.andExpect(status().isOk())
+				.andReturn();
+		ExchangeRateTO rate = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
+				ExchangeRateTO.class);
+		System.out.println("rate is: " + rate.rate() + "/" + rate.name());
+		Assert.assertNotNull(rate);
+	}
+
+	@Test
+	public void testV2() throws Exception {
+		MvcResult res = mockMvc
+				.perform(get("/v2/forex/rate/CHF-EUR").secure(true))
+				.andExpect(status().isOk())
+				.andReturn();
+		ExchangeRateTO rate = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
+				ExchangeRateTO.class);
+		System.out.println("rate is: " + rate.rate() + "/" + rate.name());
+		Assert.assertNotNull(rate);
+	}
 }

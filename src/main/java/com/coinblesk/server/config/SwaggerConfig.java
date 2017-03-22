@@ -27,21 +27,20 @@ public class SwaggerConfig {
 				.apiInfo(apiInfo())
 				.select()
 				.apis(any())
-				.paths(regex("^/v[12]/.*$"))
+				.paths(regex("^.*$"))
 				.build()
 				.securitySchemes(apiKeys());
 	}
 
 	@Bean
-	// filters out everything with a single character between slashes /./ or at the end /.$
-	// for adaption see: https://regex101.com/r/goXnVF/1
-	public Docket noShortFormsApi() {
+	// shows everything except /v1
+	public Docket nonV1Api() {
 		return new Docket(SWAGGER_2)
-				.groupName("no-short-forms-api")
+				.groupName("non-v1-api")
 				.apiInfo(apiInfo())
 				.select()
 				.apis(any())
-				.paths(regex("^\\/v[12]((?!\\/.(\\/|$)).)+$"))
+				.paths(regex("^(?!\\/v1).*$"))
 				.build()
 				.securitySchemes(apiKeys());
 	}

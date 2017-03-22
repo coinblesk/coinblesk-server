@@ -24,13 +24,13 @@ public class KeyTestUtil {
 	 */
 	public static final ECKey ALICE_CLIENT = ECKey.fromPrivate(Sha256Hash.hash("alice-client".getBytes()));
 	public static final ECKey ALICE_SERVER = ECKey.fromPrivate(Sha256Hash.hash("alice-server".getBytes()));
-	
+
 	public static final ECKey BOB_CLIENT = ECKey.fromPrivate(Sha256Hash.hash("bob-client".getBytes()));
 	public static final ECKey BOB_SERVER = ECKey.fromPrivate(Sha256Hash.hash("bob-server".getBytes()));
 
 	public static final ECKey CAROL_CLIENT = ECKey.fromPrivate(Sha256Hash.hash("carol-client".getBytes()));
 	public static final ECKey CAROL_SERVER = ECKey.fromPrivate(Sha256Hash.hash("carol-server".getBytes()));
-	
+
 	public static final ECKey DAVE_CLIENT = ECKey.fromPrivate(Sha256Hash.hash("dave-client".getBytes()));
 	public static final ECKey DAVE_SERVER = ECKey.fromPrivate(Sha256Hash.hash("dave-server".getBytes()));
 }

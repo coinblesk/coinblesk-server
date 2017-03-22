@@ -16,10 +16,10 @@
 
 package com.coinblesk.server.entity;
 
-import com.coinblesk.server.config.UserRole;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -32,168 +32,168 @@ import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
+import com.coinblesk.server.config.UserRole;
 
 /**
  *
  * @author Thomas Bocek
  */
 @Entity(name = "USER_ACCOUNT")
-@Table(indexes = {
-    @Index(name = "USERNAME_INDEX", columnList = "USERNAME")})
+@Table(indexes = { @Index(name = "USERNAME_INDEX", columnList = "USERNAME") })
 public class UserAccount implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 1L;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "ID", nullable = false)
-    private long id;
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "CREATION_DATE", nullable = false)
-    private Date creationDate;
-    @Column(name = "USERNAME", nullable = true)
-    private String username;
-    @Column(name = "EMAIL", unique = true, nullable = false)
-    private String email;
-    @Column(name = "PASSWORD", nullable = false)
-    private String password;
-    @Column(name = "DELETED", nullable = false)
-    private boolean deleted;
-    @Column(name = "BALANCE", nullable = true, precision = 25, scale = 8)
-    private BigDecimal balance;
-    @Column(name = "EMAIL_TOKEN", nullable = true)
-    private String emailToken;
-    @Column(name = "FORGOT_PASSWORD", nullable = true)
-    private String forgotPassword;
-    @Column(name = "FORGOT_EMAIL_TOKEN", nullable = true)
-    private String forgotEmailToken;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(name="USER_ROLE")
-    private UserRole userRole;
-    
-    public boolean isDeleted() {
-        return deleted;
-    }
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	@Column(name = "ID", nullable = false)
+	private long id;
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name = "CREATION_DATE", nullable = false)
+	private Date creationDate;
+	@Column(name = "USERNAME", nullable = true)
+	private String username;
+	@Column(name = "EMAIL", unique = true, nullable = false)
+	private String email;
+	@Column(name = "PASSWORD", nullable = false)
+	private String password;
+	@Column(name = "DELETED", nullable = false)
+	private boolean deleted;
+	@Column(name = "BALANCE", nullable = true, precision = 25, scale = 8)
+	private BigDecimal balance;
+	@Column(name = "EMAIL_TOKEN", nullable = true)
+	private String emailToken;
+	@Column(name = "FORGOT_PASSWORD", nullable = true)
+	private String forgotPassword;
+	@Column(name = "FORGOT_EMAIL_TOKEN", nullable = true)
+	private String forgotEmailToken;
 
-    public UserAccount setDeleted(boolean deleted) {
-        this.deleted = deleted;
-        return this;
-    }
+	@Enumerated(EnumType.STRING)
+	@Column(name = "USER_ROLE")
+	private UserRole userRole;
 
-    public long getId() {
-        return id;
-    }
+	public boolean isDeleted() {
+		return deleted;
+	}
 
-    public UserAccount setId(long id) {
-        this.id = id;
-        return this;
-    }
+	public UserAccount setDeleted(boolean deleted) {
+		this.deleted = deleted;
+		return this;
+	}
 
-    public String getUsername() {
-        return username;
-    }
+	public long getId() {
+		return id;
+	}
 
-    public UserAccount setUsername(String username) {
-        this.username = username;
-        return this;
-    }
+	public UserAccount setId(long id) {
+		this.id = id;
+		return this;
+	}
 
-    public String getEmail() {
-        return email;
-    }
+	public String getUsername() {
+		return username;
+	}
 
-    public UserAccount setEmail(String email) {
-        this.email = email;
-        return this;
-    }
+	public UserAccount setUsername(String username) {
+		this.username = username;
+		return this;
+	}
 
-    public String getPassword() {
-        return password;
-    }
+	public String getEmail() {
+		return email;
+	}
 
-    public UserAccount setPassword(String password) {
-        this.password = password;
-        return this;
-    }
+	public UserAccount setEmail(String email) {
+		this.email = email;
+		return this;
+	}
 
-    public BigDecimal getBalance() {
-        return balance;
-    }
+	public String getPassword() {
+		return password;
+	}
 
-    public UserAccount setBalance(BigDecimal balance) {
-        this.balance = balance;
-        return this;
-    }
+	public UserAccount setPassword(String password) {
+		this.password = password;
+		return this;
+	}
 
-    public Date getCreationDate() {
-        return creationDate;
-    }
+	public BigDecimal getBalance() {
+		return balance;
+	}
 
-    public UserAccount setCreationDate(Date creationDate) {
-        this.creationDate = creationDate;
-        return this;
-    }
+	public UserAccount setBalance(BigDecimal balance) {
+		this.balance = balance;
+		return this;
+	}
 
-    public String getEmailToken() {
-        return emailToken;
-    }
+	public Date getCreationDate() {
+		return creationDate;
+	}
 
-    public UserAccount setEmailToken(String emailToken) {
-        this.emailToken = emailToken;
-        return this;
-    }
-    
-    public String getForgotPassword() {
-        return forgotPassword;
-    }
+	public UserAccount setCreationDate(Date creationDate) {
+		this.creationDate = creationDate;
+		return this;
+	}
 
-    public UserAccount setForgotPassword(String forgotPassword) {
-        this.forgotPassword = forgotPassword;
-        return this;
-    }
-    
-    public String getForgotEmailToken() {
-        return forgotEmailToken;
-    }
+	public String getEmailToken() {
+		return emailToken;
+	}
 
-    public UserAccount setForgotEmailToken(String forgotEmailToken) {
-        this.forgotEmailToken = forgotEmailToken;
-        return this;
-    }
-    
-    public UserRole getUserRole() {
-    	return userRole;
-    }
-    
-    public UserAccount setUserRole(UserRole userRole) {
-    	this.userRole = userRole;
-    	return this;
-    }
+	public UserAccount setEmailToken(String emailToken) {
+		this.emailToken = emailToken;
+		return this;
+	}
 
-    public boolean isEmailVerified() {
-        return this.emailToken == null;
-    }
-    
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder()
-            .append("id: ")
-            .append(getId())
-            .append(", username: ")
-            .append(getUsername())
-            .append(", email: ")
-            .append(getEmail())
-            .append(", isDeleted: ")
-            .append(isDeleted())
-            .append(", creationDate: ")
-            .append(getCreationDate())
-            .append(", balance: ")
-            .append(getBalance())
-            .append(", emailToken: ")
-            .append(getEmailToken())
-            .append(", userRoles: ")
-            .append(getUserRole());
-        return sb.toString();
-    }
+	public String getForgotPassword() {
+		return forgotPassword;
+	}
+
+	public UserAccount setForgotPassword(String forgotPassword) {
+		this.forgotPassword = forgotPassword;
+		return this;
+	}
+
+	public String getForgotEmailToken() {
+		return forgotEmailToken;
+	}
+
+	public UserAccount setForgotEmailToken(String forgotEmailToken) {
+		this.forgotEmailToken = forgotEmailToken;
+		return this;
+	}
+
+	public UserRole getUserRole() {
+		return userRole;
+	}
+
+	public UserAccount setUserRole(UserRole userRole) {
+		this.userRole = userRole;
+		return this;
+	}
+
+	public boolean isEmailVerified() {
+		return this.emailToken == null;
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder()
+				.append("id: ")
+				.append(getId())
+				.append(", username: ")
+				.append(getUsername())
+				.append(", email: ")
+				.append(getEmail())
+				.append(", isDeleted: ")
+				.append(isDeleted())
+				.append(", creationDate: ")
+				.append(getCreationDate())
+				.append(", balance: ")
+				.append(getBalance())
+				.append(", emailToken: ")
+				.append(getEmailToken())
+				.append(", userRoles: ")
+				.append(getUserRole());
+		return sb.toString();
+	}
 }
