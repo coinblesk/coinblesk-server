@@ -51,119 +51,118 @@ import java.util.List;
  */
 public class SignTest extends CoinbleskTest {
 
-    @Autowired
-    private WebApplicationContext webAppContext;
+	@Autowired
+	private WebApplicationContext webAppContext;
 
-    @Autowired
-    private AppConfig appConfig;
+	@Autowired
+	private AppConfig appConfig;
 
-    @Autowired
-    private WalletService walletService;
+	@Autowired
+	private WalletService walletService;
 
-    private static MockMvc mockMvc;
+	private static MockMvc mockMvc;
 
-    private NetworkParameters params;
-    
-    @Before
-    public void setUp() throws Exception {
-        walletService.shutdown();
-        mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();
-        walletService.init();
-        params = appConfig.getNetworkParameters();
-    }
+	private NetworkParameters params;
 
-    @Test
-    @DatabaseSetup("/EmptyDatabase.xml")
-    @DatabaseTearDown("/EmptyDatabase.xml")
-    public void testAddressEmpty() throws Exception {
-        Client client = new Client(params, mockMvc);
-        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(),
-                walletService.blockChain());
-        Coin amountToRequest = Coin.valueOf(9876);
-        Date now = new Date();
-        List<Pair<byte[], Long>> outpointCoinPair = client.outpointsRaw(funding);
-        SignTO prepareHalfSignTO = ServerCalls.signServerCallInput(outpointCoinPair,
-                new ECKey().toAddress(params), amountToRequest.value, client.ecKey(), now);
-        prepareHalfSignTO.p2shAddressTo("1");
-        SerializeUtils.signJSON(prepareHalfSignTO, client.ecKey());
-        SignTO status = ServerCalls.signServerCallOutput(mockMvc, prepareHalfSignTO);
-        Assert.assertFalse(status.isSuccess());
-        Assert.assertEquals(Type.ADDRESS_EMPTY, status.type());
-    }
+	@Before
+	public void setUp() throws Exception {
+		walletService.shutdown();
+		mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();
+		walletService.init();
+		params = appConfig.getNetworkParameters();
+	}
 
-    @Test
-    @DatabaseSetup("/EmptyDatabase.xml")
-    @DatabaseTearDown("/EmptyDatabase.xml")
-    public void testAddressNotEnoughFunds() throws Exception {
-        Client client = new Client(params, mockMvc);
-        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(1), client.p2shAddress(),
-                walletService.blockChain());
-        Coin amountToRequest = Coin.valueOf(9876);
-        Date now = new Date();
-        SignTO status = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
-                new ECKey().toAddress(params), amountToRequest.value, client, now);
+	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
+	public void testAddressEmpty() throws Exception {
+		Client client = new Client(params, mockMvc);
+		Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(),
+				walletService.blockChain());
+		Coin amountToRequest = Coin.valueOf(9876);
+		Date now = new Date();
+		List<Pair<byte[], Long>> outpointCoinPair = client.outpointsRaw(funding);
+		SignTO prepareHalfSignTO = ServerCalls.signServerCallInput(outpointCoinPair,
+				new ECKey().toAddress(params), amountToRequest.value, client.ecKey(), now);
+		prepareHalfSignTO.p2shAddressTo("1");
+		SerializeUtils.signJSON(prepareHalfSignTO, client.ecKey());
+		SignTO status = ServerCalls.signServerCallOutput(mockMvc, prepareHalfSignTO);
+		Assert.assertFalse(status.isSuccess());
+		Assert.assertEquals(Type.ADDRESS_EMPTY, status.type());
+	}
 
-        Assert.assertFalse(status.isSuccess());
-        Assert.assertEquals(Type.NOT_ENOUGH_COINS, status.type());
-    }
+	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
+	public void testAddressNotEnoughFunds() throws Exception {
+		Client client = new Client(params, mockMvc);
+		Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(1), client.p2shAddress(),
+				walletService.blockChain());
+		Coin amountToRequest = Coin.valueOf(9876);
+		Date now = new Date();
+		SignTO status = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
+				new ECKey().toAddress(params), amountToRequest.value, client, now);
 
-    @Test
-    @DatabaseSetup("/EmptyDatabase.xml")
-    @DatabaseTearDown("/EmptyDatabase.xml")
-    public void testAddressOnlyDust() throws Exception {
-        Client client = new Client(params, mockMvc);
-        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(700), client.p2shAddress(),
-                walletService.blockChain());
-        Coin amountToRequest = Coin.valueOf(100);
-        Date now = new Date();
-        SignTO status = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
-                new ECKey().toAddress(params), amountToRequest.value, client, now);
-        Assert.assertFalse(status.isSuccess());
-        Assert.assertEquals(Type.TX_ERROR, status.type());
-    }
+		Assert.assertFalse(status.isSuccess());
+		Assert.assertEquals(Type.NOT_ENOUGH_COINS, status.type());
+	}
 
-    @Test
-    @DatabaseSetup("/EmptyDatabase.xml")
-    @ExpectedDatabase(value = "/TxTwice.xml",
-            assertionMode = DatabaseAssertionMode.NON_STRICT_UNORDERED)
-    @DatabaseTearDown("/EmptyDatabase.xml")
-    public void testSignTwice() throws Exception {
-        Client client = new Client(params, mockMvc);
-        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(),
-                walletService.blockChain());
-        Date now = new Date();
-        Coin amountToRequest = Coin.valueOf(9876);
+	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
+	public void testAddressOnlyDust() throws Exception {
+		Client client = new Client(params, mockMvc);
+		Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(700), client.p2shAddress(),
+				walletService.blockChain());
+		Coin amountToRequest = Coin.valueOf(100);
+		Date now = new Date();
+		SignTO status = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
+				new ECKey().toAddress(params), amountToRequest.value, client, now);
+		Assert.assertFalse(status.isSuccess());
+		Assert.assertEquals(Type.TX_ERROR, status.type());
+	}
 
-        SignTO status = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
-                new ECKey().toAddress(params), amountToRequest.value, client, now);
-        Assert.assertTrue(status.isSuccess());
-        Date now2 = new Date(now.getTime() + 5000L);
-        status = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
-                new ECKey().toAddress(params), amountToRequest.value, client, now2);
-        Assert.assertTrue(status.isSuccess());
-    }
+	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@ExpectedDatabase(value = "/TxTwice.xml", assertionMode = DatabaseAssertionMode.NON_STRICT_UNORDERED)
+	@DatabaseTearDown("/EmptyDatabase.xml")
+	public void testSignTwice() throws Exception {
+		Client client = new Client(params, mockMvc);
+		Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(123450), client.p2shAddress(),
+				walletService.blockChain());
+		Date now = new Date();
+		Coin amountToRequest = Coin.valueOf(9876);
 
-    @Test
-    @DatabaseSetup("/EmptyDatabase.xml")
-    @DatabaseTearDown("/EmptyDatabase.xml")
-    public void testServerSignatures() throws Exception {
-        Client client = new Client(params, mockMvc);
-        Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(123450),
-                client.p2shAddress(), walletService.blockChain());
-        Date now = new Date();
-        Coin amountToRequest = Coin.valueOf(9876);
+		SignTO status = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
+				new ECKey().toAddress(params), amountToRequest.value, client, now);
+		Assert.assertTrue(status.isSuccess());
+		Date now2 = new Date(now.getTime() + 5000L);
+		status = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
+				new ECKey().toAddress(params), amountToRequest.value, client, now2);
+		Assert.assertTrue(status.isSuccess());
+	}
 
-        SignTO status = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
-                new ECKey().toAddress(params), amountToRequest.value, client, now);
-        Assert.assertTrue(status.isSuccess());
+	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
+	public void testServerSignatures() throws Exception {
+		Client client = new Client(params, mockMvc);
+		Transaction funding = Client.sendFakeCoins(params, Coin.valueOf(123450),
+				client.p2shAddress(), walletService.blockChain());
+		Date now = new Date();
+		Coin amountToRequest = Coin.valueOf(9876);
 
-        Transaction tx = new Transaction(params, status.transaction());
+		SignTO status = ServerCalls.signServerCall(mockMvc, client.outpointsRaw(funding),
+				new ECKey().toAddress(params), amountToRequest.value, client, now);
+		Assert.assertTrue(status.isSuccess());
 
-        List<TransactionSignature> sigs = SerializeUtils.deserializeSignatures(
-                status.signatures());
-        Assert.assertTrue(SerializeUtils.verifyTxSignatures(tx, sigs,
-                client.redeemScript(), client.ecKeyServer()));
-        Assert.assertFalse(SerializeUtils.verifyTxSignatures(tx, sigs,
-                client.redeemScript(), client.ecKey()));
-    }
+		Transaction tx = new Transaction(params, status.transaction());
+
+		List<TransactionSignature> sigs = SerializeUtils.deserializeSignatures(
+				status.signatures());
+		Assert.assertTrue(SerializeUtils.verifyTxSignatures(tx, sigs,
+				client.redeemScript(), client.ecKeyServer()));
+		Assert.assertFalse(SerializeUtils.verifyTxSignatures(tx, sigs,
+				client.redeemScript(), client.ecKey()));
+	}
 }

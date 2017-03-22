@@ -16,9 +16,15 @@
 
 package com.coinblesk.server.entity;
 
-import javax.persistence.*;
 import java.io.Serializable;
 import java.util.Date;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Lob;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 
 /**
  *
@@ -28,44 +34,44 @@ import java.util.Date;
 
 @Entity(name = "TX_QUEUE")
 public class TxQueue implements Serializable {
-    private static final long serialVersionUID = -7496348013847426945L;
+	private static final long serialVersionUID = -7496348013847426945L;
 
-    @Id
-    @Column(name = "TX_HASH", updatable = false, length = 255)
-    private byte[] txHash;
+	@Id
+	@Column(name = "TX_HASH", updatable = false, length = 255)
+	private byte[] txHash;
 
-    @Lob
-    @Column(name = "TX", nullable = false, updatable = false)
-    private byte[] tx;
-    
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "CREATION_DATE", nullable = false)
-    private Date creationDate;
+	@Lob
+	@Column(name = "TX", nullable = false, updatable = false)
+	private byte[] tx;
 
-    public byte[] txHash() {
-        return txHash;
-    }
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name = "CREATION_DATE", nullable = false)
+	private Date creationDate;
 
-    public TxQueue txHash(byte[] txHash) {
-        this.txHash = txHash;
-        return this;
-    }
+	public byte[] txHash() {
+		return txHash;
+	}
 
-    public byte[] tx() {
-        return tx;
-    }
+	public TxQueue txHash(byte[] txHash) {
+		this.txHash = txHash;
+		return this;
+	}
 
-    public TxQueue tx(byte[] tx) {
-        this.tx = tx;
-        return this;
-    }
+	public byte[] tx() {
+		return tx;
+	}
 
-    public Date creationDate() {
-        return creationDate;
-    }
+	public TxQueue tx(byte[] tx) {
+		this.tx = tx;
+		return this;
+	}
 
-    public TxQueue creationDate(Date creationDate) {
-        this.creationDate = creationDate;
-        return this;
-    }
+	public Date creationDate() {
+		return creationDate;
+	}
+
+	public TxQueue creationDate(Date creationDate) {
+		this.creationDate = creationDate;
+		return this;
+	}
 }

@@ -25,29 +25,29 @@ import java.util.Map;
 
 public class ForexExchangeRateServiceTest extends CoinbleskTest {
 
-    @Autowired
-    private ForexService forexExchangeRateService;
-    
-    @Test
-    public void testForex() throws Exception {
-        BigDecimal d = forexExchangeRateService.getExchangeRate("USD", "CHF");
-        Assert.assertNotNull(d);
-        System.out.println("rate is: " + d);
-    }
+	@Autowired
+	private ForexService forexExchangeRateService;
 
-    @Test
-    public void testForexMulti1() throws Exception {
-        Map<String, BigDecimal> m = forexExchangeRateService.getExchangeRates("CHFUSD", "USDEUR");
-        Assert.assertNotNull(m);
-        System.out.println("rate is: " + m);
-    }
+	@Test
+	public void testForex() throws Exception {
+		BigDecimal d = forexExchangeRateService.getExchangeRate("USD", "CHF");
+		Assert.assertNotNull(d);
+		System.out.println("rate is: " + d);
+	}
 
-    @Test
-    public void testForexMulti2() throws Exception {
-        //TODO: check if cached
-        Map<String, BigDecimal> m = forexExchangeRateService.getExchangeRates("CHFUSD", "USDEUR");
-        Assert.assertNotNull(m);
-        System.out.println("rate is: " + m);
-    }
+	@Test
+	public void testForexMulti1() throws Exception {
+		Map<String, BigDecimal> m = forexExchangeRateService.getExchangeRates("CHFUSD", "USDEUR");
+		Assert.assertNotNull(m);
+		System.out.println("rate is: " + m);
+	}
+
+	@Test
+	public void testForexMulti2() throws Exception {
+		// TODO: check if cached
+		Map<String, BigDecimal> m = forexExchangeRateService.getExchangeRates("CHFUSD", "USDEUR");
+		Assert.assertNotNull(m);
+		System.out.println("rate is: " + m);
+	}
 
 }

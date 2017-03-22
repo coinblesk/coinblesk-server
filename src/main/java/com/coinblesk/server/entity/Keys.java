@@ -29,88 +29,85 @@ import javax.persistence.OneToMany;
 import javax.persistence.OrderBy;
 import javax.persistence.Table;
 
-
 /**
  *
  * @author Thomas Bocek
  */
 @Entity(name = "KEYS")
-@Table(indexes = {
-		@Index(name = "KEYS_CLIENT_PUBLIC_KEY", columnList = "CLIENT_PUBLIC_KEY")
-})
+@Table(indexes = { @Index(name = "KEYS_CLIENT_PUBLIC_KEY", columnList = "CLIENT_PUBLIC_KEY") })
 public class Keys implements Serializable {
 
-    private static final long serialVersionUID = -7496348013847426913L;
+	private static final long serialVersionUID = -7496348013847426913L;
 
-    @Id
-    @GeneratedValue(strategy=GenerationType.SEQUENCE)
-    private long id;
-    
-    @Column(name = "CLIENT_PUBLIC_KEY", unique = true, nullable = false, updatable = false, length = 255)
-    private byte[] clientPublicKey;
+	@Id
+	@GeneratedValue(strategy = GenerationType.SEQUENCE)
+	private long id;
 
-    @Column(name = "SERVER_PUBLIC_KEY", unique = true, nullable = false, updatable = false, length = 255)
-    private byte[] serverPublicKey;
+	@Column(name = "CLIENT_PUBLIC_KEY", unique = true, nullable = false, updatable = false, length = 255)
+	private byte[] clientPublicKey;
 
-    @Column(name = "SERVER_PRIVATE_KEY", unique = true, nullable = false, updatable = false, length = 255)
-    private byte[] serverPrivateKey;
+	@Column(name = "SERVER_PUBLIC_KEY", unique = true, nullable = false, updatable = false, length = 255)
+	private byte[] serverPublicKey;
 
-    @Column(name = "TIME_CREATED", updatable = false, nullable = false)
-    private long timeCreated;
-    
-    @OneToMany(mappedBy="keys", fetch = FetchType.EAGER)
-    @OrderBy("TIME_CREATED ASC")
-    private List<TimeLockedAddressEntity> timeLockedAddresses; 
-    
-    public byte[] clientPublicKey() {
-        return clientPublicKey;
-    }
+	@Column(name = "SERVER_PRIVATE_KEY", unique = true, nullable = false, updatable = false, length = 255)
+	private byte[] serverPrivateKey;
 
-    public Keys clientPublicKey(byte[] clientPublicKey) {
-        this.clientPublicKey = clientPublicKey;
-        return this;
-    }
+	@Column(name = "TIME_CREATED", updatable = false, nullable = false)
+	private long timeCreated;
 
-    public byte[] serverPublicKey() {
-        return serverPublicKey;
-    }
+	@OneToMany(mappedBy = "keys", fetch = FetchType.EAGER)
+	@OrderBy("TIME_CREATED ASC")
+	private List<TimeLockedAddressEntity> timeLockedAddresses;
 
-    public Keys serverPublicKey(byte[] serverPublicKey) {
-        this.serverPublicKey = serverPublicKey;
-        return this;
-    }
+	public byte[] clientPublicKey() {
+		return clientPublicKey;
+	}
 
-    public byte[] serverPrivateKey() {
-        return serverPrivateKey;
-    }
+	public Keys clientPublicKey(byte[] clientPublicKey) {
+		this.clientPublicKey = clientPublicKey;
+		return this;
+	}
 
-    public Keys serverPrivateKey(byte[] serverPrivateKey) {
-        this.serverPrivateKey = serverPrivateKey;
-        return this;
-    }
-    
-    public long timeCreated() {
-    	return timeCreated;
-    }
-    
-    public Keys timeCreated(long timeCreatedSeconds) {
-    	this.timeCreated = timeCreatedSeconds;
-    	return this;
-    }
+	public byte[] serverPublicKey() {
+		return serverPublicKey;
+	}
 
-    public List<TimeLockedAddressEntity> timeLockedAddresses() {
-    	return timeLockedAddresses;
-    }
-    
-    public TimeLockedAddressEntity latestTimeLockedAddresses() {
-    	return timeLockedAddresses.get(timeLockedAddresses.size() - 1);
-    }
-    
-    public Keys timeLockedAddresses(List<TimeLockedAddressEntity> timeLockedAddresses) {
-	this.timeLockedAddresses = timeLockedAddresses;
-	return this;
-    }
-	
+	public Keys serverPublicKey(byte[] serverPublicKey) {
+		this.serverPublicKey = serverPublicKey;
+		return this;
+	}
+
+	public byte[] serverPrivateKey() {
+		return serverPrivateKey;
+	}
+
+	public Keys serverPrivateKey(byte[] serverPrivateKey) {
+		this.serverPrivateKey = serverPrivateKey;
+		return this;
+	}
+
+	public long timeCreated() {
+		return timeCreated;
+	}
+
+	public Keys timeCreated(long timeCreatedSeconds) {
+		this.timeCreated = timeCreatedSeconds;
+		return this;
+	}
+
+	public List<TimeLockedAddressEntity> timeLockedAddresses() {
+		return timeLockedAddresses;
+	}
+
+	public TimeLockedAddressEntity latestTimeLockedAddresses() {
+		return timeLockedAddresses.get(timeLockedAddresses.size() - 1);
+	}
+
+	public Keys timeLockedAddresses(List<TimeLockedAddressEntity> timeLockedAddresses) {
+		this.timeLockedAddresses = timeLockedAddresses;
+		return this;
+	}
+
 	/*public List<Address> btcAddresses(NetworkParameters params) {
 		List<Address> addressList = new ArrayList<>(addresses.size());
 		for (TimeLockedAddressEntity e : addresses) {

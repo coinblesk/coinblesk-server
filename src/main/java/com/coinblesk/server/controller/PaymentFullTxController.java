@@ -15,15 +15,18 @@
  */
 package com.coinblesk.server.controller;
 
-import com.coinblesk.server.utils.ApiVersion;
-import com.coinblesk.json.v1.SignTO;
-import com.coinblesk.json.v1.VerifyTO;
+import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
+import static org.springframework.web.bind.annotation.RequestMethod.POST;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.coinblesk.json.v1.SignTO;
+import com.coinblesk.json.v1.VerifyTO;
+import com.coinblesk.server.utils.ApiVersion;
 
 /**
  * @deprecated This class is here for compatibility reasons
@@ -32,27 +35,32 @@ import org.springframework.web.bind.annotation.RestController;
  * @author Thomas Bocek
  *
  */
+@Deprecated
 @RestController
-@RequestMapping(value = {"/full-payment", "/f"})
-@ApiVersion({"v1", ""})
+@RequestMapping(value = "/full-payment")
+@ApiVersion({ "v1", "" })
 public class PaymentFullTxController {
 
-    @Autowired
-    private PaymentController paymentController;
+	@Autowired
+	private PaymentController paymentController;
 
-    @RequestMapping(value = {"/sign", "/s"}, method = RequestMethod.POST,
-            consumes = "application/json; charset=UTF-8",
-            produces = "application/json; charset=UTF-8")
-    @ResponseBody
-    public SignTO sign(@RequestBody SignTO input) {
-        return paymentController.sign(input);
-    }
+	@RequestMapping(
+			value = "/sign",
+			method = POST,
+			consumes = APPLICATION_JSON_UTF8_VALUE,
+			produces = APPLICATION_JSON_UTF8_VALUE)
+	@ResponseBody
+	public SignTO sign(@RequestBody SignTO input) {
+		return paymentController.sign(input);
+	}
 
-    @RequestMapping(value = {"/verify", "/v"}, method = RequestMethod.POST,
-            consumes = "application/json; charset=UTF-8",
-            produces = "application/json; charset=UTF-8")
-    @ResponseBody
-    public VerifyTO verify(@RequestBody VerifyTO input) {
-        return paymentController.verify(input);
-    }
+	@RequestMapping(
+			value = "/verify",
+			method = POST,
+			consumes = APPLICATION_JSON_UTF8_VALUE,
+			produces = APPLICATION_JSON_UTF8_VALUE)
+	@ResponseBody
+	public VerifyTO verify(@RequestBody VerifyTO input) {
+		return paymentController.verify(input);
+	}
 }

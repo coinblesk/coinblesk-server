@@ -33,24 +33,24 @@ public final class RESTUtils {
 	private RESTUtils() {
 		// prevent instance
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	public static <T extends BaseTO<?>> T postRequest(MockMvc mockMvc, String url, T requestTO) throws Exception {
 		String requestJSON = SerializeUtils.GSON.toJson(requestTO);
 		return (T) postRequest(mockMvc, url, requestJSON, requestTO.getClass());
 	}
-	
+
 	public static <T> T postRequest(MockMvc mockMvc, String url, String requestJSON, Class<T> responseClass) throws Exception {
-    	final MvcResult res = mockMvc
+		final MvcResult res = mockMvc
 				.perform(
 						post(url)
 						.secure(true)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(requestJSON))
-				.andExpect(status().isOk())
-				.andReturn();
-    	final String responseJson = res.getResponse().getContentAsString();
-    	final T responseTO = SerializeUtils.GSON.fromJson(responseJson, responseClass);
+						.andExpect(status().isOk())
+						.andReturn();
+		final String responseJson = res.getResponse().getContentAsString();
+		final T responseTO = SerializeUtils.GSON.fromJson(responseJson, responseClass);
 		return responseTO;
 	}
 }
