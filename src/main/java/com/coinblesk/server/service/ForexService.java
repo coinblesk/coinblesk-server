@@ -15,12 +15,7 @@
  */
 package com.coinblesk.server.service;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.math.BigDecimal;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -53,7 +48,7 @@ final public class ForexService {
 	// 2 days
 	public final static int CACHING_TIME_SYMBOL_MILLIS = 2 * 24 * 60 * 60 * 1000;
 
-	private final static String USER_AGENT = "Mozilla/5.0";
+	
 	private final static String PLACEHOLDER = "{{PLACEHOLDER}}";
 	private final static String YAHOO_API = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.xchange%20where%20pair%20in%20("
 			+ PLACEHOLDER
@@ -104,7 +99,7 @@ final public class ForexService {
 			String values = String.join("\",\"", unknowRates);
 			String rates = '"' + values + '"';
 			final String url = YAHOO_API.replace(PLACEHOLDER, rates);
-			final StringBuffer response = doHttpRequest(url);
+			final StringBuffer response = ServiceUtils.doHttpRequest(url);
 			// gets actual exchange rate out of Json Object and saves it to last.
 			final Gson gson = new Gson();
 			if (unknowRates.size() > 1) {
@@ -125,32 +120,7 @@ final public class ForexService {
 		return exchangeRates;
 	}
 
-	/**
-	 * Executes JSON HTTP Request and returns result.
-	 *
-	 * @param url
-	 * @return response of defined by url request
-	 * @throws IOException
-	 */
-	private static StringBuffer doHttpRequest(String url) throws IOException {
-		final URL requestURL = new URL(url);
-		final HttpURLConnection con = (HttpURLConnection) requestURL.openConnection();
-
-		// optional default is GET
-		con.setRequestMethod("GET");
-
-		// add request header
-		con.setRequestProperty("User-Agent", USER_AGENT);
-
-		final StringBuffer response = new StringBuffer();
-		try (final BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
-			String inputLine;
-			while ((inputLine = in.readLine()) != null) {
-				response.append(inputLine);
-			}
-		}
-		return response;
-	}
+	
 
 	/*-
 	 * minimized JSON representation. Query result looks like:

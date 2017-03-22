@@ -81,7 +81,7 @@ dependencies {
 
     // Shared resources with android client
     // (includes transfer-objects)
-    compile 'com.coinblesk:coinblesk-shared-resources:1.4.71'
+    compile 'com.coinblesk:coinblesk-shared-resources:1.4.73'
 
     // JWT Authentication
     compile('io.jsonwebtoken:jjwt:0.6.0')
