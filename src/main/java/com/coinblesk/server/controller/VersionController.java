@@ -107,9 +107,9 @@ public class VersionController {
 		final String defaultVersion = "(UNKNOWN)";
 		InputStream inputStream = null;
 		try {
-			inputStream = context.getResourceAsStream("/META-INF/MANIFEST.MF");
+			inputStream = context.getClassLoader().getResourceAsStream("/META-INF/MANIFEST.MF");
 			if (inputStream == null) {
-				LOG.warn("Manifest resource not found (inputStream=null, maybe not run as war file?).");
+				LOG.warn("Manifest resource not found (inputStream=null, maybe not run as jar file?).");
 				return defaultVersion;
 			}
 
