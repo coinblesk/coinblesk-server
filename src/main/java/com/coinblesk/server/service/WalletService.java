@@ -47,6 +47,7 @@ import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.net.discovery.DnsDiscovery;
+import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
@@ -144,19 +145,32 @@ public class WalletService {
 		blockChain = new BlockChain(params, blockStore);
 		peerGroup = new PeerGroup(params, blockChain);
 
-		// Add own fullnode to list of seeds
-		String[] seeds = ArrayUtils.addAll(new String[] { appConfig.getFirstSeedNode() }, params.getDnsSeeds());
-		if (appConfig.getBitcoinNet() != BitcoinNet.MAINNET) {
-			DnsDiscovery discovery = new DnsDiscovery(seeds, params);
-			peerGroup.addPeerDiscovery(discovery);
-		}
-
 		blockChain.addWallet(wallet);
 		peerGroup.addWallet(wallet);
 
-		if (appConfig.getBitcoinNet() != BitcoinNet.UNITTEST) {
-			peerGroup.start();
+		// If we're in unittest net we don't need any peer discovery or chain download logic
+		// and we are done here.
+		if (appConfig.getBitcoinNet() == BitcoinNet.UNITTEST) {
+			LOG.info("wallet init done.");
+			return;
 		}
+
+		PeerDiscovery discovery = null;
+		String[] ownFullnodes = new String[] { appConfig.getFirstSeedNode() };
+		switch (appConfig.getBitcoinNet()) {
+			case MAINNET:
+				// For mainnet we use the default seed list but with out own fullnode added as the first node
+				discovery = new DnsDiscovery(ArrayUtils.addAll(ownFullnodes, params.getDnsSeeds()), params);
+				break;
+			case TESTNET:
+				// For testnet we don't bother with other fullnodes and keep things simple by only connecting to
+				// our own fullnode(s).
+				discovery = new DnsDiscovery(ownFullnodes, params);
+				peerGroup.setMaxConnections(ownFullnodes.length);
+				break;
+		}
+		peerGroup.addPeerDiscovery(discovery);
+		peerGroup.start();
 
 		// Download block chain (blocking)
 		final DownloadProgressTracker downloadListener = new DownloadProgressTracker() {
