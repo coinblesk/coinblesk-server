@@ -137,6 +137,14 @@ public class KeyService {
 		return result;
 	}
 
+	@Transactional(readOnly = true)
+	public long getVirtualBalanceByClientPublicKey(byte[] publicKey) {
+		if (publicKey == null || publicKey.length == 0) {
+			throw new IllegalArgumentException("publicKey must not be null");
+		}
+		return keyRepository.findByClientPublicKey(publicKey).virtualBalance();
+	}
+
 	public boolean addressExists(byte[] addressHash) {
 		return timeLockedAddressRepository.findByAddressHash(addressHash) != null;
 	}

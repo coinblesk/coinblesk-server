@@ -18,16 +18,7 @@ package com.coinblesk.server.entity;
 import java.io.Serializable;
 import java.util.List;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Index;
-import javax.persistence.OneToMany;
-import javax.persistence.OrderBy;
-import javax.persistence.Table;
+import javax.persistence.*;
 
 /**
  *
@@ -54,6 +45,9 @@ public class Keys implements Serializable {
 
 	@Column(name = "TIME_CREATED", updatable = false, nullable = false)
 	private long timeCreated;
+
+	@Column(name = "VIRTUAL_BALANCE", nullable = false)
+	private long virtualBalance = 0l;
 
 	@OneToMany(mappedBy = "keys", fetch = FetchType.EAGER)
 	@OrderBy("TIME_CREATED ASC")
@@ -92,6 +86,15 @@ public class Keys implements Serializable {
 
 	public Keys timeCreated(long timeCreatedSeconds) {
 		this.timeCreated = timeCreatedSeconds;
+		return this;
+	}
+
+	public long virtualBalance() {
+		return virtualBalance;
+	}
+
+	public Keys virtualBalance(long virtualBalance) {
+		this.virtualBalance = virtualBalance;
 		return this;
 	}
 

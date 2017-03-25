@@ -713,6 +713,33 @@ public class PaymentController {
 		}
 	}
 
+	@RequestMapping(value = {"/virtualbalance"}, method = POST,
+			consumes = "application/json; charset=UTF-8",
+			produces = "application/json; charset=UTF-8")
+	@ResponseBody
+	public BalanceTO virtualBalance(@RequestBody BalanceTO input) {
+		if(input.publicKey() == null || input.publicKey().length == 0) {
+			return new BalanceTO().type(Type.KEYS_NOT_FOUND);
+		}
+
+		// Check if message is signed correctly
+		final BalanceTO error = ToUtils.checkInput(input);
+		if (error != null) {
+			return error;
+		}
+
+		// Fetch actual balance
+		final long balance = keyService.getVirtualBalanceByClientPublicKey(input.publicKey());
+
+		// Construct response
+		BalanceTO balanceDTO = new BalanceTO().balance(balance);
+
+		// Sign it
+		Keys keys = keyService.getByClientPublicKey(input.publicKey());
+		ECKey existingServerKey = ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey());
+		return SerializeUtils.signJSON(balanceDTO, existingServerKey);
+	}
+
 	private static Transaction createTx(NetworkParameters params, String p2shAddressTo, Address p2shAddressFrom,
 			List<Pair<byte[], Long>> outpointsCoinPair, long amountToSpend, Script redeemScript)
 			throws AddressFormatException, CoinbleskException, InsufficientFunds {
