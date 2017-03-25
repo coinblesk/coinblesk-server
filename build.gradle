@@ -1,13 +1,13 @@
 buildscript {
-    repositories {
-        maven {
-            url "https://plugins.gradle.org/m2/"
-        }
-    }
-    dependencies {
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:1.4.2.RELEASE")
-        classpath("org.hidetake:gradle-ssh-plugin:2.7.0")
-    }
+	repositories {
+		maven {
+			url "https://plugins.gradle.org/m2/"
+		}
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:1.4.2.RELEASE")
+		classpath("org.hidetake:gradle-ssh-plugin:2.7.0")
+	}
 }
 
 apply plugin: 'java'
@@ -17,13 +17,13 @@ apply plugin: 'org.hidetake.ssh'
 version = '2.1-SNAPSHOT'
 
 repositories {
-    mavenLocal()
-    mavenCentral()
+	mavenLocal()
+	mavenCentral()
 }
 
 test {
-    testLogging.showStandardStreams = true
-    testLogging.exceptionFormat = 'full'
+	testLogging.showStandardStreams = true
+	testLogging.exceptionFormat = 'full'
 }
 
 /* http://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/html/deployment-install.html
@@ -54,46 +54,46 @@ test {
  *
  */
 springBoot {
-    executable = true
+	executable = true
 }
 
 jar {
-    manifest {
-        attributes(
-                'Version': project.version
-        )
-    }
+	manifest {
+		attributes(
+				'Version': project.version
+		)
+	}
 }
 
 dependencies {
-    // Spring Boot
-    compile 'org.springframework.boot:spring-boot-starter-web'
-    compile 'org.springframework.boot:spring-boot-devtools'
-    compile 'org.springframework.boot:spring-boot-starter-security'
-    compile 'org.springframework.boot:spring-boot-starter-data-jpa'
-    compile 'org.springframework.boot:spring-boot-starter-mail'
-    compile group: 'io.springfox', name: 'springfox-swagger-ui', version: '2.6.1'
-    compile group: 'io.springfox', name: 'springfox-swagger2', version: '2.6.1'
+	// Spring Boot
+	compile 'org.springframework.boot:spring-boot-starter-web'
+	compile 'org.springframework.boot:spring-boot-devtools'
+	compile 'org.springframework.boot:spring-boot-starter-security'
+	compile 'org.springframework.boot:spring-boot-starter-data-jpa'
+	compile 'org.springframework.boot:spring-boot-starter-mail'
+	compile 'io.springfox:springfox-swagger-ui:2.6.1'
+	compile 'io.springfox:springfox-swagger2:2.6.1'
 
-    // Database drivers
-    runtime 'org.postgresql:postgresql'
-    runtime 'com.h2database:h2'
+	// Database drivers
+	runtime 'org.postgresql:postgresql'
+	runtime 'com.h2database:h2'
 
-    // Shared resources with android client
-    // (includes transfer-objects)
-    compile 'com.coinblesk:coinblesk-shared-resources:1.4.73'
+	// Shared resources with android client
+	// (includes transfer-objects)
+	compile 'com.coinblesk:coinblesk-shared-resources:1.4.73'
 
-    // JWT Authentication
-    compile('io.jsonwebtoken:jjwt:0.6.0')
+	// JWT Authentication
+	compile 'io.jsonwebtoken:jjwt:0.6.0'
 
-    // Misc
-    compile 'org.apache.commons:commons-lang3:3.5'
+	// Misc
+	compile 'org.apache.commons:commons-lang3:3.5'
 
-    // Testing
-    testCompile 'org.springframework.boot:spring-boot-starter-test'
-    testCompile "org.springframework.security:spring-security-test"
-    testCompile 'com.github.springtestdbunit:spring-test-dbunit:1.3.0'
-    testCompile 'org.dbunit:dbunit:2.5.1'
+	// Testing
+	testCompile 'org.springframework.boot:spring-boot-starter-test'
+	testCompile 'org.springframework.security:spring-security-test'
+	testCompile 'com.github.springtestdbunit:spring-test-dbunit:1.3.0'
+	testCompile 'org.dbunit:dbunit:2.5.1'
 }
 
 
@@ -122,45 +122,46 @@ dependencies {
  */
 task deploy {
 
-    remotes {
-        prod {
-            host = 'bitcoin3.csg.uzh.ch'
-        }
-        test {
-            host = 'bitcoin2-test.csg.uzh.ch'
-        }
-    }
+	remotes {
+		prod {
+			host = 'bitcoin3.csg.uzh.ch'
+		}
+		test {
+			host = 'bitcoin2-test.csg.uzh.ch'
+		}
+	}
 
-    ssh.settings {
-        user = "$System.env.USER"
-        identity = file("$System.env.HOME/.ssh/id_rsa")
-    }
+	ssh.settings {
+		user = "$System.env.USER"
+		identity = file("$System.env.HOME/.ssh/id_rsa")
+	}
 
-    doLast {
-        ext.upload = { env, archiveName, dst -> ssh.run {
-                session(remotes."$env") {
-                    execute 'sudo systemctl stop coinblesk'
-                    put from: "build/libs/$archiveName", into: dst
-                    execute "chown $System.env.USER:coinblesk $dst; chmod ug+x $dst"
-                    execute 'sudo systemctl start coinblesk'
-                }
-            }
-        }
-        def dst = '/var/lib/coinblesk/coinblesk.jar'
-        if (project.hasProperty('env') && project.getProperty('env') == 'test') {
-            println("deploying on TEST...")
-            upload('test', jar.archiveName, dst)
-        } else if (project.hasProperty('env')  && project.getProperty('env') == 'prod') {
-            println("deploying on PROD...")
-            upload('prod', jar.archiveName, dst)
-        } else {
-            println("deploying on LOCAL...")
-            exec {
-                commandLine "sudo systemctl stop coinblesk && \
+	doLast {
+		ext.upload = { env, archiveName, dst -> ssh.run
+				{
+					session(remotes."$env") {
+						execute 'sudo systemctl stop coinblesk'
+						put from: "build/libs/$archiveName", into: dst
+						execute "chown $System.env.USER:coinblesk $dst; chmod ug+x $dst"
+						execute 'sudo systemctl start coinblesk'
+					}
+				}
+		}
+		def dst = '/var/lib/coinblesk/coinblesk.jar'
+		if (project.hasProperty('env') && project.getProperty('env') == 'test') {
+			println("deploying on TEST...")
+			upload('test', jar.archiveName, dst)
+		} else if (project.hasProperty('env')  && project.getProperty('env') == 'prod') {
+			println("deploying on PROD...")
+			upload('prod', jar.archiveName, dst)
+		} else {
+			println("deploying on LOCAL...")
+			exec {
+				commandLine "sudo systemctl stop coinblesk && \
                     cp build/libs/$jar.archiveName $dst && \
                     chown $System.env.USER:coinblesk $dst; chmod ug+x $dst && \
                     sudo systemctl start coinblesk"
-            }
-        }
-    }
+			}
+		}
+	}
 }
