@@ -16,7 +16,9 @@
 package com.coinblesk.server.entity;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import javax.persistence.*;
 
@@ -109,6 +111,27 @@ public class Keys implements Serializable {
 	public Keys timeLockedAddresses(List<TimeLockedAddressEntity> timeLockedAddresses) {
 		this.timeLockedAddresses = timeLockedAddresses;
 		return this;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		Keys keys = (Keys) o;
+
+		return id == keys.id &&
+				Arrays.equals(clientPublicKey,  keys.clientPublicKey) &&
+				Arrays.equals(serverPublicKey,  keys.serverPublicKey) &&
+				Arrays.equals(serverPrivateKey, keys.serverPrivateKey);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id,
+				Arrays.hashCode(clientPublicKey),
+				Arrays.hashCode(serverPublicKey),
+				Arrays.hashCode(serverPrivateKey)
+		);
 	}
 
 	/*public List<Address> btcAddresses(NetworkParameters params) {

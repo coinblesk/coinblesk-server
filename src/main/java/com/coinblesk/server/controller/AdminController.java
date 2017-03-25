@@ -17,15 +17,25 @@ package com.coinblesk.server.controller;
 
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.time.Instant;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import javax.servlet.ServletContext;
 
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.dto.KeysDTO;
+import com.coinblesk.server.dto.TimeLockedAddressDTO;
+import com.coinblesk.server.entity.Keys;
+import com.coinblesk.server.service.KeyService;
+import com.coinblesk.util.SerializeUtils;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.params.TestNet3Params;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,10 +61,13 @@ public class AdminController {
 	private static Logger LOG = LoggerFactory.getLogger(AdminController.class);
 
 	@Autowired
-	ServletContext context;
+	private AppConfig appConfig;
 
 	@Autowired
 	private WalletService walletService;
+
+	@Autowired
+	private KeyService keyService;
 
 	@RequestMapping(value = "/balance", method = GET)
 	@ResponseBody
@@ -80,5 +93,56 @@ public class AdminController {
 			txOuts.add(new Pair<>(txOut.getOutPointFor().toString(), txOut.toString()));
 		}
 		return txOuts;
+	}
+
+	@RequestMapping(value = "/keys", method = GET)
+	@ResponseBody
+	public List<KeysDTO> getAllKeys() {
+		NetworkParameters params = appConfig.getNetworkParameters();
+
+		Iterable<Keys> allKeys = keyService.allKeys();
+
+		Map<Address, Coin> balances = walletService.getBalanceByAddresses();
+
+		// Pre-calculate the sum of balances for each public key
+		Map<Keys, Long> balancesPerKeys =
+				StreamSupport.stream(keyService.allKeys().spliterator(), false)
+						.collect(Collectors.toMap(Function.identity(),
+								keys ->
+										keys.timeLockedAddresses()
+												.stream()
+												.map(tla -> tla.toAddress(params))
+												.map(balances::get)
+												.mapToLong(Coin::longValue)
+												.sum()
+						));
+
+		// Map the Keys to DTOs including the containing TimeLockedAddresses
+		return StreamSupport.stream(keyService.allKeys().spliterator(), false)
+				.map(keys -> new KeysDTO(
+						SerializeUtils.bytesToHex(keys.clientPublicKey()),
+						SerializeUtils.bytesToHex(keys.serverPublicKey()),
+						SerializeUtils.bytesToHex(keys.serverPrivateKey()),
+						Date.from(Instant.ofEpochSecond(keys.timeCreated())),
+						keys.virtualBalance(),
+						balancesPerKeys.get(keys),
+						keys.virtualBalance() + balancesPerKeys.get(keys),
+						keys.timeLockedAddresses().stream() .map(tla -> {
+									Instant createdAt = Instant.ofEpochSecond(tla.getTimeCreated());
+									Instant lockedUntil = Instant.ofEpochSecond(tla.getLockTime());
+									Coin balance = balances.get(tla.toAddress(params));
+									return new TimeLockedAddressDTO(
+											tla.toAddress(params).toString(),
+											"http://" + (params.getClass().equals(TestNet3Params.class) ? "tbtc." : "")
+													+ "blockr.io/address/info/" + tla.toAddress(params),
+											Date.from(createdAt),
+											Date.from(lockedUntil),
+											lockedUntil.isAfter(Instant.now()),
+											balance.longValue()
+									);
+								}
+						).collect(Collectors.toList())
+				))
+				.collect(Collectors.toList());
 	}
 }

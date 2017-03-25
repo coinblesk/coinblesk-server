@@ -88,6 +88,7 @@ dependencies {
 
 	// Misc
 	compile 'org.apache.commons:commons-lang3:3.5'
+	compile 'org.projectlombok:lombok:1.16.16'
 
 	// Testing
 	testCompile 'org.springframework.boot:spring-boot-starter-test'
