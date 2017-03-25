@@ -31,9 +31,9 @@ test {
  * thus it will not be a jar anymore. However this, simplifies the deployemnt as only one file
  * has to be copied. For a custom script, use embeddedLaunchScript.
  *
- * systemd / init.d installation in "/etc/systemd/system/": 
+ * systemd / init.d installation in "/etc/systemd/system/":
  * http://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/html/deployment-install.html#deployment-service
- * 
+ *
  * # [Unit]
  * # Description=coinblesk
  * # After=syslog.target
@@ -49,9 +49,9 @@ test {
  *
  * Enable with:
  * # systemctl enable coinblesk.service
- * 
+ *
  * Make sure the directory /var/lib/coinblesk exists
- * 
+ *
  */
 springBoot {
     executable = true
@@ -100,28 +100,28 @@ dependencies {
 
 /*
  * To deploy a test the following needs to be in place:
- * 
+ *
  * - add group coinblesk
  *  # groupadd coinblesk
  *  # adduser USER coinblesk
- *  
+ *
  * - allow restarting of coinblesk with systemd
- * 
+ *
  * # %coinblesk ALL=(root)NOPASSWD: /bin/systemctl stop coinblesk
  * # %coinblesk ALL=(root)NOPASSWD: /bin/systemctl start coinblesk
  * # %coinblesk ALL=(root)NOPASSWD: /bin/systemctl status coinblesk
  * # %coinblesk ALL=(root)NOPASSWD: /bin/systemctl restart coinblesk
- * 
+ *
  * run with:
  * # gradle deploy -Penv=test
  * # gradle deploy -Penv=prod
  * # gradle deploy
- * 
+ *
  * check logs with:
  * # journalctl -u coinblesk.service -f
  */
 task deploy {
-    
+
     remotes {
         prod {
             host = 'bitcoin3.csg.uzh.ch'
@@ -135,7 +135,7 @@ task deploy {
         user = "$System.env.USER"
         identity = file("$System.env.HOME/.ssh/id_rsa")
     }
-    
+
     doLast {
         ext.upload = { env, archiveName, dst -> ssh.run {
                 session(remotes."$env") {
