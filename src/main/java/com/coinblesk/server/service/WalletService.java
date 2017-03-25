@@ -470,6 +470,23 @@ public class WalletService {
 		}
 	}
 
+
+	/***
+	 * Gets the current balance from the wallet including all tracked addresses
+	 * and pot itself. Used by AdminController.
+	 *
+	 * @return Coin
+	 */
+	public Coin getBalance() {
+		return wallet.getBalance(BalanceType.ESTIMATED);
+	}
+
+	/***
+	 * Returns a Map listing all watched scripts and their corresponding balance.
+	 * Used by AdminController.
+	 *
+	 * @return
+	 */
 	public Map<Address, Coin> getBalanceByAddresses() {
 		final NetworkParameters params = appConfig.getNetworkParameters();
 
@@ -479,7 +496,7 @@ public class WalletService {
 		// getBalance considers UTXO: add zero balance for all watched scripts
 		// without unspent outputs
 		Map<Address, Coin> fullBalances = new HashMap<>(selector.getAddressBalances());
-		for (Script watched : getWatchedScripts()) {
+		for (Script watched : wallet.getWatchedScripts()) {
 			Address address = watched.getToAddress(params);
 			if (!fullBalances.containsKey(address)) {
 				fullBalances.put(address, Coin.ZERO);
@@ -489,14 +506,12 @@ public class WalletService {
 		return fullBalances;
 	}
 
-	public List<Script> getWatchedScripts() {
-		return wallet.getWatchedScripts();
-	}
-
-	public Coin getBalance() {
-		return wallet.getBalance(BalanceType.ESTIMATED);
-	}
-
+	/***
+	 * List all unspent outputs tracked by the wallet.
+	 * Used by AdminController.
+	 *
+	 * @return List of {@link org.bitcoinj.core.TransactionOutput} of all unspent outputs tracked by bitcoinj.
+	 */
 	public List<TransactionOutput> getUnspentOutputs() {
 		return wallet.getUnspents();
 	}
