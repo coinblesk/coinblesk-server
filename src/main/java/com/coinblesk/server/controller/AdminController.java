@@ -55,7 +55,6 @@ import com.coinblesk.util.Pair;
 
 @Controller
 @RequestMapping(value = "/admin")
-@ApiVersion({ "v1", "" })
 public class AdminController {
 
 	private static Logger LOG = LoggerFactory.getLogger(AdminController.class);
