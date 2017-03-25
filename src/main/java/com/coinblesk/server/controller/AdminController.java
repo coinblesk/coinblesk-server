@@ -100,11 +100,10 @@ public class AdminController {
 	public List<KeysDTO> getAllKeys() {
 		NetworkParameters params = appConfig.getNetworkParameters();
 
-		Iterable<Keys> allKeys = keyService.allKeys();
-
+		// Pre-calculate balances for each address
 		Map<Address, Coin> balances = walletService.getBalanceByAddresses();
 
-		// Pre-calculate the sum of balances for each public key
+		// ...and summed for each public key
 		Map<Keys, Long> balancesPerKeys =
 				StreamSupport.stream(keyService.allKeys().spliterator(), false)
 						.collect(Collectors.toMap(Function.identity(),
@@ -117,7 +116,7 @@ public class AdminController {
 												.sum()
 						));
 
-		// Map the Keys to DTOs including the containing TimeLockedAddresses
+		// Map the Keys entities to DTOs including the containing TimeLockedAddresses
 		return StreamSupport.stream(keyService.allKeys().spliterator(), false)
 				.map(keys -> new KeysDTO(
 						SerializeUtils.bytesToHex(keys.clientPublicKey()),
