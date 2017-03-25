@@ -51,6 +51,7 @@ import com.coinblesk.util.Pair;
  *
  * @author Thomas Bocek
  * @author Andreas Albrecht
+ * @author Sebastian Stephan
  */
 
 @Controller
