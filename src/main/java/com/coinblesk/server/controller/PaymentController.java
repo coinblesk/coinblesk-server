@@ -27,6 +27,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.coinblesk.server.dto.KeyExchangeRequestDTO;
+import com.google.common.io.BaseEncoding;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Coin;
@@ -68,6 +70,8 @@ import com.coinblesk.util.CoinbleskException;
 import com.coinblesk.util.InsufficientFunds;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
+
+import javax.validation.Valid;
 
 /**
  *
@@ -328,18 +332,21 @@ public class PaymentController {
 			consumes = APPLICATION_JSON_UTF8_VALUE,
 			produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
-	public KeyTO keyExchange(@RequestBody KeyTO input) {
+	public KeyTO keyExchange(@RequestBody @Valid KeyExchangeRequestDTO request) {
 		final long startTime = System.currentTimeMillis();
 		final String tag = "{key-exchange}";
+
 		try {
-			if (input.publicKey() == null || !ECKey.isPubKeyCanonical(input.publicKey())) {
+			final byte[] publicKey = BaseEncoding.base16().decode(request.getPublicKey().toUpperCase());
+
+			if (publicKey.length != 33 || !ECKey.isPubKeyCanonical(publicKey)) {
 				LOG.debug("{} - INPUT_MISMATCH", tag);
 				return ToUtils.newInstance(KeyTO.class, Type.INPUT_MISMATCH);
 			}
 
-			LOG.debug("{} - clientPubKey={}", tag, SerializeUtils.bytesToHex(input.publicKey()));
+			LOG.debug("{} - clientPubKey={}", tag, SerializeUtils.bytesToHex(publicKey));
 			// no input checking as input may not be signed
-			final byte[] clientPublicKey = input.publicKey();
+			final byte[] clientPublicKey = publicKey;
 			final ECKey serverEcKey = new ECKey();
 			final List<ECKey> keyList = new ArrayList<>(2);
 			keyList.add(ECKey.fromPublicOnly(clientPublicKey));
