@@ -51,6 +51,9 @@ public class Keys implements Serializable {
 	@Column(name = "VIRTUAL_BALANCE", nullable = false)
 	private long virtualBalance = 0l;
 
+	@Column(name = "NONCE", nullable = false)
+	private long nonce = 0l;
+
 	@OneToMany(mappedBy = "keys", fetch = FetchType.EAGER)
 	@OrderBy("TIME_CREATED ASC")
 	private List<TimeLockedAddressEntity> timeLockedAddresses;
