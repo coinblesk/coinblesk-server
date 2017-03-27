@@ -103,6 +103,15 @@ public class Keys implements Serializable {
 		return this;
 	}
 
+	public long nonce() {
+		return nonce;
+	}
+
+	public Keys nonce(long nonce) {
+		this.nonce = nonce;
+		return this;
+	}
+
 	public List<TimeLockedAddressEntity> timeLockedAddresses() {
 		return timeLockedAddresses;
 	}
