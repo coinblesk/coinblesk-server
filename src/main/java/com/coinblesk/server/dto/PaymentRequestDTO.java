@@ -8,5 +8,5 @@ public @Data class PaymentRequestDTO {
 	@Nonnull private final String fromPublicKey;
 	@Nonnull private final String toPublicKey;
 	@Nonnull private final Long amount;
-	private long nonce;
+	private final long nonce;
 }

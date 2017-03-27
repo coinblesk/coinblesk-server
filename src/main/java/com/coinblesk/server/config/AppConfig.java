@@ -29,6 +29,7 @@ import org.springframework.core.io.FileSystemResource;
 
 import com.coinblesk.bitcoin.BitcoinNet;
 import com.coinblesk.server.utils.CoinUtils;
+import org.springframework.retry.annotation.EnableRetry;
 
 /**
  * This is the default configuration for testcases. If you want to change these
@@ -44,6 +45,7 @@ import com.coinblesk.server.utils.CoinUtils;
  * @author Thomas Bocek
  */
 @Configuration
+@EnableRetry
 public class AppConfig {
 
 	private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(AppConfig.class);
@@ -114,7 +116,7 @@ public class AppConfig {
 
 	public ECKey getPotPrivateKeyAddress() {
 
-		if (potPrivateKeyAddress == null || potPrivateKeyAddress.equals("")) {
+		if (potPrivateKeyAddress.equals(new BigInteger(""))) {
 			ECKey ecKey = new ECKey();
 			LOG.error("No private key defined, cannot continue, suggested key:{}", ecKey.getPrivKey());
 			throw new RuntimeException("No private key defined, cannot continue, suggested key:" + ecKey.getPrivKey());

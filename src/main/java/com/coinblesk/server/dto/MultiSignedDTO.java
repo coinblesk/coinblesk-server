@@ -5,13 +5,15 @@ import lombok.Data;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
-public @Data class SignedDTO {
-	// Payload contains Base64URL encoded json
+public @Data class MultiSignedDTO {
 	@NotNull
 	private final String payload;
 
-	// Signature contains the signature of the payload
 	@NotNull
 	@Valid
-	private final SignatureDTO signature;
+	private final SignatureDTO signatureForSender;
+
+	@NotNull
+	@Valid
+	private final SignatureDTO signatureForReceiver;
 }
