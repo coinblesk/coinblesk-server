@@ -195,7 +195,6 @@ public class KeyService {
 
 	byte[] getRedeemScriptByAddressHash(byte[] addressHash) {
 		TimeLockedAddressEntity address = getTimeLockedAddressByAddressHash(addressHash);
-		byte[] data = address != null ? address.getRedeemScript() : null;
-		return data;
+		return address != null ? address.getRedeemScript() : null;
 	}
 }
