@@ -49,10 +49,10 @@ public class Keys implements Serializable {
 	private long timeCreated;
 
 	@Column(name = "VIRTUAL_BALANCE", nullable = false)
-	private long virtualBalance = 0l;
+	private long virtualBalance = 0L;
 
 	@Column(name = "NONCE", nullable = false)
-	private long nonce = 0l;
+	private long nonce = 0L;
 
 	@OneToMany(mappedBy = "keys", fetch = FetchType.EAGER)
 	@OrderBy("TIME_CREATED ASC")
