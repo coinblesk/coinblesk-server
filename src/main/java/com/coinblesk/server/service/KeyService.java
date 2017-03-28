@@ -60,7 +60,7 @@ public class KeyService {
 	}
 
 	@Transactional(readOnly = true)
-	public Keys getByClientPublicKey(final byte[] clientPublicKey) {
+	public Keys getByClientPublicKey(@NonNull final byte[] clientPublicKey) {
 		return keyRepository.findByClientPublicKey(clientPublicKey);
 	}
 
@@ -74,7 +74,7 @@ public class KeyService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<ECKey> getECKeysByClientPublicKey(final byte[] clientPublicKey) {
+	public List<ECKey> getECKeysByClientPublicKey(@NonNull final byte[] clientPublicKey) {
 		final Keys keys = keyRepository.findByClientPublicKey(clientPublicKey);
 		if (keys == null) {
 			return Collections.emptyList();
@@ -86,11 +86,10 @@ public class KeyService {
 	}
 
 	@Transactional
-	public Pair<Boolean, Keys> storeKeysAndAddress(final byte[] clientPublicKey, final byte[] serverPublicKey,
-			final byte[] serverPrivateKey) {
-		if (clientPublicKey == null || serverPublicKey == null || serverPrivateKey == null) {
-			throw new IllegalArgumentException("null not expected here");
-		}
+	public Pair<Boolean, Keys> storeKeysAndAddress(
+			@NonNull final byte[] clientPublicKey,
+			@NonNull final byte[] serverPublicKey,
+			@NonNull final byte[] serverPrivateKey) {
 
 		// need to check if it exists here, as not all DBs do that for us
 		final Keys keys = keyRepository.findByClientPublicKey(clientPublicKey);
@@ -168,21 +167,18 @@ public class KeyService {
 	}
 
 	@Transactional(readOnly = true)
-	public long getVirtualBalanceByClientPublicKey(byte[] publicKey) {
-		if (publicKey == null || publicKey.length == 0) {
+	public long getVirtualBalanceByClientPublicKey(@NonNull byte[] publicKey) {
+		if (publicKey.length == 0) {
 			throw new IllegalArgumentException("publicKey must not be null");
 		}
 		return keyRepository.findByClientPublicKey(publicKey).virtualBalance();
 	}
 
-	public boolean addressExists(byte[] addressHash) {
+	public boolean addressExists(@NonNull byte[] addressHash) {
 		return timeLockedAddressRepository.findByAddressHash(addressHash) != null;
 	}
 
-	TimeLockedAddressEntity getTimeLockedAddressByAddressHash(byte[] addressHash) {
-		if (addressHash == null) {
-			throw new IllegalArgumentException("addressHash must not be null.");
-		}
+	TimeLockedAddressEntity getTimeLockedAddressByAddressHash(@NonNull byte[] addressHash) {
 		return timeLockedAddressRepository.findByAddressHash(addressHash);
 	}
 
