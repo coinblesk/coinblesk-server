@@ -2,18 +2,11 @@ package com.coinblesk.server.utils;
 
 import com.coinblesk.server.dto.SignatureDTO;
 import com.coinblesk.server.exceptions.InvalidSignatureException;
-import com.coinblesk.server.exceptions.MissingFieldException;
 import com.google.common.io.BaseEncoding;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import io.jsonwebtoken.impl.TextCodec;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.ECKey.ECDSASignature;
 import org.bitcoinj.core.Sha256Hash;
 
-import javax.annotation.Nonnull;
-import javax.validation.constraints.NotNull;
-import java.lang.reflect.Field;
 import java.math.BigInteger;
 
 /**
