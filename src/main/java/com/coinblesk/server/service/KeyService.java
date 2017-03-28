@@ -16,6 +16,7 @@
 
 package com.coinblesk.server.service;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -89,7 +90,8 @@ public class KeyService {
 		final Keys clientKey = new Keys()
 				.clientPublicKey(clientPublicKey)
 				.serverPrivateKey(serverPrivateKey)
-				.serverPublicKey(serverPublicKey);
+				.serverPublicKey(serverPublicKey)
+				.timeCreated(Instant.now().getEpochSecond());
 
 		final Keys storedKeys = keyRepository.save(clientKey);
 		return new Pair<>(true, storedKeys);
