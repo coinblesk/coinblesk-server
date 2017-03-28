@@ -85,7 +85,7 @@ public class KeyService {
 		return retVal;
 	}
 
-	@Transactional(readOnly = false)
+	@Transactional
 	public Pair<Boolean, Keys> storeKeysAndAddress(final byte[] clientPublicKey, final byte[] serverPublicKey,
 			final byte[] serverPrivateKey) {
 		if (clientPublicKey == null || serverPublicKey == null || serverPrivateKey == null) {
