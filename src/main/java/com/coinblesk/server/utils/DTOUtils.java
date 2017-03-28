@@ -8,7 +8,6 @@ import com.google.gson.GsonBuilder;
 import io.jsonwebtoken.impl.TextCodec;
 import org.bitcoinj.core.ECKey;
 
-import javax.annotation.Nonnull;
 import javax.validation.constraints.NotNull;
 import java.lang.reflect.Field;
 
@@ -58,7 +57,6 @@ public class DTOUtils {
 	/***
 	 * Takes an object of type T and checks if any fields annotated with the following annotations,
 	 * is null:
-	 * - {@link Nonnull} (javax)
 	 * - {@link javax.validation.constraints.NotNull} (javax)
 	 *
 	 * This can happen if the object was created with reflection for example by GSON.
@@ -69,12 +67,12 @@ public class DTOUtils {
 	 * @param obj The object to be checked
 	 * @param objClass The
 	 * @param <T> The type of the object to be checked
-	 * @throws MissingFieldException If a {@link NotNull} or {@link Nonnull} annotated field is null
+	 * @throws MissingFieldException If a {@link NotNull} annotated field is null
 	 */
 	private static <T> void validateNonNullFields(T obj, Class<T> objClass) {
 		Field[] fields = objClass.getDeclaredFields();
 		for(Field field : fields) {
-			if (field.isAnnotationPresent(Nonnull.class) || field.isAnnotationPresent(NotNull.class)) {
+			if (field.isAnnotationPresent(NotNull.class)) {
 				try {
 					field.setAccessible(true);
 					if (field.get(obj) == null)

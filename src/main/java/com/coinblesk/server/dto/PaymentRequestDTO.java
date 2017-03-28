@@ -2,12 +2,13 @@ package com.coinblesk.server.dto;
 
 import lombok.Data;
 
-import javax.annotation.Nonnull;
+import javax.validation.constraints.NotNull;
+
 
 public @Data class PaymentRequestDTO implements Signable {
-	@Nonnull private final String fromPublicKey;
-	@Nonnull private final String toPublicKey;
-	@Nonnull private final Long amount;
+	@NotNull private final String fromPublicKey;
+	@NotNull private final String toPublicKey;
+	@NotNull private final Long amount;
 	private final long nonce;
 
 	@Override
