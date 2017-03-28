@@ -60,14 +60,18 @@ public class AdminController {
 
 	private static Logger LOG = LoggerFactory.getLogger(AdminController.class);
 
-	@Autowired
-	private AppConfig appConfig;
+	private final AppConfig appConfig;
+
+	private final WalletService walletService;
+
+	private final KeyService keyService;
 
 	@Autowired
-	private WalletService walletService;
-
-	@Autowired
-	private KeyService keyService;
+	public AdminController(AppConfig appConfig, WalletService walletService, KeyService keyService) {
+		this.appConfig = appConfig;
+		this.walletService = walletService;
+		this.keyService = keyService;
+	}
 
 	@RequestMapping(value = "/balance", method = GET)
 	@ResponseBody
@@ -103,30 +107,31 @@ public class AdminController {
 		// Pre-calculate balances for each address
 		Map<Address, Coin> balances = walletService.getBalanceByAddresses();
 
+		List<Keys> keys = keyService.allKeys();
+
 		// ...and summed for each public key
-		Map<Keys, Long> balancesPerKeys =
-				StreamSupport.stream(keyService.allKeys().spliterator(), false)
-						.collect(Collectors.toMap(Function.identity(),
-								keys ->
-										keys.timeLockedAddresses()
-												.stream()
-												.map(tla -> tla.toAddress(params))
-												.map(balances::get)
-												.mapToLong(Coin::longValue)
-												.sum()
-						));
+		Map<Keys, Long> balancesPerKeys = keys.stream()
+				.collect(Collectors.toMap(Function.identity(),
+						key ->
+								key.timeLockedAddresses()
+										.stream()
+										.map(tla -> tla.toAddress(params))
+										.map(balances::get)
+										.mapToLong(Coin::longValue)
+										.sum()
+				));
 
 		// Map the Keys entities to DTOs including the containing TimeLockedAddresses
-		return StreamSupport.stream(keyService.allKeys().spliterator(), false)
-				.map(keys -> new KeysDTO(
-						SerializeUtils.bytesToHex(keys.clientPublicKey()),
-						SerializeUtils.bytesToHex(keys.serverPublicKey()),
-						SerializeUtils.bytesToHex(keys.serverPrivateKey()),
-						Date.from(Instant.ofEpochSecond(keys.timeCreated())),
-						keys.virtualBalance(),
-						balancesPerKeys.get(keys),
-						keys.virtualBalance() + balancesPerKeys.get(keys),
-						keys.timeLockedAddresses().stream() .map(tla -> {
+		return keys.stream()
+				.map(key -> new KeysDTO(
+						SerializeUtils.bytesToHex(key.clientPublicKey()),
+						SerializeUtils.bytesToHex(key.serverPublicKey()),
+						SerializeUtils.bytesToHex(key.serverPrivateKey()),
+						Date.from(Instant.ofEpochSecond(key.timeCreated())),
+						key.virtualBalance(),
+						balancesPerKeys.get(key),
+						key.virtualBalance() + balancesPerKeys.get(key),
+						key.timeLockedAddresses().stream() .map(tla -> {
 									Instant createdAt = Instant.ofEpochSecond(tla.getTimeCreated());
 									Instant lockedUntil = Instant.ofEpochSecond(tla.getLockTime());
 									Coin balance = balances.get(tla.toAddress(params));
