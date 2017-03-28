@@ -20,6 +20,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Utils;
@@ -111,8 +113,9 @@ public class KeyService {
 	}
 
 	@Transactional(readOnly = true)
-	public Iterable<Keys> allKeys() {
-		return keyRepository.findAll();
+	public List<Keys> allKeys() {
+		return StreamSupport.stream(keyRepository.findAll().spliterator(), false)
+				.collect(Collectors.toList());
 	}
 
 	@Transactional(readOnly = false)
