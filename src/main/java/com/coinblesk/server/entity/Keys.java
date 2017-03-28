@@ -43,7 +43,7 @@ public class Keys implements Serializable {
 	private byte[] serverPublicKey;
 
 	@Column(name = "SERVER_PRIVATE_KEY", unique = true, nullable = false, updatable = false)
-	protected byte[] serverPrivateKey;
+	private byte[] serverPrivateKey;
 
 	@Column(name = "TIME_CREATED", updatable = false, nullable = false)
 	private long timeCreated;
