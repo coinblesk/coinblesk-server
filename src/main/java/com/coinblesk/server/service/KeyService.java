@@ -193,14 +193,6 @@ public class KeyService {
 		return timeLockedAddressRepository.findByKeys_ClientPublicKey(publicKey);
 	}
 
-	public TimeLockedAddressEntity findAddressByAddressHash(byte[] addressHash) {
-		if (addressHash == null) {
-			throw new IllegalArgumentException("addressHash must not be null.");
-		}
-		TimeLockedAddressEntity address = timeLockedAddressRepository.findByAddressHash(addressHash);
-		return address;
-	}
-
 	public byte[] getRedeemScriptByAddressHash(byte[] addressHash) {
 		TimeLockedAddressEntity address = getTimeLockedAddressByAddressHash(addressHash);
 		byte[] data = address != null ? address.getRedeemScript() : null;
