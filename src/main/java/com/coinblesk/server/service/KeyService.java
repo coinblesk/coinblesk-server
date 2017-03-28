@@ -49,11 +49,15 @@ import com.coinblesk.util.Pair;
 @Service
 public class KeyService {
 
-	@Autowired
-	private KeyRepository keyRepository;
+	private final KeyRepository keyRepository;
+
+	private final TimeLockedAddressRepository timeLockedAddressRepository;
 
 	@Autowired
-	private TimeLockedAddressRepository timeLockedAddressRepository;
+	public KeyService(@NonNull KeyRepository keyRepository, @NonNull TimeLockedAddressRepository timeLockedAddressRepository) {
+		this.keyRepository = keyRepository;
+		this.timeLockedAddressRepository = timeLockedAddressRepository;
+	}
 
 	@Transactional(readOnly = true)
 	public Keys getByClientPublicKey(final byte[] clientPublicKey) {
