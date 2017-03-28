@@ -89,7 +89,7 @@ public class KeyService {
 	public Pair<Boolean, Keys> storeKeysAndAddress(final byte[] clientPublicKey, final byte[] serverPublicKey,
 			final byte[] serverPrivateKey) {
 		if (clientPublicKey == null || serverPublicKey == null || serverPrivateKey == null) {
-			throw new IllegalArgumentException("null not excpected here");
+			throw new IllegalArgumentException("null not expected here");
 		}
 
 		// need to check if it exists here, as not all DBs do that for us
