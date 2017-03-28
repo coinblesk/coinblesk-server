@@ -115,13 +115,6 @@ public class AppConfig {
 	}
 
 	public ECKey getPotPrivateKeyAddress() {
-
-		if (potPrivateKeyAddress.equals(new BigInteger(""))) {
-			ECKey ecKey = new ECKey();
-			LOG.error("No private key defined, cannot continue, suggested key:{}", ecKey.getPrivKey());
-			throw new RuntimeException("No private key defined, cannot continue, suggested key:" + ecKey.getPrivKey());
-		}
-
 		ECKey ecKey = ECKey.fromPrivate(potPrivateKeyAddress);
 		LOG.info("Pot address is: {}", ecKey.toAddress(getNetworkParameters()));
 		return ecKey;
