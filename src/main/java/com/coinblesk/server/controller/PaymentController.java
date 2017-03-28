@@ -97,17 +97,21 @@ public class PaymentController {
 	private final static Logger LOG = LoggerFactory.getLogger(PaymentController.class);
 	private final static Set<String> CONCURRENCY = Collections.synchronizedSet(new HashSet<>());
 
-	@Autowired
-	private AppConfig appConfig;
+	private final AppConfig appConfig;
+
+	private final WalletService walletService;
+
+	private final KeyService keyService;
+
+	private final TransactionService txService;
 
 	@Autowired
-	private WalletService walletService;
-
-	@Autowired
-	private KeyService keyService;
-
-	@Autowired
-	private TransactionService txService;
+	public PaymentController(AppConfig appConfig, WalletService walletService, KeyService keyService, TransactionService txService) {
+		this.appConfig = appConfig;
+		this.walletService = walletService;
+		this.keyService = keyService;
+		this.txService = txService;
+	}
 
 	@RequestMapping(value = "/createTimeLockedAddress",
 			method = POST,
