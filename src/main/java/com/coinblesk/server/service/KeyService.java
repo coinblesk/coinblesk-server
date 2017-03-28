@@ -23,6 +23,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import com.coinblesk.server.exceptions.InvalidLockTimeException;
+import com.coinblesk.server.exceptions.UserNotFoundException;
+import com.coinblesk.util.BitcoinUtils;
+import lombok.NonNull;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +44,7 @@ import com.coinblesk.util.Pair;
  *
  * @author Thomas Bocek
  * @author Andreas Albrecht
+ * @author Sebastian Stephan
  */
 @Service
 public class KeyService {
@@ -118,28 +123,44 @@ public class KeyService {
 				.collect(Collectors.toList());
 	}
 
-	@Transactional(readOnly = false)
-	public TimeLockedAddressEntity storeTimeLockedAddress(Keys keys, TimeLockedAddress address) {
-		if (address == null || keys == null) {
-			throw new IllegalArgumentException("Address/keys must not be null");
-		}
-		if (keys.serverPrivateKey() == null || keys.serverPublicKey() == null || keys.clientPublicKey() == null) {
-			throw new IllegalArgumentException("Keys must not be null.");
-		}
-		if (address.getAddressHash() == null) {
-			throw new IllegalArgumentException("AddressHash must not be null");
+	@Transactional
+	public TimeLockedAddress createTimeLockedAddress(@NonNull ECKey clientPublicKey, long lockTime)
+			throws UserNotFoundException, InvalidLockTimeException {
+
+		// Lock time must be valid
+		if (!BitcoinUtils.isLockTimeByTime(lockTime) ||
+				BitcoinUtils.isAfterLockTime(Instant.now().getEpochSecond(), lockTime)) {
+			throw new InvalidLockTimeException();
 		}
 
+		// Get client for which a new address should be created
+		Keys client = keyRepository.findByClientPublicKey(clientPublicKey.getPubKey());
+		if (client == null)
+			throw new UserNotFoundException(clientPublicKey.getPublicKeyAsHex());
+
+		// Create address
+		final TimeLockedAddress address = new TimeLockedAddress(
+				client.clientPublicKey(),
+				client.serverPublicKey(),
+				lockTime);
+
+		// Check if address is already in database, if so nothing to do
+		TimeLockedAddressEntity existingAddress =
+				timeLockedAddressRepository.findByAddressHash(address.getAddressHash());
+		if (existingAddress != null)
+			return address;
+
+		// Create the new address entity and save
 		TimeLockedAddressEntity addressEntity = new TimeLockedAddressEntity();
 		addressEntity
 				.setLockTime(address.getLockTime())
 				.setAddressHash(address.getAddressHash())
 				.setRedeemScript(address.createRedeemScript().getProgram())
 				.setTimeCreated(Utils.currentTimeSeconds())
-				.setKeys(keys);
+				.setKeys(client);
+		timeLockedAddressRepository.save(addressEntity);
 
-		TimeLockedAddressEntity result = timeLockedAddressRepository.save(addressEntity);
-		return result;
+		return address;
 	}
 
 	@Transactional(readOnly = true)

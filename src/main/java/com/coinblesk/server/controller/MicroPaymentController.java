@@ -9,10 +9,7 @@ import com.coinblesk.util.InsufficientFunds;
 import org.bitcoinj.core.ECKey;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 
@@ -42,32 +39,23 @@ public class MicroPaymentController {
 			produces = APPLICATION_JSON_UTF8_VALUE)
 	public ResponseEntity virtualpayment(@RequestBody @Valid SignedDTO request)
 	{
+		// Get the embedded payload and check signature
 		final PaymentRequestDTO requestDTO;
-		final ECKey keySender, keyReceiver;
-
-		// Checks that don't require the database
 		try {
-			final String payloadBase64String = request.getPayload();
-
-			// Parse Base64 payload to actual DTO
-			requestDTO = DTOUtils.parsePayload(payloadBase64String, PaymentRequestDTO.class);
-
-			// Get public key of sender from DTO and parse into ECKey
-			keySender = SignatureUtils.getECKeyFromHexPublicKey(requestDTO.getFromPublicKey());
-
-			// Get the public key of the receiver from the DTO and parse into ECKey
-			keyReceiver = SignatureUtils.getECKeyFromHexPublicKey(requestDTO.getToPublicKey());
-
-			// The sender of coins must have signed the whole payload
-			final String sigR = request.getSignature().getSigR();
-			final String sigS = request.getSignature().getSigS();
-			SignatureUtils.validateSignature(payloadBase64String, sigR, sigS, keySender);
-
+			requestDTO = DTOUtils.parseAndValidatePayload(request, PaymentRequestDTO.class);
 		} catch (MissingFieldException|InvalidSignatureException e) {
 			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
-		} catch (Exception e) {
+		} catch (Throwable e) {
 			return new ResponseEntity<>(new ErrorDTO("Bad request"), BAD_REQUEST);
 		}
+
+		final ECKey keySender, keyReceiver;
+
+		// Get the public key of the sender from the DTO and parse into ECKey
+		keySender = SignatureUtils.getECKeyFromHexPublicKey(requestDTO.getFromPublicKey());
+
+		// Get the public key of the receiver from the DTO and parse into ECKey
+		keyReceiver = SignatureUtils.getECKeyFromHexPublicKey(requestDTO.getToPublicKey());
 
 		// Do payment in service
 		MicropaymentService.VirtualPaymentResult result;

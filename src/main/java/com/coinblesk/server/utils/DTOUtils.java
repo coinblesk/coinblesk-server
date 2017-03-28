@@ -1,9 +1,12 @@
 package com.coinblesk.server.utils;
 
+import com.coinblesk.server.dto.Signable;
+import com.coinblesk.server.dto.SignedDTO;
 import com.coinblesk.server.exceptions.MissingFieldException;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import io.jsonwebtoken.impl.TextCodec;
+import org.bitcoinj.core.ECKey;
 
 import javax.annotation.Nonnull;
 import javax.validation.constraints.NotNull;
@@ -21,25 +24,35 @@ public class DTOUtils {
 	public static Gson gson = new GsonBuilder().create();
 
 	/***
-	 * Takes a Base64URL encoded string that represents some UTF8 json string and parses it back
-	 * to the object given by the type parameter.
+	 * Takes a SignedDTO with embedded payload and signature and returns the embedded DTO.
+	 * Checks for valid signature.
+	 * Checks for illegal null values in the embedded DTO.
 	 *
-	 * Illegal null values are validated by {@link #validateNonNullFields(Object, Class)}
+	 * @param request: The SignedDTO that contains a payload and a signature.
+	 * @param typeofPayload The type of the embedded DTO in the payload. Must be fo type {@link Signable}
+	 * @param <T> The type of the embedded DTO in the payload. Must be fo type {@link Signable}
 	 *
-	 * @param base64Payload Base64URL encoded string containing a valid JSON representation of the given type
-	 * @param typeofPayload The type that the JSON string represents
-	 * @param <T> The type that the JSON string represents.
-	 * @return The parsed and for illegal null-values checked object of type T.
+	 * @return The parsed checked DTO object of type T.
 	 */
-	public static <T> T parsePayload(String base64Payload, Class<T> typeofPayload) {
+	public static <T extends Signable> T parseAndValidatePayload(SignedDTO request, Class<T> typeofPayload) {
+		final String payloadBase64String = request.getPayload();
+
 		// Parse base64 payload back to json string
-		String jsonPayload = fromBase64(base64Payload);
+		String jsonPayload = fromBase64(payloadBase64String);
 
 		// Parse string back to object
 		T parsedObject = gson.fromJson(jsonPayload, typeofPayload);
 
 		// Check for illegal null fields
-		return validateNonNullFields(parsedObject, typeofPayload);
+		validateNonNullFields(parsedObject, typeofPayload);
+
+		// Check signature
+		ECKey signingKey = SignatureUtils.getECKeyFromHexPublicKey(parsedObject.getPublicKeyForSigning());
+		final String sigR = request.getSignature().getSigR();
+		final String sigS = request.getSignature().getSigS();
+		SignatureUtils.validateSignature(payloadBase64String, sigR, sigS, signingKey);
+
+		return parsedObject;
 	}
 
 	/***
@@ -56,10 +69,9 @@ public class DTOUtils {
 	 * @param obj The object to be checked
 	 * @param objClass The
 	 * @param <T> The type of the object to be checked
-	 * @return The object obj
 	 * @throws MissingFieldException If a {@link NotNull} or {@link Nonnull} annotated field is null
 	 */
-	private static <T> T validateNonNullFields(T obj, Class<T> objClass) {
+	private static <T> void validateNonNullFields(T obj, Class<T> objClass) {
 		Field[] fields = objClass.getDeclaredFields();
 		for(Field field : fields) {
 			if (field.isAnnotationPresent(Nonnull.class) || field.isAnnotationPresent(NotNull.class)) {
@@ -72,8 +84,6 @@ public class DTOUtils {
 				}
 			}
 		}
-
-		return obj;
 	}
 
 	private static String fromBase64(String input)
