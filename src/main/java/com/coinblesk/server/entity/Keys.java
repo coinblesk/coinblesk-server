@@ -36,14 +36,14 @@ public class Keys implements Serializable {
 	@GeneratedValue(strategy = GenerationType.SEQUENCE)
 	private long id;
 
-	@Column(name = "CLIENT_PUBLIC_KEY", unique = true, nullable = false, updatable = false, length = 255)
+	@Column(name = "CLIENT_PUBLIC_KEY", unique = true, nullable = false, updatable = false)
 	private byte[] clientPublicKey;
 
-	@Column(name = "SERVER_PUBLIC_KEY", unique = true, nullable = false, updatable = false, length = 255)
+	@Column(name = "SERVER_PUBLIC_KEY", unique = true, nullable = false, updatable = false)
 	private byte[] serverPublicKey;
 
-	@Column(name = "SERVER_PRIVATE_KEY", unique = true, nullable = false, updatable = false, length = 255)
-	private byte[] serverPrivateKey;
+	@Column(name = "SERVER_PRIVATE_KEY", unique = true, nullable = false, updatable = false)
+	protected byte[] serverPrivateKey;
 
 	@Column(name = "TIME_CREATED", updatable = false, nullable = false)
 	private long timeCreated;
