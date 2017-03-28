@@ -84,7 +84,7 @@ public class MicroPaymentController {
 		SignatureDTO signatureForSender = SignatureUtils.sign(responseAsBase64, serverKeyForSender);
 
 		ECKey serverKeyForReceiver = ECKey.fromPrivate(result.getServerPrivateKeyForReceiver());
-		SignatureDTO signatureForReceiver = SignatureUtils.sign(responseAsBase64, serverKeyForSender);
+		SignatureDTO signatureForReceiver = SignatureUtils.sign(responseAsBase64, serverKeyForReceiver);
 
 		MultiSignedDTO signedResponse = new MultiSignedDTO(responseAsBase64, signatureForSender, signatureForReceiver);
 
