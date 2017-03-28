@@ -179,21 +179,21 @@ public class KeyService {
 		return timeLockedAddressRepository.findByAddressHash(addressHash) != null;
 	}
 
-	public TimeLockedAddressEntity getTimeLockedAddressByAddressHash(byte[] addressHash) {
+	TimeLockedAddressEntity getTimeLockedAddressByAddressHash(byte[] addressHash) {
 		if (addressHash == null) {
 			throw new IllegalArgumentException("addressHash must not be null.");
 		}
 		return timeLockedAddressRepository.findByAddressHash(addressHash);
 	}
 
-	public List<TimeLockedAddressEntity> getTimeLockedAddressesByClientPublicKey(byte[] publicKey) {
+	List<TimeLockedAddressEntity> getTimeLockedAddressesByClientPublicKey(byte[] publicKey) {
 		if (publicKey == null || publicKey.length <= 0) {
 			throw new IllegalArgumentException("publicKey must not be null");
 		}
 		return timeLockedAddressRepository.findByKeys_ClientPublicKey(publicKey);
 	}
 
-	public byte[] getRedeemScriptByAddressHash(byte[] addressHash) {
+	byte[] getRedeemScriptByAddressHash(byte[] addressHash) {
 		TimeLockedAddressEntity address = getTimeLockedAddressByAddressHash(addressHash);
 		byte[] data = address != null ? address.getRedeemScript() : null;
 		return data;
