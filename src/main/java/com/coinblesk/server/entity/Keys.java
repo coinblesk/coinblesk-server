@@ -146,12 +146,4 @@ public class Keys implements Serializable {
 		);
 	}
 
-	/*public List<Address> btcAddresses(NetworkParameters params) {
-		List<Address> addressList = new ArrayList<>(addresses.size());
-		for (TimeLockedAddressEntity e : addresses) {
-			addressList.add(e.toAddress(params));
-		}
-		// make explicit that this list is not stored in DB!
-		return Collections.unmodifiableList(addressList);
-	}*/
 }
