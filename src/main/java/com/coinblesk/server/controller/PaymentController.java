@@ -15,6 +15,9 @@
  */
 package com.coinblesk.server.controller;
 
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import static org.springframework.http.HttpStatus.OK;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
@@ -27,6 +30,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.coinblesk.server.dto.ErrorDTO;
+import com.coinblesk.server.dto.KeyExchangeRequestDTO;
+import com.coinblesk.server.dto.CreateAddressRequestDTO;
+import com.coinblesk.server.dto.SignedDTO;
+import com.coinblesk.server.exceptions.InvalidLockTimeException;
+import com.coinblesk.server.exceptions.InvalidSignatureException;
+import com.coinblesk.server.exceptions.MissingFieldException;
+import com.coinblesk.server.exceptions.UserNotFoundException;
+import com.coinblesk.server.utils.DTOUtils;
+import com.coinblesk.server.utils.SignatureUtils;
+import com.google.common.io.BaseEncoding;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Coin;
@@ -41,10 +55,8 @@ import org.bitcoinj.script.Script;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.json.v1.BalanceTO;
@@ -52,7 +64,6 @@ import com.coinblesk.json.v1.KeyTO;
 import com.coinblesk.json.v1.RefundTO;
 import com.coinblesk.json.v1.SignTO;
 import com.coinblesk.json.v1.SignVerifyTO;
-import com.coinblesk.json.v1.TimeLockedAddressTO;
 import com.coinblesk.json.v1.TxSig;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.VerifyTO;
@@ -69,6 +80,8 @@ import com.coinblesk.util.InsufficientFunds;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
 
+import javax.validation.Valid;
+
 /**
  *
  * @author Alessandro Di Carli
@@ -84,84 +97,62 @@ public class PaymentController {
 	private final static Logger LOG = LoggerFactory.getLogger(PaymentController.class);
 	private final static Set<String> CONCURRENCY = Collections.synchronizedSet(new HashSet<>());
 
-	@Autowired
-	private AppConfig appConfig;
+	private final AppConfig appConfig;
+
+	private final WalletService walletService;
+
+	private final KeyService keyService;
+
+	private final TransactionService txService;
 
 	@Autowired
-	private WalletService walletService;
-
-	@Autowired
-	private KeyService keyService;
-
-	@Autowired
-	private TransactionService txService;
+	public PaymentController(AppConfig appConfig, WalletService walletService, KeyService keyService, TransactionService txService) {
+		this.appConfig = appConfig;
+		this.walletService = walletService;
+		this.keyService = keyService;
+		this.txService = txService;
+	}
 
 	@RequestMapping(value = "/createTimeLockedAddress",
 			method = POST,
 			consumes = APPLICATION_JSON_UTF8_VALUE,
 			produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
-	public TimeLockedAddressTO createTimeLockedAddress(@RequestBody TimeLockedAddressTO input) {
-		final String tag = "{createTimeLockedAddress}";
-		final Instant startTime = Instant.now();
-		final NetworkParameters params = appConfig.getNetworkParameters();
+	@CrossOrigin
+	public ResponseEntity createTimeLockedAddress(@RequestBody @Valid SignedDTO request) {
 
+		// Get the embedded payload and check signature
+		final CreateAddressRequestDTO createAddressRequestDTO;
 		try {
-			final TimeLockedAddressTO error = ToUtils.checkInput(input);
-			if (error != null) {
-				LOG.debug("{} - input error - type={}", tag, error.type().toString());
-				return error;
-			}
-
-			// set client/server keys
-			final ECKey clientKey = ECKey.fromPublicOnly(input.publicKey());
-			final String clientPubKeyHex = clientKey.getPublicKeyAsHex();
-			final Keys keys = keyService.getByClientPublicKey(clientKey.getPubKey());
-			if (keys == null) {
-				LOG.debug("{} - keys not found for clientPubKey={}", tag, clientPubKeyHex);
-				return new TimeLockedAddressTO().type(Type.KEYS_NOT_FOUND);
-			}
-			final ECKey serverKey = ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(),
-					keys.serverPublicKey());
-
-			// lockTime: do not allow locking by block and lockTime in the past
-			final long lockTime = input.lockTime();
-			if (!BitcoinUtils.isLockTimeByTime(lockTime)
-					|| BitcoinUtils.isAfterLockTime(startTime.getEpochSecond(), lockTime)) {
-				return new TimeLockedAddressTO().type(Type.LOCKTIME_ERROR);
-			}
-
-			// Input is OK: create and return address
-			final TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), serverKey.getPubKey(),
-					lockTime);
-			TimeLockedAddressTO responseTO = new TimeLockedAddressTO()
-					.currentDate(startTime.toEpochMilli())
-					.timeLockedAddress(address);
-
-			// save if not exists
-			if (!keyService.addressExists(address.getAddressHash())) {
-				keyService.storeTimeLockedAddress(keys, address);
-				walletService.addWatching(address.createPubkeyScript());
-				// TODO: better below?
-				// walletService.addWatching(address.getAddress(params));
-				responseTO.setSuccess();
-				LOG.debug("{} - new address created: {}", tag, address.toStringDetailed(params));
-			} else {
-				responseTO.type(Type.SUCCESS_BUT_ADDRESS_ALREADY_EXISTS);
-				LOG.debug("{} - address already exists (multiple requests in a short time?): {}", tag,
-						address.toStringDetailed(params));
-			}
-
-			SerializeUtils.signJSON(responseTO, serverKey);
-			LOG.info("{} - created address: {}, clientPubKey={}", tag, address.toString(params), clientPubKeyHex);
-			return responseTO;
-
-		} catch (Exception e) {
-			LOG.error("{} - Failed with exception: ", tag, e);
-			return new TimeLockedAddressTO().type(Type.SERVER_ERROR).message(e.getMessage());
-		} finally {
-			LOG.debug("{} - finished in {} ms", tag, Duration.between(startTime, Instant.now()).toMillis());
+			createAddressRequestDTO = DTOUtils.parseAndValidatePayload(request, CreateAddressRequestDTO.class);
+		} catch (MissingFieldException|InvalidSignatureException e) {
+			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
+		} catch (Throwable e) {
+			return new ResponseEntity<>(new ErrorDTO("Bad request"), BAD_REQUEST);
 		}
+
+		// The client we want to create an address for
+		final ECKey clientPublicKey = SignatureUtils.getECKeyFromHexPublicKey(createAddressRequestDTO.getPublicKey());
+		final long lockTime = createAddressRequestDTO.getLockTime();
+
+		TimeLockedAddress address = null;
+		try {
+			address = keyService.createTimeLockedAddress(clientPublicKey, lockTime);
+		} catch (UserNotFoundException|InvalidLockTimeException e) {
+			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
+		} catch (Throwable e) {
+			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), INTERNAL_SERVER_ERROR);
+		}
+
+		if (address == null)
+			System.out.println("asdf");
+
+		// Start watching the address
+		walletService.addWatching(address.createPubkeyScript());
+
+		// Create response
+		// TODO: Wrap address and other information (check android) needed into SignedDTO
+		return new ResponseEntity("ok", OK);
 	}
 
 	@RequestMapping(
@@ -328,18 +319,22 @@ public class PaymentController {
 			consumes = APPLICATION_JSON_UTF8_VALUE,
 			produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
-	public KeyTO keyExchange(@RequestBody KeyTO input) {
+	@CrossOrigin
+	public KeyTO keyExchange(@RequestBody @Valid KeyExchangeRequestDTO request) {
 		final long startTime = System.currentTimeMillis();
 		final String tag = "{key-exchange}";
+
 		try {
-			if (input.publicKey() == null || !ECKey.isPubKeyCanonical(input.publicKey())) {
+			final byte[] publicKey = BaseEncoding.base16().decode(request.getPublicKey().toUpperCase());
+
+			if (publicKey.length != 33 || !ECKey.isPubKeyCanonical(publicKey)) {
 				LOG.debug("{} - INPUT_MISMATCH", tag);
 				return ToUtils.newInstance(KeyTO.class, Type.INPUT_MISMATCH);
 			}
 
-			LOG.debug("{} - clientPubKey={}", tag, SerializeUtils.bytesToHex(input.publicKey()));
+			LOG.debug("{} - clientPubKey={}", tag, SerializeUtils.bytesToHex(publicKey));
 			// no input checking as input may not be signed
-			final byte[] clientPublicKey = input.publicKey();
+			final byte[] clientPublicKey = publicKey;
 			final ECKey serverEcKey = new ECKey();
 			final List<ECKey> keyList = new ArrayList<>(2);
 			keyList.add(ECKey.fromPublicOnly(clientPublicKey));
@@ -711,6 +706,33 @@ public class PaymentController {
 		} finally {
 			CONCURRENCY.remove(key);
 		}
+	}
+
+	@RequestMapping(value = {"/virtualbalance"}, method = POST,
+			consumes = "application/json; charset=UTF-8",
+			produces = "application/json; charset=UTF-8")
+	@ResponseBody
+	public BalanceTO virtualBalance(@RequestBody BalanceTO input) {
+		if(input.publicKey() == null || input.publicKey().length == 0) {
+			return new BalanceTO().type(Type.KEYS_NOT_FOUND);
+		}
+
+		// Check if message is signed correctly
+		final BalanceTO error = ToUtils.checkInput(input);
+		if (error != null) {
+			return error;
+		}
+
+		// Fetch actual balance
+		final long balance = keyService.getVirtualBalanceByClientPublicKey(input.publicKey());
+
+		// Construct response
+		BalanceTO balanceDTO = new BalanceTO().balance(balance);
+
+		// Sign it
+		Keys keys = keyService.getByClientPublicKey(input.publicKey());
+		ECKey existingServerKey = ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey());
+		return SerializeUtils.signJSON(balanceDTO, existingServerKey);
 	}
 
 	private static Transaction createTx(NetworkParameters params, String p2shAddressTo, Address p2shAddressFrom,

@@ -16,10 +16,17 @@
 
 package com.coinblesk.server.service;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
+import com.coinblesk.server.exceptions.InvalidLockTimeException;
+import com.coinblesk.server.exceptions.UserNotFoundException;
+import com.coinblesk.util.BitcoinUtils;
+import lombok.NonNull;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,18 +44,23 @@ import com.coinblesk.util.Pair;
  *
  * @author Thomas Bocek
  * @author Andreas Albrecht
+ * @author Sebastian Stephan
  */
 @Service
 public class KeyService {
 
-	@Autowired
-	private KeyRepository keyRepository;
+	private final KeyRepository keyRepository;
+
+	private final TimeLockedAddressRepository timeLockedAddressRepository;
 
 	@Autowired
-	private TimeLockedAddressRepository timeLockedAddressRepository;
+	public KeyService(@NonNull KeyRepository keyRepository, @NonNull TimeLockedAddressRepository timeLockedAddressRepository) {
+		this.keyRepository = keyRepository;
+		this.timeLockedAddressRepository = timeLockedAddressRepository;
+	}
 
 	@Transactional(readOnly = true)
-	public Keys getByClientPublicKey(final byte[] clientPublicKey) {
+	public Keys getByClientPublicKey(@NonNull final byte[] clientPublicKey) {
 		return keyRepository.findByClientPublicKey(clientPublicKey);
 	}
 
@@ -62,7 +74,7 @@ public class KeyService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<ECKey> getECKeysByClientPublicKey(final byte[] clientPublicKey) {
+	public List<ECKey> getECKeysByClientPublicKey(@NonNull final byte[] clientPublicKey) {
 		final Keys keys = keyRepository.findByClientPublicKey(clientPublicKey);
 		if (keys == null) {
 			return Collections.emptyList();
@@ -73,12 +85,11 @@ public class KeyService {
 		return retVal;
 	}
 
-	@Transactional(readOnly = false)
-	public Pair<Boolean, Keys> storeKeysAndAddress(final byte[] clientPublicKey, final byte[] serverPublicKey,
-			final byte[] serverPrivateKey) {
-		if (clientPublicKey == null || serverPublicKey == null || serverPrivateKey == null) {
-			throw new IllegalArgumentException("null not excpected here");
-		}
+	@Transactional
+	public Pair<Boolean, Keys> storeKeysAndAddress(
+			@NonNull final byte[] clientPublicKey,
+			@NonNull final byte[] serverPublicKey,
+			@NonNull final byte[] serverPrivateKey) {
 
 		// need to check if it exists here, as not all DBs do that for us
 		final Keys keys = keyRepository.findByClientPublicKey(clientPublicKey);
@@ -89,7 +100,8 @@ public class KeyService {
 		final Keys clientKey = new Keys()
 				.clientPublicKey(clientPublicKey)
 				.serverPrivateKey(serverPrivateKey)
-				.serverPublicKey(serverPublicKey);
+				.serverPublicKey(serverPublicKey)
+				.timeCreated(Instant.now().getEpochSecond());
 
 		final Keys storedKeys = keyRepository.save(clientKey);
 		return new Pair<>(true, storedKeys);
@@ -109,63 +121,76 @@ public class KeyService {
 	}
 
 	@Transactional(readOnly = true)
-	public Iterable<Keys> allKeys() {
-		return keyRepository.findAll();
+	public List<Keys> allKeys() {
+		return StreamSupport.stream(keyRepository.findAll().spliterator(), false)
+				.collect(Collectors.toList());
 	}
 
-	@Transactional(readOnly = false)
-	public TimeLockedAddressEntity storeTimeLockedAddress(Keys keys, TimeLockedAddress address) {
-		if (address == null || keys == null) {
-			throw new IllegalArgumentException("Address/keys must not be null");
-		}
-		if (keys.serverPrivateKey() == null || keys.serverPublicKey() == null || keys.clientPublicKey() == null) {
-			throw new IllegalArgumentException("Keys must not be null.");
-		}
-		if (address.getAddressHash() == null) {
-			throw new IllegalArgumentException("AddressHash must not be null");
+	@Transactional
+	public TimeLockedAddress createTimeLockedAddress(@NonNull ECKey clientPublicKey, long lockTime)
+			throws UserNotFoundException, InvalidLockTimeException {
+
+		// Lock time must be valid
+		if (!BitcoinUtils.isLockTimeByTime(lockTime) ||
+				BitcoinUtils.isAfterLockTime(Instant.now().getEpochSecond(), lockTime)) {
+			throw new InvalidLockTimeException();
 		}
 
+		// Get client for which a new address should be created
+		Keys client = keyRepository.findByClientPublicKey(clientPublicKey.getPubKey());
+		if (client == null)
+			throw new UserNotFoundException(clientPublicKey.getPublicKeyAsHex());
+
+		// Create address
+		final TimeLockedAddress address = new TimeLockedAddress(
+				client.clientPublicKey(),
+				client.serverPublicKey(),
+				lockTime);
+
+		// Check if address is already in database, if so nothing to do
+		TimeLockedAddressEntity existingAddress =
+				timeLockedAddressRepository.findByAddressHash(address.getAddressHash());
+		if (existingAddress != null)
+			return address;
+
+		// Create the new address entity and save
 		TimeLockedAddressEntity addressEntity = new TimeLockedAddressEntity();
 		addressEntity
 				.setLockTime(address.getLockTime())
 				.setAddressHash(address.getAddressHash())
 				.setRedeemScript(address.createRedeemScript().getProgram())
 				.setTimeCreated(Utils.currentTimeSeconds())
-				.setKeys(keys);
+				.setKeys(client);
+		timeLockedAddressRepository.save(addressEntity);
 
-		TimeLockedAddressEntity result = timeLockedAddressRepository.save(addressEntity);
-		return result;
+		return address;
 	}
 
-	public boolean addressExists(byte[] addressHash) {
+	@Transactional(readOnly = true)
+	public long getVirtualBalanceByClientPublicKey(@NonNull byte[] publicKey) {
+		if (publicKey.length == 0) {
+			throw new IllegalArgumentException("publicKey must not be null");
+		}
+		return keyRepository.findByClientPublicKey(publicKey).virtualBalance();
+	}
+
+	public boolean addressExists(@NonNull byte[] addressHash) {
 		return timeLockedAddressRepository.findByAddressHash(addressHash) != null;
 	}
 
-	public TimeLockedAddressEntity getTimeLockedAddressByAddressHash(byte[] addressHash) {
-		if (addressHash == null) {
-			throw new IllegalArgumentException("addressHash must not be null.");
-		}
+	TimeLockedAddressEntity getTimeLockedAddressByAddressHash(@NonNull byte[] addressHash) {
 		return timeLockedAddressRepository.findByAddressHash(addressHash);
 	}
 
-	public List<TimeLockedAddressEntity> getTimeLockedAddressesByClientPublicKey(byte[] publicKey) {
+	List<TimeLockedAddressEntity> getTimeLockedAddressesByClientPublicKey(byte[] publicKey) {
 		if (publicKey == null || publicKey.length <= 0) {
 			throw new IllegalArgumentException("publicKey must not be null");
 		}
 		return timeLockedAddressRepository.findByKeys_ClientPublicKey(publicKey);
 	}
 
-	public TimeLockedAddressEntity findAddressByAddressHash(byte[] addressHash) {
-		if (addressHash == null) {
-			throw new IllegalArgumentException("addressHash must not be null.");
-		}
-		TimeLockedAddressEntity address = timeLockedAddressRepository.findByAddressHash(addressHash);
-		return address;
-	}
-
-	public byte[] getRedeemScriptByAddressHash(byte[] addressHash) {
+	byte[] getRedeemScriptByAddressHash(byte[] addressHash) {
 		TimeLockedAddressEntity address = getTimeLockedAddressByAddressHash(addressHash);
-		byte[] data = address != null ? address.getRedeemScript() : null;
-		return data;
+		return address != null ? address.getRedeemScript() : null;
 	}
 }
