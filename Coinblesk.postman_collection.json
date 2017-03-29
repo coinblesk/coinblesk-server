@@ -2,7 +2,7 @@
 	"variables": [],
 	"info": {
 		"name": "Coinblesk",
-		"_postman_id": "8147c90d-74cd-8160-26f6-02564d699c35",
+		"_postman_id": "45b3a060-f8b5-5fea-25ec-50340f15b9b2",
 		"description": "",
 		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
 	},
@@ -23,7 +23,10 @@
 								"description": ""
 							}
 						],
-						"body": {},
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
 						"description": ""
 					},
 					"response": []
@@ -40,7 +43,10 @@
 								"description": ""
 							}
 						],
-						"body": {},
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
 						"description": ""
 					},
 					"response": []
@@ -57,7 +63,10 @@
 								"description": ""
 							}
 						],
-						"body": {},
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
 						"description": ""
 					},
 					"response": []
@@ -74,7 +83,10 @@
 								"description": ""
 							}
 						],
-						"body": {},
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
 						"description": ""
 					},
 					"response": []
@@ -91,7 +103,10 @@
 						"url": "{{url}}/forex/exchangeRate/CHF",
 						"method": "GET",
 						"header": [],
-						"body": {},
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
 						"description": ""
 					},
 					"response": []
@@ -102,7 +117,10 @@
 						"url": "{{url}}/v2/forex/rate/EUR-USD",
 						"method": "GET",
 						"header": [],
-						"body": {},
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
 						"description": ""
 					},
 					"response": []
@@ -233,7 +251,10 @@
 								"description": ""
 							}
 						],
-						"body": {},
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
 						"description": ""
 					},
 					"response": []
@@ -337,6 +358,18 @@
 				},
 				{
 					"name": "/user/login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"postman.setEnvironmentVariable(\"jwt\", jsonData.token);"
+								]
+							}
+						}
+					],
 					"request": {
 						"url": "{{url}}/user/login",
 						"method": "POST",
