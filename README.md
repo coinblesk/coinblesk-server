@@ -31,7 +31,7 @@ Run
 
 The service is available at [http://localhost:8080/](http://localhost:8080)
 You can inspect the database during development at 
-[http://localhost:8080/h2-console](http://localhost:8080/h2-console) and the REST endpoints at 
+[http://localhost:8080/h2-console](http://localhost:8080/h2-console) (make sure you use the following database connection settings: ```jdbc:h2:mem:testdb```)and the REST endpoints at 
 [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
 
 ## Building
