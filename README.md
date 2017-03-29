@@ -5,87 +5,98 @@
 
 A mobile Bitcoin payment solution with NFC support.
 
-### Installation
+## Install the dependencies
 
-gradle clean install
+### Java 8 JDK
+```bash
+sudo apt-get install openjdk-8-jdk
+```
 
-The following instructions are for Debian based systems.
+OS X and Windows: [Oracle Java](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
 
-In order to install and run the CoinBlesk server, the following dependencies have to be installed:
-
-* Java 7 or higher
-* Tomcat 7 or higher
-* Maven
-* PostgreSQL Server & Client
-
-##### Install the dependencies
+### Shared resources
 
 ```bash
-sudo apt-get install openjdk-8-jdk tomcat8 tomcat8-admin maven postgresql postgresql-client
+git checkout git@github.com:coinblesk/coinblesk-shared-resources.git
+cd coinblesk-shared-resources
+./gradlew install
 ```
 
-##### Database Setup
+## Local development
 
-Start the PostgreSQL server and create the coinblesk database:
+Run 
+```bash
+./gradlew run
+```
+
+The service is available at [http://localhost:8080/](http://localhost:8080)
+You can inspect the database during development at 
+[http://localhost:8080/h2-console](http://localhost:8080/h2-console) and the REST endpoints at 
+[http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+
+## Building
 
 ```bash
-sudo service postgresql start
-sudo -u postgres createdb coinblesk
+./gradlew assemble
 ```
+Ready-to-run jar file is at `build/libs/coinblesk-server-2.1.SNAPSHOT.jar`
 
-##### Tomcat Setup
+## Deployment
 
-In order to deploy CoinBlesk to tomcat, make sure you have a Tomcat user with username "admin" and no password, that has the role "manager-script":
-
-```xml
-<!-- {$TOMCAT_HOME}/tomcat-users.xml -->
-<?xml version='1.0' encoding='utf-8'?>
-<tomcat-users>
-  <role rolename="manager-script"/>
-  <user username="admin" password="" roles="manager-script"/>
-</tomcat-users>
-```
-
-Make sure to restart tomcat after you changed the tomcat-users.xml file.
-
-*Side note*: If you don't want to change your Tomcat users, you can also change the tomcat credentials in the pom.xml 
-file of the coinblesk-server project, and edit the tomcat user credentials in the 
-tomcat7-maven-plugin settings. The same applies for deploying on a remote Tomcat instance. 
-The documentation for the tomcat7-maven-plugin can be found [here](http://tomcat.apache.org/maven-plugin-2.0/tomcat7-maven-plugin/deploy-mojo.html).
-
-##### Server Settings
-
-All server settings are loaded from the context.xml file of the Tomcat directory. A sample context.xml file is included in this project (SAMPLE.context.xml).
-
-##### Compilation
-
-Create a directory for coinblesk and enter it:
-
+Run directly (jar is executable)
 ```bash
-mkdir coinblesk && cd -
+./coinblesk-server-2.1.SNAPSHOT.jar
 ```
 
-Clone the projects "coinblesk-shared-resources" and "coinblesk-server":
-```bash
-git clone https://github.com/coinblesk/coinblesk-shared-resources.git
-git clone https://github.com/coinblesk/coinblesk-server.git
+or as jar with java
+```
+java -jar coinblesk-server-2.1.SNAPSHOT.jar
 ```
 
-Install the modules in your local maven repository:
-
-```bash
-mvn -f coinblesk-shared-resources/pom.xml clean install
-mvn -f coinblesk-server/pom.xml clean install
+In production you probably want to use the production profile and set some additional sensitive configuration via environment variables:
+```
+SPRING_PROFILES_ACTIVE=prod \
+BITCOIN_POTPRIVKEY=97324063353421115888582782536755703931560774174498831848725083330146537953701 \
+SECURITY_JWT_SECRET=supersecret \
+EMAIL_PASSWORD=hunter2 \
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost/coinblesk?user=fred&password=secret&ssl=true
+java -jar coinblesk-server-2.1.SNAPSHOT.jar
 ```
 
-##### Deployment
+## Configuration
 
-Deploy the CoinBlesk server by running:
+The default configuration can be found with additional information in [application.properties](application.properties).
 
-```bash
-mvn -f coinblesk-server/pom.xml tomcat7:deploy-only
-```
+Some default settings for production environment is configured at [application-prod.properties](application-prod.properties).
+To enable prod settings start the application with the environment variable `SPRING_PROFILES_ACTIVE=prod`
 
-After that, the CoinBlesk server should be running at http://localhost:8080/coinblesk
+All configuration can be overruled by setting the equivalent environment variables at runtime. For example `bitcoin.net` can be set via a `BITCOIN_NET` variable.
 
+The following settings can be configured:
 
+| Variable                            | Description                                                                                                                                                              | Example                           |
+|-------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------|
+| SPRING_DATASOURCE_URL               | Database JDBC path. For in memory database use "jdbc:h2:mem:testdb"                                                                                                      | jdbc:h2:mem:testdb                |
+| LOGGING_LEVEL_ROOT                  | Sets the root logging level (WARN, ERROR, DEBUG, OFF...)                                                                                                                 | INFO                              |
+| COINBLESK_URL                       | The endpoint at which coinblesk api is available                                                                                                                         | https://coinblesk.org/            |
+| COINBLESK_CONFIG_DIR                | The folder at which to store SPV chain and wallet files                                                                                                                  | /var/coinblesk                    |
+| SECURITY_JWT_SECRET                 | The secret to use to sign JWTs. Should be long and complicated and always set via environment variable                                                                   | kI34jxqkrPxv8qYxaQpx98...         |
+| SECURITY_JWT_VALIDITYINSECONDS      | Validity of JWT in seconds until expiration                                                                                                                              | 604800                            |
+| SECURITY_JWT_ADMINVALIDITYINSECONDS | ... same for admin users                                                                                                                                                 | 3600                              |
+| BITCOIN_NET                         | Which bitcoinnet to use: "mainnet", "testnet", "unittest"                                                                                                                | testnet                           |
+| BITCOIN_FIRSTSEEDNODE               | Which server to try to connect first. In testnet mode: This is the only server we connect to.                                                                            | bitcoin4-fullnode.csg.uzh.ch      |
+| BITCOIN_MINCONF                     | Number blocks for confirmations needed for a transaction                                                                                                                 | 1                                 |
+| BITCOIN_POTPRIVKEY                  | Privatekey in number format for the pot of the server. Keep this secret and only set by environment variable. A new one can be generated with `new ECKey().getPrivKey()` | 973240633534211158885827803931... |
+| BITCOIN_POTCREATIONTIME             | Creation time of the wallet pot in epoch seconds. Used for checkpointing optimization at initial chain download.                                                         | 1486638252                        |
+| EMAIL_ENABLED                       | True / False. If the server should send out email.                                                                                                                       | True                              |
+| EMAIL_HOST                          | `mail.smtp.host` SMTP host [see JavaMail API](https://javamail.java.net/nonav/docs/api/)                                                                                 | mail.office365.com                |
+| EMAIL_PROTOCOL                      | `mail.transport.protocol` [see JavaMail API](https://javamail.java.net/nonav/docs/api/)                                                                                  | smtp                              |
+| EMAIL_PORT                          | `mail.smtp.port` [see JavaMail API](https://javamail.java.net/nonav/docs/api/)                                                                                           | 587                               |
+| EMAIL_AUTH                          | `mail.smtp.auth` Username/Password needed. [see JavaMail API](https://javamail.java.net/nonav/docs/api/)                                                                 | true                              |
+| EMAIL_STARTTLS                      | `mail.smtp.starttls.enable` Use STARTTLS [see JavaMail API](https://javamail.java.net/nonav/docs/api/)                                                                   | true                              |
+| EMAIL_DEBUG                         | `mail.debug` More email debug output. [see JavaMail API](https://javamail.java.net/nonav/docs/api/)                                                                      | false                             |
+| EMAIL_TRUST                         | `mail.smtp.ssl.trust` Trust self signed mail servers. `mail.smtp.ssl.trust` [see JavaMail API](https://javamail.java.net/nonav/docs/api/)                                | false                             |
+| EMAIL_USERNAME                      | Username for smtp server if auth enabled                                                                                                                                 | bob                               |
+| EMAIL_PASSWORD                      | Password for smtp server if auth enabled                                                                                                                                 | supersecurepassword!              |
+| EMAIL_ADMIN                         | Admin email address for warning related emails                                                                                                                           | admin@coinblesk.ch                |
+| EMAIL_SENDFROM                      | Sender email for outgoing emails (account activation, password reset)                                                                                                    | info@coinblesk.ch                 |
