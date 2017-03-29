@@ -65,9 +65,9 @@ java -jar coinblesk-server-2.1.SNAPSHOT.jar
 
 ## Configuration
 
-The default configuration can be found with additional information in [application.properties](application.properties).
+The default configuration can be found with additional information in [application.properties](src/main/resources/application.properties).
 
-Some default settings for production environment is configured at [application-prod.properties](application-prod.properties).
+Some default settings for production environment is configured at [application-prod.properties](src/main/resources/application-prod.properties).
 To enable prod settings start the application with the environment variable `SPRING_PROFILES_ACTIVE=prod`
 
 All configuration can be overruled by setting the equivalent environment variables at runtime. For example `bitcoin.net` can be set via a `BITCOIN_NET` variable.
