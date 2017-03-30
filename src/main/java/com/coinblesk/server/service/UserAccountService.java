@@ -78,7 +78,7 @@ public class UserAccountService {
 	private WalletService walletService;
 
 	@Autowired
-	private KeyService keyService;
+	private AccountService accountService;
 
 	@Transactional(readOnly = true)
 	public UserAccount getByEmail(String email) {
@@ -197,7 +197,7 @@ public class UserAccountService {
 		List<TransactionOutput> outputs = walletService.potTransactionOutput(params);
 
 		// TODO: get current timelocked multisig address
-		Account account = keyService.getByClientPublicKey(clientKey.getPubKey());
+		Account account = accountService.getByClientPublicKey(clientKey.getPubKey());
 		Transaction tx;
 		try {
 			tx = BitcoinUtils.createTx(params, outputs, pot.toAddress(params),

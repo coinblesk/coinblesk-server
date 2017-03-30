@@ -69,7 +69,7 @@ public class TransactionService {
 	private WalletService walletService;
 
 	@Autowired
-	private KeyService keyService;
+	private AccountService accountService;
 
 	@Transactional(readOnly = false)
 	public SignVerifyTO signVerifyTransaction(Transaction transaction, ECKey clientKey, ECKey serverKey,
@@ -139,7 +139,7 @@ public class TransactionService {
 			final byte[] redeemScript;
 			if (txOut != null) {
 				byte[] addressHashFrom = txOut.getScriptPubKey().getPubKeyHash();
-				redeemScript = keyService.getRedeemScriptByAddressHash(addressHashFrom);
+				redeemScript = accountService.getRedeemScriptByAddressHash(addressHashFrom);
 				if (redeemScript == null) {
 					instantCounter++;
 					LOG.warn("signTransaction - redeem script for input {} not found - output: {}", inputIndex, txOut);
@@ -290,7 +290,7 @@ public class TransactionService {
 			}
 
 			byte[] addressHash = output.getScriptPubKey().getPubKeyHash();
-			TimeLockedAddressEntity address = keyService.getTimeLockedAddressByAddressHash(addressHash);
+			TimeLockedAddressEntity address = accountService.getTimeLockedAddressByAddressHash(addressHash);
 			if (address == null) {
 				// unknown input (maybe not locked)
 				return false;

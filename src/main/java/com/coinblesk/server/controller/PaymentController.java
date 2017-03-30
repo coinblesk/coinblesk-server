@@ -69,7 +69,7 @@ import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.VerifyTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.entity.Account;
-import com.coinblesk.server.service.KeyService;
+import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.TransactionService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utils.ApiVersion;
@@ -101,15 +101,15 @@ public class PaymentController {
 
 	private final WalletService walletService;
 
-	private final KeyService keyService;
+	private final AccountService accountService;
 
 	private final TransactionService txService;
 
 	@Autowired
-	public PaymentController(AppConfig appConfig, WalletService walletService, KeyService keyService, TransactionService txService) {
+	public PaymentController(AppConfig appConfig, WalletService walletService, AccountService accountService, TransactionService txService) {
 		this.appConfig = appConfig;
 		this.walletService = walletService;
-		this.keyService = keyService;
+		this.accountService = accountService;
 		this.txService = txService;
 	}
 
@@ -137,7 +137,7 @@ public class PaymentController {
 
 		TimeLockedAddress address = null;
 		try {
-			address = keyService.createTimeLockedAddress(clientPublicKey, lockTime);
+			address = accountService.createTimeLockedAddress(clientPublicKey, lockTime);
 		} catch (UserNotFoundException|InvalidLockTimeException e) {
 			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
 		} catch (Throwable e) {
@@ -190,7 +190,7 @@ public class PaymentController {
 			}
 
 			LOG.debug("{} - clientPubKey={} - request", tag, clientPubKeyHex);
-			account = keyService.getByClientPublicKey(clientKey.getPubKey());
+			account = accountService.getByClientPublicKey(clientKey.getPubKey());
 			if (account == null
 					|| account.clientPublicKey() == null
 					|| account.serverPrivateKey() == null
@@ -283,7 +283,7 @@ public class PaymentController {
 			return false;
 		}
 
-		Account payeeAccount = keyService.getByClientPublicKey(payeePubKey);
+		Account payeeAccount = accountService.getByClientPublicKey(payeePubKey);
 		if (payeeAccount == null) {
 			return false; // payee unknown / external user.
 		}
@@ -342,7 +342,7 @@ public class PaymentController {
 
 			// 2-of-2 multisig
 			final Script script = BitcoinUtils.createP2SHOutputScript(2, keyList);
-			final Pair<Boolean, Account> retVal = keyService.storeKeysAndAddress(clientPublicKey, serverEcKey.getPubKey(),
+			final Pair<Boolean, Account> retVal = accountService.storeKeysAndAddress(clientPublicKey, serverEcKey.getPubKey(),
 					serverEcKey.getPrivKeyBytes());
 
 			final KeyTO serverKeyTO = new KeyTO().currentDate(System.currentTimeMillis());
@@ -387,7 +387,7 @@ public class PaymentController {
 				return error;
 			}
 			final NetworkParameters params = appConfig.getNetworkParameters();
-			final List<ECKey> keys = keyService.getPublicECKeysByClientPublicKey(input.publicKey());
+			final List<ECKey> keys = accountService.getPublicECKeysByClientPublicKey(input.publicKey());
 			final Script script = BitcoinUtils.createP2SHOutputScript(2, keys);
 			final Address p2shAddressFrom = script.getToAddress(params);
 			List<TransactionOutput> outputs = walletService.verifiedOutputs(params, p2shAddressFrom);
@@ -422,7 +422,7 @@ public class PaymentController {
 			if (error != null) {
 				return error;
 			}
-			final List<ECKey> keys = keyService.getECKeysByClientPublicKey(input.publicKey());
+			final List<ECKey> keys = accountService.getECKeysByClientPublicKey(input.publicKey());
 			if (keys == null || keys.size() != 2) {
 				return new RefundTO().type(Type.KEYS_NOT_FOUND);
 			}
@@ -517,7 +517,7 @@ public class PaymentController {
 				return error;
 			}
 			final NetworkParameters params = appConfig.getNetworkParameters();
-			final List<ECKey> keys = keyService.getECKeysByClientPublicKey(input.publicKey());
+			final List<ECKey> keys = accountService.getECKeysByClientPublicKey(input.publicKey());
 			if (keys == null || keys.size() != 2) {
 				return new SignTO().type(Type.KEYS_NOT_FOUND);
 			}
@@ -608,7 +608,7 @@ public class PaymentController {
 				return error;
 			}
 			final NetworkParameters params = appConfig.getNetworkParameters();
-			final List<ECKey> keys = keyService.getECKeysByClientPublicKey(input.publicKey());
+			final List<ECKey> keys = accountService.getECKeysByClientPublicKey(input.publicKey());
 			if (keys == null || keys.size() != 2) {
 				return new VerifyTO().type(Type.KEYS_NOT_FOUND);
 			}
@@ -724,13 +724,13 @@ public class PaymentController {
 		}
 
 		// Fetch actual balance
-		final long balance = keyService.getVirtualBalanceByClientPublicKey(input.publicKey());
+		final long balance = accountService.getVirtualBalanceByClientPublicKey(input.publicKey());
 
 		// Construct response
 		BalanceTO balanceDTO = new BalanceTO().balance(balance);
 
 		// Sign it
-		Account account = keyService.getByClientPublicKey(input.publicKey());
+		Account account = accountService.getByClientPublicKey(input.publicKey());
 		ECKey existingServerKey = ECKey.fromPrivateAndPrecalculatedPublic(account.serverPrivateKey(), account.serverPublicKey());
 		return SerializeUtils.signJSON(balanceDTO, existingServerKey);
 	}

@@ -86,7 +86,7 @@ public class WalletService {
 	private AppConfig appConfig;
 
 	@Autowired
-	private KeyService keyService;
+	private AccountService accountService;
 
 	@Autowired
 	private TransactionService transactionService;
@@ -210,7 +210,7 @@ public class WalletService {
 
 	private void walletWatchKeysP2SH(final NetworkParameters params) {
 		StringBuilder sb = new StringBuilder();
-		final List<List<ECKey>> all = keyService.all();
+		final List<List<ECKey>> all = accountService.all();
 		final List<Script> scripts = new ArrayList<>();
 		for (List<ECKey> keys : all) {
 			final Script script = BitcoinUtils.createP2SHOutputScript(2, keys);
@@ -224,7 +224,7 @@ public class WalletService {
 
 	private void walletWatchKeysCLTV(final NetworkParameters params) {
 		StringBuilder sb = new StringBuilder();
-		for (Account key : keyService.allKeys()) {
+		for (Account key : accountService.allKeys()) {
 			for (TimeLockedAddressEntity address : key.timeLockedAddresses()) {
 				wallet.addWatchedAddress(address.toAddress(params), address.getTimeCreated());
 				sb.append(address.toAddress(params)).append("\n");

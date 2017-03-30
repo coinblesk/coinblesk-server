@@ -47,14 +47,14 @@ import com.coinblesk.util.Pair;
  * @author Sebastian Stephan
  */
 @Service
-public class KeyService {
+public class AccountService {
 
 	private final KeyRepository keyRepository;
 
 	private final TimeLockedAddressRepository timeLockedAddressRepository;
 
 	@Autowired
-	public KeyService(@NonNull KeyRepository keyRepository, @NonNull TimeLockedAddressRepository timeLockedAddressRepository) {
+	public AccountService(@NonNull KeyRepository keyRepository, @NonNull TimeLockedAddressRepository timeLockedAddressRepository) {
 		this.keyRepository = keyRepository;
 		this.timeLockedAddressRepository = timeLockedAddressRepository;
 	}

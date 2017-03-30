@@ -39,10 +39,10 @@ import static org.junit.Assert.*;
  * @author Andreas Albrecht
  */
 @TestExecutionListeners(listeners = DbUnitTestExecutionListener.class, mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
-public class KeyServiceTest extends CoinbleskTest {
+public class AccountServiceTest extends CoinbleskTest {
 
 	@Autowired
-	private KeyService keyService;
+	private AccountService accountService;
 
 	@Test
 	@DatabaseSetup("/EmptyDatabase.xml")
@@ -51,11 +51,11 @@ public class KeyServiceTest extends CoinbleskTest {
 		ECKey ecKeyClient = new ECKey();
 		ECKey ecKeyServer = new ECKey();
 
-		boolean retVal = keyService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
+		boolean retVal = accountService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
 				ecKeyServer.getPrivKeyBytes()).element0();
 		Assert.assertTrue(retVal);
 		// adding again should fail
-		retVal = keyService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
+		retVal = accountService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
 				ecKeyServer.getPrivKeyBytes()).element0();
 		Assert.assertFalse(retVal);
 	}
@@ -67,20 +67,20 @@ public class KeyServiceTest extends CoinbleskTest {
 		ECKey ecKeyClient = new ECKey();
 		ECKey ecKeyServer = new ECKey();
 
-		boolean retVal = keyService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
+		boolean retVal = accountService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
 				ecKeyServer.getPrivKeyBytes()).element0();
 		Assert.assertTrue(retVal);
-		retVal = keyService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
+		retVal = accountService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
 				ecKeyServer.getPrivKeyBytes()).element0();
 		Assert.assertFalse(retVal);
 
-		Account account = keyService.getByClientPublicKey(ecKeyClient.getPubKey());
+		Account account = accountService.getByClientPublicKey(ecKeyClient.getPubKey());
 		Assert.assertNotNull(account);
 
-		account = keyService.getByClientPublicKey(ecKeyClient.getPubKey());
+		account = accountService.getByClientPublicKey(ecKeyClient.getPubKey());
 		Assert.assertNotNull(account);
 		//
-		List<ECKey> list = keyService.getPublicECKeysByClientPublicKey(ecKeyClient.getPubKey());
+		List<ECKey> list = accountService.getPublicECKeysByClientPublicKey(ecKeyClient.getPubKey());
 		Assert.assertEquals(2, list.size());
 		Assert.assertArrayEquals(list.get(0).getPubKey(), ecKeyClient.getPubKey());
 		Assert.assertArrayEquals(list.get(1).getPubKey(), ecKeyServer.getPubKey());
@@ -94,12 +94,12 @@ public class KeyServiceTest extends CoinbleskTest {
 		long lockTime = 123456;
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 
-		Account account = keyService.getByClientPublicKey(clientKey.getPubKey());
+		Account account = accountService.getByClientPublicKey(clientKey.getPubKey());
 
 		TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), account.serverPublicKey(), lockTime);
 		// do not store -> empty result
 
-		TimeLockedAddressEntity fromDB = keyService.getTimeLockedAddressByAddressHash(address.getAddressHash());
+		TimeLockedAddressEntity fromDB = accountService.getTimeLockedAddressByAddressHash(address.getAddressHash());
 		assertNull(fromDB);
 	}
 
@@ -111,17 +111,17 @@ public class KeyServiceTest extends CoinbleskTest {
 		long lockTime = 123456;
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 
-		Account account = keyService.getByClientPublicKey(clientKey.getPubKey());
+		Account account = accountService.getByClientPublicKey(clientKey.getPubKey());
 
 		TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), account.serverPublicKey(), lockTime);
-		TimeLockedAddressEntity intoDB = keyService.storeTimeLockedAddress(account, address);
+		TimeLockedAddressEntity intoDB = accountService.storeTimeLockedAddress(account, address);
 		assertNotNull(intoDB);
 
-		TimeLockedAddressEntity fromDB = keyService.getTimeLockedAddressByAddressHash(address.getAddressHash());
+		TimeLockedAddressEntity fromDB = accountService.getTimeLockedAddressByAddressHash(address.getAddressHash());
 		assertNotNull(fromDB);
 		assertEquals(intoDB, fromDB);
 
-		account = keyService.getByClientPublicKey(clientKey.getPubKey());
+		account = accountService.getByClientPublicKey(clientKey.getPubKey());
 		assertTrue(account.timeLockedAddresses().contains(fromDB));
 	}
 
@@ -132,23 +132,23 @@ public class KeyServiceTest extends CoinbleskTest {
 	public void testStoreAndGetTimeLockedAddresses() {
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 
-		Account account = keyService.getByClientPublicKey(clientKey.getPubKey());
+		Account account = accountService.getByClientPublicKey(clientKey.getPubKey());
 
 		TimeLockedAddress address_1 = new TimeLockedAddress(clientKey.getPubKey(), account.serverPublicKey(), 42);
 		TimeLockedAddress address_2 = new TimeLockedAddress(clientKey.getPubKey(), account.serverPublicKey(), 4242);
-		TimeLockedAddressEntity addressEntity_1 = keyService.storeTimeLockedAddress(account, address_1);
+		TimeLockedAddressEntity addressEntity_1 = accountService.storeTimeLockedAddress(account, address_1);
 		assertNotNull(addressEntity_1);
-		TimeLockedAddressEntity addressEntity_2 = keyService.storeTimeLockedAddress(account, address_2);
+		TimeLockedAddressEntity addressEntity_2 = accountService.storeTimeLockedAddress(account, address_2);
 		assertNotNull(addressEntity_2);
 
-		List<TimeLockedAddressEntity> fromDB = keyService.getTimeLockedAddressesByClientPublicKey(
+		List<TimeLockedAddressEntity> fromDB = accountService.getTimeLockedAddressesByClientPublicKey(
 				clientKey.getPubKey());
 		assertNotNull(fromDB);
 		assertTrue(fromDB.size() == 2);
 		assertTrue(fromDB.contains(addressEntity_1));
 		assertTrue(fromDB.contains(addressEntity_2));
 
-		account = keyService.getByClientPublicKey(clientKey.getPubKey());
+		account = accountService.getByClientPublicKey(clientKey.getPubKey());
 		assertTrue(account.timeLockedAddresses().containsAll(fromDB));
 	}
 }

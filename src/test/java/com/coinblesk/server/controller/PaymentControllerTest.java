@@ -41,7 +41,7 @@ import com.coinblesk.json.v1.BaseTO;
 import com.coinblesk.json.v1.KeyTO;
 import com.coinblesk.json.v1.TimeLockedAddressTO;
 import com.coinblesk.json.v1.Type;
-import com.coinblesk.server.service.KeyService;
+import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.KeyTestUtil;
 import com.coinblesk.server.utilTest.RESTUtils;
@@ -64,7 +64,7 @@ public class PaymentControllerTest extends CoinbleskTest {
 	private WebApplicationContext webAppContext;
 
 	@Autowired
-	private KeyService keyService;
+	private AccountService accountService;
 
 	private static MockMvc mockMvc;
 
@@ -259,7 +259,7 @@ public class PaymentControllerTest extends CoinbleskTest {
 	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_NewAddress_ClientUnknown() throws Exception {
 		ECKey clientKey = new ECKey();
-		assertNull(keyService.getByClientPublicKey(clientKey.getPubKey()) ); // not known yet
+		assertNull(accountService.getByClientPublicKey(clientKey.getPubKey()) ); // not known yet
 		TimeLockedAddressTO requestTO = createSignedTimeLockedAddressTO(clientKey);
 		TimeLockedAddressTO responseTO = requestCreateTimeLockedAddress(requestTO);
 		assertFalse(responseTO.isSuccess());
@@ -368,7 +368,7 @@ public class PaymentControllerTest extends CoinbleskTest {
 		TimeLockedAddressTO requestTO = createSignedTimeLockedAddressTO(clientKey);
 		TimeLockedAddress expectedAddress = new TimeLockedAddress(
 				clientKey.getPubKey(), serverKey.getPubKey(), requestTO.lockTime());
-		assertFalse(keyService.addressExists(expectedAddress.getAddressHash()));
+		assertFalse(accountService.addressExists(expectedAddress.getAddressHash()));
 
 		TimeLockedAddressTO responseTO = requestCreateTimeLockedAddress(requestTO);
 		assertTrue(responseTO.isSuccess());
@@ -387,7 +387,7 @@ public class PaymentControllerTest extends CoinbleskTest {
 		assertEquals(address.getLockTime(), requestTO.lockTime());
 
 		assertEquals(expectedAddress, address);
-		assertTrue(keyService.addressExists(address.getAddressHash()));
+		assertTrue(accountService.addressExists(address.getAddressHash()));
 	}
 
 	private TimeLockedAddressTO requestCreateTimeLockedAddress(TimeLockedAddressTO requestTO) throws Exception {

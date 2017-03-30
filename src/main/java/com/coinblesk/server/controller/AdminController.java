@@ -26,7 +26,7 @@ import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dto.KeysDTO;
 import com.coinblesk.server.dto.TimeLockedAddressDTO;
 import com.coinblesk.server.entity.Account;
-import com.coinblesk.server.service.KeyService;
+import com.coinblesk.server.service.AccountService;
 import com.coinblesk.util.SerializeUtils;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
@@ -60,13 +60,13 @@ public class AdminController {
 
 	private final WalletService walletService;
 
-	private final KeyService keyService;
+	private final AccountService accountService;
 
 	@Autowired
-	public AdminController(AppConfig appConfig, WalletService walletService, KeyService keyService) {
+	public AdminController(AppConfig appConfig, WalletService walletService, AccountService accountService) {
 		this.appConfig = appConfig;
 		this.walletService = walletService;
-		this.keyService = keyService;
+		this.accountService = accountService;
 	}
 
 	@RequestMapping(value = "/balance", method = GET)
@@ -103,7 +103,7 @@ public class AdminController {
 		// Pre-calculate balances for each address
 		Map<Address, Coin> balances = walletService.getBalanceByAddresses();
 
-		List<Account> keys = keyService.allKeys();
+		List<Account> keys = accountService.allKeys();
 
 		// ...and summed for each public key
 		Map<Account, Long> balancesPerKeys = keys.stream()

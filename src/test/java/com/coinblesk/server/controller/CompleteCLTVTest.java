@@ -58,7 +58,7 @@ import com.coinblesk.json.v1.SignVerifyTO;
 import com.coinblesk.json.v1.TimeLockedAddressTO;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.service.KeyService;
+import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.FakeTxBuilder;
@@ -92,7 +92,7 @@ public class CompleteCLTVTest extends CoinbleskTest {
 	private WalletService walletService;
 
 	@Autowired
-	private KeyService keyService;
+	private AccountService accountService;
 
 	private Client client;
 	private Client merchant;

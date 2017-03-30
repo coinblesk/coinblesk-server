@@ -58,7 +58,7 @@ public class UserAccountServiceTest extends CoinbleskTest {
 	private TxQueueService txQueueService;
 
 	@Autowired
-	private KeyService keyService;
+	private AccountService accountService;
 
 	@Autowired
 	private WalletService walletService;
@@ -89,12 +89,12 @@ public class UserAccountServiceTest extends CoinbleskTest {
 				.setUsername("blib");
 		userAccountService.save(userAccount);
 
-		Account account = keyService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
+		Account account = accountService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
 				ecKeyServer.getPrivKeyBytes()).element1();
 
 		TimeLockedAddress address = new TimeLockedAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(), 123456);
 
-		keyService.storeTimeLockedAddress(account, address);
+		accountService.storeTimeLockedAddress(account, address);
 	}
 
 	@After
