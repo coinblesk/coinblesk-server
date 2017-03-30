@@ -286,10 +286,6 @@ public class WalletService {
 		return blockChain;
 	}
 
-	public void addWatching(Address address) {
-		wallet.addWatchedAddress(address);
-	}
-
 	public void addWatching(Script script) {
 		List<Script> list = new ArrayList<>(1);
 		list.add(script);
@@ -348,14 +344,6 @@ public class WalletService {
 		}
 
 		return retVal;
-	}
-
-	public long balance(NetworkParameters params, Address p2shAddress) {
-		long balance = 0;
-		for (TransactionOutput transactionOutput : verifiedOutputs(params, p2shAddress)) {
-			balance += transactionOutput.getValue().value;
-		}
-		return balance;
 	}
 
 	@PreDestroy

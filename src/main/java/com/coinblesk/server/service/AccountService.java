@@ -108,19 +108,6 @@ public class AccountService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<List<ECKey>> all() {
-		final Iterable<Account> all = accountRepository.findAll();
-		final List<List<ECKey>> retVal = new ArrayList<>();
-		for (Account entity : all) {
-			final List<ECKey> keys = new ArrayList<>(2);
-			keys.add(ECKey.fromPublicOnly(entity.clientPublicKey()));
-			keys.add(ECKey.fromPublicOnly(entity.serverPublicKey()));
-			retVal.add(keys);
-		}
-		return retVal;
-	}
-
-	@Transactional(readOnly = true)
 	public List<Account> allAccounts() {
 		return StreamSupport.stream(accountRepository.findAll().spliterator(), false)
 				.collect(Collectors.toList());

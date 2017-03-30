@@ -95,7 +95,6 @@ import javax.validation.Valid;
 public class PaymentController {
 
 	private final static Logger LOG = LoggerFactory.getLogger(PaymentController.class);
-	private final static Set<String> CONCURRENCY = Collections.synchronizedSet(new HashSet<>());
 
 	private final AppConfig appConfig;
 
@@ -522,17 +521,4 @@ public class PaymentController {
 		return SerializeUtils.signJSON(balanceDTO, existingServerKey);
 	}
 
-	private static Transaction createTx(NetworkParameters params, String p2shAddressTo, Address p2shAddressFrom,
-			List<Pair<byte[], Long>> outpointsCoinPair, long amountToSpend, Script redeemScript)
-			throws AddressFormatException, CoinbleskException, InsufficientFunds {
-		final Address p2shAddressTo1 = new Address(params, p2shAddressTo);
-
-		// we now get from the client the outpoints for the refund tx (including
-		// hash)
-		final List<Pair<TransactionOutPoint, Coin>> refundClientPoints = SerializeUtils.deserializeOutPointsCoin(params,
-				outpointsCoinPair);
-
-		return BitcoinUtils.createTx(params, refundClientPoints, redeemScript, p2shAddressFrom, p2shAddressTo1,
-				amountToSpend, true);
-	}
 }
