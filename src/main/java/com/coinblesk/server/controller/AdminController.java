@@ -23,7 +23,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.dto.KeysDTO;
+import com.coinblesk.server.dto.AccountDTO;
 import com.coinblesk.server.dto.TimeLockedAddressDTO;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.service.AccountService;
@@ -97,7 +97,7 @@ public class AdminController {
 
 	@RequestMapping(value = "/accounts", method = GET)
 	@ResponseBody
-	public List<KeysDTO> getAllAccounts() {
+	public List<AccountDTO> getAllAccounts() {
 		NetworkParameters params = appConfig.getNetworkParameters();
 
 		// Pre-calculate balances for each address
@@ -119,7 +119,7 @@ public class AdminController {
 
 		// Map the Account entities to DTOs including the containing TimeLockedAddresses
 		return keys.stream()
-				.map(account -> new KeysDTO(
+				.map(account -> new AccountDTO(
 						SerializeUtils.bytesToHex(account.clientPublicKey()),
 						SerializeUtils.bytesToHex(account.serverPublicKey()),
 						SerializeUtils.bytesToHex(account.serverPrivateKey()),
