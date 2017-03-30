@@ -95,9 +95,9 @@ public class AdminController {
 		return txOuts;
 	}
 
-	@RequestMapping(value = "/keys", method = GET)
+	@RequestMapping(value = "/accounts", method = GET)
 	@ResponseBody
-	public List<KeysDTO> getAllKeys() {
+	public List<KeysDTO> getAllAccounts() {
 		NetworkParameters params = appConfig.getNetworkParameters();
 
 		// Pre-calculate balances for each address
@@ -105,7 +105,7 @@ public class AdminController {
 
 		List<Account> keys = accountService.allKeys();
 
-		// ...and summed for each public key
+		// ...and summed for each account
 		Map<Account, Long> balancesPerKeys = keys.stream()
 				.collect(Collectors.toMap(Function.identity(),
 						account ->
