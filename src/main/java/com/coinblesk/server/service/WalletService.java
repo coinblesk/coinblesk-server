@@ -137,7 +137,6 @@ public class WalletService {
 		}
 		wallet.autosaveToFile(walletFile, 5, TimeUnit.SECONDS, null);
 
-		walletWatchKeysP2SH(params);
 		walletWatchKeysCLTV(params);
 		walletWatchKeysPot(params);
 
@@ -206,20 +205,6 @@ public class WalletService {
 		pendingTransactions();
 
 		LOG.info("wallet init done.");
-	}
-
-	private void walletWatchKeysP2SH(final NetworkParameters params) {
-		StringBuilder sb = new StringBuilder();
-		final List<List<ECKey>> all = accountService.all();
-		final List<Script> scripts = new ArrayList<>();
-		for (List<ECKey> keys : all) {
-			final Script script = BitcoinUtils.createP2SHOutputScript(2, keys);
-			script.setCreationTimeSeconds(0);
-			scripts.add(script);
-			sb.append(script.getToAddress(params)).append("\n");
-		}
-		wallet.addWatchedScripts(scripts);
-		LOG.info("walletWatchKeysP2SH:\n{}", sb.toString());
 	}
 
 	private void walletWatchKeysCLTV(final NetworkParameters params) {
