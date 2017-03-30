@@ -224,7 +224,7 @@ public class WalletService {
 
 	private void walletWatchKeysCLTV(final NetworkParameters params) {
 		StringBuilder sb = new StringBuilder();
-		for (Account key : accountService.allKeys()) {
+		for (Account key : accountService.allAccounts()) {
 			for (TimeLockedAddressEntity address : key.timeLockedAddresses()) {
 				wallet.addWatchedAddress(address.toAddress(params), address.getTimeCreated());
 				sb.append(address.toAddress(params)).append("\n");

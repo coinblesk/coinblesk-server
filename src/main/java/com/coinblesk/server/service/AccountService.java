@@ -121,7 +121,7 @@ public class AccountService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<Account> allKeys() {
+	public List<Account> allAccounts() {
 		return StreamSupport.stream(accountRepository.findAll().spliterator(), false)
 				.collect(Collectors.toList());
 	}

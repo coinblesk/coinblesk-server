@@ -103,7 +103,7 @@ public class AdminController {
 		// Pre-calculate balances for each address
 		Map<Address, Coin> balances = walletService.getBalanceByAddresses();
 
-		List<Account> keys = accountService.allKeys();
+		List<Account> keys = accountService.allAccounts();
 
 		// ...and summed for each account
 		Map<Account, Long> balancesPerKeys = keys.stream()
