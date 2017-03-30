@@ -108,8 +108,8 @@ public class AdminController {
 		// ...and summed for each public key
 		Map<Account, Long> balancesPerKeys = keys.stream()
 				.collect(Collectors.toMap(Function.identity(),
-						key ->
-								key.timeLockedAddresses()
+						account ->
+								account.timeLockedAddresses()
 										.stream()
 										.map(tla -> tla.toAddress(params))
 										.map(balances::get)
@@ -119,15 +119,15 @@ public class AdminController {
 
 		// Map the Account entities to DTOs including the containing TimeLockedAddresses
 		return keys.stream()
-				.map(key -> new KeysDTO(
-						SerializeUtils.bytesToHex(key.clientPublicKey()),
-						SerializeUtils.bytesToHex(key.serverPublicKey()),
-						SerializeUtils.bytesToHex(key.serverPrivateKey()),
-						Date.from(Instant.ofEpochSecond(key.timeCreated())),
-						key.virtualBalance(),
-						balancesPerKeys.get(key),
-						key.virtualBalance() + balancesPerKeys.get(key),
-						key.timeLockedAddresses().stream() .map(tla -> {
+				.map(account -> new KeysDTO(
+						SerializeUtils.bytesToHex(account.clientPublicKey()),
+						SerializeUtils.bytesToHex(account.serverPublicKey()),
+						SerializeUtils.bytesToHex(account.serverPrivateKey()),
+						Date.from(Instant.ofEpochSecond(account.timeCreated())),
+						account.virtualBalance(),
+						balancesPerKeys.get(account),
+						account.virtualBalance() + balancesPerKeys.get(account),
+						account.timeLockedAddresses().stream() .map(tla -> {
 									Instant createdAt = Instant.ofEpochSecond(tla.getTimeCreated());
 									Instant lockedUntil = Instant.ofEpochSecond(tla.getLockTime());
 									Coin balance = balances.get(tla.toAddress(params));
