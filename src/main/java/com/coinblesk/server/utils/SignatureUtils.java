@@ -38,7 +38,7 @@ public class SignatureUtils {
 	 * @param sigS The number of the S value of the signature as a string. BigInteger is used internally.
 	 * @param publicKey The EC2Key containing the public key, which is used to check validity of the signature.
 	 */
-	public static void validateSignature(String payload, String sigR, String sigS, ECKey publicKey)
+	static void validateSignature(String payload, String sigR, String sigS, ECKey publicKey)
 	{
 		final ECDSASignature signature = new ECDSASignature(new BigInteger(sigR), new BigInteger(sigS));
 		boolean valid = publicKey.verify(Sha256Hash.of(payload.getBytes()), signature);
