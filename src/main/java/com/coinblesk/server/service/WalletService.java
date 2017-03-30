@@ -67,7 +67,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.coinblesk.bitcoin.AddressCoinSelector;
 import com.coinblesk.bitcoin.BitcoinNet;
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.entity.Keys;
+import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.util.BitcoinUtils;
 import com.google.common.util.concurrent.FutureCallback;
@@ -224,7 +224,7 @@ public class WalletService {
 
 	private void walletWatchKeysCLTV(final NetworkParameters params) {
 		StringBuilder sb = new StringBuilder();
-		for (Keys key : keyService.allKeys()) {
+		for (Account key : keyService.allKeys()) {
 			for (TimeLockedAddressEntity address : key.timeLockedAddresses()) {
 				wallet.addWatchedAddress(address.toAddress(params), address.getTimeCreated());
 				sb.append(address.toAddress(params)).append("\n");

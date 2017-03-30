@@ -16,7 +16,7 @@
 package com.coinblesk.server.service;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.server.entity.Keys;
+import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.KeyTestUtil;
@@ -74,11 +74,11 @@ public class KeyServiceTest extends CoinbleskTest {
 				ecKeyServer.getPrivKeyBytes()).element0();
 		Assert.assertFalse(retVal);
 
-		Keys keys = keyService.getByClientPublicKey(ecKeyClient.getPubKey());
-		Assert.assertNotNull(keys);
+		Account account = keyService.getByClientPublicKey(ecKeyClient.getPubKey());
+		Assert.assertNotNull(account);
 
-		keys = keyService.getByClientPublicKey(ecKeyClient.getPubKey());
-		Assert.assertNotNull(keys);
+		account = keyService.getByClientPublicKey(ecKeyClient.getPubKey());
+		Assert.assertNotNull(account);
 		//
 		List<ECKey> list = keyService.getPublicECKeysByClientPublicKey(ecKeyClient.getPubKey());
 		Assert.assertEquals(2, list.size());
@@ -94,9 +94,9 @@ public class KeyServiceTest extends CoinbleskTest {
 		long lockTime = 123456;
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 
-		Keys keys = keyService.getByClientPublicKey(clientKey.getPubKey());
+		Account account = keyService.getByClientPublicKey(clientKey.getPubKey());
 
-		TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), keys.serverPublicKey(), lockTime);
+		TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), account.serverPublicKey(), lockTime);
 		// do not store -> empty result
 
 		TimeLockedAddressEntity fromDB = keyService.getTimeLockedAddressByAddressHash(address.getAddressHash());
@@ -111,18 +111,18 @@ public class KeyServiceTest extends CoinbleskTest {
 		long lockTime = 123456;
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 
-		Keys keys = keyService.getByClientPublicKey(clientKey.getPubKey());
+		Account account = keyService.getByClientPublicKey(clientKey.getPubKey());
 
-		TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), keys.serverPublicKey(), lockTime);
-		TimeLockedAddressEntity intoDB = keyService.storeTimeLockedAddress(keys, address);
+		TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), account.serverPublicKey(), lockTime);
+		TimeLockedAddressEntity intoDB = keyService.storeTimeLockedAddress(account, address);
 		assertNotNull(intoDB);
 
 		TimeLockedAddressEntity fromDB = keyService.getTimeLockedAddressByAddressHash(address.getAddressHash());
 		assertNotNull(fromDB);
 		assertEquals(intoDB, fromDB);
 
-		keys = keyService.getByClientPublicKey(clientKey.getPubKey());
-		assertTrue(keys.timeLockedAddresses().contains(fromDB));
+		account = keyService.getByClientPublicKey(clientKey.getPubKey());
+		assertTrue(account.timeLockedAddresses().contains(fromDB));
 	}
 
 	@Test
@@ -132,13 +132,13 @@ public class KeyServiceTest extends CoinbleskTest {
 	public void testStoreAndGetTimeLockedAddresses() {
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 
-		Keys keys = keyService.getByClientPublicKey(clientKey.getPubKey());
+		Account account = keyService.getByClientPublicKey(clientKey.getPubKey());
 
-		TimeLockedAddress address_1 = new TimeLockedAddress(clientKey.getPubKey(), keys.serverPublicKey(), 42);
-		TimeLockedAddress address_2 = new TimeLockedAddress(clientKey.getPubKey(), keys.serverPublicKey(), 4242);
-		TimeLockedAddressEntity addressEntity_1 = keyService.storeTimeLockedAddress(keys, address_1);
+		TimeLockedAddress address_1 = new TimeLockedAddress(clientKey.getPubKey(), account.serverPublicKey(), 42);
+		TimeLockedAddress address_2 = new TimeLockedAddress(clientKey.getPubKey(), account.serverPublicKey(), 4242);
+		TimeLockedAddressEntity addressEntity_1 = keyService.storeTimeLockedAddress(account, address_1);
 		assertNotNull(addressEntity_1);
-		TimeLockedAddressEntity addressEntity_2 = keyService.storeTimeLockedAddress(keys, address_2);
+		TimeLockedAddressEntity addressEntity_2 = keyService.storeTimeLockedAddress(account, address_2);
 		assertNotNull(addressEntity_2);
 
 		List<TimeLockedAddressEntity> fromDB = keyService.getTimeLockedAddressesByClientPublicKey(
@@ -148,7 +148,7 @@ public class KeyServiceTest extends CoinbleskTest {
 		assertTrue(fromDB.contains(addressEntity_1));
 		assertTrue(fromDB.contains(addressEntity_2));
 
-		keys = keyService.getByClientPublicKey(clientKey.getPubKey());
-		assertTrue(keys.timeLockedAddresses().containsAll(fromDB));
+		account = keyService.getByClientPublicKey(clientKey.getPubKey());
+		assertTrue(account.timeLockedAddresses().containsAll(fromDB));
 	}
 }

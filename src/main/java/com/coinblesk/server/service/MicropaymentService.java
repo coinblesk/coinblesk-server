@@ -1,7 +1,7 @@
 package com.coinblesk.server.service;
 
 import com.coinblesk.server.dao.KeyRepository;
-import com.coinblesk.server.entity.Keys;
+import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.exceptions.InvalidAmountException;
 import com.coinblesk.server.exceptions.InvalidNonceException;
 import com.coinblesk.server.exceptions.InvalidRequestException;
@@ -35,7 +35,7 @@ public class MicropaymentService {
 		if (keySender.getPublicKeyAsHex().equals(keyReceiver.getPublicKeyAsHex()))
 			throw new InvalidRequestException("The sender and receiver cannot be the same entities");
 
-		final Keys sender = keyRepository.findByClientPublicKey(keySender.getPubKey());
+		final Account sender = keyRepository.findByClientPublicKey(keySender.getPubKey());
 		if (sender == null)
 			throw new UserNotFoundException(keySender.getPublicKeyAsHex());
 
@@ -56,7 +56,7 @@ public class MicropaymentService {
 			throw new InsufficientFunds("Insufficient funds, only " + sender.virtualBalance() + " satoshis available");
 
 		// Get receiver from database
-		final Keys receiver = keyRepository.findByClientPublicKey(keyReceiver.getPubKey());
+		final Account receiver = keyRepository.findByClientPublicKey(keyReceiver.getPubKey());
 		if (receiver == null)
 			throw new UserNotFoundException(keyReceiver.getPublicKeyAsHex());
 

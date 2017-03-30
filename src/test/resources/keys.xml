@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dataset>
     <!--
-    Sample Keys dataset:
-    client/server keys are derived as follows:
+    SamAccountKeys dataset:
+    client/seraccountkeys are derived as follows:
     ECKey client = ECKey(sha256({name}-client))
     ECKey server = ECKey(sha256({name}-server))
     where {name} is alice, bob, carol or dave

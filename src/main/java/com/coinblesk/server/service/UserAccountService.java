@@ -39,7 +39,7 @@ import com.coinblesk.json.v1.UserAccountTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.config.UserRole;
 import com.coinblesk.server.dao.UserAccountRepository;
-import com.coinblesk.server.entity.Keys;
+import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.CoinbleskException;
@@ -197,11 +197,11 @@ public class UserAccountService {
 		List<TransactionOutput> outputs = walletService.potTransactionOutput(params);
 
 		// TODO: get current timelocked multisig address
-		Keys keys = keyService.getByClientPublicKey(clientKey.getPubKey());
+		Account account = keyService.getByClientPublicKey(clientKey.getPubKey());
 		Transaction tx;
 		try {
 			tx = BitcoinUtils.createTx(params, outputs, pot.toAddress(params),
-					keys.latestTimeLockedAddresses().toAddress(params), satoshi, false);
+					account.latestTimeLockedAddresses().toAddress(params), satoshi, false);
 
 			tx = BitcoinUtils.sign(params, tx, pot);
 			BitcoinUtils.verifyTxFull(tx);

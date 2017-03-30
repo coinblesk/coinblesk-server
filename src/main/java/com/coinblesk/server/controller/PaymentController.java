@@ -68,7 +68,7 @@ import com.coinblesk.json.v1.TxSig;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.VerifyTO;
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.entity.Keys;
+import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.service.KeyService;
 import com.coinblesk.server.service.TransactionService;
 import com.coinblesk.server.service.WalletService;
@@ -168,7 +168,7 @@ public class PaymentController {
 
 		try {
 			final NetworkParameters params = appConfig.getNetworkParameters();
-			final Keys keys;
+			final Account account;
 			final ECKey clientKey = ECKey.fromPublicOnly(request.publicKey());
 			clientPubKeyHex = clientKey.getPublicKeyAsHex();
 			final ECKey serverKey;
@@ -190,17 +190,17 @@ public class PaymentController {
 			}
 
 			LOG.debug("{} - clientPubKey={} - request", tag, clientPubKeyHex);
-			keys = keyService.getByClientPublicKey(clientKey.getPubKey());
-			if (keys == null
-					|| keys.clientPublicKey() == null
-					|| keys.serverPrivateKey() == null
-					|| keys.serverPublicKey() == null) {
+			account = keyService.getByClientPublicKey(clientKey.getPubKey());
+			if (account == null
+					|| account.clientPublicKey() == null
+					|| account.serverPrivateKey() == null
+					|| account.serverPublicKey() == null) {
 				LOG.debug("{} - clientPubKey={} - KEYS_NOT_FOUND", tag, clientPubKeyHex);
 				return ToUtils.newInstance(SignVerifyTO.class, Type.KEYS_NOT_FOUND);
 			}
-			serverKey = ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey());
+			serverKey = ECKey.fromPrivateAndPrecalculatedPublic(account.serverPrivateKey(), account.serverPublicKey());
 
-			if (keys.timeLockedAddresses().isEmpty()) {
+			if (account.timeLockedAddresses().isEmpty()) {
 				LOG.debug("{} - clientPubKey={} - ADDRESS_EMPTY", tag, clientPubKeyHex);
 				return ToUtils.newInstance(SignVerifyTO.class, Type.ADDRESS_EMPTY, serverKey);
 			}
@@ -225,7 +225,7 @@ public class PaymentController {
 				// if change amount is provided, we add an output to the most
 				// recently created address of the client.
 				if (request.amountChange() > 0) {
-					Address changeAddress = keys.latestTimeLockedAddresses().toAddress(params);
+					Address changeAddress = account.latestTimeLockedAddresses().toAddress(params);
 					Coin changeAmount = Coin.valueOf(request.amountChange());
 					TransactionOutput changeOut = transaction.addOutput(changeAmount, changeAddress);
 					outputsToAdd.add(changeOut);
@@ -283,13 +283,13 @@ public class PaymentController {
 			return false;
 		}
 
-		Keys payeeKeys = keyService.getByClientPublicKey(payeePubKey);
-		if (payeeKeys == null) {
+		Account payeeAccount = keyService.getByClientPublicKey(payeePubKey);
+		if (payeeAccount == null) {
 			return false; // payee unknown / external user.
 		}
 		ECKey payeeClientKey = ECKey.fromPublicOnly(payeePubKey);
-		ECKey payeeServerKey = ECKey.fromPrivateAndPrecalculatedPublic(payeeKeys.serverPrivateKey(),
-				payeeKeys.serverPublicKey());
+		ECKey payeeServerKey = ECKey.fromPrivateAndPrecalculatedPublic(payeeAccount.serverPrivateKey(),
+				payeeAccount.serverPublicKey());
 
 		// check that payee signature is valid
 		request.payeePublicKey(payeePubKey);
@@ -342,7 +342,7 @@ public class PaymentController {
 
 			// 2-of-2 multisig
 			final Script script = BitcoinUtils.createP2SHOutputScript(2, keyList);
-			final Pair<Boolean, Keys> retVal = keyService.storeKeysAndAddress(clientPublicKey, serverEcKey.getPubKey(),
+			final Pair<Boolean, Account> retVal = keyService.storeKeysAndAddress(clientPublicKey, serverEcKey.getPubKey(),
 					serverEcKey.getPrivKeyBytes());
 
 			final KeyTO serverKeyTO = new KeyTO().currentDate(System.currentTimeMillis());
@@ -352,11 +352,11 @@ public class PaymentController {
 				serverKeyTO.setSuccess();
 				SerializeUtils.signJSON(serverKeyTO, serverEcKey);
 			} else {
-				Keys keys = retVal.element1();
-				serverKeyTO.publicKey(keys.serverPublicKey());
+				Account account = retVal.element1();
+				serverKeyTO.publicKey(account.serverPublicKey());
 				serverKeyTO.type(Type.SUCCESS_BUT_KEY_ALREADY_EXISTS);
-				ECKey existingServerKey = ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(),
-						keys.serverPublicKey());
+				ECKey existingServerKey = ECKey.fromPrivateAndPrecalculatedPublic(account.serverPrivateKey(),
+						account.serverPublicKey());
 				SerializeUtils.signJSON(serverKeyTO, existingServerKey);
 			}
 			LOG.debug("{} - done - {}", serverKeyTO.type().toString());
@@ -730,8 +730,8 @@ public class PaymentController {
 		BalanceTO balanceDTO = new BalanceTO().balance(balance);
 
 		// Sign it
-		Keys keys = keyService.getByClientPublicKey(input.publicKey());
-		ECKey existingServerKey = ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey());
+		Account account = keyService.getByClientPublicKey(input.publicKey());
+		ECKey existingServerKey = ECKey.fromPrivateAndPrecalculatedPublic(account.serverPrivateKey(), account.serverPublicKey());
 		return SerializeUtils.signJSON(balanceDTO, existingServerKey);
 	}
 

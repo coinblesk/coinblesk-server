@@ -26,9 +26,9 @@ import javax.persistence.*;
  *
  * @author Thomas Bocek
  */
-@Entity(name = "KEYS")
-@Table(indexes = { @Index(name = "KEYS_CLIENT_PUBLIC_KEY", columnList = "CLIENT_PUBLIC_KEY") })
-public class Keys implements Serializable {
+@Entity(name = "ACCOUNT")
+@Table(indexes = { @Index(name = "ACCOUNT_CLIENT_PUBLIC_KEY", columnList = "CLIENT_PUBLIC_KEY") })
+public class Account implements Serializable {
 
 	private static final long serialVersionUID = -7496348013847426913L;
 
@@ -54,7 +54,7 @@ public class Keys implements Serializable {
 	@Column(name = "NONCE", nullable = false)
 	private long nonce = 0L;
 
-	@OneToMany(mappedBy = "keys", fetch = FetchType.EAGER)
+	@OneToMany(mappedBy = "account", fetch = FetchType.EAGER)
 	@OrderBy("TIME_CREATED ASC")
 	private List<TimeLockedAddressEntity> timeLockedAddresses;
 
@@ -62,7 +62,7 @@ public class Keys implements Serializable {
 		return clientPublicKey;
 	}
 
-	public Keys clientPublicKey(byte[] clientPublicKey) {
+	public Account clientPublicKey(byte[] clientPublicKey) {
 		this.clientPublicKey = clientPublicKey;
 		return this;
 	}
@@ -71,7 +71,7 @@ public class Keys implements Serializable {
 		return serverPublicKey;
 	}
 
-	public Keys serverPublicKey(byte[] serverPublicKey) {
+	public Account serverPublicKey(byte[] serverPublicKey) {
 		this.serverPublicKey = serverPublicKey;
 		return this;
 	}
@@ -80,7 +80,7 @@ public class Keys implements Serializable {
 		return serverPrivateKey;
 	}
 
-	public Keys serverPrivateKey(byte[] serverPrivateKey) {
+	public Account serverPrivateKey(byte[] serverPrivateKey) {
 		this.serverPrivateKey = serverPrivateKey;
 		return this;
 	}
@@ -89,7 +89,7 @@ public class Keys implements Serializable {
 		return timeCreated;
 	}
 
-	public Keys timeCreated(long timeCreatedSeconds) {
+	public Account timeCreated(long timeCreatedSeconds) {
 		this.timeCreated = timeCreatedSeconds;
 		return this;
 	}
@@ -98,7 +98,7 @@ public class Keys implements Serializable {
 		return virtualBalance;
 	}
 
-	public Keys virtualBalance(long virtualBalance) {
+	public Account virtualBalance(long virtualBalance) {
 		this.virtualBalance = virtualBalance;
 		return this;
 	}
@@ -107,7 +107,7 @@ public class Keys implements Serializable {
 		return nonce;
 	}
 
-	public Keys nonce(long nonce) {
+	public Account nonce(long nonce) {
 		this.nonce = nonce;
 		return this;
 	}
@@ -120,7 +120,7 @@ public class Keys implements Serializable {
 		return timeLockedAddresses.get(timeLockedAddresses.size() - 1);
 	}
 
-	public Keys timeLockedAddresses(List<TimeLockedAddressEntity> timeLockedAddresses) {
+	public Account timeLockedAddresses(List<TimeLockedAddressEntity> timeLockedAddresses) {
 		this.timeLockedAddresses = timeLockedAddresses;
 		return this;
 	}
@@ -129,12 +129,12 @@ public class Keys implements Serializable {
 	public boolean equals(Object o) {
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
-		Keys keys = (Keys) o;
+		Account account = (Account) o;
 
-		return id == keys.id &&
-				Arrays.equals(clientPublicKey,  keys.clientPublicKey) &&
-				Arrays.equals(serverPublicKey,  keys.serverPublicKey) &&
-				Arrays.equals(serverPrivateKey, keys.serverPrivateKey);
+		return id == account.id &&
+				Arrays.equals(clientPublicKey,  account.clientPublicKey) &&
+				Arrays.equals(serverPublicKey,  account.serverPublicKey) &&
+				Arrays.equals(serverPrivateKey, account.serverPrivateKey);
 	}
 
 	@Override

@@ -36,7 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.server.dao.KeyRepository;
 import com.coinblesk.server.dao.TimeLockedAddressRepository;
-import com.coinblesk.server.entity.Keys;
+import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.util.Pair;
 
@@ -60,58 +60,58 @@ public class KeyService {
 	}
 
 	@Transactional(readOnly = true)
-	public Keys getByClientPublicKey(@NonNull final byte[] clientPublicKey) {
+	public Account getByClientPublicKey(@NonNull final byte[] clientPublicKey) {
 		return keyRepository.findByClientPublicKey(clientPublicKey);
 	}
 
 	@Transactional(readOnly = true)
 	public List<ECKey> getPublicECKeysByClientPublicKey(final byte[] clientPublicKey) {
-		final Keys keys = keyRepository.findByClientPublicKey(clientPublicKey);
+		final Account account = keyRepository.findByClientPublicKey(clientPublicKey);
 		final List<ECKey> retVal = new ArrayList<>(2);
-		retVal.add(ECKey.fromPublicOnly(keys.clientPublicKey()));
-		retVal.add(ECKey.fromPublicOnly(keys.serverPublicKey()));
+		retVal.add(ECKey.fromPublicOnly(account.clientPublicKey()));
+		retVal.add(ECKey.fromPublicOnly(account.serverPublicKey()));
 		return retVal;
 	}
 
 	@Transactional(readOnly = true)
 	public List<ECKey> getECKeysByClientPublicKey(@NonNull final byte[] clientPublicKey) {
-		final Keys keys = keyRepository.findByClientPublicKey(clientPublicKey);
-		if (keys == null) {
+		final Account account = keyRepository.findByClientPublicKey(clientPublicKey);
+		if (account == null) {
 			return Collections.emptyList();
 		}
 		final List<ECKey> retVal = new ArrayList<>(2);
-		retVal.add(ECKey.fromPublicOnly(keys.clientPublicKey()));
-		retVal.add(ECKey.fromPrivateAndPrecalculatedPublic(keys.serverPrivateKey(), keys.serverPublicKey()));
+		retVal.add(ECKey.fromPublicOnly(account.clientPublicKey()));
+		retVal.add(ECKey.fromPrivateAndPrecalculatedPublic(account.serverPrivateKey(), account.serverPublicKey()));
 		return retVal;
 	}
 
 	@Transactional
-	public Pair<Boolean, Keys> storeKeysAndAddress(
+	public Pair<Boolean, Account> storeKeysAndAddress(
 			@NonNull final byte[] clientPublicKey,
 			@NonNull final byte[] serverPublicKey,
 			@NonNull final byte[] serverPrivateKey) {
 
 		// need to check if it exists here, as not all DBs do that for us
-		final Keys keys = keyRepository.findByClientPublicKey(clientPublicKey);
-		if (keys != null) {
-			return new Pair<>(false, keys);
+		final Account account = keyRepository.findByClientPublicKey(clientPublicKey);
+		if (account != null) {
+			return new Pair<>(false, account);
 		}
 
-		final Keys clientKey = new Keys()
+		final Account clientKey = new Account()
 				.clientPublicKey(clientPublicKey)
 				.serverPrivateKey(serverPrivateKey)
 				.serverPublicKey(serverPublicKey)
 				.timeCreated(Instant.now().getEpochSecond());
 
-		final Keys storedKeys = keyRepository.save(clientKey);
-		return new Pair<>(true, storedKeys);
+		final Account storedAccount = keyRepository.save(clientKey);
+		return new Pair<>(true, storedAccount);
 	}
 
 	@Transactional(readOnly = true)
 	public List<List<ECKey>> all() {
-		final Iterable<Keys> all = keyRepository.findAll();
+		final Iterable<Account> all = keyRepository.findAll();
 		final List<List<ECKey>> retVal = new ArrayList<>();
-		for (Keys entity : all) {
+		for (Account entity : all) {
 			final List<ECKey> keys = new ArrayList<>(2);
 			keys.add(ECKey.fromPublicOnly(entity.clientPublicKey()));
 			keys.add(ECKey.fromPublicOnly(entity.serverPublicKey()));
@@ -121,7 +121,7 @@ public class KeyService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<Keys> allKeys() {
+	public List<Account> allKeys() {
 		return StreamSupport.stream(keyRepository.findAll().spliterator(), false)
 				.collect(Collectors.toList());
 	}
@@ -137,7 +137,7 @@ public class KeyService {
 		}
 
 		// Get client for which a new address should be created
-		Keys client = keyRepository.findByClientPublicKey(clientPublicKey.getPubKey());
+		Account client = keyRepository.findByClientPublicKey(clientPublicKey.getPubKey());
 		if (client == null)
 			throw new UserNotFoundException(clientPublicKey.getPublicKeyAsHex());
 
@@ -160,7 +160,7 @@ public class KeyService {
 				.setAddressHash(address.getAddressHash())
 				.setRedeemScript(address.createRedeemScript().getProgram())
 				.setTimeCreated(Utils.currentTimeSeconds())
-				.setKeys(client);
+				.setAccount(client);
 		timeLockedAddressRepository.save(addressEntity);
 
 		return address;
@@ -186,7 +186,7 @@ public class KeyService {
 		if (publicKey == null || publicKey.length <= 0) {
 			throw new IllegalArgumentException("publicKey must not be null");
 		}
-		return timeLockedAddressRepository.findByKeys_ClientPublicKey(publicKey);
+		return timeLockedAddressRepository.findByAccount_ClientPublicKey(publicKey);
 	}
 
 	byte[] getRedeemScriptByAddressHash(byte[] addressHash) {

@@ -43,8 +43,8 @@ public class TimeLockedAddressEntity {
 	private long id;
 
 	@ManyToOne
-	@JoinColumn(name = "KEYS_FK")
-	private Keys keys;
+	@JoinColumn(name = "ACCOUNT_FK")
+	private Account account;
 
 	@Column(name = "TIME_CREATED", nullable = false, updatable = false)
 	private long timeCreated;
@@ -67,12 +67,12 @@ public class TimeLockedAddressEntity {
 		return this;
 	}
 
-	public Keys getKeys() {
-		return keys;
+	public Account getAccount() {
+		return account;
 	}
 
-	public TimeLockedAddressEntity setKeys(Keys keys) {
-		this.keys = keys;
+	public TimeLockedAddressEntity setAccount(Account account) {
+		this.account = account;
 		return this;
 	}
 

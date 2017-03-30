@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
+import com.coinblesk.server.entity.Account;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.PrunedException;
@@ -31,7 +32,6 @@ import org.springframework.test.context.TestExecutionListeners;
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.json.v1.UserAccountTO;
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.entity.Keys;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.FakeTxBuilder;
@@ -89,12 +89,12 @@ public class UserAccountServiceTest extends CoinbleskTest {
 				.setUsername("blib");
 		userAccountService.save(userAccount);
 
-		Keys keys = keyService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
+		Account account = keyService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
 				ecKeyServer.getPrivKeyBytes()).element1();
 
 		TimeLockedAddress address = new TimeLockedAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(), 123456);
 
-		keyService.storeTimeLockedAddress(keys, address);
+		keyService.storeTimeLockedAddress(account, address);
 	}
 
 	@After

@@ -20,7 +20,7 @@ import org.bitcoinj.core.Sha256Hash;
 
 public class KeyTestUtil {
 	/**
-	 * Keys correspond to the keys in the keys.xml dataset.
+	 * Account correspond to the keys in the keys.xml dataset.
 	 */
 	public static final ECKey ALICE_CLIENT = ECKey.fromPrivate(Sha256Hash.hash("alice-client".getBytes()));
 	public static final ECKey ALICE_SERVER = ECKey.fromPrivate(Sha256Hash.hash("alice-server".getBytes()));

@@ -21,14 +21,11 @@ import java.time.Instant;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-
-import javax.servlet.ServletContext;
 
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dto.KeysDTO;
 import com.coinblesk.server.dto.TimeLockedAddressDTO;
-import com.coinblesk.server.entity.Keys;
+import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.service.KeyService;
 import com.coinblesk.util.SerializeUtils;
 import org.bitcoinj.core.Address;
@@ -44,7 +41,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.coinblesk.server.service.WalletService;
-import com.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.util.Pair;
 
 /**
@@ -107,10 +103,10 @@ public class AdminController {
 		// Pre-calculate balances for each address
 		Map<Address, Coin> balances = walletService.getBalanceByAddresses();
 
-		List<Keys> keys = keyService.allKeys();
+		List<Account> keys = keyService.allKeys();
 
 		// ...and summed for each public key
-		Map<Keys, Long> balancesPerKeys = keys.stream()
+		Map<Account, Long> balancesPerKeys = keys.stream()
 				.collect(Collectors.toMap(Function.identity(),
 						key ->
 								key.timeLockedAddresses()
@@ -121,7 +117,7 @@ public class AdminController {
 										.sum()
 				));
 
-		// Map the Keys entities to DTOs including the containing TimeLockedAddresses
+		// Map the Account entities to DTOs including the containing TimeLockedAddresses
 		return keys.stream()
 				.map(key -> new KeysDTO(
 						SerializeUtils.bytesToHex(key.clientPublicKey()),
