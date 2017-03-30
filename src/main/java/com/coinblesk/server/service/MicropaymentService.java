@@ -1,6 +1,6 @@
 package com.coinblesk.server.service;
 
-import com.coinblesk.server.dao.KeyRepository;
+import com.coinblesk.server.dao.AccountRepository;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.exceptions.InvalidAmountException;
 import com.coinblesk.server.exceptions.InvalidNonceException;
@@ -19,11 +19,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class MicropaymentService {
-	private final KeyRepository keyRepository;
+	private final AccountRepository accountRepository;
 
 	@Autowired
-	public MicropaymentService(KeyRepository keyRepository) {
-		this.keyRepository = keyRepository;
+	public MicropaymentService(AccountRepository accountRepository) {
+		this.accountRepository = accountRepository;
 	}
 
 	@Transactional(isolation = Isolation.SERIALIZABLE)
@@ -35,7 +35,7 @@ public class MicropaymentService {
 		if (keySender.getPublicKeyAsHex().equals(keyReceiver.getPublicKeyAsHex()))
 			throw new InvalidRequestException("The sender and receiver cannot be the same entities");
 
-		final Account sender = keyRepository.findByClientPublicKey(keySender.getPubKey());
+		final Account sender = accountRepository.findByClientPublicKey(keySender.getPubKey());
 		if (sender == null)
 			throw new UserNotFoundException(keySender.getPublicKeyAsHex());
 
@@ -56,7 +56,7 @@ public class MicropaymentService {
 			throw new InsufficientFunds("Insufficient funds, only " + sender.virtualBalance() + " satoshis available");
 
 		// Get receiver from database
-		final Account receiver = keyRepository.findByClientPublicKey(keyReceiver.getPubKey());
+		final Account receiver = accountRepository.findByClientPublicKey(keyReceiver.getPubKey());
 		if (receiver == null)
 			throw new UserNotFoundException(keyReceiver.getPublicKeyAsHex());
 
@@ -69,8 +69,8 @@ public class MicropaymentService {
 		// Guarantee that this request is only processed once
 		sender.nonce(requestNonce);
 
-		keyRepository.save(sender);
-		keyRepository.save(receiver);
+		accountRepository.save(sender);
+		accountRepository.save(receiver);
 
 		// Return the new balances and the keys for sender and receiver that can be used for signing
 		return new VirtualPaymentResult(

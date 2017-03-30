@@ -34,7 +34,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.server.dao.KeyRepository;
+import com.coinblesk.server.dao.AccountRepository;
 import com.coinblesk.server.dao.TimeLockedAddressRepository;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
@@ -49,24 +49,24 @@ import com.coinblesk.util.Pair;
 @Service
 public class AccountService {
 
-	private final KeyRepository keyRepository;
+	private final AccountRepository accountRepository;
 
 	private final TimeLockedAddressRepository timeLockedAddressRepository;
 
 	@Autowired
-	public AccountService(@NonNull KeyRepository keyRepository, @NonNull TimeLockedAddressRepository timeLockedAddressRepository) {
-		this.keyRepository = keyRepository;
+	public AccountService(@NonNull AccountRepository accountRepository, @NonNull TimeLockedAddressRepository timeLockedAddressRepository) {
+		this.accountRepository = accountRepository;
 		this.timeLockedAddressRepository = timeLockedAddressRepository;
 	}
 
 	@Transactional(readOnly = true)
 	public Account getByClientPublicKey(@NonNull final byte[] clientPublicKey) {
-		return keyRepository.findByClientPublicKey(clientPublicKey);
+		return accountRepository.findByClientPublicKey(clientPublicKey);
 	}
 
 	@Transactional(readOnly = true)
 	public List<ECKey> getPublicECKeysByClientPublicKey(final byte[] clientPublicKey) {
-		final Account account = keyRepository.findByClientPublicKey(clientPublicKey);
+		final Account account = accountRepository.findByClientPublicKey(clientPublicKey);
 		final List<ECKey> retVal = new ArrayList<>(2);
 		retVal.add(ECKey.fromPublicOnly(account.clientPublicKey()));
 		retVal.add(ECKey.fromPublicOnly(account.serverPublicKey()));
@@ -75,7 +75,7 @@ public class AccountService {
 
 	@Transactional(readOnly = true)
 	public List<ECKey> getECKeysByClientPublicKey(@NonNull final byte[] clientPublicKey) {
-		final Account account = keyRepository.findByClientPublicKey(clientPublicKey);
+		final Account account = accountRepository.findByClientPublicKey(clientPublicKey);
 		if (account == null) {
 			return Collections.emptyList();
 		}
@@ -92,7 +92,7 @@ public class AccountService {
 			@NonNull final byte[] serverPrivateKey) {
 
 		// need to check if it exists here, as not all DBs do that for us
-		final Account account = keyRepository.findByClientPublicKey(clientPublicKey);
+		final Account account = accountRepository.findByClientPublicKey(clientPublicKey);
 		if (account != null) {
 			return new Pair<>(false, account);
 		}
@@ -103,13 +103,13 @@ public class AccountService {
 				.serverPublicKey(serverPublicKey)
 				.timeCreated(Instant.now().getEpochSecond());
 
-		final Account storedAccount = keyRepository.save(clientKey);
+		final Account storedAccount = accountRepository.save(clientKey);
 		return new Pair<>(true, storedAccount);
 	}
 
 	@Transactional(readOnly = true)
 	public List<List<ECKey>> all() {
-		final Iterable<Account> all = keyRepository.findAll();
+		final Iterable<Account> all = accountRepository.findAll();
 		final List<List<ECKey>> retVal = new ArrayList<>();
 		for (Account entity : all) {
 			final List<ECKey> keys = new ArrayList<>(2);
@@ -122,7 +122,7 @@ public class AccountService {
 
 	@Transactional(readOnly = true)
 	public List<Account> allKeys() {
-		return StreamSupport.stream(keyRepository.findAll().spliterator(), false)
+		return StreamSupport.stream(accountRepository.findAll().spliterator(), false)
 				.collect(Collectors.toList());
 	}
 
@@ -137,7 +137,7 @@ public class AccountService {
 		}
 
 		// Get client for which a new address should be created
-		Account client = keyRepository.findByClientPublicKey(clientPublicKey.getPubKey());
+		Account client = accountRepository.findByClientPublicKey(clientPublicKey.getPubKey());
 		if (client == null)
 			throw new UserNotFoundException(clientPublicKey.getPublicKeyAsHex());
 
@@ -171,7 +171,7 @@ public class AccountService {
 		if (publicKey.length == 0) {
 			throw new IllegalArgumentException("publicKey must not be null");
 		}
-		return keyRepository.findByClientPublicKey(publicKey).virtualBalance();
+		return accountRepository.findByClientPublicKey(publicKey).virtualBalance();
 	}
 
 	public boolean addressExists(@NonNull byte[] addressHash) {
