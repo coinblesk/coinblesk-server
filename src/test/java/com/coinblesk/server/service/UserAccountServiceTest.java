@@ -11,6 +11,8 @@ import java.util.Date;
 import java.util.List;
 
 import com.coinblesk.server.entity.Account;
+import com.coinblesk.server.exceptions.InvalidLockTimeException;
+import com.coinblesk.server.exceptions.UserNotFoundException;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.PrunedException;
@@ -72,7 +74,7 @@ public class UserAccountServiceTest extends CoinbleskTest {
 	private int counter = 0;
 
 	@Before
-	public void before() throws IOException, UnreadableWalletException, BlockStoreException, InterruptedException {
+	public void before() throws IOException, UnreadableWalletException, BlockStoreException, InterruptedException, InvalidLockTimeException, UserNotFoundException {
 		System.setProperty("coinblesk.config.dir", "/tmp/lib/coinblesk" + (counter++));
 		if (counter > 0) {
 			walletService.init();
@@ -89,12 +91,11 @@ public class UserAccountServiceTest extends CoinbleskTest {
 				.setUsername("blib");
 		userAccountService.save(userAccount);
 
-		Account account = accountService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
+		accountService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
 				ecKeyServer.getPrivKeyBytes()).element1();
 
-		TimeLockedAddress address = new TimeLockedAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(), 123456);
 
-		accountService.storeTimeLockedAddress(account, address);
+		accountService.createTimeLockedAddress(ecKeyClient, 123456);
 	}
 
 	@After

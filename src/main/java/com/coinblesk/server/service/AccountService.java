@@ -165,8 +165,9 @@ public class AccountService {
 		return timeLockedAddressRepository.findByAddressHash(addressHash) != null;
 	}
 
-	TimeLockedAddressEntity getTimeLockedAddressByAddressHash(@NonNull byte[] addressHash) {
-		return timeLockedAddressRepository.findByAddressHash(addressHash);
+	TimeLockedAddress getTimeLockedAddressByAddressHash(@NonNull byte[] addressHash) {
+		TimeLockedAddressEntity entity = timeLockedAddressRepository.findByAddressHash(addressHash);
+		return entity == null ? null : TimeLockedAddress.fromRedeemScript(entity.getRedeemScript());
 	}
 
 	List<TimeLockedAddressEntity> getTimeLockedAddressesByClientPublicKey(byte[] publicKey) {
@@ -176,8 +177,4 @@ public class AccountService {
 		return timeLockedAddressRepository.findByAccount_ClientPublicKey(publicKey);
 	}
 
-	byte[] getRedeemScriptByAddressHash(byte[] addressHash) {
-		TimeLockedAddressEntity address = getTimeLockedAddressByAddressHash(addressHash);
-		return address != null ? address.getRedeemScript() : null;
-	}
 }

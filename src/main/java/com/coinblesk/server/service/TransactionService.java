@@ -139,7 +139,9 @@ public class TransactionService {
 			final byte[] redeemScript;
 			if (txOut != null) {
 				byte[] addressHashFrom = txOut.getScriptPubKey().getPubKeyHash();
-				redeemScript = accountService.getRedeemScriptByAddressHash(addressHashFrom);
+				redeemScript = accountService.getTimeLockedAddressByAddressHash(addressHashFrom)
+						.createRedeemScript()
+						.getProgram();
 				if (redeemScript == null) {
 					instantCounter++;
 					LOG.warn("signTransaction - redeem script for input {} not found - output: {}", inputIndex, txOut);
@@ -290,7 +292,7 @@ public class TransactionService {
 			}
 
 			byte[] addressHash = output.getScriptPubKey().getPubKeyHash();
-			TimeLockedAddressEntity address = accountService.getTimeLockedAddressByAddressHash(addressHash);
+			TimeLockedAddress address = accountService.getTimeLockedAddressByAddressHash(addressHash);
 			if (address == null) {
 				// unknown input (maybe not locked)
 				return false;

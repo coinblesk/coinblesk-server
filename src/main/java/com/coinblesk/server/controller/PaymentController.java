@@ -34,6 +34,7 @@ import com.coinblesk.server.dto.ErrorDTO;
 import com.coinblesk.server.dto.KeyExchangeRequestDTO;
 import com.coinblesk.server.dto.CreateAddressRequestDTO;
 import com.coinblesk.server.dto.SignedDTO;
+import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.exceptions.InvalidLockTimeException;
 import com.coinblesk.server.exceptions.InvalidSignatureException;
 import com.coinblesk.server.exceptions.MissingFieldException;
@@ -144,7 +145,7 @@ public class PaymentController {
 		}
 
 		if (address == null)
-			System.out.println("asdf");
+			return new ResponseEntity<>(new ErrorDTO("Could not create Address"), INTERNAL_SERVER_ERROR);
 
 		// Start watching the address
 		walletService.addWatching(address.createPubkeyScript());

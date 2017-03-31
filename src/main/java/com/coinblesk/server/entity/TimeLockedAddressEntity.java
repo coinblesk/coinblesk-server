@@ -27,6 +27,7 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
+import com.coinblesk.bitcoin.TimeLockedAddress;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.bitcoinj.core.Address;
@@ -57,6 +58,10 @@ public class TimeLockedAddressEntity {
 
 	@Column(name = "LOCK_TIME", nullable = false, updatable = false)
 	private long lockTime;
+
+	public TimeLockedAddress toTimeLockedAddress() {
+		return TimeLockedAddress.fromRedeemScript(this.redeemScript);
+	}
 
 	public long getId() {
 		return id;

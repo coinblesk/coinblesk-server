@@ -18,6 +18,8 @@ package com.coinblesk.server.service;
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
+import com.coinblesk.server.exceptions.InvalidLockTimeException;
+import com.coinblesk.server.exceptions.UserNotFoundException;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.KeyTestUtil;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
@@ -29,6 +31,9 @@ import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.TestExecutionListeners;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -99,7 +104,7 @@ public class AccountServiceTest extends CoinbleskTest {
 		TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), account.serverPublicKey(), lockTime);
 		// do not store -> empty result
 
-		TimeLockedAddressEntity fromDB = accountService.getTimeLockedAddressByAddressHash(address.getAddressHash());
+		TimeLockedAddress fromDB = accountService.getTimeLockedAddressByAddressHash(address.getAddressHash());
 		assertNull(fromDB);
 	}
 
@@ -107,46 +112,47 @@ public class AccountServiceTest extends CoinbleskTest {
 	@DatabaseSetup("/EmptyDatabase.xml")
 	@DatabaseSetup("/keys.xml")
 	@DatabaseTearDown("/EmptyDatabase.xml")
-	public void testStoreAndGetTimeLockedAddress() {
-		long lockTime = 123456;
+	public void testStoreAndGetTimeLockedAddress() throws InvalidLockTimeException, UserNotFoundException {
+		long lockTime = Instant.now().plus(Duration.ofDays(90)).getEpochSecond();
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 
-		Account account = accountService.getByClientPublicKey(clientKey.getPubKey());
-
-		TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), account.serverPublicKey(), lockTime);
-		TimeLockedAddressEntity intoDB = accountService.storeTimeLockedAddress(account, address);
+		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, lockTime);
 		assertNotNull(intoDB);
 
-		TimeLockedAddressEntity fromDB = accountService.getTimeLockedAddressByAddressHash(address.getAddressHash());
+		TimeLockedAddress fromDB = accountService.getTimeLockedAddressByAddressHash(intoDB.getAddressHash());
 		assertNotNull(fromDB);
+
 		assertEquals(intoDB, fromDB);
 
-		account = accountService.getByClientPublicKey(clientKey.getPubKey());
-		assertTrue(account.timeLockedAddresses().contains(fromDB));
+		Account account = accountService.getByClientPublicKey(clientKey.getPubKey());
+		assertTrue(account.timeLockedAddresses().stream()
+				.anyMatch( entity -> entity.toTimeLockedAddress().equals(fromDB)));
 	}
 
 	@Test
 	@DatabaseSetup("/EmptyDatabase.xml")
 	@DatabaseSetup("/keys.xml")
 	@DatabaseTearDown("/EmptyDatabase.xml")
-	public void testStoreAndGetTimeLockedAddresses() {
+	public void testStoreAndGetTimeLockedAddresses() throws InvalidLockTimeException, UserNotFoundException {
 		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
 
 		Account account = accountService.getByClientPublicKey(clientKey.getPubKey());
 
-		TimeLockedAddress address_1 = new TimeLockedAddress(clientKey.getPubKey(), account.serverPublicKey(), 42);
-		TimeLockedAddress address_2 = new TimeLockedAddress(clientKey.getPubKey(), account.serverPublicKey(), 4242);
-		TimeLockedAddressEntity addressEntity_1 = accountService.storeTimeLockedAddress(account, address_1);
+		Long locktime1 = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
+		TimeLockedAddress addressEntity_1 = accountService.createTimeLockedAddress(clientKey, locktime1);
 		assertNotNull(addressEntity_1);
-		TimeLockedAddressEntity addressEntity_2 = accountService.storeTimeLockedAddress(account, address_2);
+
+		Long locktime2 = Instant.now().plus(Duration.ofDays(60)).getEpochSecond();
+		TimeLockedAddress addressEntity_2 = accountService.createTimeLockedAddress(clientKey, locktime2);
 		assertNotNull(addressEntity_2);
 
 		List<TimeLockedAddressEntity> fromDB = accountService.getTimeLockedAddressesByClientPublicKey(
 				clientKey.getPubKey());
+
 		assertNotNull(fromDB);
 		assertTrue(fromDB.size() == 2);
-		assertTrue(fromDB.contains(addressEntity_1));
-		assertTrue(fromDB.contains(addressEntity_2));
+		assertTrue(fromDB.stream().map(e -> e.toTimeLockedAddress()).anyMatch(e -> e.equals(addressEntity_1)));
+		assertTrue(fromDB.stream().map(e -> e.toTimeLockedAddress()).anyMatch(e -> e.equals(addressEntity_2)));
 
 		account = accountService.getByClientPublicKey(clientKey.getPubKey());
 		assertTrue(account.timeLockedAddresses().containsAll(fromDB));
