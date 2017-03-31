@@ -18,6 +18,9 @@ package com.coinblesk.server.controller;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.coinblesk.server.dto.KeyExchangeRequestDTO;
+import com.coinblesk.server.utils.DTOUtils;
+import com.google.common.io.BaseEncoding;
 import org.bitcoinj.core.ECKey;
 import org.junit.Assert;
 import org.junit.Before;
@@ -36,11 +39,15 @@ import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
 
+import java.security.SecureRandom;
+
 /**
  *
- * @author draft
+ * @author Thomas Bocek
+ * @author Sebastian Stephan
+ *
  */
-public class RegisterKeyTest extends CoinbleskTest {
+public class KeyExchangeTest extends CoinbleskTest {
 
 	@Autowired
 	private WebApplicationContext webAppContext;
@@ -55,33 +62,51 @@ public class RegisterKeyTest extends CoinbleskTest {
 	@Test
 	@DatabaseSetup("/EmptyDatabase.xml")
 	@DatabaseTearDown("/EmptyDatabase.xml")
-	public void testRegister() throws Exception {
-		// no object
-		mockMvc.perform(post("/payment/key-exchange").secure(true)).andExpect(status().is4xxClientError());
-		// with object, but no public key
-		KeyTO keyTO = new KeyTO();
-		keyTO.currentDate(System.currentTimeMillis());
-		MvcResult res = mockMvc.perform(post("/payment/key-exchange").secure(true).contentType(MediaType.APPLICATION_JSON)
-				.content(SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
-		KeyTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
-		Assert.assertEquals(false, status.isSuccess());
-		Assert.assertEquals(Type.INPUT_MISMATCH, status.type());
-		Assert.assertNull(status.publicKey());
-		// with bogus key
-		keyTO = new KeyTO().publicKey("bogus=======".getBytes());
-		res = mockMvc.perform(post("/payment/key-exchange").secure(true).contentType(MediaType.APPLICATION_JSON).content(
-				SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
-		status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
-		Assert.assertEquals(false, status.isSuccess());
-		Assert.assertEquals(Type.INPUT_MISMATCH, status.type());
-		Assert.assertNull(status.publicKey());
-		// with good pubilc key
-		ECKey ecKeyClient = new ECKey();
-		keyTO = new KeyTO().publicKey(ecKeyClient.getPubKey());
-		res = mockMvc.perform(post("/payment/key-exchange").secure(true).contentType(MediaType.APPLICATION_JSON).content(
-				SerializeUtils.GSON.toJson(keyTO))).andExpect(status().isOk()).andReturn();
-		status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), KeyTO.class);
-		Assert.assertEquals(true, status.isSuccess());
-		Assert.assertNotNull(status.publicKey());
+	public void noPayloadFails() throws Exception {
+		mockMvc
+				.perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON))
+				.andExpect(status().isBadRequest());
+
+		mockMvc
+				.perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON)
+						.content("{}"))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
+	public void emptyPublicKeyFails() throws Exception {
+		mockMvc.
+				perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON)
+						.content("{\"publicKey\": \"\"}"))
+				.andExpect(status().isBadRequest()).andReturn();
+	}
+
+
+	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
+	public void invalidPublicKeyFails() throws Exception {
+		String bogusKey = "02a485c51c0cef798620ea810541d4ffffffffffff8c031a046d50ca3ca0ad148f";
+		mockMvc
+				.perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON)
+						.content(SerializeUtils.GSON.toJson(
+								new KeyExchangeRequestDTO(bogusKey))
+						))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	@DatabaseSetup("/EmptyDatabase.xml")
+	@DatabaseTearDown("/EmptyDatabase.xml")
+	public void resultIs200OK() throws Exception {
+		ECKey goodKey = new ECKey();
+		mockMvc
+				.perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON)
+						.content(SerializeUtils.GSON.toJson(
+								new KeyExchangeRequestDTO(goodKey.getPublicKeyAsHex()))
+						))
+				.andExpect(status().isOk()).andReturn();
 	}
 }
