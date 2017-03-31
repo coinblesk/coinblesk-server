@@ -306,13 +306,8 @@ public class PaymentController {
 	}
 
 	/**
-	 * Input is the KeyTO with the client public key. The server will create for
-	 * this client public key its own server keypair and return the server
-	 * public key, or indicate an error in KeyTO (or via status code). Make sure
-	 * to check for isSuccess(). Internally the server will hash the client
-	 * public key with SHA-256 (UUID) and clients need to identify themselfs
-	 * with this UUID for subsequent calls.
-	 *
+	 * Input is the KeyExchangeRequestDTO with the client public key. The server will create for
+	 * this client public key its own server keypair and return the server public key.
 	 */
 	@RequestMapping(value = "/key-exchange",
 			method = POST,
