@@ -91,10 +91,7 @@ public class UserAccountServiceTest extends CoinbleskTest {
 				.setUsername("blib");
 		userAccountService.save(userAccount);
 
-		accountService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
-				ecKeyServer.getPrivKeyBytes()).element1();
-
-
+		accountService.createAcount(ecKeyClient);
 		accountService.createTimeLockedAddress(ecKeyClient, 123456);
 	}
 

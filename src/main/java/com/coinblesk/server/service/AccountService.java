@@ -16,6 +16,7 @@
 
 package com.coinblesk.server.service;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -23,9 +24,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.exceptions.InvalidLockTimeException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
-import com.coinblesk.util.BitcoinUtils;
 import lombok.NonNull;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Utils;
@@ -38,7 +39,6 @@ import com.coinblesk.server.dao.AccountRepository;
 import com.coinblesk.server.dao.TimeLockedAddressRepository;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
-import com.coinblesk.util.Pair;
 
 /**
  *
@@ -53,10 +53,13 @@ public class AccountService {
 
 	private final TimeLockedAddressRepository timeLockedAddressRepository;
 
+	private final AppConfig appConfig;
+
 	@Autowired
-	public AccountService(@NonNull AccountRepository accountRepository, @NonNull TimeLockedAddressRepository timeLockedAddressRepository) {
+	public AccountService(@NonNull AccountRepository accountRepository, @NonNull TimeLockedAddressRepository timeLockedAddressRepository, AppConfig appConfig) {
 		this.accountRepository = accountRepository;
 		this.timeLockedAddressRepository = timeLockedAddressRepository;
+		this.appConfig = appConfig;
 	}
 
 	@Transactional(readOnly = true)
@@ -85,26 +88,37 @@ public class AccountService {
 		return retVal;
 	}
 
+	/**
+	 * Creates a new account for a given client public key.
+	 * Returns the public key of the server for the newly created or already existing account.
+	 *
+	 * Idempodent: Calling this function with a public key that already exists will not make any changes.
+	 *
+	 * @param clientPublicKey The client public key for which an account should be generated
+	 * @return The server ECKey public key associated with that account.
+	 * 		   Does not contain the private key.
+	 */
 	@Transactional
-	public Pair<Boolean, Account> storeKeysAndAddress(
-			@NonNull final byte[] clientPublicKey,
-			@NonNull final byte[] serverPublicKey,
-			@NonNull final byte[] serverPrivateKey) {
+	public ECKey createAcount( @NonNull ECKey clientPublicKey ) {
 
-		// need to check if it exists here, as not all DBs do that for us
-		final Account account = accountRepository.findByClientPublicKey(clientPublicKey);
-		if (account != null) {
-			return new Pair<>(false, account);
+		// Check if client has already account
+		final Account existingAccount = accountRepository.findByClientPublicKey(clientPublicKey.getPubKey());
+		if (existingAccount != null) {
+			return ECKey.fromPublicOnly(existingAccount.serverPublicKey());
 		}
 
+		// Not in database => Create new account with new server key pair
+		ECKey serverKeyPair = new ECKey();
 		final Account clientKey = new Account()
-				.clientPublicKey(clientPublicKey)
-				.serverPrivateKey(serverPrivateKey)
-				.serverPublicKey(serverPublicKey)
+				.clientPublicKey(clientPublicKey.getPubKey())
+				.serverPrivateKey(serverKeyPair.getPrivKeyBytes())
+				.serverPublicKey(serverKeyPair.getPubKey())
 				.timeCreated(Instant.now().getEpochSecond());
 
-		final Account storedAccount = accountRepository.save(clientKey);
-		return new Pair<>(true, storedAccount);
+		final Account newAccount = accountRepository.save(clientKey);
+
+		// Don't return the the private key of the server, makes it harder to not actually leak it somewhere.
+		return ECKey.fromPublicOnly(newAccount.serverPublicKey());
 	}
 
 	@Transactional(readOnly = true)
@@ -118,8 +132,9 @@ public class AccountService {
 			throws UserNotFoundException, InvalidLockTimeException {
 
 		// Lock time must be valid
-		if (!BitcoinUtils.isLockTimeByTime(lockTime) ||
-				BitcoinUtils.isAfterLockTime(Instant.now().getEpochSecond(), lockTime)) {
+		final long minLockTime = Instant.now().getEpochSecond() + appConfig.getMinimumLockTimeSeconds();
+		final long maxLockTime = Instant.now().plus(Duration.ofDays(appConfig.getMaximumLockTimeDays())).getEpochSecond();
+		if (lockTime < minLockTime || lockTime > maxLockTime) {
 			throw new InvalidLockTimeException();
 		}
 
@@ -168,13 +183,6 @@ public class AccountService {
 	TimeLockedAddress getTimeLockedAddressByAddressHash(@NonNull byte[] addressHash) {
 		TimeLockedAddressEntity entity = timeLockedAddressRepository.findByAddressHash(addressHash);
 		return entity == null ? null : TimeLockedAddress.fromRedeemScript(entity.getRedeemScript());
-	}
-
-	List<TimeLockedAddressEntity> getTimeLockedAddressesByClientPublicKey(byte[] publicKey) {
-		if (publicKey == null || publicKey.length <= 0) {
-			throw new IllegalArgumentException("publicKey must not be null");
-		}
-		return timeLockedAddressRepository.findByAccount_ClientPublicKey(publicKey);
 	}
 
 }

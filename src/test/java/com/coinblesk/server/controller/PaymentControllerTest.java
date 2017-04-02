@@ -26,6 +26,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.Random;
 
+import com.coinblesk.server.dao.TimeLockedAddressRepository;
+import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Utils;
@@ -65,6 +67,8 @@ public class PaymentControllerTest extends CoinbleskTest {
 
 	@Autowired
 	private AccountService accountService;
+
+	@Autowired TimeLockedAddressRepository timeLockedAddressRepository;
 
 	private static MockMvc mockMvc;
 
@@ -368,7 +372,7 @@ public class PaymentControllerTest extends CoinbleskTest {
 		TimeLockedAddressTO requestTO = createSignedTimeLockedAddressTO(clientKey);
 		TimeLockedAddress expectedAddress = new TimeLockedAddress(
 				clientKey.getPubKey(), serverKey.getPubKey(), requestTO.lockTime());
-		assertFalse(accountService.addressExists(expectedAddress.getAddressHash()));
+		assertNull(timeLockedAddressRepository.findByAddressHash(expectedAddress.getAddressHash()));
 
 		TimeLockedAddressTO responseTO = requestCreateTimeLockedAddress(requestTO);
 		assertTrue(responseTO.isSuccess());

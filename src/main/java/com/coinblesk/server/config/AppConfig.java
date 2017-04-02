@@ -65,6 +65,12 @@ public class AppConfig {
 	@Value("${coinblesk.config.dir}")
 	private FileSystemResource configDir;
 
+	@Value("${coinblesk.minimumLockTimeSeconds}")
+	private long minimumLockTimeSeconds;
+
+	@Value("${coinblesk.maximumLockTimeDays}")
+	private long maximumLockTimeDays;
+
 	@Value("${bitcoin.net}")
 	private String bitcoinNet;
 
@@ -142,5 +148,13 @@ public class AppConfig {
 
 	public String getFirstSeedNode() {
 		return firstSeedNode;
+	}
+
+	public long getMinimumLockTimeSeconds() {
+		return minimumLockTimeSeconds;
+	}
+
+	public long getMaximumLockTimeDays() {
+		return maximumLockTimeDays;
 	}
 }

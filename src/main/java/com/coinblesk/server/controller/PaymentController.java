@@ -26,29 +26,21 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
-import com.coinblesk.server.dto.ErrorDTO;
-import com.coinblesk.server.dto.KeyExchangeRequestDTO;
-import com.coinblesk.server.dto.CreateAddressRequestDTO;
-import com.coinblesk.server.dto.SignedDTO;
-import com.coinblesk.server.entity.TimeLockedAddressEntity;
+import com.coinblesk.server.dto.*;
 import com.coinblesk.server.exceptions.InvalidLockTimeException;
 import com.coinblesk.server.exceptions.InvalidSignatureException;
 import com.coinblesk.server.exceptions.MissingFieldException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
 import com.coinblesk.server.utils.DTOUtils;
 import com.coinblesk.server.utils.SignatureUtils;
-import com.google.common.io.BaseEncoding;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.TransactionSignature;
@@ -61,13 +53,10 @@ import org.springframework.web.bind.annotation.*;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.json.v1.BalanceTO;
-import com.coinblesk.json.v1.KeyTO;
 import com.coinblesk.json.v1.RefundTO;
-import com.coinblesk.json.v1.SignTO;
 import com.coinblesk.json.v1.SignVerifyTO;
 import com.coinblesk.json.v1.TxSig;
 import com.coinblesk.json.v1.Type;
-import com.coinblesk.json.v1.VerifyTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.service.AccountService;
@@ -76,8 +65,6 @@ import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.server.utils.ToUtils;
 import com.coinblesk.util.BitcoinUtils;
-import com.coinblesk.util.CoinbleskException;
-import com.coinblesk.util.InsufficientFunds;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
 
@@ -315,52 +302,20 @@ public class PaymentController {
 			produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	@CrossOrigin
-	public KeyTO keyExchange(@RequestBody @Valid KeyExchangeRequestDTO request) {
-		final long startTime = System.currentTimeMillis();
-		final String tag = "{key-exchange}";
+	public ResponseEntity keyExchange(@RequestBody @Valid KeyExchangeRequestDTO request) {
+
+		ECKey clientPublicKey;
+		try {
+			clientPublicKey = SignatureUtils.getECKeyFromHexPublicKey(request.getPublicKey());
+		} catch (Throwable e) {
+			return new ResponseEntity<>(new ErrorDTO("Invalid publicKey given"), BAD_REQUEST);
+		};
 
 		try {
-			final byte[] publicKey = BaseEncoding.base16().decode(request.getPublicKey().toUpperCase());
-
-			if (publicKey.length != 33 || !ECKey.isPubKeyCanonical(publicKey)) {
-				LOG.debug("{} - INPUT_MISMATCH", tag);
-				return ToUtils.newInstance(KeyTO.class, Type.INPUT_MISMATCH);
-			}
-
-			LOG.debug("{} - clientPubKey={}", tag, SerializeUtils.bytesToHex(publicKey));
-			// no input checking as input may not be signed
-			final byte[] clientPublicKey = publicKey;
-			final ECKey serverEcKey = new ECKey();
-			final List<ECKey> keyList = new ArrayList<>(2);
-			keyList.add(ECKey.fromPublicOnly(clientPublicKey));
-			keyList.add(serverEcKey);
-
-			// 2-of-2 multisig
-			final Script script = BitcoinUtils.createP2SHOutputScript(2, keyList);
-			final Pair<Boolean, Account> retVal = accountService.storeKeysAndAddress(clientPublicKey, serverEcKey.getPubKey(),
-					serverEcKey.getPrivKeyBytes());
-
-			final KeyTO serverKeyTO = new KeyTO().currentDate(System.currentTimeMillis());
-			if (retVal.element0()) {
-				walletService.addWatching(script);
-				serverKeyTO.publicKey(serverEcKey.getPubKey());
-				serverKeyTO.setSuccess();
-				SerializeUtils.signJSON(serverKeyTO, serverEcKey);
-			} else {
-				Account account = retVal.element1();
-				serverKeyTO.publicKey(account.serverPublicKey());
-				serverKeyTO.type(Type.SUCCESS_BUT_KEY_ALREADY_EXISTS);
-				ECKey existingServerKey = ECKey.fromPrivateAndPrecalculatedPublic(account.serverPrivateKey(),
-						account.serverPublicKey());
-				SerializeUtils.signJSON(serverKeyTO, existingServerKey);
-			}
-			LOG.debug("{} - done - {}", serverKeyTO.type().toString());
-			return serverKeyTO;
-		} catch (Exception e) {
-			LOG.error("{} - SERVER_ERROR: ", e);
-			return new KeyTO().currentDate(System.currentTimeMillis()).type(Type.SERVER_ERROR).message(e.getMessage());
-		} finally {
-			LOG.debug("{} - finished in {} ms", tag, (System.currentTimeMillis() - startTime));
+			final ECKey serverPublicKey = accountService.createAcount(clientPublicKey);
+			return new ResponseEntity<>(new KeyExchangeResponseDTO(serverPublicKey.getPublicKeyAsHex()), OK);
+		} catch (Throwable e) {
+			return new ResponseEntity<>(new ErrorDTO("Error during key exchange"), INTERNAL_SERVER_ERROR);
 		}
 	}
 

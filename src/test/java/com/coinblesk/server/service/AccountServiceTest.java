@@ -16,145 +16,223 @@
 package com.coinblesk.server.service;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.dao.AccountRepository;
+import com.coinblesk.server.dao.TimeLockedAddressRepository;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.exceptions.InvalidLockTimeException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
 import com.coinblesk.server.utilTest.CoinbleskTest;
-import com.coinblesk.server.utilTest.KeyTestUtil;
-import com.github.springtestdbunit.DbUnitTestExecutionListener;
-import com.github.springtestdbunit.annotation.DatabaseSetup;
-import com.github.springtestdbunit.annotation.DatabaseTearDown;
-import org.bitcoinj.core.ECKey;
+import com.subgraph.orchid.data.exitpolicy.Network;
+import org.assertj.core.api.Assertions;
+import org.bitcoinj.core.*;
+import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptBuilder;
+import org.bitcoinj.wallet.Protos;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.internal.matchers.ArrayEquals;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.TestExecutionListeners;
 
+import javax.persistence.EntityManager;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.*;
 
 /**
- *
- * @author Thomas Bocek
- * @author Andreas Albrecht
+ * @author Sebastian Stephan
  */
-@TestExecutionListeners(listeners = DbUnitTestExecutionListener.class, mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
 public class AccountServiceTest extends CoinbleskTest {
 
 	@Autowired
 	private AccountService accountService;
 
-	@Test
-	@DatabaseSetup("/EmptyDatabase.xml")
-	@DatabaseTearDown("/EmptyDatabase.xml")
-	public void testAddKey() throws Exception {
-		ECKey ecKeyClient = new ECKey();
-		ECKey ecKeyServer = new ECKey();
+	@Autowired
+	private AccountRepository accountRepository;
 
-		boolean retVal = accountService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
-				ecKeyServer.getPrivKeyBytes()).element0();
-		Assert.assertTrue(retVal);
-		// adding again should fail
-		retVal = accountService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
-				ecKeyServer.getPrivKeyBytes()).element0();
-		Assert.assertFalse(retVal);
+	@Autowired
+	private TimeLockedAddressRepository timeLockedAddressRepository;
+
+	@Autowired
+	private EntityManager em;
+
+	@Autowired
+	private AppConfig appConfig;
+
+	@Test
+	public void createAccountReturnsServerPublicKey() {
+		final ECKey serverPublicKey = accountService.createAcount(new ECKey());
+		Assert.assertNotNull(serverPublicKey);
+		Assert.assertNotNull(serverPublicKey.getPubKey());
 	}
 
 	@Test
-	@DatabaseSetup("/EmptyDatabase.xml")
-	@DatabaseTearDown("/EmptyDatabase.xml")
-	public void testAddKey2() throws Exception {
-		ECKey ecKeyClient = new ECKey();
-		ECKey ecKeyServer = new ECKey();
-
-		boolean retVal = accountService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
-				ecKeyServer.getPrivKeyBytes()).element0();
-		Assert.assertTrue(retVal);
-		retVal = accountService.storeKeysAndAddress(ecKeyClient.getPubKey(), ecKeyServer.getPubKey(),
-				ecKeyServer.getPrivKeyBytes()).element0();
-		Assert.assertFalse(retVal);
-
-		Account account = accountService.getByClientPublicKey(ecKeyClient.getPubKey());
-		Assert.assertNotNull(account);
-
-		account = accountService.getByClientPublicKey(ecKeyClient.getPubKey());
-		Assert.assertNotNull(account);
-		//
-		List<ECKey> list = accountService.getPublicECKeysByClientPublicKey(ecKeyClient.getPubKey());
-		Assert.assertEquals(2, list.size());
-		Assert.assertArrayEquals(list.get(0).getPubKey(), ecKeyClient.getPubKey());
-		Assert.assertArrayEquals(list.get(1).getPubKey(), ecKeyServer.getPubKey());
+	public void createAccountSavesNewAccount() {
+		ECKey clientKey = new ECKey();
+		accountService.createAcount(clientKey);
+		assertNotNull(accountRepository.findByClientPublicKey(clientKey.getPubKey()));
 	}
 
 	@Test
-	@DatabaseSetup("/EmptyDatabase.xml")
-	@DatabaseSetup("/keys.xml")
-	@DatabaseTearDown("/EmptyDatabase.xml")
-	public void testGetTimeLockedAddress_EmptyResult() {
-		long lockTime = 123456;
-		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
-
-		Account account = accountService.getByClientPublicKey(clientKey.getPubKey());
-
-		TimeLockedAddress address = new TimeLockedAddress(clientKey.getPubKey(), account.serverPublicKey(), lockTime);
-		// do not store -> empty result
-
-		TimeLockedAddress fromDB = accountService.getTimeLockedAddressByAddressHash(address.getAddressHash());
-		assertNull(fromDB);
+	public void createdAccountContainsReturnedServerPublicKey() {
+		ECKey clientKey = new ECKey();
+		ECKey returnedServerPublicKey = accountService.createAcount(clientKey);
+		Account account = accountRepository.findByClientPublicKey(clientKey.getPubKey());
+		assertArrayEquals("Returned serverKey must be the one saved",
+				returnedServerPublicKey.getPubKey(), account.serverPublicKey());
 	}
 
 	@Test
-	@DatabaseSetup("/EmptyDatabase.xml")
-	@DatabaseSetup("/keys.xml")
-	@DatabaseTearDown("/EmptyDatabase.xml")
-	public void testStoreAndGetTimeLockedAddress() throws InvalidLockTimeException, UserNotFoundException {
-		long lockTime = Instant.now().plus(Duration.ofDays(90)).getEpochSecond();
-		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
+	public void createdAccountHasBalanceZero() {
+		ECKey clientKey = new ECKey();
+		ECKey returnedServerPublicKey = accountService.createAcount(clientKey);
+		Account account = accountRepository.findByClientPublicKey(clientKey.getPubKey());
+		assertEquals("Initial virtual balance must be zero", account.virtualBalance(), 0);
+	}
 
-		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, lockTime);
-		assertNotNull(intoDB);
+	@Test
+	public void createdAccountHasZeroNonce() {
+		ECKey clientKey = new ECKey();
+		accountService.createAcount(clientKey);
+		Account account = accountRepository.findByClientPublicKey(clientKey.getPubKey());
+		assertEquals("Initial nonce must be zero", account.nonce(), 0);
+	}
 
+	@Test
+	public void createdAccountContainsTimeCreated() {
+		ECKey clientKey = new ECKey();
+		accountService.createAcount(clientKey);
+		Account account = accountRepository.findByClientPublicKey(clientKey.getPubKey());
+		assertTrue("timeCreated must not be in the future", account.timeCreated() <= Instant.now().getEpochSecond());
+		assertTrue("timeCreated must be somthing in the last 10 seconds",
+				account.timeCreated() >= Instant.now().minus(Duration.ofSeconds(10)).getEpochSecond());
+	}
+
+	@Test
+	public void creatingAccountTwiceOnlyInsertsOnce() {
+		ECKey clientKey = new ECKey();
+		accountService.createAcount(clientKey);
+		accountService.createAcount(clientKey);
+		List resultList = em.createQuery("SELECT a FROM ACCOUNT a WHERE CLIENT_PUBLIC_KEY = :pubKey")
+				.setParameter("pubKey", clientKey.getPubKey())
+				.getResultList();
+		assertEquals(resultList.size(), 1);
+	}
+
+	@Test
+	public void creatingAccountTwiceReturnsSameServerKey() {
+		ECKey clientKey = new ECKey();
+		ECKey serverKey1 = accountService.createAcount(clientKey);
+		ECKey serverKey2 = accountService.createAcount(clientKey);
+		assertEquals(serverKey1, serverKey2);
+	}
+
+	private long validLocktime() {
+		final long minLockTime = Instant.now().getEpochSecond() + appConfig.getMinimumLockTimeSeconds();
+		final long maxLockTime = Instant.now().plus(Duration.ofDays(appConfig.getMaximumLockTimeDays())).getEpochSecond();
+		return (minLockTime + maxLockTime) / 2;
+	}
+
+	@Test
+	public void createTimeLockedAddressFailsWithNullParameters() {
+		Assertions.assertThatThrownBy(() -> {
+			accountService.createTimeLockedAddress(null, validLocktime());
+		}).isInstanceOf(RuntimeException.class);
+	}
+
+	@Test
+	public void createTimeLockedAddressFailsWithUnknownUser() {
+		Assertions.assertThatThrownBy(() -> {
+			accountService.createTimeLockedAddress(new ECKey(), validLocktime());
+		}).isInstanceOf(UserNotFoundException.class);
+	}
+
+	@Test
+	public void createTimeLockedAddressFailsWithInvalidLocktime() {
+		// Zero locktime
+		Assertions.assertThatThrownBy(() -> {
+			accountService.createTimeLockedAddress(new ECKey(), 0L);
+		}).isInstanceOf(InvalidLockTimeException.class);
+
+		// Locktime that could be interpreted as block height
+		Assertions.assertThatThrownBy(() -> {
+			accountService.createTimeLockedAddress(new ECKey(), Transaction.LOCKTIME_THRESHOLD - 1);
+		}).isInstanceOf(InvalidLockTimeException.class);
+
+		// In the past
+		Assertions.assertThatThrownBy(() -> {
+			accountService.createTimeLockedAddress(new ECKey(), Instant.now().minus(Duration.ofDays(1)).getEpochSecond());
+		}).isInstanceOf(InvalidLockTimeException.class);
+
+		// Now
+		Assertions.assertThatThrownBy(() -> {
+			accountService.createTimeLockedAddress(new ECKey(), Instant.now().getEpochSecond());
+		}).isInstanceOf(InvalidLockTimeException.class);
+
+		// Not enough into the future
+		Assertions.assertThatThrownBy(() -> {
+			accountService.createTimeLockedAddress(new ECKey(),
+					Instant.now().getEpochSecond() + appConfig.getMinimumLockTimeSeconds() - 1);
+		}).isInstanceOf(InvalidLockTimeException.class);
+
+		// Too far into the future
+		Assertions.assertThatThrownBy(() -> {
+			accountService.createTimeLockedAddress(new ECKey(),
+					Instant.now().plus(Duration.ofDays(appConfig.getMaximumLockTimeDays() + 1)).getEpochSecond());
+		}).isInstanceOf(InvalidLockTimeException.class);
+	}
+
+	@Test
+	public void createTimeLockedAddressSucceedsWithKnownUser() throws InvalidLockTimeException, UserNotFoundException {
+		final ECKey clientKey = new ECKey();
+		accountService.createAcount(clientKey);
+		TimeLockedAddress address = accountService.createTimeLockedAddress(clientKey, validLocktime());
+		assertNotNull(address);
+	}
+
+	@Test
+	public void createTimeLockedAddressIsSaved() throws InvalidLockTimeException, UserNotFoundException {
+		final ECKey clientKey = new ECKey();
+		accountService.createAcount(clientKey);
+		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, validLocktime());
 		TimeLockedAddress fromDB = accountService.getTimeLockedAddressByAddressHash(intoDB.getAddressHash());
-		assertNotNull(fromDB);
 
 		assertEquals(intoDB, fromDB);
 
-		Account account = accountService.getByClientPublicKey(clientKey.getPubKey());
-		assertTrue(account.timeLockedAddresses().stream()
-				.anyMatch( entity -> entity.toTimeLockedAddress().equals(fromDB)));
 	}
 
 	@Test
-	@DatabaseSetup("/EmptyDatabase.xml")
-	@DatabaseSetup("/keys.xml")
-	@DatabaseTearDown("/EmptyDatabase.xml")
-	public void testStoreAndGetTimeLockedAddresses() throws InvalidLockTimeException, UserNotFoundException {
-		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
+	public void createTimeLockedAddressCreatesCorrentHash() throws InvalidLockTimeException, UserNotFoundException {
+		final ECKey clientKey = new ECKey();
+		accountService.createAcount(clientKey);
+		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, validLocktime());
 
-		Account account = accountService.getByClientPublicKey(clientKey.getPubKey());
+		List result = em.createQuery("SELECT a FROM TIME_LOCKED_ADDRESS a WHERE ADDRESS_HASH = :addressHash")
+				.setParameter("addressHash", intoDB.getAddressHash()).getResultList();
+		assertEquals(result.size(), 1);
+		TimeLockedAddressEntity saved = (TimeLockedAddressEntity) result.get(0);
 
-		Long locktime1 = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
-		TimeLockedAddress addressEntity_1 = accountService.createTimeLockedAddress(clientKey, locktime1);
-		assertNotNull(addressEntity_1);
-
-		Long locktime2 = Instant.now().plus(Duration.ofDays(60)).getEpochSecond();
-		TimeLockedAddress addressEntity_2 = accountService.createTimeLockedAddress(clientKey, locktime2);
-		assertNotNull(addressEntity_2);
-
-		List<TimeLockedAddressEntity> fromDB = accountService.getTimeLockedAddressesByClientPublicKey(
-				clientKey.getPubKey());
-
-		assertNotNull(fromDB);
-		assertTrue(fromDB.size() == 2);
-		assertTrue(fromDB.stream().map(e -> e.toTimeLockedAddress()).anyMatch(e -> e.equals(addressEntity_1)));
-		assertTrue(fromDB.stream().map(e -> e.toTimeLockedAddress()).anyMatch(e -> e.equals(addressEntity_2)));
-
-		account = accountService.getByClientPublicKey(clientKey.getPubKey());
-		assertTrue(account.timeLockedAddresses().containsAll(fromDB));
+		// Address hash is 20 byte hash of redeem script
+		Assert.assertArrayEquals(saved.getAddressHash(), Utils.sha256hash160(saved.getRedeemScript()));
 	}
+
+	@Test
+	public void createTimeLockedAddressCreatesCorrentRedeemScript() throws InvalidLockTimeException, UserNotFoundException {
+		final ECKey clientKey = new ECKey();
+		accountService.createAcount(clientKey);
+		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, validLocktime());
+
+		List result = em.createQuery("SELECT a FROM TIME_LOCKED_ADDRESS a WHERE ADDRESS_HASH = :addressHash")
+				.setParameter("addressHash", intoDB.getAddressHash()).getResultList();
+		assertEquals(result.size(), 1);
+		TimeLockedAddressEntity saved = (TimeLockedAddressEntity) result.get(0);
+
+		TimeLockedAddress fromRedeemScript = TimeLockedAddress.fromRedeemScript(saved.getRedeemScript());
+		assertEquals(intoDB, fromRedeemScript);
+	}
+
+
 }
