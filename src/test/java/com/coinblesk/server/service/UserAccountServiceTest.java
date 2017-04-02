@@ -7,6 +7,8 @@ package com.coinblesk.server.service;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 
@@ -92,7 +94,7 @@ public class UserAccountServiceTest extends CoinbleskTest {
 		userAccountService.save(userAccount);
 
 		accountService.createAcount(ecKeyClient);
-		accountService.createTimeLockedAddress(ecKeyClient, 123456);
+		accountService.createTimeLockedAddress(ecKeyClient, Instant.now().plus(Duration.ofDays(7)).getEpochSecond());
 	}
 
 	@After

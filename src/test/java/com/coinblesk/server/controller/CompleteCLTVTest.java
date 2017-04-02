@@ -1,16 +1,21 @@
 package com.coinblesk.server.controller;
 
+import static com.coinblesk.server.controller.PaymentControllerTest.URL_CREATE_TIME_LOCKED_ADDRESS;
+import static com.coinblesk.server.controller.PaymentControllerTest.URL_KEY_EXCHANGE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.File;
 import java.io.FilenameFilter;
 import java.net.InetSocketAddress;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,6 +23,8 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import com.coinblesk.server.dto.*;
+import com.coinblesk.server.utils.DTOUtils;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.BlockChain;
@@ -639,36 +646,42 @@ public class CompleteCLTVTest extends CoinbleskTest {
 		}
 
 		private ECKey keyExchange() throws Exception {
-			KeyTO keyTO = new KeyTO().currentDate(System.currentTimeMillis()).publicKey(clientKey.getPubKey());
-			SerializeUtils.signJSON(keyTO, clientKey);
+			KeyExchangeRequestDTO requestDTO = new KeyExchangeRequestDTO(clientKey.getPublicKeyAsHex());
+			String response = mockMvc.perform(post(URL_KEY_EXCHANGE)
+					.contentType(APPLICATION_JSON)
+					.content(SerializeUtils.GSON.toJson(requestDTO)))
+					.andExpect(status().is2xxSuccessful())
+					.andReturn().getResponse().getContentAsString();
+			KeyExchangeResponseDTO responseDTO = SerializeUtils.GSON.fromJson(response, KeyExchangeResponseDTO.class);
+			String serverPublicKey = responseDTO.getServerPublicKey();
+			assertNotNull(serverPublicKey);
+			ECKey serverKey = DTOUtils.getECKeyFromHexPublicKey(serverPublicKey);
 
-			KeyTO responseTO = RESTUtils.postRequest(mockMvc, PaymentControllerTest.URL_KEY_EXCHANGE, keyTO);
-			assertTrue(responseTO.isSuccess());
-			assertNotNull(responseTO.publicKey());
-
-			return ECKey.fromPublicOnly(responseTO.publicKey());
+			return serverKey;
 		}
 
 		public TimeLockedAddress createTimeLockedAddress() throws Exception {
-			long locktime = (System.currentTimeMillis() + 5000L) / 1000L;
-			TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
-					.currentDate(System.currentTimeMillis())
-					.lockTime(locktime)
-					.publicKey(clientKey.getPubKey());
-			SerializeUtils.signJSON(requestTO, clientKey);
-			MvcResult res = mockMvc.perform(
-					post(PaymentControllerTest.URL_CREATE_TIME_LOCKED_ADDRESS)
-					.secure(true)
-					.contentType(MediaType.APPLICATION_JSON)
-					.content(SerializeUtils.GSON.toJson(requestTO)))
-									.andExpect(status().isOk())
-									.andReturn();
-			TimeLockedAddressTO response = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
-					TimeLockedAddressTO.class);
+			long locktime = Instant.now().plus(Duration.ofDays(7)).getEpochSecond();
 
-			assertTrue(response.isSuccess());
-			TimeLockedAddress timeLockedAddress = response.timeLockedAddress();
-			assertNotNull(timeLockedAddress);
+			CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO(clientKey.getPublicKeyAsHex(), locktime);
+			SignedDTO requestDTO = DTOUtils.serializeAndSign(innerDTO, clientKey);
+
+			String responseString = mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)
+					.contentType(APPLICATION_JSON)
+					.content(DTOUtils.toJSON(requestDTO)))
+					.andExpect(status().isOk())
+					.andReturn().getResponse().getContentAsString();
+
+			SignedDTO responseDTO = DTOUtils.fromJSON(responseString, SignedDTO.class);
+			DTOUtils.validateSignature(responseDTO.getPayload(), responseDTO.getSignature(), serverKey);
+			CreateAddressResponseDTO createAddressResponse = DTOUtils.parseAndValidate(responseDTO, CreateAddressResponseDTO.class);
+
+			// Construct TLA from response
+			byte[] clientPublicKey = DTOUtils.getECKeyFromHexPublicKey(createAddressResponse.getClientPublicKey()).getPubKey();
+			byte[] serverPublicKey = DTOUtils.getECKeyFromHexPublicKey(createAddressResponse.getServerPublicKey()).getPubKey();
+			long receivedLockTime = createAddressResponse.getLockTime();
+			TimeLockedAddress timeLockedAddress = new TimeLockedAddress(clientPublicKey, serverPublicKey, receivedLockTime);
+
 			Address address = timeLockedAddress.getAddress(params);
 			addressesToRedeemScripts.put(address, timeLockedAddress.createRedeemScript().getProgram());
 			mostRecentAddress = address;
@@ -690,7 +703,7 @@ public class CompleteCLTVTest extends CoinbleskTest {
 
 			MvcResult res = mockMvc
 					.perform(post(PaymentControllerTest.URL_SIGN_VERIFY).secure(true)
-						.contentType(MediaType.APPLICATION_JSON)
+						.contentType(APPLICATION_JSON)
 						.content(SerializeUtils.GSON.toJson(signTO)))
 					.andExpect(status().isOk())
 					.andReturn();

@@ -80,7 +80,7 @@ public class KeyExchangeTest extends CoinbleskTest {
 		mockMvc.
 				perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON)
 						.content("{\"publicKey\": \"\"}"))
-				.andExpect(status().isBadRequest()).andReturn();
+				.andExpect(status().isBadRequest());
 	}
 
 
@@ -88,7 +88,7 @@ public class KeyExchangeTest extends CoinbleskTest {
 	@DatabaseSetup("/EmptyDatabase.xml")
 	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void invalidPublicKeyFails() throws Exception {
-		String bogusKey = "02a485c51c0cef798620ea810541d4ffffffffffff8c031a046d50ca3ca0ad148f";
+		String bogusKey = "02a485c51c0cef798620ea81054100000BOGUSKEY000001a046d50ca3ca0ad148f";
 		mockMvc
 				.perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON)
 						.content(SerializeUtils.GSON.toJson(
