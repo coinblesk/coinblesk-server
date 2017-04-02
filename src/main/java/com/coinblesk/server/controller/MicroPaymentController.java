@@ -4,7 +4,6 @@ import com.coinblesk.server.dto.*;
 import com.coinblesk.server.exceptions.*;
 import com.coinblesk.server.service.MicropaymentService;
 import com.coinblesk.server.utils.DTOUtils;
-import com.coinblesk.server.utils.SignatureUtils;
 import com.coinblesk.util.InsufficientFunds;
 import org.bitcoinj.core.ECKey;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,7 +41,9 @@ public class MicroPaymentController {
 		// Get the embedded payload and check signature
 		final PaymentRequestDTO requestDTO;
 		try {
-			requestDTO = DTOUtils.parseAndValidatePayload(request, PaymentRequestDTO.class);
+			requestDTO = DTOUtils.parseAndValidate(request, PaymentRequestDTO.class);
+			ECKey signingKey = DTOUtils.getECKeyFromHexPublicKey(requestDTO.getFromPublicKey());
+			DTOUtils.validateSignature(request.getPayload(), request.getSignature(), signingKey);
 		} catch (MissingFieldException|InvalidSignatureException e) {
 			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
 		} catch (Throwable e) {
@@ -52,10 +53,10 @@ public class MicroPaymentController {
 		final ECKey keySender, keyReceiver;
 
 		// Get the public key of the sender from the DTO and parse into ECKey
-		keySender = SignatureUtils.getECKeyFromHexPublicKey(requestDTO.getFromPublicKey());
+		keySender = DTOUtils.getECKeyFromHexPublicKey(requestDTO.getFromPublicKey());
 
 		// Get the public key of the receiver from the DTO and parse into ECKey
-		keyReceiver = SignatureUtils.getECKeyFromHexPublicKey(requestDTO.getToPublicKey());
+		keyReceiver = DTOUtils.getECKeyFromHexPublicKey(requestDTO.getToPublicKey());
 
 		// Do payment in service
 		MicropaymentService.VirtualPaymentResult result;
@@ -76,15 +77,15 @@ public class MicroPaymentController {
 				result.getNewBalanceReceiver(),
 				Instant.now().toEpochMilli()
 				);
-		final String responseAsJson = DTOUtils.gson.toJson(virtualPaymentResponseDTO);
+		final String responseAsJson = DTOUtils.toJSON(virtualPaymentResponseDTO);
 		final String responseAsBase64 = DTOUtils.toBase64(responseAsJson);
 
 		// We need two signatures, so both the sender and receiver can verify that this response is legit
 		ECKey serverKeyForSender = ECKey.fromPrivate(result.getServerPrivateKeyForSender());
-		SignatureDTO signatureForSender = SignatureUtils.sign(responseAsBase64, serverKeyForSender);
+		SignatureDTO signatureForSender = DTOUtils.sign(responseAsBase64, serverKeyForSender);
 
 		ECKey serverKeyForReceiver = ECKey.fromPrivate(result.getServerPrivateKeyForReceiver());
-		SignatureDTO signatureForReceiver = SignatureUtils.sign(responseAsBase64, serverKeyForReceiver);
+		SignatureDTO signatureForReceiver = DTOUtils.sign(responseAsBase64, serverKeyForReceiver);
 
 		MultiSignedDTO signedResponse = new MultiSignedDTO(responseAsBase64, signatureForSender, signatureForReceiver);
 

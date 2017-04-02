@@ -24,15 +24,10 @@ import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.exceptions.InvalidLockTimeException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
 import com.coinblesk.server.utilTest.CoinbleskTest;
-import com.subgraph.orchid.data.exitpolicy.Network;
 import org.assertj.core.api.Assertions;
 import org.bitcoinj.core.*;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.wallet.Protos;
 import org.junit.Assert;
 import org.junit.Test;
-import org.mockito.internal.matchers.ArrayEquals;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.persistence.EntityManager;
@@ -88,7 +83,7 @@ public class AccountServiceTest extends CoinbleskTest {
 	@Test
 	public void createdAccountHasBalanceZero() {
 		ECKey clientKey = new ECKey();
-		ECKey returnedServerPublicKey = accountService.createAcount(clientKey);
+		accountService.createAcount(clientKey);
 		Account account = accountRepository.findByClientPublicKey(clientKey.getPubKey());
 		assertEquals("Initial virtual balance must be zero", account.virtualBalance(), 0);
 	}
@@ -189,7 +184,8 @@ public class AccountServiceTest extends CoinbleskTest {
 	public void createTimeLockedAddressSucceedsWithKnownUser() throws InvalidLockTimeException, UserNotFoundException {
 		final ECKey clientKey = new ECKey();
 		accountService.createAcount(clientKey);
-		TimeLockedAddress address = accountService.createTimeLockedAddress(clientKey, validLocktime());
+		TimeLockedAddress address = accountService.createTimeLockedAddress(clientKey, validLocktime())
+				.getTimeLockedAddress();
 		assertNotNull(address);
 	}
 
@@ -197,7 +193,8 @@ public class AccountServiceTest extends CoinbleskTest {
 	public void createTimeLockedAddressIsSaved() throws InvalidLockTimeException, UserNotFoundException {
 		final ECKey clientKey = new ECKey();
 		accountService.createAcount(clientKey);
-		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, validLocktime());
+		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, validLocktime())
+				.getTimeLockedAddress();
 		TimeLockedAddress fromDB = accountService.getTimeLockedAddressByAddressHash(intoDB.getAddressHash());
 
 		assertEquals(intoDB, fromDB);
@@ -208,7 +205,8 @@ public class AccountServiceTest extends CoinbleskTest {
 	public void createTimeLockedAddressCreatesCorrentHash() throws InvalidLockTimeException, UserNotFoundException {
 		final ECKey clientKey = new ECKey();
 		accountService.createAcount(clientKey);
-		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, validLocktime());
+		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, validLocktime())
+				.getTimeLockedAddress();
 
 		List result = em.createQuery("SELECT a FROM TIME_LOCKED_ADDRESS a WHERE ADDRESS_HASH = :addressHash")
 				.setParameter("addressHash", intoDB.getAddressHash()).getResultList();
@@ -223,7 +221,8 @@ public class AccountServiceTest extends CoinbleskTest {
 	public void createTimeLockedAddressCreatesCorrentRedeemScript() throws InvalidLockTimeException, UserNotFoundException {
 		final ECKey clientKey = new ECKey();
 		accountService.createAcount(clientKey);
-		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, validLocktime());
+		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, validLocktime())
+				.getTimeLockedAddress();
 
 		List result = em.createQuery("SELECT a FROM TIME_LOCKED_ADDRESS a WHERE ADDRESS_HASH = :addressHash")
 				.setParameter("addressHash", intoDB.getAddressHash()).getResultList();

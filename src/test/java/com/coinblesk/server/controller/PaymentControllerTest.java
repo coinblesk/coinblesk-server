@@ -15,22 +15,19 @@
  */
 package com.coinblesk.server.controller;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
+import static org.springframework.http.MediaType.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.Random;
+import java.time.Duration;
+import java.time.Instant;
 
+import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dao.TimeLockedAddressRepository;
-import com.coinblesk.server.entity.TimeLockedAddressEntity;
+import com.coinblesk.server.dto.*;
+import com.coinblesk.server.utils.DTOUtils;
 import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.Utils;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,14 +36,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.json.v1.BaseTO;
-import com.coinblesk.json.v1.KeyTO;
-import com.coinblesk.json.v1.TimeLockedAddressTO;
-import com.coinblesk.json.v1.Type;
 import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.utilTest.CoinbleskTest;
-import com.coinblesk.server.utilTest.KeyTestUtil;
-import com.coinblesk.server.utilTest.RESTUtils;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
@@ -55,12 +46,13 @@ import com.github.springtestdbunit.annotation.DatabaseTearDown;
 /**
  *
  * @author Andreas Albrecht
+ * @author Sebastian Stephan
  */
 public class PaymentControllerTest extends CoinbleskTest {
 
-	public static final String URL_KEY_EXCHANGE = "/v1/payment/key-exchange";
-	public static final String URL_CREATE_TIME_LOCKED_ADDRESS = "/v1/payment/createTimeLockedAddress";
-	public static final String URL_SIGN_VERIFY = "/v1/payment/signverify";
+	public static final String URL_KEY_EXCHANGE = "/payment/key-exchange";
+	public static final String URL_CREATE_TIME_LOCKED_ADDRESS = "/payment/createTimeLockedAddress";
+	public static final String URL_SIGN_VERIFY = "/payment/signverify";
 
 	@Autowired
 	private WebApplicationContext webAppContext;
@@ -69,6 +61,9 @@ public class PaymentControllerTest extends CoinbleskTest {
 	private AccountService accountService;
 
 	@Autowired TimeLockedAddressRepository timeLockedAddressRepository;
+
+	@Autowired
+	private AppConfig appConfig;
 
 	private static MockMvc mockMvc;
 
@@ -82,7 +77,7 @@ public class PaymentControllerTest extends CoinbleskTest {
 	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testKeyExchange_NoContent() throws Exception {
 		mockMvc
-			.perform(post(URL_KEY_EXCHANGE).secure(true))
+			.perform(post(URL_KEY_EXCHANGE))
 			.andExpect(status().is4xxClientError());
 	}
 
@@ -90,93 +85,83 @@ public class PaymentControllerTest extends CoinbleskTest {
 	@DatabaseSetup("/EmptyDatabase.xml")
 	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testKeyExchange_EmptyRequest() throws Exception {
-		KeyTO requestTO = new KeyTO();
-		KeyTO response = requestKeyExchange(requestTO);
-		assertFalse(response.isSuccess());
-		assertEquals(response.type(), Type.INPUT_MISMATCH);
-		assertNull(response.publicKey());
+		mockMvc.perform(post(URL_KEY_EXCHANGE)
+				.contentType(APPLICATION_JSON)
+				.content("{}"))
+				.andExpect(status().is4xxClientError());
 	}
 
 	@Test
 	@DatabaseSetup("/EmptyDatabase.xml")
 	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testKeyExchange_NoPubKey() throws Exception {
-		KeyTO requestTO = new KeyTO();
-		requestTO.currentDate(System.currentTimeMillis());
-
-		KeyTO response = requestKeyExchange(requestTO);
-		assertFalse(response.isSuccess());
-		assertEquals(response.type(), Type.INPUT_MISMATCH);
-		assertNull(response.publicKey());
+		KeyExchangeRequestDTO requestDTO = new KeyExchangeRequestDTO("");
+		mockMvc.perform(post(URL_KEY_EXCHANGE)
+				.contentType(APPLICATION_JSON)
+				.content(SerializeUtils.GSON.toJson(requestDTO)))
+				.andExpect(status().is4xxClientError());
 	}
 
 	@Test
 	@DatabaseSetup("/EmptyDatabase.xml")
 	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testKeyExchange_InvalidPubKey() throws Exception {
-		KeyTO requestTO = new KeyTO()
-			.currentDate(System.currentTimeMillis())
-			.publicKey("invalid key".getBytes());
-
-		KeyTO response = requestKeyExchange(requestTO);
-		assertFalse(response.isSuccess());
-		assertEquals(response.type(), Type.INPUT_MISMATCH);
-		assertNull(response.publicKey());
+		String invalidPubKey= "f66b37dc2de5276a080bce77f9a6b0753f963e300c9a1f4557815ed49dc80fffb1";
+		KeyExchangeRequestDTO requestDTO = new KeyExchangeRequestDTO(invalidPubKey);
+		mockMvc.perform(post(URL_KEY_EXCHANGE)
+				.contentType(APPLICATION_JSON)
+				.content(SerializeUtils.GSON.toJson(requestDTO)))
+				.andExpect(status().is4xxClientError());
 	}
 
 	@Test
 	@DatabaseSetup("/EmptyDatabase.xml")
 	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testKeyExchange() throws Exception {
-		ECKey key = new ECKey();
-		KeyTO requestTO = new KeyTO()
-			.currentDate(System.currentTimeMillis())
-			.publicKey(key.getPubKey());
-
-		KeyTO response = requestKeyExchange(requestTO);
-		assertTrue(response.isSuccess());
-		assertEquals(response.type(), Type.SUCCESS);
-		assertNotNull(response.publicKey());
-		assertTrue(ECKey.isPubKeyCanonical(response.publicKey()));
-
-		// throws if invalid
-		ECKey serverPubKey = ECKey.fromPublicOnly(response.publicKey());
-		assertTrue(SerializeUtils.verifyJSONSignature(response, serverPubKey));
+		ECKey clientKey = new ECKey();
+		KeyExchangeRequestDTO requestDTO = new KeyExchangeRequestDTO(clientKey.getPublicKeyAsHex());
+		String response = mockMvc.perform(post(URL_KEY_EXCHANGE)
+				.contentType(APPLICATION_JSON)
+				.content(SerializeUtils.GSON.toJson(requestDTO)))
+				.andExpect(status().is2xxSuccessful())
+				.andReturn().getResponse().getContentAsString();
+		KeyExchangeResponseDTO responseDTO = SerializeUtils.GSON.fromJson(response, KeyExchangeResponseDTO.class);
+		String serverPublicKey = responseDTO.getServerPublicKey();
+		assertNotNull(serverPublicKey);
+		ECKey serverKey = DTOUtils.getECKeyFromHexPublicKey(serverPublicKey);
+		assertNotEquals(clientKey.getPublicKeyAsHex(), serverKey.getPublicKeyAsHex());
 	}
 
 	@Test
 	@DatabaseSetup("/EmptyDatabase.xml")
 	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testKeyExchange_ExistingPubKey() throws Exception {
-		ECKey key = new ECKey();
-		KeyTO requestTO = new KeyTO()
-			.currentDate(System.currentTimeMillis())
-			.publicKey(key.getPubKey());
+		ECKey clientKey = new ECKey();
 
-		KeyTO response = requestKeyExchange(requestTO);
-		assertTrue(response.isSuccess());
-		assertEquals(response.type(), Type.SUCCESS);
-		assertNotNull(response.publicKey());
+		// Test idempotence, requesting twice, succeeds with same result.
+		KeyExchangeRequestDTO requestDTO1 = new KeyExchangeRequestDTO(clientKey.getPublicKeyAsHex());
+		String response1 = mockMvc.perform(post(URL_KEY_EXCHANGE)
+				.contentType(APPLICATION_JSON)
+				.content(SerializeUtils.GSON.toJson(requestDTO1)))
+				.andExpect(status().is2xxSuccessful())
+				.andReturn().getResponse().getContentAsString();
+		KeyExchangeResponseDTO responseDTO1 = SerializeUtils.GSON.fromJson(response1, KeyExchangeResponseDTO.class);
+		String serverPublicKey1 = responseDTO1.getServerPublicKey();
+		assertNotNull(serverPublicKey1);
+		ECKey serverKey1 = DTOUtils.getECKeyFromHexPublicKey(serverPublicKey1);
 
-		// throws if invalid
-		ECKey serverPubKey = ECKey.fromPublicOnly(response.publicKey());
-		assertTrue(SerializeUtils.verifyJSONSignature(response, serverPubKey));
+		KeyExchangeRequestDTO requestDTO2 = new KeyExchangeRequestDTO(clientKey.getPublicKeyAsHex());
+		String response2 = mockMvc.perform(post(URL_KEY_EXCHANGE)
+				.contentType(APPLICATION_JSON)
+				.content(SerializeUtils.GSON.toJson(requestDTO2)))
+				.andExpect(status().is2xxSuccessful())
+				.andReturn().getResponse().getContentAsString();
+		KeyExchangeResponseDTO responseDTO2 = SerializeUtils.GSON.fromJson(response2, KeyExchangeResponseDTO.class);
+		String serverPublicKey2 = responseDTO2.getServerPublicKey();
+		assertNotNull(serverPublicKey2);
+		ECKey serverKey2 = DTOUtils.getECKeyFromHexPublicKey(serverPublicKey2);
 
-		// execute 2nd request - server should respond with same key.
-		KeyTO request2TO = new KeyTO()
-			.currentDate(System.currentTimeMillis())
-			.publicKey(key.getPubKey());
-		KeyTO response_2 = requestKeyExchange(request2TO);
-		assertTrue(response_2.isSuccess());
-		assertEquals(response_2.type(), Type.SUCCESS_BUT_KEY_ALREADY_EXISTS);
-		assertNotNull(response_2.publicKey());
-		assertArrayEquals(response_2.publicKey(), response.publicKey());
-		assertTrue(SerializeUtils.verifyJSONSignature(response_2, serverPubKey));
-	}
-
-	private KeyTO requestKeyExchange(KeyTO requestTO) throws Exception {
-		String jsonTO = SerializeUtils.GSON.toJson(requestTO);
-		return RESTUtils.postRequest(mockMvc, URL_KEY_EXCHANGE, jsonTO, KeyTO.class);
+		assertEquals(serverKey1.getPublicKeyAsHex(), serverKey2.getPublicKeyAsHex());
 	}
 
 	@Test
@@ -184,7 +169,7 @@ public class PaymentControllerTest extends CoinbleskTest {
 	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_NoContent() throws Exception {
 		mockMvc
-			.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).secure(true))
+			.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS))
 			.andExpect(status().is4xxClientError());
 	}
 
@@ -192,11 +177,10 @@ public class PaymentControllerTest extends CoinbleskTest {
 	@DatabaseSetup("/EmptyDatabase.xml")
 	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_EmptyRequest() throws Exception {
-		TimeLockedAddressTO requestTO = new TimeLockedAddressTO();
-		TimeLockedAddressTO response = requestCreateTimeLockedAddress(requestTO);
-		assertFalse(response.isSuccess());
-		assertEquals(response.type(), Type.INPUT_MISMATCH);
-		assertNull(response.timeLockedAddress());
+		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)
+				.contentType(APPLICATION_JSON)
+				.content("{}"))
+				.andExpect(status().is4xxClientError());
 	}
 
 	@Test
@@ -204,14 +188,15 @@ public class PaymentControllerTest extends CoinbleskTest {
 	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_NoPublicKey() throws Exception {
 		ECKey clientKey = new ECKey();
-		TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
-				.currentDate(System.currentTimeMillis());
-		SerializeUtils.signJSON(requestTO, clientKey);
+		accountService.createAcount(clientKey);
 
-		TimeLockedAddressTO response = requestCreateTimeLockedAddress(requestTO);
-		assertFalse(response.isSuccess());
-		assertEquals(response.type(), Type.SERVER_ERROR);
-		assertNull(response.timeLockedAddress());
+		CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO("", validLocktime());
+		SignedDTO requestDTO = DTOUtils.serializeAndSign(innerDTO, clientKey);
+
+		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)
+				.contentType(APPLICATION_JSON)
+				.content(DTOUtils.toJSON(requestDTO)))
+				.andExpect(status().is4xxClientError());
 	}
 
 	@Test
@@ -219,12 +204,16 @@ public class PaymentControllerTest extends CoinbleskTest {
 	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_NoSignature() throws Exception {
 		ECKey clientKey = new ECKey();
-		TimeLockedAddressTO requestTO = createSignedTimeLockedAddressTO(clientKey);
-		requestTO.messageSig(null); // Do not sign
+		accountService.createAcount(clientKey);
 
-		TimeLockedAddressTO responseTO = requestCreateTimeLockedAddress(requestTO);
-		assertFalse(responseTO.isSuccess());
-		assertEquals(responseTO.type(), Type.INPUT_MISMATCH);
+		CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO(clientKey.getPublicKeyAsHex(), validLocktime());
+		String payload = DTOUtils.toBase64(innerDTO);
+		SignedDTO requestDTO = new SignedDTO(payload, null);
+
+		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)
+				.contentType(APPLICATION_JSON)
+				.content(DTOUtils.toJSON(requestDTO)))
+				.andExpect(status().is4xxClientError());
 	}
 
 	@Test
@@ -233,29 +222,15 @@ public class PaymentControllerTest extends CoinbleskTest {
 	public void testCreateTimeLockedAddress_WrongSignature() throws Exception {
 		ECKey clientKey = new ECKey();
 		ECKey wrongKey = new ECKey();
-		TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
-				.currentDate(Utils.currentTimeMillis())
-				.publicKey(clientKey.getPubKey());
-		SerializeUtils.signJSON(requestTO, wrongKey);
+		accountService.createAcount(clientKey);
 
-		TimeLockedAddressTO responseTO = requestCreateTimeLockedAddress(requestTO);
-		assertFalse(responseTO.isSuccess());
-		assertEquals(responseTO.type(), Type.JSON_SIGNATURE_ERROR);
-	}
+		CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO(clientKey.getPublicKeyAsHex(), validLocktime());
+		SignedDTO requestDTO = DTOUtils.serializeAndSign(innerDTO, wrongKey);
 
-	@Test
-	@DatabaseSetup("/EmptyDatabase.xml")
-	@DatabaseTearDown("/EmptyDatabase.xml")
-	public void testCreateTimeLockedAddress_WrongECKey() throws Exception {
-		TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
-				.publicKey("helloworld".getBytes())
-				.currentDate(System.currentTimeMillis());
-		SerializeUtils.signJSON(requestTO, new ECKey());
-
-		TimeLockedAddressTO response = requestCreateTimeLockedAddress(requestTO);
-		assertFalse(response.isSuccess());
-		assertEquals(response.type(), Type.SERVER_ERROR);
-		assertNull(response.timeLockedAddress());
+		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)
+				.contentType(APPLICATION_JSON)
+				.content(DTOUtils.toJSON(requestDTO)))
+				.andExpect(status().is4xxClientError());
 	}
 
 	@Test
@@ -263,123 +238,84 @@ public class PaymentControllerTest extends CoinbleskTest {
 	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_NewAddress_ClientUnknown() throws Exception {
 		ECKey clientKey = new ECKey();
-		assertNull(accountService.getByClientPublicKey(clientKey.getPubKey()) ); // not known yet
-		TimeLockedAddressTO requestTO = createSignedTimeLockedAddressTO(clientKey);
-		TimeLockedAddressTO responseTO = requestCreateTimeLockedAddress(requestTO);
-		assertFalse(responseTO.isSuccess());
-		assertNull(responseTO.timeLockedAddress());
-		assertEquals(responseTO.type(), Type.KEYS_NOT_FOUND);
+
+		CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO(clientKey.getPublicKeyAsHex(), validLocktime());
+		SignedDTO requestDTO = DTOUtils.serializeAndSign(innerDTO, clientKey);
+
+		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)
+				.contentType(APPLICATION_JSON)
+				.content(DTOUtils.toJSON(requestDTO)))
+				.andExpect(status().is4xxClientError());
 	}
 
 	@Test
 	@DatabaseSetup("/EmptyDatabase.xml")
-	@DatabaseSetup("/keys.xml")
 	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_NoLockTime() throws Exception {
-		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
-		TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
-					.currentDate(Utils.currentTimeMillis())
-					.publicKey(clientKey.getPubKey());
-		SerializeUtils.signJSON(requestTO, clientKey);
+		ECKey clientKey = new ECKey();
+		accountService.createAcount(clientKey);
 
-		TimeLockedAddressTO responseTO = requestCreateTimeLockedAddress(requestTO);
-		assertFalse(responseTO.isSuccess());
-		assertNull(responseTO.timeLockedAddress());
-		assertEquals(responseTO.type(), Type.LOCKTIME_ERROR);
+		CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO(clientKey.getPublicKeyAsHex(), 0L);
+		SignedDTO requestDTO = DTOUtils.serializeAndSign(innerDTO, clientKey);
+
+		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)
+				.contentType(APPLICATION_JSON)
+				.content(DTOUtils.toJSON(requestDTO)))
+				.andExpect(status().is4xxClientError());
 	}
+
 
 	@Test
 	@DatabaseSetup("/EmptyDatabase.xml")
-	@DatabaseSetup("/keys.xml")
 	@DatabaseTearDown("/EmptyDatabase.xml")
-	public void testCreateTimeLockedAddress_LockTimeByBlock() throws Exception {
-		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
-		long lockTime = Transaction.LOCKTIME_THRESHOLD - 1000;
-		TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
-					.currentDate(Utils.currentTimeMillis())
-					.publicKey(clientKey.getPubKey())
-					.lockTime(lockTime);
-		SerializeUtils.signJSON(requestTO, clientKey);
+	public void testCreateTimeLockedAddress_ValidSignature() throws Exception {
+		ECKey clientKey = new ECKey();
+		ECKey serverKey = accountService.createAcount(clientKey);
 
-		TimeLockedAddressTO responseTO = requestCreateTimeLockedAddress(requestTO);
-		assertFalse(responseTO.isSuccess());
-		assertNull(responseTO.timeLockedAddress());
-		assertEquals(responseTO.type(), Type.LOCKTIME_ERROR);
+		long lockTime = validLocktime();
+		CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO(clientKey.getPublicKeyAsHex(), lockTime);
+		SignedDTO requestDTO = DTOUtils.serializeAndSign(innerDTO, clientKey);
+
+		String responseString = mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)
+				.contentType(APPLICATION_JSON)
+				.content(DTOUtils.toJSON(requestDTO)))
+				.andExpect(status().isOk())
+				.andReturn().getResponse().getContentAsString();
+
+		SignedDTO responseDTO = DTOUtils.fromJSON(responseString, SignedDTO.class);
+		DTOUtils.validateSignature(responseDTO.getPayload(), responseDTO.getSignature(), serverKey);
+
 	}
 
 	@Test
 	@DatabaseSetup("/EmptyDatabase.xml")
-	@DatabaseSetup("/keys.xml")
-	@DatabaseTearDown("/EmptyDatabase.xml")
-	public void testCreateTimeLockedAddress_LockTimeInPast() throws Exception {
-		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
-		long lockTime = Utils.currentTimeSeconds() - 1;
-		TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
-					.currentDate(Utils.currentTimeMillis())
-					.publicKey(clientKey.getPubKey())
-					.lockTime(lockTime);
-		SerializeUtils.signJSON(requestTO, clientKey);
-
-		TimeLockedAddressTO responseTO = requestCreateTimeLockedAddress(requestTO);
-		assertFalse(responseTO.isSuccess());
-		assertNull(responseTO.timeLockedAddress());
-		assertEquals(responseTO.type(), Type.LOCKTIME_ERROR);
-	}
-
-	@Test
-	@DatabaseSetup("/EmptyDatabase.xml")
-	@DatabaseSetup("/keys.xml")
-	@DatabaseTearDown("/EmptyDatabase.xml")
-	public void testCreateTimeLockedAddress_RequestTwice() throws Exception {
-		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
-		long lockTime = Utils.currentTimeSeconds() + 100;
-		TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
-					.currentDate(Utils.currentTimeMillis())
-					.publicKey(clientKey.getPubKey())
-					.lockTime(lockTime);
-		SerializeUtils.signJSON(requestTO, clientKey);
-
-		TimeLockedAddress address1, address2;
-		// 1st request
-		TimeLockedAddressTO responseTO = requestCreateTimeLockedAddress(requestTO);
-		assertTrue(responseTO.isSuccess());
-		assertNotNull(responseTO.timeLockedAddress());
-		assertEquals(responseTO.type(), Type.SUCCESS);
-		address1 = responseTO.timeLockedAddress();
-		assertVerifyJSONSig(responseTO, ECKey.fromPublicOnly(address1.getServerPubKey()));
-
-		// 2nd request
-		responseTO = requestCreateTimeLockedAddress(requestTO);
-		assertTrue(responseTO.isSuccess());
-		assertNotNull(responseTO.timeLockedAddress());
-		assertEquals(responseTO.type(), Type.SUCCESS_BUT_ADDRESS_ALREADY_EXISTS);
-		address2 = responseTO.timeLockedAddress();
-		assertVerifyJSONSig(responseTO, ECKey.fromPublicOnly(address2.getServerPubKey()));
-
-		// must receive same address
-		assertEquals(address1, address2);
-	}
-
-	@Test
-	@DatabaseSetup("/EmptyDatabase.xml")
-	@DatabaseSetup("/keys.xml")
 	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testCreateTimeLockedAddress_NewAddress_ClientKnown() throws Exception {
-		// keys are already stored in DB
-		ECKey clientKey = KeyTestUtil.ALICE_CLIENT;
-		ECKey serverKey = KeyTestUtil.ALICE_SERVER;
+		ECKey clientKey = new ECKey();
+		ECKey serverKey = accountService.createAcount(clientKey);
+		long requestedLockTime = validLocktime();
 
-		TimeLockedAddressTO requestTO = createSignedTimeLockedAddressTO(clientKey);
-		TimeLockedAddress expectedAddress = new TimeLockedAddress(
-				clientKey.getPubKey(), serverKey.getPubKey(), requestTO.lockTime());
-		assertNull(timeLockedAddressRepository.findByAddressHash(expectedAddress.getAddressHash()));
+		TimeLockedAddress expectedAddress = new TimeLockedAddress(clientKey.getPubKey(), serverKey.getPubKey(), requestedLockTime);
 
-		TimeLockedAddressTO responseTO = requestCreateTimeLockedAddress(requestTO);
-		assertTrue(responseTO.isSuccess());
-		assertVerifyJSONSig(responseTO, serverKey);
+		CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO(clientKey.getPublicKeyAsHex(), requestedLockTime);
+		SignedDTO requestDTO = DTOUtils.serializeAndSign(innerDTO, clientKey);
 
-		TimeLockedAddress address = responseTO.timeLockedAddress();
-		assertVerifyJSONSig(responseTO, ECKey.fromPublicOnly(address.getServerPubKey()));
+		String responseString = mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)
+				.contentType(APPLICATION_JSON)
+				.content(DTOUtils.toJSON(requestDTO)))
+				.andExpect(status().isOk())
+				.andReturn().getResponse().getContentAsString();
+
+		SignedDTO responseDTO = DTOUtils.fromJSON(responseString, SignedDTO.class);
+		DTOUtils.validateSignature(responseDTO.getPayload(), responseDTO.getSignature(), serverKey);
+		CreateAddressResponseDTO createAddressResponse = DTOUtils.parseAndValidate(responseDTO, CreateAddressResponseDTO.class);
+
+		// Construct TLA from response
+		byte[] clientPublicKey = DTOUtils.getECKeyFromHexPublicKey(createAddressResponse.getClientPublicKey()).getPubKey();
+		byte[] serverPublicKey = DTOUtils.getECKeyFromHexPublicKey(createAddressResponse.getServerPublicKey()).getPubKey();
+		long receivedLockTime = createAddressResponse.getLockTime();
+		TimeLockedAddress address = new TimeLockedAddress(clientPublicKey, serverPublicKey, receivedLockTime);
+
 		assertNotNull(address);
 		assertNotNull(address.getAddressHash());
 		assertNotNull(address.getClientPubKey());
@@ -388,31 +324,15 @@ public class PaymentControllerTest extends CoinbleskTest {
 
 		assertArrayEquals(address.getClientPubKey(), clientKey.getPubKey());
 		assertArrayEquals(address.getServerPubKey(), serverKey.getPubKey());
-		assertEquals(address.getLockTime(), requestTO.lockTime());
+		assertEquals(address.getLockTime(), requestedLockTime);
 
 		assertEquals(expectedAddress, address);
 		assertTrue(accountService.addressExists(address.getAddressHash()));
 	}
 
-	private TimeLockedAddressTO requestCreateTimeLockedAddress(TimeLockedAddressTO requestTO) throws Exception {
-		String jsonTO = SerializeUtils.GSON.toJson(requestTO);
-		return RESTUtils.postRequest(mockMvc, URL_CREATE_TIME_LOCKED_ADDRESS, jsonTO, TimeLockedAddressTO.class);
-	}
-
-	private TimeLockedAddressTO createSignedTimeLockedAddressTO(ECKey clientKey) {
-		// lock time between now and (now+1year)
-		long lockTime = Utils.currentTimeSeconds() + new Random().nextInt(365 * 24 * 60 * 60);
-		TimeLockedAddressTO requestTO = new TimeLockedAddressTO()
-				.currentDate(Utils.currentTimeMillis())
-																	.publicKey(clientKey.getPubKey())
-																	.lockTime(lockTime);
-		SerializeUtils.signJSON(requestTO, clientKey);
-		return requestTO;
-	}
-
-	private static <K extends BaseTO<?>> boolean assertVerifyJSONSig(K k, ECKey key) {
-		boolean result = SerializeUtils.verifyJSONSignature(k, key);
-		assertTrue(result);
-		return result;
+	private long validLocktime() {
+		final long minLockTime = Instant.now().getEpochSecond() + appConfig.getMinimumLockTimeSeconds();
+		final long maxLockTime = Instant.now().plus(Duration.ofDays(appConfig.getMaximumLockTimeDays())).getEpochSecond();
+		return (minLockTime + maxLockTime) / 2;
 	}
 }

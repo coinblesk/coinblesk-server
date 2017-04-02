@@ -34,7 +34,6 @@ import com.coinblesk.server.exceptions.InvalidSignatureException;
 import com.coinblesk.server.exceptions.MissingFieldException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
 import com.coinblesk.server.utils.DTOUtils;
-import com.coinblesk.server.utils.SignatureUtils;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Coin;
@@ -111,7 +110,9 @@ public class PaymentController {
 		// Get the embedded payload and check signature
 		final CreateAddressRequestDTO createAddressRequestDTO;
 		try {
-			createAddressRequestDTO = DTOUtils.parseAndValidatePayload(request, CreateAddressRequestDTO.class);
+			createAddressRequestDTO = DTOUtils.parseAndValidate(request, CreateAddressRequestDTO.class);
+			ECKey signingKey = DTOUtils.getECKeyFromHexPublicKey(createAddressRequestDTO.getPublicKey());
+			DTOUtils.validateSignature(request.getPayload(), request.getSignature(), signingKey);
 		} catch (MissingFieldException|InvalidSignatureException e) {
 			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
 		} catch (Throwable e) {
@@ -119,27 +120,36 @@ public class PaymentController {
 		}
 
 		// The client we want to create an address for
-		final ECKey clientPublicKey = SignatureUtils.getECKeyFromHexPublicKey(createAddressRequestDTO.getPublicKey());
+		final ECKey clientPublicKey = DTOUtils.getECKeyFromHexPublicKey(createAddressRequestDTO.getPublicKey());
 		final long lockTime = createAddressRequestDTO.getLockTime();
 
-		TimeLockedAddress address = null;
+		AccountService.CreateTimeLockedAddressResponse response = null;
 		try {
-			address = accountService.createTimeLockedAddress(clientPublicKey, lockTime);
+			response = accountService.createTimeLockedAddress(clientPublicKey, lockTime);
 		} catch (UserNotFoundException|InvalidLockTimeException e) {
 			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
 		} catch (Throwable e) {
 			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), INTERNAL_SERVER_ERROR);
 		}
 
-		if (address == null)
+		final TimeLockedAddress address = response.getTimeLockedAddress();
+		final ECKey serverPrivateKeyForSigning = response.getServerPrivateKey();
+
+		if (response == null || address == null || serverPrivateKeyForSigning == null)
 			return new ResponseEntity<>(new ErrorDTO("Could not create Address"), INTERNAL_SERVER_ERROR);
 
 		// Start watching the address
 		walletService.addWatching(address.createPubkeyScript());
 
 		// Create response
-		// TODO: Wrap address and other information (check android) needed into SignedDTO
-		return new ResponseEntity("ok", OK);
+		CreateAddressResponseDTO innerResponse = new CreateAddressResponseDTO(
+				DTOUtils.toHex(address.getClientPubKey()),
+				DTOUtils.toHex(address.getServerPubKey()),
+				address.getLockTime()
+				);
+		SignedDTO responseDTO = DTOUtils.serializeAndSign(innerResponse, serverPrivateKeyForSigning);
+
+		return new ResponseEntity<>(responseDTO, OK);
 	}
 
 	@RequestMapping(
@@ -306,7 +316,7 @@ public class PaymentController {
 
 		ECKey clientPublicKey;
 		try {
-			clientPublicKey = SignatureUtils.getECKeyFromHexPublicKey(request.getPublicKey());
+			clientPublicKey = DTOUtils.getECKeyFromHexPublicKey(request.getPublicKey());
 		} catch (Throwable e) {
 			return new ResponseEntity<>(new ErrorDTO("Invalid publicKey given"), BAD_REQUEST);
 		};

@@ -27,6 +27,7 @@ import java.util.stream.StreamSupport;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.exceptions.InvalidLockTimeException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
+import lombok.Data;
 import lombok.NonNull;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Utils;
@@ -127,8 +128,14 @@ public class AccountService {
 				.collect(Collectors.toList());
 	}
 
+	@Data public static class CreateTimeLockedAddressResponse {
+		@NonNull final private TimeLockedAddress timeLockedAddress;
+		@NonNull final private ECKey serverPrivateKey;
+
+	}
+
 	@Transactional
-	public TimeLockedAddress createTimeLockedAddress(@NonNull ECKey clientPublicKey, long lockTime)
+	public CreateTimeLockedAddressResponse createTimeLockedAddress(@NonNull ECKey clientPublicKey, long lockTime)
 			throws UserNotFoundException, InvalidLockTimeException {
 
 		// Lock time must be valid
@@ -152,8 +159,14 @@ public class AccountService {
 		// Check if address is already in database, if so nothing to do
 		TimeLockedAddressEntity existingAddress =
 				timeLockedAddressRepository.findByAddressHash(address.getAddressHash());
-		if (existingAddress != null)
-			return address;
+
+		ECKey serverPrivateKey = ECKey.fromPrivateAndPrecalculatedPublic(
+				client.serverPrivateKey(),
+				client.serverPublicKey());
+
+		if (existingAddress != null) {
+			return new CreateTimeLockedAddressResponse( address, serverPrivateKey );
+		}
 
 		// Create the new address entity and save
 		TimeLockedAddressEntity addressEntity = new TimeLockedAddressEntity();
@@ -165,7 +178,7 @@ public class AccountService {
 				.setAccount(client);
 		timeLockedAddressRepository.save(addressEntity);
 
-		return address;
+		return new CreateTimeLockedAddressResponse(address, serverPrivateKey);
 	}
 
 	@Transactional(readOnly = true)

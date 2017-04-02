@@ -1,15 +1,19 @@
 package com.coinblesk.server.utils;
 
-import com.coinblesk.server.dto.Signable;
+import com.coinblesk.server.dto.SignatureDTO;
 import com.coinblesk.server.dto.SignedDTO;
+import com.coinblesk.server.exceptions.InvalidSignatureException;
 import com.coinblesk.server.exceptions.MissingFieldException;
+import com.google.common.io.BaseEncoding;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import io.jsonwebtoken.impl.TextCodec;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.Sha256Hash;
 
 import javax.validation.constraints.NotNull;
 import java.lang.reflect.Field;
+import java.math.BigInteger;
 
 /***
  * Helper class for everything related to data transfer objects.
@@ -20,38 +24,20 @@ import java.lang.reflect.Field;
  * @author Sebastian Stephan
  */
 public class DTOUtils {
-	public static Gson gson = new GsonBuilder().create();
+	private static Gson gson = new GsonBuilder().create();
 
-	/***
-	 * Takes a SignedDTO with embedded payload and signature and returns the embedded DTO.
-	 * Checks for valid signature.
-	 * Checks for illegal null values in the embedded DTO.
-	 *
-	 * @param request: The SignedDTO that contains a payload and a signature.
-	 * @param typeofPayload The type of the embedded DTO in the payload. Must be fo type {@link Signable}
-	 * @param <T> The type of the embedded DTO in the payload. Must be fo type {@link Signable}
-	 *
-	 * @return The parsed checked DTO object of type T.
-	 */
-	public static <T extends Signable> T parseAndValidatePayload(SignedDTO request, Class<T> typeofPayload) {
-		final String payloadBase64String = request.getPayload();
-
-		// Parse base64 payload back to json string
+	public static <T> T parseAndValidate(SignedDTO signedDTO , Class<T> typeOfPayload) {
+		final String payloadBase64String = signedDTO.getPayload();
 		String jsonPayload = fromBase64(payloadBase64String);
-
-		// Parse string back to object
-		T parsedObject = gson.fromJson(jsonPayload, typeofPayload);
-
-		// Check for illegal null fields
-		validateNonNullFields(parsedObject, typeofPayload);
-
-		// Check signature
-		ECKey signingKey = SignatureUtils.getECKeyFromHexPublicKey(parsedObject.getPublicKeyForSigning());
-		final String sigR = request.getSignature().getSigR();
-		final String sigS = request.getSignature().getSigS();
-		SignatureUtils.validateSignature(payloadBase64String, sigR, sigS, signingKey);
-
+		T parsedObject = gson.fromJson(jsonPayload, typeOfPayload);
+		validateNonNullFields(parsedObject, typeOfPayload);
 		return parsedObject;
+	}
+
+	public static <T> SignedDTO serializeAndSign(T innerDTO, ECKey privKey) {
+		String base64Payload = toBase64(gson.toJson(innerDTO));
+		SignatureDTO signature = sign(base64Payload, privKey);
+		return new SignedDTO(base64Payload, signature);
 	}
 
 	/***
@@ -84,13 +70,75 @@ public class DTOUtils {
 		}
 	}
 
-	private static String fromBase64(String input)
-	{
+	public static String fromBase64(String input) {
 		return TextCodec.BASE64URL.decodeToString(input);
 	}
 
-	public static String toBase64 (String input)
-	{
+	public static String toBase64(String input) {
 		return TextCodec.BASE64URL.encode(input);
+	}
+
+	public static String toBase64(Object o) {
+		return TextCodec.BASE64URL.encode(gson.toJson(o));
+	}
+
+	public static byte[] fromHex(String input) {
+		return BaseEncoding.base16().decode(input.toUpperCase());
+	}
+
+	public static String toHex(byte[] input) {
+		return BaseEncoding.base16().encode(input);
+	}
+
+	public static String toJSON(Object o) {
+		return gson.toJson(o);
+	}
+
+	public static <T> T fromJSON(String input, Class<T> typeOfT) {
+		return gson.fromJson(input, typeOfT);
+	}
+
+	/***
+	 * Converts a base16 hex formatted public key into an ECKey
+	 * Since the ECKey contains only the public key, it can only be used
+	 * for checking signatures.
+	 *
+	 * @param hexFormattedPublicKey Public key in hex format.
+	 * @return ECKey with only public key
+	 */
+	public static ECKey getECKeyFromHexPublicKey(String hexFormattedPublicKey) {
+		return ECKey.fromPublicOnly(fromHex(hexFormattedPublicKey));
+	}
+
+	/***
+	 * Hashes the given string with SHA-256 and checks the given signature against the given public key.
+	 *
+	 * @param payload The string that was used to create the signature. .getBytes() is called internally.
+	 * @param signature The signature that should be validated.
+	 * @param publicKey The EC2Key containing the public key, which is used to check validity of the signature.
+	 */
+	public static void validateSignature(String payload, SignatureDTO signatureDTO, ECKey publicKey)
+	{
+		final BigInteger sigR = new BigInteger(signatureDTO.getSigR());
+		final BigInteger sigS = new BigInteger(signatureDTO.getSigS());
+		final ECKey.ECDSASignature signature = new ECKey.ECDSASignature(sigR, sigS);
+		boolean valid = publicKey.verify(Sha256Hash.of(payload.getBytes()), signature);
+		if (!valid) {
+			throw new InvalidSignatureException("Signature is not valid");
+		}
+	}
+
+	/***
+	 * Takes a string and returns the signature in form of a {@link SignatureDTO}
+	 * The input string is hashed with Sha256.
+	 *
+	 * @param payload The target payload string to hash and sign.
+	 * @param key The key used to sign the payload
+	 * @return {@link SignatureDTO} with the Base64Url encoded json of the object and the ECDSA signature
+	 */
+	public static SignatureDTO sign(String payload, ECKey key)
+	{
+		ECKey.ECDSASignature signature = key.sign(Sha256Hash.of(payload.getBytes()));
+		return new SignatureDTO(signature.r.toString(), signature.s.toString());
 	}
 }
