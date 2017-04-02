@@ -27,7 +27,6 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import com.coinblesk.json.v1.ExchangeRateTO;
 import com.coinblesk.json.v1.FeeTO;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.util.SerializeUtils;

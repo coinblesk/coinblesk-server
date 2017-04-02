@@ -319,7 +319,7 @@ public class PaymentController {
 			clientPublicKey = DTOUtils.getECKeyFromHexPublicKey(request.getPublicKey());
 		} catch (Throwable e) {
 			return new ResponseEntity<>(new ErrorDTO("Invalid publicKey given"), BAD_REQUEST);
-		};
+		}
 
 		try {
 			final ECKey serverPublicKey = accountService.createAcount(clientPublicKey);

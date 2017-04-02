@@ -12,7 +12,6 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 
-import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.exceptions.InvalidLockTimeException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
 import org.bitcoinj.core.Block;
@@ -33,7 +32,6 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.TestExecutionListeners;
 
-import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.json.v1.UserAccountTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.entity.UserAccount;

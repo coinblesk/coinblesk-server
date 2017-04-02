@@ -42,7 +42,6 @@ import com.coinblesk.json.v1.TxSig;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dao.TxRepository;
-import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.entity.Tx;
 import com.coinblesk.server.utils.ToUtils;
 import com.coinblesk.util.BitcoinUtils;

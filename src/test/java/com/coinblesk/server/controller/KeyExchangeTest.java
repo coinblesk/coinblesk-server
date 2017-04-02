@@ -19,27 +19,19 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.coinblesk.server.dto.KeyExchangeRequestDTO;
-import com.coinblesk.server.utils.DTOUtils;
-import com.google.common.io.BaseEncoding;
 import org.bitcoinj.core.ECKey;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import com.coinblesk.json.v1.KeyTO;
-import com.coinblesk.json.v1.Type;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.util.SerializeUtils;
 import com.github.springtestdbunit.annotation.DatabaseSetup;
 import com.github.springtestdbunit.annotation.DatabaseTearDown;
-
-import java.security.SecureRandom;
 
 /**
  *
