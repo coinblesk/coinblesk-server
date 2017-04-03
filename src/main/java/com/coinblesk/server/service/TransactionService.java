@@ -157,7 +157,6 @@ public class TransactionService {
 				// not related to coinblesk (unknown tx outputs).
 				LOG.warn("signTransaction - transaction output for tx input {} not found - input: {}", inputIndex,
 						txIn);
-				redeemScript = null;
 				continue;
 			}
 

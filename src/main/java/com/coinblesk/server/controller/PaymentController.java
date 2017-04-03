@@ -116,7 +116,7 @@ public class PaymentController {
 		final ECKey clientPublicKey = DTOUtils.getECKeyFromHexPublicKey(createAddressRequestDTO.getPublicKey());
 		final long lockTime = createAddressRequestDTO.getLockTime();
 
-		AccountService.CreateTimeLockedAddressResponse response = null;
+		AccountService.CreateTimeLockedAddressResponse response;
 		try {
 			response = accountService.createTimeLockedAddress(clientPublicKey, lockTime);
 		} catch (UserNotFoundException|InvalidLockTimeException e) {
