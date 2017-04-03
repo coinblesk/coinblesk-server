@@ -60,8 +60,6 @@ public class PaymentControllerTest extends CoinbleskTest {
 	@Autowired
 	private AccountService accountService;
 
-	@Autowired TimeLockedAddressRepository timeLockedAddressRepository;
-
 	@Autowired
 	private AppConfig appConfig;
 
