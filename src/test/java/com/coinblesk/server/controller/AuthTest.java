@@ -158,7 +158,16 @@ public class AuthTest extends CoinbleskTest {
 				.andExpect(status().is4xxClientError());
 
 		// Correct login returns a token
-		String authorizationToken = loginAndGetToken("test@test.test", "123456");
+		String authorizationToken = mockMvc
+			.perform(
+				post("/user/login")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"username\":\"test@test.test\",\"password\":\"123456\"}"))
+			.andExpect(status().isOk())
+			.andExpect(header().string("Authorization", Matchers.not(Matchers.isEmptyOrNullString())))
+			.andReturn()
+			.getResponse()
+			.getHeader("Authorization");
 
 		// Token is valid
 		Assert.assertTrue(StringUtils.hasText(authorizationToken));
@@ -180,16 +189,4 @@ public class AuthTest extends CoinbleskTest {
 		Assert.assertEquals("test@test.test", uato.email());
 	}
 
-	private String loginAndGetToken(String username, String password) throws Exception {
-		return mockMvc
-				.perform(
-						post("/user/login")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content("{\"username\":\"test@test.test\",\"password\":\"123456\"}"))
-				.andExpect(status().isOk())
-				.andExpect(header().string("Authorization", Matchers.not(Matchers.isEmptyOrNullString())))
-				.andReturn()
-				.getResponse()
-				.getHeader("Authorization");
-	}
 }
