@@ -29,50 +29,50 @@ import org.springframework.stereotype.Service;
 @Service
 public class FeeService {
 
-    private final static Logger LOG = LoggerFactory.getLogger(FeeService.class);
+	private final static Logger LOG = LoggerFactory.getLogger(FeeService.class);
 
-    // current limit is 5000 requests per hour
-    public final static int ONE_MINUTE_MILLIS = 60 * 1000;
-    // 5min
-    public final static int CACHING_FEE_MILLIS = 15 * ONE_MINUTE_MILLIS;
+	// current limit is 5000 requests per hour
+	public final static int ONE_MINUTE_MILLIS = 60 * 1000;
+	// 5min
+	public final static int CACHING_FEE_MILLIS = 15 * ONE_MINUTE_MILLIS;
 
-    //satoshis per bytes, see https://bitcoinfees.21.co/
-    public final static int DEFAULT_FEE = 200;
+	//satoshis per bytes, see https://bitcoinfees.21.co/
+	public final static int DEFAULT_FEE = 200;
 
-    public final static String URL = "https://bitcoinfees.21.co/api/v1/fees/recommended";
+	public final static String URL = "https://bitcoinfees.21.co/api/v1/fees/recommended";
 
-    private Pair<Long, Integer> cachedFee;
+	private Pair<Long, Integer> cachedFee;
 
-    private final Object lock = new Object();
+	private final Object lock = new Object();
 
-    public int fee() throws IOException {
-        synchronized (lock) {
-            if (cachedFee == null || cachedFee.element0() + CACHING_FEE_MILLIS < System.currentTimeMillis()) {
-                int fee = askFee();
-                cachedFee = new Pair<>(System.currentTimeMillis(), fee);
-            }
-            return cachedFee.element1();
-        }
-    }
+	public int fee() throws IOException {
+		synchronized (lock) {
+			if (cachedFee == null || cachedFee.element0() + CACHING_FEE_MILLIS < System.currentTimeMillis()) {
+				int fee = askFee();
+				cachedFee = new Pair<>(System.currentTimeMillis(), fee);
+			}
+			return cachedFee.element1();
+		}
+	}
 
-    private int askFee() throws IOException {
-        final StringBuffer response = ServiceUtils.doHttpRequest(URL);
-        final FeeService.Root root = DTOUtils.fromJSON(response.toString(), FeeService.Root.class);
-        try {
-            return Integer.parseInt(root.hourFee);
-        } catch (Exception e) {
-            LOG.error("could not get fee", e);
-            return DEFAULT_FEE;
-        }
-    }
+	private int askFee() throws IOException {
+		final StringBuffer response = ServiceUtils.doHttpRequest(URL);
+		final FeeService.Root root = DTOUtils.fromJSON(response.toString(), FeeService.Root.class);
+		try {
+			return Integer.parseInt(root.hourFee);
+		} catch (Exception e) {
+			LOG.error("could not get fee", e);
+			return DEFAULT_FEE;
+		}
+	}
 
-    private void setFee(int fee) {
-        synchronized (lock) {
-            cachedFee = new Pair<>(System.currentTimeMillis(), fee);
-        }
-    }
+	private void setFee(int fee) {
+		synchronized (lock) {
+			cachedFee = new Pair<>(System.currentTimeMillis(), fee);
+		}
+	}
 
-    /*-
+	/*-
      * minimized JSON representation. Query result looks like:
      * {
      *   "fastestFee":220,
@@ -80,22 +80,22 @@ public class FeeService {
      *   "hourFee":200
      * }
      */
-    private static class Root {
-        private String fastestFee;
-        private String halfHourFee;
-        private String hourFee;
-    }
+	private static class Root {
+		private String fastestFee;
+		private String halfHourFee;
+		private String hourFee;
+	}
 
-    final static public class FeeTask {
+	final static public class FeeTask {
 
-        @Autowired
-        private FeeService feeService;
+		@Autowired
+		private FeeService feeService;
 
-        // call every 5 minutes
-        @Scheduled(fixedRate = CACHING_FEE_MILLIS / 3)
-        public void doTask() throws Exception {
-            int fee = feeService.askFee();
-            feeService.setFee(fee);
-        }
-    }
+		// call every 5 minutes
+		@Scheduled(fixedRate = CACHING_FEE_MILLIS / 3)
+		public void doTask() throws Exception {
+			int fee = feeService.askFee();
+			feeService.setFee(fee);
+		}
+	}
 }

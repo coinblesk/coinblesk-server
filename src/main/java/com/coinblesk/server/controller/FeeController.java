@@ -50,15 +50,15 @@ public class FeeController {
 	@RequestMapping(value = "/fee", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public ResponseEntity<FeeTO> fee() {
-            FeeTO output = new FeeTO();
-            try {
-                output.fee(feeService.fee());
-                return new ResponseEntity<>(output, OK);
-            } catch (Exception e) {
-                LOG.error("{fee} - SERVER_ERROR - exception: ", e);
-		output.type(SERVER_ERROR);
-		output.message(e.getMessage());
-		return new ResponseEntity<>(output, BAD_REQUEST);
-            }
+		FeeTO output = new FeeTO();
+		try {
+			output.fee(feeService.fee());
+			return new ResponseEntity<>(output, OK);
+		} catch (Exception e) {
+			LOG.error("{fee} - SERVER_ERROR - exception: ", e);
+			output.type(SERVER_ERROR);
+			output.message(e.getMessage());
+			return new ResponseEntity<>(output, BAD_REQUEST);
+		}
 	}
 }
