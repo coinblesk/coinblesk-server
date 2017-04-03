@@ -18,8 +18,6 @@ package com.coinblesk.server.service;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -66,27 +64,6 @@ public class AccountService {
 	@Transactional(readOnly = true)
 	public Account getByClientPublicKey(@NonNull final byte[] clientPublicKey) {
 		return accountRepository.findByClientPublicKey(clientPublicKey);
-	}
-
-	@Transactional(readOnly = true)
-	public List<ECKey> getPublicECKeysByClientPublicKey(final byte[] clientPublicKey) {
-		final Account account = accountRepository.findByClientPublicKey(clientPublicKey);
-		final List<ECKey> retVal = new ArrayList<>(2);
-		retVal.add(ECKey.fromPublicOnly(account.clientPublicKey()));
-		retVal.add(ECKey.fromPublicOnly(account.serverPublicKey()));
-		return retVal;
-	}
-
-	@Transactional(readOnly = true)
-	public List<ECKey> getECKeysByClientPublicKey(@NonNull final byte[] clientPublicKey) {
-		final Account account = accountRepository.findByClientPublicKey(clientPublicKey);
-		if (account == null) {
-			return Collections.emptyList();
-		}
-		final List<ECKey> retVal = new ArrayList<>(2);
-		retVal.add(ECKey.fromPublicOnly(account.clientPublicKey()));
-		retVal.add(ECKey.fromPrivateAndPrecalculatedPublic(account.serverPrivateKey(), account.serverPublicKey()));
-		return retVal;
 	}
 
 	/**
