@@ -537,6 +537,9 @@ public class CompleteCLTVTest extends CoinbleskTest {
 			this.clientKey = new ECKey();
 			this.addressesToRedeemScripts = new HashMap<>();
 			this.serverKey = keyExchange();
+
+			createTimeLockedAddress();
+
 		}
 
 		public Map<Address, Coin> getBalanceByAddresses() {
