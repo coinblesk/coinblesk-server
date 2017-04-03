@@ -62,7 +62,6 @@ import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.json.v1.SignVerifyTO;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.FakeTxBuilder;

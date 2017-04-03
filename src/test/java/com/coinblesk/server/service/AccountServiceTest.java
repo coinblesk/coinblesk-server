@@ -18,7 +18,6 @@ package com.coinblesk.server.service;
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dao.AccountRepository;
-import com.coinblesk.server.dao.TimeLockedAddressRepository;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.exceptions.InvalidLockTimeException;

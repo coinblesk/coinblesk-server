@@ -19,13 +19,11 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.OK;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
-import static org.springframework.web.bind.annotation.RequestMethod.GET;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import com.coinblesk.server.dto.*;
@@ -35,15 +33,12 @@ import com.coinblesk.server.exceptions.MissingFieldException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
 import com.coinblesk.server.utils.DTOUtils;
 import org.bitcoinj.core.Address;
-import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.TransactionSignature;
-import org.bitcoinj.script.Script;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,7 +47,6 @@ import org.springframework.web.bind.annotation.*;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.json.v1.BalanceTO;
-import com.coinblesk.json.v1.RefundTO;
 import com.coinblesk.json.v1.SignVerifyTO;
 import com.coinblesk.json.v1.TxSig;
 import com.coinblesk.json.v1.Type;
@@ -64,7 +58,6 @@ import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.server.utils.ToUtils;
 import com.coinblesk.util.BitcoinUtils;
-import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
 
 import javax.validation.Valid;
