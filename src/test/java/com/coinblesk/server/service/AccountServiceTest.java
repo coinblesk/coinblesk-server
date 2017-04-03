@@ -49,9 +49,6 @@ public class AccountServiceTest extends CoinbleskTest {
 	private AccountRepository accountRepository;
 
 	@Autowired
-	private TimeLockedAddressRepository timeLockedAddressRepository;
-
-	@Autowired
 	private EntityManager em;
 
 	@Autowired
