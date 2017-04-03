@@ -23,13 +23,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import com.coinblesk.server.utils.DTOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.google.gson.Gson;
 
 /**
  *
@@ -48,7 +48,7 @@ final public class ForexService {
 	// 2 days
 	public final static int CACHING_TIME_SYMBOL_MILLIS = 2 * 24 * 60 * 60 * 1000;
 
-	
+
 	private final static String PLACEHOLDER = "{{PLACEHOLDER}}";
 	private final static String YAHOO_API = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.xchange%20where%20pair%20in%20("
 			+ PLACEHOLDER
@@ -83,7 +83,7 @@ final public class ForexService {
 		// mark as used
 		Map<String, BigDecimal> exchangeRates = new HashMap<>(pairs.length);
 		// this empty most of the times:
-		List<String> unknowRates = new ArrayList<>(1); 
+		List<String> unknowRates = new ArrayList<>(1);
 		for (String pair : pairs) {
 			exchangeRatesSymbolCache.put(pair, Boolean.TRUE);
 			BigDecimal exchangeRate = exchangeRatesCache.getIfPresent(pair);
@@ -101,16 +101,15 @@ final public class ForexService {
 			final String url = YAHOO_API.replace(PLACEHOLDER, rates);
 			final StringBuffer response = ServiceUtils.doHttpRequest(url);
 			// gets actual exchange rate out of Json Object and saves it to last.
-			final Gson gson = new Gson();
 			if (unknowRates.size() > 1) {
-				final RootMulti root = gson.fromJson(response.toString(), RootMulti.class);
+				final RootMulti root = DTOUtils.fromJSON(response.toString(), RootMulti.class);
 				for (RootMulti.Query.Results.Rate rate : root.query.results.rate) {
 					BigDecimal exchangeRate = new BigDecimal(rate.Rate);
 					exchangeRatesCache.put(rate.id, exchangeRate);
 					exchangeRates.put(rate.id, exchangeRate);
 				}
 			} else {
-				final RootSingle root = gson.fromJson(response.toString(), RootSingle.class);
+				final RootSingle root = DTOUtils.fromJSON(response.toString(), RootSingle.class);
 				BigDecimal exchangeRate = new BigDecimal(root.query.results.rate.Rate);
 				exchangeRatesCache.put(root.query.results.rate.id, exchangeRate);
 				exchangeRates.put(root.query.results.rate.id, exchangeRate);
@@ -120,7 +119,7 @@ final public class ForexService {
 		return exchangeRates;
 	}
 
-	
+
 
 	/*-
 	 * minimized JSON representation. Query result looks like:

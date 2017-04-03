@@ -17,8 +17,8 @@ package com.coinblesk.server.service;
  *
  * @author Thomas Bocek
  */
+import com.coinblesk.server.utils.DTOUtils;
 import com.coinblesk.util.Pair;
-import com.google.gson.Gson;
 import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,8 +57,7 @@ public class FeeService {
 
     private int askFee() throws IOException {
         final StringBuffer response = ServiceUtils.doHttpRequest(URL);
-        final Gson gson = new Gson();
-        final FeeService.Root root = gson.fromJson(response.toString(), FeeService.Root.class);
+        final FeeService.Root root = DTOUtils.fromJSON(response.toString(), FeeService.Root.class);
         try {
             return Integer.parseInt(root.hourFee);
         } catch (Exception e) {
