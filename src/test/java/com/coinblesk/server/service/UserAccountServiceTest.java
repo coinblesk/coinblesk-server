@@ -69,7 +69,6 @@ public class UserAccountServiceTest extends CoinbleskTest {
 	private AppConfig cfg;
 
 	final private ECKey ecKeyClient = new ECKey();
-	final private ECKey ecKeyServer = new ECKey();
 
 	private int counter = 0;
 
