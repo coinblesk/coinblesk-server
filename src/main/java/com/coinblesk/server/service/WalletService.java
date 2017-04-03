@@ -322,29 +322,6 @@ public class WalletService {
 		return copy2;
 	}
 
-	@Transactional(readOnly = true)
-	public List<TransactionOutput> verifiedOutputs(NetworkParameters params, Address p2shAddress) {
-		List<TransactionOutput> retVal = new ArrayList<>();
-
-		Map<Sha256Hash, Transaction> unspent = verifiedTransactions(params);
-
-		for (Transaction t : unspent.values()) {
-			for (TransactionOutput out : t.getOutputs()) {
-				if (p2shAddress.equals(out.getAddressFromP2SH(appConfig.getNetworkParameters()))) {
-					if (out.isAvailableForSpending()) {
-						// now check if not spent
-						retVal.add(out);
-						LOG.debug("this txout is unspent : {}, point: {}, spent {}", out, out.getOutPointFor());
-					} else {
-						LOG.debug("this txout is spent!: {}, point: {}out.getOutPointFor()", out, out.getOutPointFor());
-					}
-				}
-			}
-		}
-
-		return retVal;
-	}
-
 	@PreDestroy
 	public void shutdown() {
 		try {
