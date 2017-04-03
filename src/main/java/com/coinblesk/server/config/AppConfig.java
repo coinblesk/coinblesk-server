@@ -31,19 +31,6 @@ import com.coinblesk.bitcoin.BitcoinNet;
 import com.coinblesk.server.utils.CoinUtils;
 import org.springframework.retry.annotation.EnableRetry;
 
-/**
- * This is the default configuration for testcases. If you want to change these
- * settings e.g. when using tomcat, add these values to context.xml:
- *
- * <pre>
- *  ...
- *  <Parameter name="bitcoin.net" value="testnet" />
- *  ...
- * </pre>
- *
- * @author Raphael Voellmy
- * @author Thomas Bocek
- */
 @Configuration
 @EnableRetry
 public class AppConfig {
