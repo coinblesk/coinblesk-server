@@ -94,9 +94,6 @@ public class CompleteCLTVTest extends CoinbleskTest {
 	@Autowired
 	private WalletService walletService;
 
-	@Autowired
-	private AccountService accountService;
-
 	private Client client;
 	private Client merchant;
 
@@ -541,9 +538,6 @@ public class CompleteCLTVTest extends CoinbleskTest {
 			this.clientKey = new ECKey();
 			this.addressesToRedeemScripts = new HashMap<>();
 			this.serverKey = keyExchange();
-
-			TimeLockedAddress timeLockedAddress = createTimeLockedAddress();
-
 		}
 
 		public Map<Address, Coin> getBalanceByAddresses() {
@@ -718,14 +712,6 @@ public class CompleteCLTVTest extends CoinbleskTest {
 				clientSigs.add(sig);
 			}
 			return clientSigs;
-		}
-
-		public ECKey getClientKey() {
-			return clientKey;
-		}
-
-		public ECKey getServerKey() {
-			return serverKey;
 		}
 
 	}
