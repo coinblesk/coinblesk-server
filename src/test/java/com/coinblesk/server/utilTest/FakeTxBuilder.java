@@ -17,6 +17,7 @@ package com.coinblesk.server.utilTest;
  * limitations under the License.
  */
 
+import org.apache.commons.lang3.RandomUtils;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.ScriptBuilder;
@@ -36,6 +37,11 @@ public class FakeTxBuilder {
 	/** Create a fake transaction, without change. */
 	public static Transaction createFakeTx(final NetworkParameters params) {
 		return createFakeTxWithoutChangeAddress(params, Coin.COIN, new ECKey().toAddress(params));
+	}
+
+	public static Transaction createFakeP2SHTx(final NetworkParameters params) {
+		// Transaction that sends to some (non-existing) script hash
+		return createFakeTxWithoutChangeAddress(params, Coin.COIN, Address.fromP2SHHash(params, RandomUtils.nextBytes(20)));
 	}
 
 	/** Create a fake transaction, without change. */
