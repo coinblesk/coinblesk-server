@@ -39,9 +39,9 @@ public class MicroPaymentController {
 	public ResponseEntity virtualpayment(@RequestBody @Valid SignedDTO request)
 	{
 		// Get the embedded payload and check signature
-		final PaymentRequestDTO requestDTO;
+		final VirtualPaymentRequestDTO requestDTO;
 		try {
-			requestDTO = DTOUtils.parseAndValidate(request, PaymentRequestDTO.class);
+			requestDTO = DTOUtils.parseAndValidate(request, VirtualPaymentRequestDTO.class);
 			ECKey signingKey = DTOUtils.getECKeyFromHexPublicKey(requestDTO.getFromPublicKey());
 			DTOUtils.validateSignature(request.getPayload(), request.getSignature(), signingKey);
 		} catch (MissingFieldException|InvalidSignatureException e) {
