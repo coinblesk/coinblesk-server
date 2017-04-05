@@ -291,6 +291,10 @@ public class WalletService {
 		wallet.addWatchedScripts(list);
 	}
 
+	public void addWatching(Address address) {
+		wallet.addWatchedAddress(address);
+	}
+
 	/**
 	 * The unspent tx also contains spentOutputs, where the approved tx should
 	 * mark the unspent as spent!
