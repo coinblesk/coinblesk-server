@@ -15,6 +15,8 @@
  */
 package com.coinblesk.server.config;
 
+import static org.springframework.http.HttpMethod.OPTIONS;
+
 import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -76,6 +78,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		.and()
 			.sessionManagement()
 			.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+		.and() // allow CORS's OPTIONS preflight
+			.authorizeRequests()
+			.antMatchers(OPTIONS, "/**").permitAll()
 		.and()
 			.authorizeRequests()
 			// .antMatchers("/").permitAll()
