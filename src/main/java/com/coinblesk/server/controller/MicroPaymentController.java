@@ -1,11 +1,14 @@
 package com.coinblesk.server.controller;
 
+import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dto.*;
 import com.coinblesk.server.exceptions.*;
 import com.coinblesk.server.service.MicropaymentService;
 import com.coinblesk.server.utils.DTOUtils;
 import com.coinblesk.util.InsufficientFunds;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.VerificationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,10 +31,47 @@ public class MicroPaymentController {
 
 	private final MicropaymentService micropaymentService;
 
+	@Autowired AppConfig appConfig;
+
 	@Autowired
 	public MicroPaymentController(MicropaymentService micropaymentService) {
 		this.micropaymentService = micropaymentService;
 	}
+
+	@RequestMapping(value = "/micropayment", method = POST,
+		consumes = APPLICATION_JSON_UTF8_VALUE,
+		produces = APPLICATION_JSON_UTF8_VALUE)
+	public ResponseEntity micropayment(@RequestBody @Valid SignedDTO request)
+	{
+		// Get the embedded request
+		final MicroPaymentRequestDTO requestDTO;
+		final ECKey senderPublicKey;
+		try {
+			requestDTO = DTOUtils.parseAndValidate(request, MicroPaymentRequestDTO.class);
+			senderPublicKey = DTOUtils.getECKeyFromHexPublicKey(requestDTO.getFromPublicKey());
+			DTOUtils.validateSignature(request.getPayload(), request.getSignature(), senderPublicKey);
+		} catch (MissingFieldException|InvalidSignatureException e) {
+			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
+		} catch (Throwable e) {
+			return new ResponseEntity<>(new ErrorDTO("Bad request"), BAD_REQUEST);
+		}
+
+		// Parse the transaction
+		byte[] txInByes = DTOUtils.fromHex(requestDTO.getTx());
+		final Transaction tx;
+		try {
+			tx = new Transaction(appConfig.getNetworkParameters(), txInByes);
+			tx.verify();
+		} catch (VerificationException e) {
+			return new ResponseEntity<>(new ErrorDTO("Invalid transaction: " + e.getMessage()), BAD_REQUEST);
+		} catch (Throwable e) {
+			e.printStackTrace();
+			return new ResponseEntity<>(new ErrorDTO("Could not parse transaction"), BAD_REQUEST);
+		}
+
+		return new ResponseEntity<>("not yet implemented", OK);
+	}
+
 
 	@RequestMapping(value = "/virtualpayment", method = POST,
 			consumes = APPLICATION_JSON_UTF8_VALUE,
