@@ -4,11 +4,11 @@ import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dto.*;
 import com.coinblesk.server.exceptions.*;
 import com.coinblesk.server.service.MicropaymentService;
+import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utils.DTOUtils;
 import com.coinblesk.util.InsufficientFunds;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.VerificationException;
+import lombok.extern.java.Log;
+import org.bitcoinj.core.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +17,9 @@ import javax.validation.Valid;
 
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.OK;
@@ -27,11 +30,14 @@ import static org.springframework.web.bind.annotation.RequestMethod.POST;
 @RestController
 @RequestMapping(value = "/payment")
 @CrossOrigin
+@Log
 public class MicroPaymentController {
 
 	private final MicropaymentService micropaymentService;
 
 	@Autowired AppConfig appConfig;
+
+	@Autowired WalletService walletService;
 
 	@Autowired
 	public MicroPaymentController(MicropaymentService micropaymentService) {
@@ -67,6 +73,20 @@ public class MicroPaymentController {
 		} catch (Throwable e) {
 			e.printStackTrace();
 			return new ResponseEntity<>(new ErrorDTO("Could not parse transaction"), BAD_REQUEST);
+		}
+
+		// Make sure all the UTXOs are known to the wallet
+		List<TransactionOutput> spentOutputs = tx.getInputs().stream().map(walletService::findOutputFor).collect(Collectors.toList());
+		if (spentOutputs.stream().anyMatch(Objects::isNull)) {
+			return new ResponseEntity<>(new ErrorDTO("Transaction spends unknown UTXOs"), BAD_REQUEST);
+		}
+
+		// Gather all addresses from the input and make sure they are in the P2SH format
+		List<Address> spentAddresses = spentOutputs.stream()
+			.map(transactionOutput -> transactionOutput.getAddressFromP2SH(appConfig.getNetworkParameters()))
+			.collect(Collectors.toList());
+		if (spentAddresses.stream().anyMatch(Objects::isNull)) {
+			return new ResponseEntity<>(new ErrorDTO("Transaction must spent P2SH addresses"), BAD_REQUEST);
 		}
 
 		return new ResponseEntity<>("not yet implemented", OK);
