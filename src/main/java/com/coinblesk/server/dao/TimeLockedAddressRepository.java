@@ -10,5 +10,4 @@ public interface TimeLockedAddressRepository extends CrudRepository<TimeLockedAd
 
 	TimeLockedAddressEntity findByAddressHash(byte[] addressHash);
 
-	List<TimeLockedAddressEntity> findByAccount_ClientPublicKey(byte[] clientPublicKey);
 }
