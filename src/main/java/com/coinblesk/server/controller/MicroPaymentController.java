@@ -1,8 +1,10 @@
 package com.coinblesk.server.controller;
 
+import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dto.*;
 import com.coinblesk.server.exceptions.*;
+import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.MicropaymentService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utils.DTOUtils;
@@ -38,6 +40,8 @@ public class MicroPaymentController {
 	@Autowired AppConfig appConfig;
 
 	@Autowired WalletService walletService;
+
+	@Autowired AccountService accountService;
 
 	@Autowired
 	public MicroPaymentController(MicropaymentService micropaymentService) {
@@ -87,6 +91,15 @@ public class MicroPaymentController {
 			.collect(Collectors.toList());
 		if (spentAddresses.stream().anyMatch(Objects::isNull)) {
 			return new ResponseEntity<>(new ErrorDTO("Transaction must spent P2SH addresses"), BAD_REQUEST);
+		}
+
+		// Gather all TimeLockedAddresses from the database and make sure we known them all
+		List<TimeLockedAddress> timeLockedAddresses = spentAddresses.stream()
+			.map(Address::getHash160)
+			.map(accountService::getTimeLockedAddressByAddressHash)
+			.collect(Collectors.toList());
+		if (timeLockedAddresses.stream().anyMatch(Objects::isNull)) {
+			return new ResponseEntity<>(new ErrorDTO("Used TLA inputs are not known to server"), BAD_REQUEST);
 		}
 
 		return new ResponseEntity<>("not yet implemented", OK);

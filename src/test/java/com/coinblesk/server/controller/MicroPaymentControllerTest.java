@@ -1,5 +1,6 @@
 package com.coinblesk.server.controller;
 
+import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dto.ErrorDTO;
 import com.coinblesk.server.dto.MicroPaymentRequestDTO;
@@ -17,6 +18,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+
+import java.time.Duration;
+import java.time.Instant;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -66,79 +70,86 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 	@Test public void microPayment_failsOnNoTransaction() throws Exception {
 		ECKey clientKey = new ECKey();
-
 		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
 			"", clientKey.getPublicKeyAsHex(), new ECKey().getPublicKeyAsHex(), 10L);
 		SignedDTO dto = DTOUtils.serializeAndSign(microPaymentRequestDTO, clientKey);
-
-		mockMvc.perform(post(URL_MICRO_PAYMENT)
-			.contentType(APPLICATION_JSON)
-			.content(DTOUtils.toJSON(dto)))
-			.andExpect(status().is4xxClientError());
-
+		sendAndExpect4xxError("/payment/micropayment", dto, "");
 	}
 
 	@Test public void microPayment_failsOnEmptyTransaction() throws Exception {
 		ECKey clientKey = new ECKey();
-		Transaction tx = new Transaction(params());
-
-		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
-			DTOUtils.toHex(tx.bitcoinSerialize()), clientKey.getPublicKeyAsHex(), new ECKey().getPublicKeyAsHex(), 10L);
-		SignedDTO dto = DTOUtils.serializeAndSign(microPaymentRequestDTO, clientKey);
-
-		MvcResult result = mockMvc.perform(post(URL_MICRO_PAYMENT)
-			.contentType(APPLICATION_JSON)
-			.content(DTOUtils.toJSON(dto)))
-			.andExpect(status().is4xxClientError()).andReturn();
-
-		String errorMessage = DTOUtils.fromJSON(result.getResponse().getContentAsString(), ErrorDTO.class).getError();
-		assertThat(errorMessage, containsString("Invalid transaction"));
+		Transaction microPaymentTransaction = new Transaction(params());
+		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction, 100L);
+		sendAndExpect4xxError("/payment/micropayment", dto, "Invalid transaction");
 	}
 
 	@Test public void microPayment_failsOnUnknownUTXOs() throws Exception {
 		ECKey clientKey = new ECKey();
-		Transaction spentTx = FakeTxBuilder.createFakeTx(params());
-
-		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
-			DTOUtils.toHex(spentTx.bitcoinSerialize()), clientKey.getPublicKeyAsHex(), new ECKey().getPublicKeyAsHex(), 10L);
-		SignedDTO dto = DTOUtils.serializeAndSign(microPaymentRequestDTO, clientKey);
-
-		MvcResult result = mockMvc.perform(post("/payment/micropayment")
-			.contentType(APPLICATION_JSON)
-			.content(DTOUtils.toJSON(dto)))
-			.andExpect(status().is4xxClientError()).andReturn();
-
-		String errorMessage = DTOUtils.fromJSON(result.getResponse().getContentAsString(), ErrorDTO.class).getError();
-		assertThat(errorMessage, containsString("Transaction spends unknown UTXOs"));
+		Transaction microPaymentTransaction = FakeTxBuilder.createFakeTx(params());
+		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction, 100L);
+		sendAndExpect4xxError("/payment/micropayment", dto,  "Transaction spends unknown UTXOs");
 	}
 
 	@Test public void microPayment_failsOnWrongAddressType() throws Exception {
 		ECKey clientKey = new ECKey();
-		Transaction spent1 = FakeTxBuilder.createFakeTx(params()); // Creates a P2PKHash output, not what we want
-		Transaction spent2 = FakeTxBuilder.createFakeP2SHTx(params()); // Creates a P2SH output, this would be ok
+		Transaction inputTx1 = FakeTxBuilder.createFakeTx(params()); // Creates a P2PKHash output, not what we want
+		Transaction inputTx2 = FakeTxBuilder.createFakeP2SHTx(params()); // Creates a P2SH output, this would be ok
 
-		Transaction t = new Transaction(params());
-		t.addOutput(new TransactionOutput(params(), t, Coin.valueOf(100), new ECKey().toAddress(params())));
-		t.addInput(spent1.getOutput(0));
-		t.addInput(spent2.getOutput(0));
+		Transaction microPaymentTransaction = new Transaction(params());
+		microPaymentTransaction.addOutput(someP2PKHOutput(microPaymentTransaction));
+		microPaymentTransaction.addInput(inputTx1.getOutput(0));
+		microPaymentTransaction.addInput(inputTx2.getOutput(0));
 
-		// Making sure the wallet watches the transaction used as inputs and they are mined
-		watchAllOutputs(spent1);
-		mineTransaction(spent1);
-		watchAllOutputs(spent2);
-		mineTransaction(spent2);
+		// Making sure the wallet watches the transactions used as inputs and they are mined
+		watchAllOutputs(inputTx1);
+		mineTransaction(inputTx1);
+		watchAllOutputs(inputTx2);
+		mineTransaction(inputTx2);
 
+		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction, 100L);
+		sendAndExpect4xxError("/payment/micropayment", dto,  "Transaction must spent P2SH addresses");
+	}
+
+	@Test public void microPayment_failsOnUnknownTLAInputs() throws Exception {
+		final ECKey clientKey = new ECKey();
+		final ECKey serverKey = new ECKey();
+		final long lockTime = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
+
+		// Create a tla but without registering it in any way with the server
+		TimeLockedAddress tla = new TimeLockedAddress(clientKey.getPubKey(), serverKey.getPubKey(), lockTime);
+		Transaction tlaTxToSpend = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			tla.getAddress(params()));
+
+		Transaction microPaymentTransaction = new Transaction(params());
+		microPaymentTransaction.addOutput(someP2PKHOutput(microPaymentTransaction));
+		microPaymentTransaction.addInput(tlaTxToSpend.getOutput(0));
+
+		// Making sure the wallet watches the transaction used as input and it is are mined
+		watchAllOutputs(tlaTxToSpend);
+		mineTransaction(tlaTxToSpend);
+
+		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction, 100l);
+		sendAndExpect4xxError("/payment/micropayment", dto,  "Used TLA inputs are not known to server");
+
+	}
+
+	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx, long amount) {
 		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
-			DTOUtils.toHex(t.bitcoinSerialize()), clientKey.getPublicKeyAsHex(), new ECKey().getPublicKeyAsHex(), 10L);
-		SignedDTO dto = DTOUtils.serializeAndSign(microPaymentRequestDTO, clientKey);
+			DTOUtils.toHex(tx.bitcoinSerialize()), from.getPublicKeyAsHex(), to.getPublicKeyAsHex(), amount);
+		return DTOUtils.serializeAndSign(microPaymentRequestDTO, from);
+	}
 
-		MvcResult result = mockMvc.perform(post("/payment/micropayment")
+	private void sendAndExpect4xxError(String url, SignedDTO dto, String expectedErrorMessage) throws Exception {
+		MvcResult result = mockMvc.perform(post(url)
 			.contentType(APPLICATION_JSON)
 			.content(DTOUtils.toJSON(dto)))
 			.andExpect(status().is4xxClientError()).andReturn();
-
 		String errorMessage = DTOUtils.fromJSON(result.getResponse().getContentAsString(), ErrorDTO.class).getError();
-		assertThat(errorMessage, containsString("Transaction must spent P2SH addresses"));
+		assertThat(errorMessage, containsString(expectedErrorMessage));
+	}
+
+	private TransactionOutput someP2PKHOutput(Transaction forTransaction) {
+		return new TransactionOutput(params(), forTransaction, Coin.valueOf(100), new ECKey().toAddress(params()));
 	}
 
 	private void watchAllOutputs(Transaction tx) {
