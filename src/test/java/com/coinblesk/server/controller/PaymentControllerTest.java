@@ -325,7 +325,7 @@ public class PaymentControllerTest extends CoinbleskTest {
 		assertEquals(address.getLockTime(), requestedLockTime);
 
 		assertEquals(expectedAddress, address);
-		assertTrue(accountService.addressExists(address.getAddressHash()));
+		assertNotNull(accountService.getTimeLockedAddressByAddressHash(address.getAddressHash()));
 	}
 
 	private long validLocktime() {
