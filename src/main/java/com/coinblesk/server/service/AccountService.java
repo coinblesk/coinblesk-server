@@ -166,11 +166,12 @@ public class AccountService {
 		return accountRepository.findByClientPublicKey(publicKey).virtualBalance();
 	}
 
+	// TODO replace with getTimeLockedAddressByAddressHash
 	public boolean addressExists(@NonNull byte[] addressHash) {
 		return timeLockedAddressRepository.findByAddressHash(addressHash) != null;
 	}
 
-	TimeLockedAddress getTimeLockedAddressByAddressHash(@NonNull byte[] addressHash) {
+	public TimeLockedAddress getTimeLockedAddressByAddressHash(@NonNull byte[] addressHash) {
 		TimeLockedAddressEntity entity = timeLockedAddressRepository.findByAddressHash(addressHash);
 		return entity == null ? null : TimeLockedAddress.fromRedeemScript(entity.getRedeemScript());
 	}
