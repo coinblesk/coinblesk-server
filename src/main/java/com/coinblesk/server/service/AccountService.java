@@ -170,4 +170,9 @@ public class AccountService {
 		return entity == null ? null : TimeLockedAddress.fromRedeemScript(entity.getRedeemScript());
 	}
 
+	@Transactional
+	public List<Account> getAccountByAddressHashes(@NonNull List<byte[]> addressHashes) {
+		return accountRepository.findDistinctByTimeLockedAddresses_addressHashIn(addressHashes);
+	}
+
 }

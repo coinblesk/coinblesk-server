@@ -32,7 +32,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import javax.persistence.EntityManager;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 import static org.junit.Assert.*;
 
@@ -229,5 +232,75 @@ public class AccountServiceTest extends CoinbleskTest {
 		assertEquals(intoDB, fromRedeemScript);
 	}
 
+	@Test
+	public void testGetAccountByAddressHashes() throws InvalidLockTimeException, UserNotFoundException {
+		final ECKey account1 = new ECKey();
+		final ECKey account2 = new ECKey();
 
+		final ECKey serverKeyAccount1 = accountService.createAcount(account1);
+		final ECKey serverKeyAccount2 = accountService.createAcount(account2);
+
+		final Account expectedAccount1 = new Account().clientPublicKey(account1.getPubKey())
+			.serverPrivateKey(serverKeyAccount1.getPrivKeyBytes()).serverPublicKey(serverKeyAccount1.getPubKey());
+		final Account expectedAccount2 = new Account().clientPublicKey(account2.getPubKey())
+			.serverPrivateKey(serverKeyAccount2.getPrivKeyBytes()).serverPublicKey(serverKeyAccount2.getPubKey());
+
+		TimeLockedAddress account1_addr1 = accountService.createTimeLockedAddress(account1, validLocktime())
+			.getTimeLockedAddress();
+		TimeLockedAddress account1_addr2 = accountService.createTimeLockedAddress(account1, validLocktime())
+			.getTimeLockedAddress();
+		TimeLockedAddress account1_addr3 = accountService.createTimeLockedAddress(account1, validLocktime())
+			.getTimeLockedAddress();
+
+		TimeLockedAddress account2_addr1 = accountService.createTimeLockedAddress(account2, validLocktime())
+			.getTimeLockedAddress();
+		TimeLockedAddress account2_addr2 = accountService.createTimeLockedAddress(account2, validLocktime())
+			.getTimeLockedAddress();
+
+		List<Account> result;
+
+		// Non existing hash returns empty list
+		byte[] fakeHash = new byte[20];
+		new Random().nextBytes(fakeHash);
+		result = accountService.getAccountByAddressHashes(Collections.singletonList( fakeHash));
+		assertEquals(0, result.size());
+
+		// Single address hash returns correct single account
+		result = accountService.getAccountByAddressHashes(Collections.singletonList(
+			account1_addr2.getAddressHash()));
+		assertEquals(1, result.size());
+		assertArrayEquals(account1.getPubKey(), result.get(0).clientPublicKey());
+		assertArrayEquals(serverKeyAccount1.getPrivKeyBytes(), result.get(0).serverPrivateKey());
+		assertArrayEquals(serverKeyAccount1.getPubKey(), result.get(0).serverPublicKey());
+
+		// Two duplicate address hashes from same account return single account
+		result = accountService.getAccountByAddressHashes(Arrays.asList(
+			account1_addr1.getAddressHash(), account1_addr3.getAddressHash()));
+		assertEquals(1, result.size());
+		assertArrayEquals(account1.getPubKey(), result.get(0).clientPublicKey());
+		assertArrayEquals(serverKeyAccount1.getPrivKeyBytes(), result.get(0).serverPrivateKey());
+		assertArrayEquals(serverKeyAccount1.getPubKey(), result.get(0).serverPublicKey());
+
+		// Two different address hashes from same account return correct account
+		result = accountService.getAccountByAddressHashes(Arrays.asList(
+			account1_addr1.getAddressHash(), account1_addr3.getAddressHash()));
+		assertEquals(1, result.size());
+		assertArrayEquals(account1.getPubKey(), result.get(0).clientPublicKey());
+		assertArrayEquals(serverKeyAccount1.getPrivKeyBytes(), result.get(0).serverPrivateKey());
+		assertArrayEquals(serverKeyAccount1.getPubKey(), result.get(0).serverPublicKey());
+
+		// Two single addresses from two accounts return two accounts
+		result = accountService.getAccountByAddressHashes(Arrays.asList(
+			account1_addr2.getAddressHash(), account2_addr1.getAddressHash()));
+		assertEquals(2, result.size());
+		assertTrue(result.contains(expectedAccount1));
+		assertTrue(result.contains(expectedAccount2));
+
+		// Three addresses from two accounts return two accounts
+		result = accountService.getAccountByAddressHashes(Arrays.asList(
+			account1_addr3.getAddressHash(), account2_addr1.getAddressHash(), account2_addr2.getAddressHash()));
+		assertEquals(2, result.size());
+		assertTrue(result.contains(expectedAccount1));
+		assertTrue(result.contains(expectedAccount2));
+	}
 }
