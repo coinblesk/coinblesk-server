@@ -81,7 +81,8 @@ public class AccountService {
 		// Check if client has already account
 		final Account existingAccount = accountRepository.findByClientPublicKey(clientPublicKey.getPubKey());
 		if (existingAccount != null) {
-			return ECKey.fromPublicOnly(existingAccount.serverPublicKey());
+			return ECKey.fromPrivateAndPrecalculatedPublic(existingAccount.serverPrivateKey(),
+				existingAccount.serverPublicKey());
 		}
 
 		// Not in database => Create new account with new server key pair
