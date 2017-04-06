@@ -5,6 +5,7 @@ import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dto.ErrorDTO;
 import com.coinblesk.server.dto.MicroPaymentRequestDTO;
 import com.coinblesk.server.dto.SignedDTO;
+import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.FakeTxBuilder;
@@ -21,6 +22,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -40,6 +42,9 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 	@Autowired
 	WalletService walletService;
+
+	@Autowired
+	AccountService accountService;
 
 	@Autowired
 	private AppConfig appConfig;
@@ -71,7 +76,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	@Test public void microPayment_failsOnNoTransaction() throws Exception {
 		ECKey clientKey = new ECKey();
 		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
-			"", clientKey.getPublicKeyAsHex(), new ECKey().getPublicKeyAsHex(), 10L);
+			"", new ECKey().getPublicKeyAsHex(), 10L);
 		SignedDTO dto = DTOUtils.serializeAndSign(microPaymentRequestDTO, clientKey);
 		sendAndExpect4xxError("/payment/micropayment", dto, "");
 	}
@@ -101,10 +106,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		microPaymentTransaction.addInput(inputTx2.getOutput(0));
 
 		// Making sure the wallet watches the transactions used as inputs and they are mined
-		watchAllOutputs(inputTx1);
-		mineTransaction(inputTx1);
-		watchAllOutputs(inputTx2);
-		mineTransaction(inputTx2);
+		watchAndMineTransactions(inputTx1, inputTx2);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction, 100L);
 		sendAndExpect4xxError("/payment/micropayment", dto,  "Transaction must spent P2SH addresses");
@@ -125,16 +127,65 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		microPaymentTransaction.addInput(tlaTxToSpend.getOutput(0));
 
 		// Making sure the wallet watches the transaction used as input and it is are mined
-		watchAllOutputs(tlaTxToSpend);
-		mineTransaction(tlaTxToSpend);
+		watchAndMineTransactions(tlaTxToSpend);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction, 100l);
 		sendAndExpect4xxError("/payment/micropayment", dto,  "Used TLA inputs are not known to server");
 	}
 
+	@Test public void microPayment_failsOnInputsBelongingToMultipleAccounts() throws Exception {
+		final long lockTime = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
+		final ECKey clientKey1 = new ECKey();
+		final ECKey clientKey2 = new ECKey();
+
+		accountService.createAcount(clientKey1);
+		accountService.createAcount(clientKey2);
+		TimeLockedAddress addressClient1 = accountService.createTimeLockedAddress(clientKey1, lockTime)
+			.getTimeLockedAddress();
+		TimeLockedAddress addressClient2 = accountService.createTimeLockedAddress(clientKey2, lockTime)
+			.getTimeLockedAddress();
+
+		// Fund both addresses
+		Transaction tla1TxToSpend = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			addressClient1.getAddress(params()));
+		Transaction tla2TxToSpend = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			addressClient2.getAddress(params()));
+
+		// Use them as inputs
+		Transaction microPaymentTransaction = new Transaction(params());
+		microPaymentTransaction.addOutput(someP2PKHOutput(microPaymentTransaction));
+		microPaymentTransaction.addInput(tla1TxToSpend.getOutput(0));
+		microPaymentTransaction.addInput(tla2TxToSpend.getOutput(0));
+
+		watchAndMineTransactions(tla1TxToSpend, tla2TxToSpend);
+
+		SignedDTO dto = createMicroPaymentRequestDTO(clientKey1, new ECKey(), microPaymentTransaction, 100l);
+		sendAndExpect4xxError("/payment/micropayment", dto,  "Inputs must be from one account");
+	}
+
+	@Test public void microPayment_failsOnWrongSignature() throws Exception {
+		final long lockTime = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
+		final ECKey clientKey = new ECKey();
+
+		accountService.createAcount(clientKey);
+		TimeLockedAddress addressClient = accountService.createTimeLockedAddress(clientKey, lockTime)
+			.getTimeLockedAddress();
+		Transaction tlaTxToSpend = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			addressClient.getAddress(params()));
+
+		Transaction microPaymentTransaction = new Transaction(params());
+		microPaymentTransaction.addOutput(someP2PKHOutput(microPaymentTransaction));
+		microPaymentTransaction.addInput(tlaTxToSpend.getOutput(0));
+
+		watchAndMineTransactions(tlaTxToSpend);
+
+		SignedDTO dto = createMicroPaymentRequestDTO(new ECKey(), new ECKey(), microPaymentTransaction, 100l);
+		sendAndExpect4xxError("/payment/micropayment", dto,  "Signature is not valid");
+	}
+
 	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx, long amount) {
 		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
-			DTOUtils.toHex(tx.bitcoinSerialize()), from.getPublicKeyAsHex(), to.getPublicKeyAsHex(), amount);
+			DTOUtils.toHex(tx.bitcoinSerialize()), to.getPublicKeyAsHex(), amount);
 		return DTOUtils.serializeAndSign(microPaymentRequestDTO, from);
 	}
 
@@ -149,6 +200,13 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 	private TransactionOutput someP2PKHOutput(Transaction forTransaction) {
 		return new TransactionOutput(params(), forTransaction, Coin.valueOf(100), new ECKey().toAddress(params()));
+	}
+
+	private void watchAndMineTransactions(Transaction... txs) throws PrunedException, BlockStoreException {
+		for (Transaction tx : Arrays.asList(txs)) {
+			watchAllOutputs(tx);
+			mineTransaction(tx);
+		}
 	}
 
 	private void watchAllOutputs(Transaction tx) {

@@ -55,11 +55,8 @@ public class MicroPaymentController {
 	{
 		// Get the embedded request
 		final MicroPaymentRequestDTO requestDTO;
-		final ECKey senderPublicKey;
 		try {
 			requestDTO = DTOUtils.parseAndValidate(request, MicroPaymentRequestDTO.class);
-			senderPublicKey = DTOUtils.getECKeyFromHexPublicKey(requestDTO.getFromPublicKey());
-			DTOUtils.validateSignature(request.getPayload(), request.getSignature(), senderPublicKey);
 		} catch (MissingFieldException|InvalidSignatureException e) {
 			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
 		} catch (Throwable e) {
@@ -105,6 +102,15 @@ public class MicroPaymentController {
 		}
 		if (spendingAccounts.size() != 1) {
 			return new ResponseEntity<>(new ErrorDTO("Inputs must be from one account"), BAD_REQUEST);
+		}
+
+		// Now that we know which accounts wants to spend, check signature
+		final ECKey senderPublicKey = ECKey.fromPublicOnly(spendingAccounts.get(0).clientPublicKey());
+		try {
+			DTOUtils.validateSignature(request.getPayload(), request.getSignature(), senderPublicKey);
+		}
+		catch(Throwable e) {
+			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
 		}
 
 		return new ResponseEntity<>("not yet implemented", OK);

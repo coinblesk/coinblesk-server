@@ -114,7 +114,7 @@ public class DTOUtils {
 	 * Hashes the given string with SHA-256 and checks the given signature against the given public key.
 	 *
 	 * @param payload The string that was used to create the signature. .getBytes() is called internally.
-	 * @param signature The signature that should be validated.
+	 * @param signatureDTO The signature that should be validated.
 	 * @param publicKey The EC2Key containing the public key, which is used to check validity of the signature.
 	 */
 	public static void validateSignature(String payload, SignatureDTO signatureDTO, ECKey publicKey)
