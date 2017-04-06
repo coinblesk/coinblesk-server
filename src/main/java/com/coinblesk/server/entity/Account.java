@@ -131,15 +131,14 @@ public class Account implements Serializable {
 		if (o == null || getClass() != o.getClass()) return false;
 		Account account = (Account) o;
 
-		return id == account.id &&
-				Arrays.equals(clientPublicKey,  account.clientPublicKey) &&
+		return Arrays.equals(clientPublicKey,  account.clientPublicKey) &&
 				Arrays.equals(serverPublicKey,  account.serverPublicKey) &&
 				Arrays.equals(serverPrivateKey, account.serverPrivateKey);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id,
+		return Objects.hash(
 				Arrays.hashCode(clientPublicKey),
 				Arrays.hashCode(serverPublicKey),
 				Arrays.hashCode(serverPrivateKey)
