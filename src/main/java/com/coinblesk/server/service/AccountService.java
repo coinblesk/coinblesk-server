@@ -73,8 +73,7 @@ public class AccountService {
 	 * Idempodent: Calling this function with a public key that already exists will not make any changes.
 	 *
 	 * @param clientPublicKey The client public key for which an account should be generated
-	 * @return The server ECKey public key associated with that account.
-	 * 		   Does not contain the private key.
+	 * @return The server ECKey pair associated with that account.
 	 */
 	@Transactional
 	public ECKey createAcount( @NonNull ECKey clientPublicKey ) {
@@ -95,8 +94,7 @@ public class AccountService {
 
 		final Account newAccount = accountRepository.save(clientKey);
 
-		// Don't return the the private key of the server, makes it harder to not actually leak it somewhere.
-		return ECKey.fromPublicOnly(newAccount.serverPublicKey());
+		return ECKey.fromPrivateAndPrecalculatedPublic(newAccount.serverPrivateKey(), newAccount.serverPublicKey());
 	}
 
 	@Transactional(readOnly = true)
