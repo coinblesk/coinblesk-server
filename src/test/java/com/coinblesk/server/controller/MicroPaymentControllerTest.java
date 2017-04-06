@@ -130,7 +130,6 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction, 100l);
 		sendAndExpect4xxError("/payment/micropayment", dto,  "Used TLA inputs are not known to server");
-
 	}
 
 	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx, long amount) {
