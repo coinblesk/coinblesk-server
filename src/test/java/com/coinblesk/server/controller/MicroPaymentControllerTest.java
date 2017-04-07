@@ -11,6 +11,10 @@ import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.FakeTxBuilder;
 import com.coinblesk.server.utils.DTOUtils;
 import org.bitcoinj.core.*;
+import org.bitcoinj.core.Transaction.SigHash;
+import org.bitcoinj.crypto.TransactionSignature;
+import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.store.BlockStoreException;
 import org.junit.Before;
 import org.junit.Test;
@@ -217,16 +221,16 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		final ECKey receiverKey = new ECKey();
 
 		accountService.createAcount(senderKey);
-		TimeLockedAddress addressClient = accountService.createTimeLockedAddress(senderKey, lockTime)
+		TimeLockedAddress timeLockedAddress = accountService.createTimeLockedAddress(senderKey, lockTime)
 			.getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
-			addressClient.getAddress(params()));
+			timeLockedAddress.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
 		microPaymentTransaction.addOutput(anyP2PKOutput(microPaymentTransaction));
 		microPaymentTransaction.addInput(fundingTx.getOutput(0));
-
+		signAllInputs(microPaymentTransaction, timeLockedAddress.createRedeemScript(), senderKey);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Transaction must have exactly one output for server");
@@ -238,15 +242,16 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		final ECKey receiverKey = new ECKey();
 
 		ECKey serverPublicKey = accountService.createAcount(senderKey);
-		TimeLockedAddress addressClient = accountService.createTimeLockedAddress(senderKey, lockTime)
+		TimeLockedAddress timeLockedAddress = accountService.createTimeLockedAddress(senderKey, lockTime)
 			.getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
-			addressClient.getAddress(params()));
+			timeLockedAddress.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
 		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
 		microPaymentTransaction.addInput(fundingTx.getOutput(0));
+		signAllInputs(microPaymentTransaction, timeLockedAddress.createRedeemScript(), senderKey);
 
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction);
@@ -258,15 +263,16 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		final ECKey senderKey = new ECKey();
 
 		ECKey serverPublicKey = accountService.createAcount(senderKey);
-		TimeLockedAddress addressClient = accountService.createTimeLockedAddress(senderKey, lockTime)
+		TimeLockedAddress timeLockedAddress = accountService.createTimeLockedAddress(senderKey, lockTime)
 			.getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
-			addressClient.getAddress(params()));
+			timeLockedAddress.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
 		microPaymentTransaction.addInput(fundingTx.getOutput(0));
 		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
+		signAllInputs(microPaymentTransaction, timeLockedAddress.createRedeemScript(), senderKey);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, senderKey, microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Sender and receiver must be different");
@@ -280,17 +286,18 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		ECKey serverPublicKey = accountService.createAcount(senderKey);
 		accountService.createAcount(receiverKey);
 
-		TimeLockedAddress addressClient = accountService.createTimeLockedAddress(senderKey, lockTime)
+		TimeLockedAddress timeLockedAddress = accountService.createTimeLockedAddress(senderKey, lockTime)
 			.getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
-			addressClient.getAddress(params()));
+			timeLockedAddress.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
-		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
-		microPaymentTransaction.addOutput(changeOutput(microPaymentTransaction, addressClient));
-		microPaymentTransaction.addOutput(changeOutput(microPaymentTransaction, addressClient));
 		microPaymentTransaction.addInput(fundingTx.getOutput(0));
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
+		microPaymentTransaction.addOutput(changeOutput(microPaymentTransaction, timeLockedAddress));
+		microPaymentTransaction.addOutput(changeOutput(microPaymentTransaction, timeLockedAddress));
+		signAllInputs(microPaymentTransaction, timeLockedAddress.createRedeemScript(), senderKey);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, senderKey, microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Cannot have multiple change outputs");
@@ -316,9 +323,17 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		microPaymentTransaction.addInput(fundingTx.getOutput(0));
 		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
 		microPaymentTransaction.addOutput(changeOutput(microPaymentTransaction, changeAddress));
+		signAllInputs(microPaymentTransaction, inputAddress.createRedeemScript(), senderKey);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, senderKey, microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Change cannot be send to address that is locked for less than 24 hours");
+	}
+
+	private void signAllInputs(Transaction tx, Script redeemScript, ECKey signingKey) {
+		for (int i=0; i<tx.getInputs().size(); i++){
+			TransactionSignature sig = tx.calculateSignature(i, signingKey, redeemScript.getProgram(), SigHash.ALL, false);
+			tx.getInput(i).setScriptSig(new ScriptBuilder().data(sig.encodeToBitcoin()).build());
+		}
 	}
 
 	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx) {

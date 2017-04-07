@@ -12,6 +12,10 @@ import com.coinblesk.util.InsufficientFunds;
 import lombok.Data;
 import lombok.NonNull;
 import org.bitcoinj.core.*;
+import org.bitcoinj.core.Transaction.SigHash;
+import org.bitcoinj.crypto.TransactionSignature;
+import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -173,6 +177,37 @@ public class MicropaymentService {
 			Instant.ofEpochSecond(tla.getLockTime()).isAfter(Instant.now().plus(MINIMUM_LOCKTIME_DURATION)));
 		if (!allInputsLocked) {
 			throw new RuntimeException("Inputs must be locked for 24 hours");
+		}
+
+		// 1.6 Inputs must be correctly partially signed by sender
+		for (int i=0; i<tx.getInputs().size(); i++) {
+			TransactionInput input = tx.getInput(i);
+			Script spendingScript = input.getScriptSig();
+			if (spendingScript.getChunks().size() == 0) {
+				throw new RuntimeException("Input was not signed");
+			}
+			if (spendingScript.getChunks().size() != 1 && !spendingScript.getChunks().get(0).isPushData()) {
+				throw new RuntimeException("Signature for input had wrong format");
+			}
+
+			// Calculate server signature
+			Script scriptPubKey = walletService.findOutputFor(input).getScriptPubKey();
+			byte[] connectedAddressHash = scriptPubKey.getPubKeyHash();
+			byte[] redeemScript = usedAddresses.stream()
+				.filter( tla -> Arrays.equals(tla.getAddressHash(), connectedAddressHash) )
+				.findAny().get().getRedeemScript();
+			final ECKey serverPrivateKey = ECKey.fromPrivateAndPrecalculatedPublic(accountSender.serverPrivateKey(),
+				accountSender.serverPublicKey());
+			TransactionSignature serverSig = tx.calculateSignature(i, serverPrivateKey, redeemScript, SigHash.ALL, false);
+
+			// Append server signature and rest of script to check if it makes it spendable
+			Script finalSig  = new ScriptBuilder(spendingScript)
+				.data(serverSig.encodeToBitcoin())
+				.smallNum(1)
+				.data(redeemScript)
+				.build();
+			input.setScriptSig(finalSig);
+			finalSig.correctlySpends(tx, i, scriptPubKey, Script.ALL_VERIFY_FLAGS);
 		}
 
 		// 2 Check all outputs
