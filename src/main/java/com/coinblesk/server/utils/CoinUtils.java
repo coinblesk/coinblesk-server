@@ -36,7 +36,7 @@ public class CoinUtils {
 	public static NetworkParameters getNetworkParams(BitcoinNet bitcoinNet) {
 		switch (bitcoinNet) {
 		case UNITTEST:
-			return UnitTestParams.get();
+			return CoinbleskTestParams.get();
 		case REGTEST:
 			return RegTestParams.get();
 		case TESTNET:
