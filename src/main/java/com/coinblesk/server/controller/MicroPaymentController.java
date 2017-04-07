@@ -16,9 +16,7 @@ import javax.validation.Valid;
 
 import java.time.Instant;
 
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
-import static org.springframework.http.HttpStatus.OK;
-import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
+import static org.springframework.http.HttpStatus.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
@@ -54,6 +52,8 @@ public class MicroPaymentController {
 			micropaymentService.microPayment(senderPublicKey, receiverPublicKey, requestDTO.getTx(),
 				requestDTO.getAmount());
 
+		} catch (CoinbleskInternalError e) {
+			return new ResponseEntity<>(new ErrorDTO("Internal server error"), INTERNAL_SERVER_ERROR);
 		} catch (Throwable e) {
 			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
 		}
