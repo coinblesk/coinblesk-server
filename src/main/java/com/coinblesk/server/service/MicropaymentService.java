@@ -27,16 +27,18 @@ import java.util.stream.Collectors;
 public class MicropaymentService {
 	private final AccountRepository accountRepository;
 
+	final private AppConfig appConfig;
+
+	final private WalletService walletService;
+
+	final private AccountService accountService;
+
 	@Autowired
-	AppConfig appConfig;
-
-	@Autowired WalletService walletService;
-
-	@Autowired AccountService accountService;
-
-	@Autowired
-	public MicropaymentService(AccountRepository accountRepository) {
+	public MicropaymentService(AccountRepository accountRepository, AppConfig appConfig, WalletService walletService, AccountService accountService) {
 		this.accountRepository = accountRepository;
+		this.appConfig = appConfig;
+		this.walletService = walletService;
+		this.accountService = accountService;
 	}
 
 	@Transactional(isolation = Isolation.SERIALIZABLE)
