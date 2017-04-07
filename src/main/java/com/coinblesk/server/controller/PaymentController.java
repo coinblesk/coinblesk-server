@@ -297,7 +297,7 @@ public class PaymentController {
 
 	/**
 	 * Input is the KeyExchangeRequestDTO with the client public key. The server will create for
-	 * this client public key its own server keypair and return the server public key.
+	 * this client public key its own server keypair and return the server public key
 	 */
 	@RequestMapping(value = "/key-exchange",
 			method = POST,

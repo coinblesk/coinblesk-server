@@ -137,6 +137,11 @@ public class MicropaymentService {
 			throw new RuntimeException("Request was not signed by owner of inputs");
 		}
 
+		// Make sure the receiving public key is known to the server
+		final Account accountReceiver = accountService.getByClientPublicKey(receiverPublicKey.getPubKey());
+		if (accountReceiver == null) {
+			throw new RuntimeException("Receiver is unknown to server");
+		}
 
 	}
 

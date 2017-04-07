@@ -194,6 +194,27 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		sendAndExpect4xxError(dto,  "Request was not signed by owner of inputs");
 	}
 
+	@Test public void microPayment_failsOnUnknownReceiver() throws Exception {
+		final long lockTime = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
+		final ECKey senderKey = new ECKey();
+		final ECKey receiverKey = new ECKey();
+
+		accountService.createAcount(senderKey);
+		TimeLockedAddress addressClient = accountService.createTimeLockedAddress(senderKey, lockTime)
+			.getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			addressClient.getAddress(params()));
+
+		Transaction microPaymentTransaction = new Transaction(params());
+		microPaymentTransaction.addOutput(someP2PKHOutput(microPaymentTransaction));
+		microPaymentTransaction.addInput(fundingTx.getOutput(0));
+
+		watchAndMineTransactions(fundingTx);
+
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 100l);
+		sendAndExpect4xxError(dto,  "Receiver is unknown to server");
+	}
+
 	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx, long amount) {
 		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
 			DTOUtils.toHex(tx.bitcoinSerialize()), from.getPublicKeyAsHex(), to.getPublicKeyAsHex(), amount);
