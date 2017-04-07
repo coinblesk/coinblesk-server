@@ -194,7 +194,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		sendAndExpect4xxError(dto,  "Request was not signed by owner of inputs");
 	}
 
-	@Test public void microPayment_failsOnUnknownReceiver() throws Exception {
+	@Test public void microPayment_failsOnNoOutputForServer() throws Exception {
 		final long lockTime = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
 		final ECKey senderKey = new ECKey();
 		final ECKey receiverKey = new ECKey();
@@ -207,6 +207,27 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		Transaction microPaymentTransaction = new Transaction(params());
 		microPaymentTransaction.addOutput(someP2PKHOutput(microPaymentTransaction));
+		microPaymentTransaction.addInput(fundingTx.getOutput(0));
+
+		watchAndMineTransactions(fundingTx);
+
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction);
+		sendAndExpect4xxError(dto,  "Transaction must have exactly one output for server");
+	}
+
+	@Test public void microPayment_failsOnUnknownReceiver() throws Exception {
+		final long lockTime = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
+		final ECKey senderKey = new ECKey();
+		final ECKey receiverKey = new ECKey();
+
+		ECKey serverPublicKey = accountService.createAcount(senderKey);
+		TimeLockedAddress addressClient = accountService.createTimeLockedAddress(senderKey, lockTime)
+			.getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			addressClient.getAddress(params()));
+
+		Transaction microPaymentTransaction = new Transaction(params());
+		microPaymentTransaction.addOutput(serverPotOutput(microPaymentTransaction, serverPublicKey));
 		microPaymentTransaction.addInput(fundingTx.getOutput(0));
 
 		watchAndMineTransactions(fundingTx);
@@ -232,6 +253,9 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 	private TransactionOutput someP2PKHOutput(Transaction forTransaction) {
 		return new TransactionOutput(params(), forTransaction, Coin.valueOf(100), new ECKey().toAddress(params()));
+	}
+	private TransactionOutput serverPotOutput(Transaction forTransaction, ECKey serverPublicKey) {
+		return new TransactionOutput(params(), forTransaction, Coin.valueOf(100), serverPublicKey.toAddress(params()));
 	}
 
 	private void watchAndMineTransactions(Transaction... txs) throws PrunedException, BlockStoreException {

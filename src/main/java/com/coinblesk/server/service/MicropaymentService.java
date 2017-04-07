@@ -104,7 +104,8 @@ public class MicropaymentService {
 		tx.verify(); // Checks for no input or outputs and no negative values.
 
 		// Make sure all the UTXOs are known to the wallet
-		List<TransactionOutput> spentOutputs = tx.getInputs().stream().map(walletService::findOutputFor).collect(Collectors.toList());
+		List<TransactionOutput> spentOutputs = tx.getInputs().stream().map(walletService::findOutputFor)
+			.collect(Collectors.toList());
 		if (spentOutputs.stream().anyMatch(Objects::isNull)) {
 			throw new RuntimeException("Transaction spends unknown UTXOs");
 		}
@@ -136,6 +137,20 @@ public class MicropaymentService {
 		if (!ECKey.fromPublicOnly(accountSender.clientPublicKey()).equals(senderPublicKey)) {
 			throw new RuntimeException("Request was not signed by owner of inputs");
 		}
+
+		// Transaction must have one and only one output to the server pot
+		final ECKey serverPubKey = ECKey.fromPublicOnly(accountSender.serverPublicKey());
+		final Address serverPot = serverPubKey.toAddress(appConfig.getNetworkParameters());
+		final List<TransactionOutput> outputsForServer = tx.getOutputs().stream()
+			.filter(output -> {
+					Address p2PKAddress = output.getAddressFromP2PKHScript(appConfig.getNetworkParameters());
+					return (p2PKAddress != null && p2PKAddress.equals(serverPot));
+			})
+			.collect(Collectors.toList());
+		if (outputsForServer.size() != 1) {
+			throw new RuntimeException("Transaction must have exactly one output for server");
+		}
+		final TransactionOutput outputForServer = outputsForServer.get(0);
 
 		// Make sure the receiving public key is known to the server
 		final Account accountReceiver = accountService.getByClientPublicKey(receiverPublicKey.getPubKey());
