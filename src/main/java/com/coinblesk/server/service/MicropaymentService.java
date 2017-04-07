@@ -167,6 +167,14 @@ public class MicropaymentService {
 			throw new RuntimeException("Request was not signed by owner of inputs");
 		}
 
+		// 1.5 All time locked addresses used must still be locked for some time
+		final List<TimeLockedAddressEntity> usedAddresses = inputAccounts.values().iterator().next();
+		final boolean allInputsLocked = usedAddresses.stream().allMatch(tla ->
+			Instant.ofEpochSecond(tla.getLockTime()).isAfter(Instant.now().plus(MINIMUM_LOCKTIME_DURATION)));
+		if (!allInputsLocked) {
+			throw new RuntimeException("Inputs must be locked for 24 hours");
+		}
+
 		// 2 Check all outputs
 		final Set<TransactionOutput> remainingOutputs = new HashSet<>(tx.getOutputs());
 

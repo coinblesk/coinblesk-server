@@ -141,6 +141,26 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		sendAndExpect4xxError(dto,  "Used TLA inputs are not known to server");
 	}
 
+	@Test public void microPayment_failsOnSoonLockedInputs() throws Exception {
+		final ECKey clientKey = new ECKey();
+		final ECKey serverKey = new ECKey();
+		final long lockTime = Instant.now().plus(Duration.ofHours(20)).getEpochSecond();
+
+		accountService.createAcount(clientKey);
+		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(clientKey, lockTime)
+			.getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			inputAddress.getAddress(params()));
+		watchAndMineTransactions(fundingTx);
+
+		Transaction microPaymentTransaction = new Transaction(params());
+		microPaymentTransaction.addInput(fundingTx.getOutput(0));
+		microPaymentTransaction.addOutput(anyP2PKOutput(microPaymentTransaction));
+
+		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction);
+		sendAndExpect4xxError(dto,  "Inputs must be locked for 24 hours");
+	}
+
 	@Test public void microPayment_failsOnInputsBelongingToMultipleAccounts() throws Exception {
 		final long lockTime = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
 		final ECKey clientKey1 = new ECKey();
@@ -277,23 +297,25 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	}
 
 	@Test public void microPayment_failsWhenChangeOutputIsSoonUnlocked() throws Exception {
-		final long lockTime = Instant.now().plus(Duration.ofHours(20)).getEpochSecond();
+		final long lockTimeInput = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
 		final ECKey senderKey = new ECKey();
 		final ECKey receiverKey = new ECKey();
 
 		ECKey serverPublicKey = accountService.createAcount(senderKey);
 		accountService.createAcount(receiverKey);
 
-		TimeLockedAddress addressClient = accountService.createTimeLockedAddress(senderKey, lockTime)
+		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, lockTimeInput)
 			.getTimeLockedAddress();
+		TimeLockedAddress changeAddress = accountService.createTimeLockedAddress(senderKey,
+			Instant.now().plus(Duration.ofHours(20)).getEpochSecond() ).getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
-			addressClient.getAddress(params()));
+			inputAddress.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
-		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
-		microPaymentTransaction.addOutput(changeOutput(microPaymentTransaction, addressClient));
 		microPaymentTransaction.addInput(fundingTx.getOutput(0));
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
+		microPaymentTransaction.addOutput(changeOutput(microPaymentTransaction, changeAddress));
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, senderKey, microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Change cannot be send to address that is locked for less than 24 hours");
