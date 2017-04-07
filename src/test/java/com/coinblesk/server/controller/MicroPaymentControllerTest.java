@@ -108,16 +108,15 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 	@Test public void microPayment_failsOnWrongAddressType() throws Exception {
 		ECKey clientKey = new ECKey();
-		Transaction inputTx1 = FakeTxBuilder.createFakeTx(params()); // Creates a P2PKHash output, not what we want
-		Transaction inputTx2 = FakeTxBuilder.createFakeP2SHTx(params()); // Creates a P2SH output, this would be ok
+
+		Transaction fundingTx1 = FakeTxBuilder.createFakeTx(params()); // Creates a P2PKHash output, not what we want
+		Transaction fundingTx2 = FakeTxBuilder.createFakeP2SHTx(params()); // Creates a P2SH output, this would be ok
+		watchAndMineTransactions(fundingTx1, fundingTx2);
 
 		Transaction microPaymentTransaction = new Transaction(params());
-		microPaymentTransaction.addOutput(someP2PKHOutput(microPaymentTransaction));
-		microPaymentTransaction.addInput(inputTx1.getOutput(0));
-		microPaymentTransaction.addInput(inputTx2.getOutput(0));
-
-		// Making sure the wallet watches the transactions used as inputs and they are mined
-		watchAndMineTransactions(inputTx1, inputTx2);
+		microPaymentTransaction.addOutput(anyP2PKOutput(microPaymentTransaction));
+		microPaymentTransaction.addInput(fundingTx1.getOutput(0));
+		microPaymentTransaction.addInput(fundingTx2.getOutput(0));
 
 		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Transaction must spent P2SH addresses");
@@ -130,15 +129,13 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		// Create a tla but without registering it in any way with the server
 		TimeLockedAddress tla = new TimeLockedAddress(clientKey.getPubKey(), serverKey.getPubKey(), lockTime);
-		Transaction tlaTxToSpend = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
 			tla.getAddress(params()));
+		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
-		microPaymentTransaction.addOutput(someP2PKHOutput(microPaymentTransaction));
-		microPaymentTransaction.addInput(tlaTxToSpend.getOutput(0));
-
-		// Making sure the wallet watches the transaction used as input and it is are mined
-		watchAndMineTransactions(tlaTxToSpend);
+		microPaymentTransaction.addInput(fundingTx.getOutput(0));
+		microPaymentTransaction.addOutput(anyP2PKOutput(microPaymentTransaction));
 
 		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Used TLA inputs are not known to server");
@@ -153,22 +150,22 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		accountService.createAcount(clientKey2);
 		TimeLockedAddress addressClient1 = accountService.createTimeLockedAddress(clientKey1, lockTime)
 			.getTimeLockedAddress();
+		// This address belongs to a different client, which is not allowed
 		TimeLockedAddress addressClient2 = accountService.createTimeLockedAddress(clientKey2, lockTime)
 			.getTimeLockedAddress();
 
 		// Fund both addresses
-		Transaction tla1TxToSpend = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx1 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
 			addressClient1.getAddress(params()));
-		Transaction tla2TxToSpend = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx2 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
 			addressClient2.getAddress(params()));
+		watchAndMineTransactions(fundingTx1, fundingTx2);
 
 		// Use them as inputs
 		Transaction microPaymentTransaction = new Transaction(params());
-		microPaymentTransaction.addOutput(someP2PKHOutput(microPaymentTransaction));
-		microPaymentTransaction.addInput(tla1TxToSpend.getOutput(0));
-		microPaymentTransaction.addInput(tla2TxToSpend.getOutput(0));
-
-		watchAndMineTransactions(tla1TxToSpend, tla2TxToSpend);
+		microPaymentTransaction.addInput(fundingTx1.getOutput(0));
+		microPaymentTransaction.addInput(fundingTx2.getOutput(0));
+		microPaymentTransaction.addOutput(anyP2PKOutput(microPaymentTransaction));
 
 		SignedDTO dto = createMicroPaymentRequestDTO(clientKey1, new ECKey(), microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Inputs must be from one account");
@@ -181,14 +178,14 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		accountService.createAcount(clientKey);
 		TimeLockedAddress addressClient = accountService.createTimeLockedAddress(clientKey, lockTime)
 			.getTimeLockedAddress();
-		Transaction tlaTxToSpend = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
 			addressClient.getAddress(params()));
+		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
-		microPaymentTransaction.addOutput(someP2PKHOutput(microPaymentTransaction));
-		microPaymentTransaction.addInput(tlaTxToSpend.getOutput(0));
+		microPaymentTransaction.addOutput(anyP2PKOutput(microPaymentTransaction));
+		microPaymentTransaction.addInput(fundingTx.getOutput(0));
 
-		watchAndMineTransactions(tlaTxToSpend);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(new ECKey(), new ECKey(), microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Request was not signed by owner of inputs");
@@ -204,12 +201,12 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 			.getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
 			addressClient.getAddress(params()));
+		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
-		microPaymentTransaction.addOutput(someP2PKHOutput(microPaymentTransaction));
+		microPaymentTransaction.addOutput(anyP2PKOutput(microPaymentTransaction));
 		microPaymentTransaction.addInput(fundingTx.getOutput(0));
 
-		watchAndMineTransactions(fundingTx);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Transaction must have exactly one output for server");
@@ -225,12 +222,12 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 			.getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
 			addressClient.getAddress(params()));
+		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
-		microPaymentTransaction.addOutput(serverPotOutput(microPaymentTransaction, serverPublicKey));
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
 		microPaymentTransaction.addInput(fundingTx.getOutput(0));
 
-		watchAndMineTransactions(fundingTx);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Receiver is unknown to server");
@@ -245,13 +242,38 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 			.getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
 			addressClient.getAddress(params()));
-		Transaction microPaymentTransaction = new Transaction(params());
-		microPaymentTransaction.addOutput(serverPotOutput(microPaymentTransaction, serverPublicKey));
-		microPaymentTransaction.addInput(fundingTx.getOutput(0));
 		watchAndMineTransactions(fundingTx);
+
+		Transaction microPaymentTransaction = new Transaction(params());
+		microPaymentTransaction.addInput(fundingTx.getOutput(0));
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, senderKey, microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Sender and receiver must be different");
+	}
+
+	@Test public void microPayment_failsWithMultipleChangeOutputs() throws Exception {
+		final long lockTime = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
+		final ECKey senderKey = new ECKey();
+		final ECKey receiverKey = new ECKey();
+
+		ECKey serverPublicKey = accountService.createAcount(senderKey);
+		accountService.createAcount(receiverKey);
+
+		TimeLockedAddress addressClient = accountService.createTimeLockedAddress(senderKey, lockTime)
+			.getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			addressClient.getAddress(params()));
+		watchAndMineTransactions(fundingTx);
+
+		Transaction microPaymentTransaction = new Transaction(params());
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
+		microPaymentTransaction.addOutput(changeOutput(microPaymentTransaction, addressClient));
+		microPaymentTransaction.addOutput(changeOutput(microPaymentTransaction, addressClient));
+		microPaymentTransaction.addInput(fundingTx.getOutput(0));
+
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, senderKey, microPaymentTransaction);
+		sendAndExpect4xxError(dto,  "Cannot have multiple change outputs");
 	}
 
 	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx) {
@@ -269,11 +291,14 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		assertThat(errorMessage, containsString(expectedErrorMessage));
 	}
 
-	private TransactionOutput someP2PKHOutput(Transaction forTransaction) {
+	private TransactionOutput anyP2PKOutput(Transaction forTransaction) {
 		return new TransactionOutput(params(), forTransaction, Coin.valueOf(100), new ECKey().toAddress(params()));
 	}
-	private TransactionOutput serverPotOutput(Transaction forTransaction, ECKey serverPublicKey) {
-		return new TransactionOutput(params(), forTransaction, Coin.valueOf(100), serverPublicKey.toAddress(params()));
+	private TransactionOutput P2PKOutput(Transaction forTransaction, ECKey to) {
+		return new TransactionOutput(params(), forTransaction, Coin.valueOf(100), to.toAddress(params()));
+	}
+	private TransactionOutput changeOutput(Transaction forTransaction, TimeLockedAddress changeTo) {
+		return new TransactionOutput(params(), forTransaction, Coin.valueOf(100), changeTo.getAddress(params()));
 	}
 
 	private void watchAndMineTransactions(Transaction... txs) throws PrunedException, BlockStoreException {

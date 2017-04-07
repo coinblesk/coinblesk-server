@@ -3,15 +3,14 @@ package com.coinblesk.server.service;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dao.AccountRepository;
 import com.coinblesk.server.entity.Account;
-import com.coinblesk.server.exceptions.InvalidAmountException;
-import com.coinblesk.server.exceptions.InvalidNonceException;
-import com.coinblesk.server.exceptions.InvalidRequestException;
-import com.coinblesk.server.exceptions.UserNotFoundException;
+import com.coinblesk.server.exceptions.*;
 import com.coinblesk.server.utils.DTOUtils;
 import com.coinblesk.util.InsufficientFunds;
 import lombok.Data;
 import lombok.NonNull;
 import org.bitcoinj.core.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.TransientDataAccessException;
 import org.springframework.retry.annotation.Retryable;
@@ -19,12 +18,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
+
+import static java.util.logging.Level.SEVERE;
 
 @Service
 public class MicropaymentService {
+	private final static Logger LOG = LoggerFactory.getLogger(WalletService.class);
+
 	private final AccountRepository accountRepository;
 
 	final private AppConfig appConfig;
@@ -140,10 +147,13 @@ public class MicropaymentService {
 			throw new RuntimeException("Request was not signed by owner of inputs");
 		}
 
-		// Transaction must have one and only one output to the server pot
+		// 1 Check all outputs
+		final Set<TransactionOutput> remainingOutputs = new HashSet<>(tx.getOutputs());
+
+		// 1.1) Transaction must have one and only one output to the server pot
 		final ECKey serverPubKey = ECKey.fromPublicOnly(accountSender.serverPublicKey());
 		final Address serverPot = serverPubKey.toAddress(appConfig.getNetworkParameters());
-		final List<TransactionOutput> outputsForServer = tx.getOutputs().stream()
+		final List<TransactionOutput> outputsForServer = remainingOutputs.stream()
 			.filter(output -> {
 					Address p2PKAddress = output.getAddressFromP2PKHScript(appConfig.getNetworkParameters());
 					return (p2PKAddress != null && p2PKAddress.equals(serverPot));
@@ -153,6 +163,36 @@ public class MicropaymentService {
 			throw new RuntimeException("Transaction must have exactly one output for server");
 		}
 		final TransactionOutput outputForServer = outputsForServer.get(0);
+		if (!remainingOutputs.remove(outputForServer)) {
+			throw new CoinbleskInternalError("Could not remove server output from set");
+		}
+
+		// 1.2) Transaction must have at most one change output back to sender, which is the newest TLA
+		final Address expectedChangeAddress = Address.fromP2SHHash(appConfig.getNetworkParameters(),
+			accountSender.latestTimeLockedAddresses().getAddressHash());
+		List<TransactionOutput> changeOutputs = remainingOutputs.stream()
+			.filter(output -> {
+				Address p2SHAddress = output.getAddressFromP2SH(appConfig.getNetworkParameters());
+				return (p2SHAddress != null && p2SHAddress.equals(expectedChangeAddress));
+			})
+			.collect(Collectors.toList());
+		if (changeOutputs.size() == 0) {
+			LOG.warn("Client provided no change in micropayment");
+		}
+		if (changeOutputs.size() == 1) {
+			final long lockTimeOfChange = accountSender.latestTimeLockedAddresses().getLockTime();
+			if (Instant.ofEpochSecond(lockTimeOfChange).isBefore(Instant.now().plus(Duration.ofDays(1)))) {
+				throw new RuntimeException("Change cannot be send to address that is locked for less than " +
+					"24 hours");
+			}
+			final TransactionOutput changeOutput = changeOutputs.get(0);
+			if (!remainingOutputs.remove(changeOutput)) {
+				throw new CoinbleskInternalError("Could not remove change output from set");
+			}
+		}
+		else if (changeOutputs.size() > 1) {
+			throw new RuntimeException("Cannot have multiple change outputs");
+		}
 
 		// Make sure the receiving public key is known to the server
 		final Account accountReceiver = accountService.getByClientPublicKey(receiverPublicKey.getPubKey());
