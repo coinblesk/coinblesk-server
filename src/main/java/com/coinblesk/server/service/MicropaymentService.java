@@ -1,8 +1,11 @@
 package com.coinblesk.server.service;
 
+import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dao.AccountRepository;
+import com.coinblesk.server.dao.TimeLockedAddressRepository;
 import com.coinblesk.server.entity.Account;
+import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.exceptions.*;
 import com.coinblesk.server.utils.DTOUtils;
 import com.coinblesk.util.InsufficientFunds;
@@ -20,13 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
-
-import static java.util.logging.Level.SEVERE;
 
 @Service
 public class MicropaymentService {
@@ -34,15 +32,20 @@ public class MicropaymentService {
 
 	private final AccountRepository accountRepository;
 
-	final private AppConfig appConfig;
+	private final TimeLockedAddressRepository timeLockedAddressRepository;
 
-	final private WalletService walletService;
+	private final AppConfig appConfig;
 
-	final private AccountService accountService;
+	private final WalletService walletService;
+
+	private final AccountService accountService;
+
+	private final Duration MINIMUM_LOCKTIME_DURATION = Duration.ofHours(24);
 
 	@Autowired
-	public MicropaymentService(AccountRepository accountRepository, AppConfig appConfig, WalletService walletService, AccountService accountService) {
+	public MicropaymentService(AccountRepository accountRepository, TimeLockedAddressRepository timeLockedAddressRepository, AppConfig appConfig, WalletService walletService, AccountService accountService) {
 		this.accountRepository = accountRepository;
+		this.timeLockedAddressRepository = timeLockedAddressRepository;
 		this.appConfig = appConfig;
 		this.walletService = walletService;
 		this.accountService = accountService;
@@ -103,6 +106,19 @@ public class MicropaymentService {
 		);
 	}
 
+	/**
+	 * Result of a successful virtual payment.
+	 * Contains the new balances and both private keys of the server.
+	 * These can be used to sign the resulting information.
+	 */
+	public @Data class VirtualPaymentResult {
+		private final long newBalanceSender;
+		private final byte[] serverPrivateKeyForSender;
+
+		private final long newBalanceReceiver;
+		private final byte[] serverPrivateKeyForReceiver;
+	}
+
 	@Transactional(isolation = Isolation.SERIALIZABLE)
 	public void microPayment(ECKey senderPublicKey, ECKey receiverPublicKey, String txInHex, Long amount) {
 
@@ -112,14 +128,15 @@ public class MicropaymentService {
 		tx = new Transaction(appConfig.getNetworkParameters(), txInByes);
 		tx.verify(); // Checks for no input or outputs and no negative values.
 
-		// Make sure all the UTXOs are known to the wallet
+		// 1: Validating all inputs
+		// 1.1 Make sure all the UTXOs are known to the wallet
 		List<TransactionOutput> spentOutputs = tx.getInputs().stream().map(walletService::findOutputFor)
 			.collect(Collectors.toList());
 		if (spentOutputs.stream().anyMatch(Objects::isNull)) {
 			throw new RuntimeException("Transaction spends unknown UTXOs");
 		}
 
-		// Gather all addresses from the input and make sure they are in the P2SH format
+		// 1.2 Make sure all inputs are from P2SH addresses
 		List<Address> spentAddresses = spentOutputs.stream()
 			.map(transactionOutput -> transactionOutput.getAddressFromP2SH(appConfig.getNetworkParameters()))
 			.collect(Collectors.toList());
@@ -127,30 +144,33 @@ public class MicropaymentService {
 			throw new RuntimeException("Transaction must spent P2SH addresses");
 		}
 
-		// Gather all accounts belonging to the addresses from the inputs
+		// 1.3 Make sure all inputs come from known time locked addresses and from a single account
 		List<byte[]> addressHashes = spentAddresses.stream()
 			.map(Address::getHash160)
 			.collect(Collectors.toList());
-
-		// Make sure the addresses belong all to the same single account
-		List<Account> spendingAccounts = accountService.getAccountByAddressHashes(addressHashes);
-		if (spendingAccounts.isEmpty()) {
+		List<TimeLockedAddressEntity> addresses = timeLockedAddressRepository.findByAddressHashIn(addressHashes);
+		if (addresses.size() != tx.getInputs().size()) {
 			throw new RuntimeException("Used TLA inputs are not known to server");
 		}
-		if (spendingAccounts.size() != 1) {
+		Map<Account, List<TimeLockedAddressEntity>> inputAccounts = addresses.stream()
+			.collect(Collectors.groupingBy(TimeLockedAddressEntity::getAccount));
+		if (inputAccounts.isEmpty()) {
+			throw new RuntimeException("Used TLA inputs are not known to server");
+		} else if(inputAccounts.size() != 1) {
 			throw new RuntimeException("Inputs must be from one account");
 		}
 
-		// Sender, signer and owner of inputs must be equal
-		Account accountSender = spendingAccounts.get(0);
+		// 1.4 Make sure that owner of inputs is the same as in the request, that signed the DTO
+		// 	   (sender, signer and owner of inputs must be equal)
+		Account accountSender = inputAccounts.keySet().iterator().next();
 		if (!ECKey.fromPublicOnly(accountSender.clientPublicKey()).equals(senderPublicKey)) {
 			throw new RuntimeException("Request was not signed by owner of inputs");
 		}
 
-		// 1 Check all outputs
+		// 2 Check all outputs
 		final Set<TransactionOutput> remainingOutputs = new HashSet<>(tx.getOutputs());
 
-		// 1.1) Transaction must have one and only one output to the server pot
+		// 2.1) Transaction must have one and only one output to the server pot
 		final ECKey serverPubKey = ECKey.fromPublicOnly(accountSender.serverPublicKey());
 		final Address serverPot = serverPubKey.toAddress(appConfig.getNetworkParameters());
 		final List<TransactionOutput> outputsForServer = remainingOutputs.stream()
@@ -167,7 +187,7 @@ public class MicropaymentService {
 			throw new CoinbleskInternalError("Could not remove server output from set");
 		}
 
-		// 1.2) Transaction must have at most one change output back to sender, which is the newest TLA
+		// 2.2) Transaction must have at most one change output back to sender, which is the newest TLA
 		final Address expectedChangeAddress = Address.fromP2SHHash(appConfig.getNetworkParameters(),
 			accountSender.latestTimeLockedAddresses().getAddressHash());
 		List<TransactionOutput> changeOutputs = remainingOutputs.stream()
@@ -178,10 +198,9 @@ public class MicropaymentService {
 			.collect(Collectors.toList());
 		if (changeOutputs.size() == 0) {
 			LOG.warn("Client provided no change in micropayment");
-		}
-		if (changeOutputs.size() == 1) {
+		} else if (changeOutputs.size() == 1) {
 			final long lockTimeOfChange = accountSender.latestTimeLockedAddresses().getLockTime();
-			if (Instant.ofEpochSecond(lockTimeOfChange).isBefore(Instant.now().plus(Duration.ofDays(1)))) {
+			if (Instant.ofEpochSecond(lockTimeOfChange).isBefore(Instant.now().plus(MINIMUM_LOCKTIME_DURATION))) {
 				throw new RuntimeException("Change cannot be send to address that is locked for less than " +
 					"24 hours");
 			}
@@ -205,18 +224,5 @@ public class MicropaymentService {
 			throw new RuntimeException("Sender and receiver must be different");
 		}
 
-	}
-
-	/**
-	 * Result of a successful virtual payment.
-	 * Contains the new balances and both private keys of the server.
-	 * These can be used to sign the resulting information.
-	 */
-	public @Data class VirtualPaymentResult {
-		private final long newBalanceSender;
-		private final byte[] serverPrivateKeyForSender;
-
-		private final long newBalanceReceiver;
-		private final byte[] serverPrivateKeyForReceiver;
 	}
 }
