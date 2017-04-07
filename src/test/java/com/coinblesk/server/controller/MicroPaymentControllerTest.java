@@ -34,8 +34,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * @author Sebastian Stephan
  */
 public class MicroPaymentControllerTest extends CoinbleskTest {
-	public static final String URL_MICRO_PAYMENT = "/payment/micropayment";
-	public static final String URL_VIRTUAL_PAYMENT = "/payment/virtualpayment";
+	private static final String URL_MICRO_PAYMENT = "/payment/micropayment";
+	private static final String URL_VIRTUAL_PAYMENT = "/payment/virtualpayment";
 
 	@Autowired
 	private WebApplicationContext webAppContext;
@@ -140,7 +140,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		// Making sure the wallet watches the transaction used as input and it is are mined
 		watchAndMineTransactions(tlaTxToSpend);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction, 100l);
+		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction, 100L);
 		sendAndExpect4xxError(dto,  "Used TLA inputs are not known to server");
 	}
 
@@ -170,7 +170,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		watchAndMineTransactions(tla1TxToSpend, tla2TxToSpend);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(clientKey1, new ECKey(), microPaymentTransaction, 100l);
+		SignedDTO dto = createMicroPaymentRequestDTO(clientKey1, new ECKey(), microPaymentTransaction, 100L);
 		sendAndExpect4xxError(dto,  "Inputs must be from one account");
 	}
 
@@ -190,7 +190,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		watchAndMineTransactions(tlaTxToSpend);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(new ECKey(), new ECKey(), microPaymentTransaction, 100l);
+		SignedDTO dto = createMicroPaymentRequestDTO(new ECKey(), new ECKey(), microPaymentTransaction, 100L);
 		sendAndExpect4xxError(dto,  "Request was not signed by owner of inputs");
 	}
 
@@ -211,7 +211,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		watchAndMineTransactions(fundingTx);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 100l);
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 100L);
 		sendAndExpect4xxError(dto,  "Receiver is unknown to server");
 	}
 
