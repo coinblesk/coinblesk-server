@@ -1,15 +1,17 @@
 package com.coinblesk.server.service;
 
+import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dao.AccountRepository;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.exceptions.InvalidAmountException;
 import com.coinblesk.server.exceptions.InvalidNonceException;
 import com.coinblesk.server.exceptions.InvalidRequestException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
+import com.coinblesk.server.utils.DTOUtils;
 import com.coinblesk.util.InsufficientFunds;
 import lombok.Data;
 import lombok.NonNull;
-import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.TransientDataAccessException;
 import org.springframework.retry.annotation.Retryable;
@@ -17,9 +19,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
 @Service
 public class MicropaymentService {
 	private final AccountRepository accountRepository;
+
+	@Autowired
+	AppConfig appConfig;
+
+	@Autowired WalletService walletService;
+
+	@Autowired AccountService accountService;
 
 	@Autowired
 	public MicropaymentService(AccountRepository accountRepository) {
@@ -79,6 +92,52 @@ public class MicropaymentService {
 				receiver.virtualBalance(),
 				receiver.serverPrivateKey()
 		);
+	}
+
+	@Transactional(isolation = Isolation.SERIALIZABLE)
+	public void microPayment(ECKey senderPublicKey, ECKey receiverPublicKey, String txInHex, Long amount) {
+
+		// Parse the transaction
+		byte[] txInByes = DTOUtils.fromHex(txInHex);
+		final Transaction tx;
+		tx = new Transaction(appConfig.getNetworkParameters(), txInByes);
+		tx.verify(); // Checks for no input or outputs and no negative values.
+
+		// Make sure all the UTXOs are known to the wallet
+		List<TransactionOutput> spentOutputs = tx.getInputs().stream().map(walletService::findOutputFor).collect(Collectors.toList());
+		if (spentOutputs.stream().anyMatch(Objects::isNull)) {
+			throw new RuntimeException("Transaction spends unknown UTXOs");
+		}
+
+		// Gather all addresses from the input and make sure they are in the P2SH format
+		List<Address> spentAddresses = spentOutputs.stream()
+			.map(transactionOutput -> transactionOutput.getAddressFromP2SH(appConfig.getNetworkParameters()))
+			.collect(Collectors.toList());
+		if (spentAddresses.stream().anyMatch(Objects::isNull)) {
+			throw new RuntimeException("Transaction must spent P2SH addresses");
+		}
+
+		// Gather all accounts belonging to the addresses from the inputs
+		List<byte[]> addressHashes = spentAddresses.stream()
+			.map(Address::getHash160)
+			.collect(Collectors.toList());
+
+		// Make sure the addresses belong all to the same single account
+		List<Account> spendingAccounts = accountService.getAccountByAddressHashes(addressHashes);
+		if (spendingAccounts.isEmpty()) {
+			throw new RuntimeException("Used TLA inputs are not known to server");
+		}
+		if (spendingAccounts.size() != 1) {
+			throw new RuntimeException("Inputs must be from one account");
+		}
+
+		Account accountSender = spendingAccounts.get(0);
+
+		if (!ECKey.fromPublicOnly(accountSender.clientPublicKey()).equals(senderPublicKey)) {
+			throw new RuntimeException("Request was not signed by owner of inputs");
+		}
+
+
 	}
 
 	/**

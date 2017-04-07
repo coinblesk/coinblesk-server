@@ -73,26 +73,37 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 			.andExpect(status().is4xxClientError());
 	}
 
+	@Test public void microPayment_failsOnWrongSignature() throws Exception {
+		ECKey fromPublicKey = new ECKey();
+		ECKey signingKey = new ECKey();
+		Transaction microPaymentTransaction = new Transaction(params());
+		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
+			DTOUtils.toHex(microPaymentTransaction.bitcoinSerialize()), fromPublicKey.getPublicKeyAsHex(),
+			new ECKey().getPublicKeyAsHex(), 100L);
+		SignedDTO dto = DTOUtils.serializeAndSign(microPaymentRequestDTO, signingKey);
+		sendAndExpect4xxError(dto,  "Signature is not valid");
+	}
+
 	@Test public void microPayment_failsOnNoTransaction() throws Exception {
 		ECKey clientKey = new ECKey();
 		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
-			"", new ECKey().getPublicKeyAsHex(), 10L);
+			"", new ECKey().getPublicKeyAsHex(), new ECKey().getPublicKeyAsHex(), 10L);
 		SignedDTO dto = DTOUtils.serializeAndSign(microPaymentRequestDTO, clientKey);
-		sendAndExpect4xxError("/payment/micropayment", dto, "");
+		sendAndExpect4xxError(dto, "");
 	}
 
 	@Test public void microPayment_failsOnEmptyTransaction() throws Exception {
 		ECKey clientKey = new ECKey();
 		Transaction microPaymentTransaction = new Transaction(params());
 		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction, 100L);
-		sendAndExpect4xxError("/payment/micropayment", dto, "Invalid transaction");
+		sendAndExpect4xxError(dto, "Transaction had no inputs or no outputs");
 	}
 
 	@Test public void microPayment_failsOnUnknownUTXOs() throws Exception {
 		ECKey clientKey = new ECKey();
 		Transaction microPaymentTransaction = FakeTxBuilder.createFakeTx(params());
 		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction, 100L);
-		sendAndExpect4xxError("/payment/micropayment", dto,  "Transaction spends unknown UTXOs");
+		sendAndExpect4xxError(dto,  "Transaction spends unknown UTXOs");
 	}
 
 	@Test public void microPayment_failsOnWrongAddressType() throws Exception {
@@ -109,7 +120,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		watchAndMineTransactions(inputTx1, inputTx2);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction, 100L);
-		sendAndExpect4xxError("/payment/micropayment", dto,  "Transaction must spent P2SH addresses");
+		sendAndExpect4xxError(dto,  "Transaction must spent P2SH addresses");
 	}
 
 	@Test public void microPayment_failsOnUnknownTLAInputs() throws Exception {
@@ -130,7 +141,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		watchAndMineTransactions(tlaTxToSpend);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction, 100l);
-		sendAndExpect4xxError("/payment/micropayment", dto,  "Used TLA inputs are not known to server");
+		sendAndExpect4xxError(dto,  "Used TLA inputs are not known to server");
 	}
 
 	@Test public void microPayment_failsOnInputsBelongingToMultipleAccounts() throws Exception {
@@ -160,10 +171,10 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		watchAndMineTransactions(tla1TxToSpend, tla2TxToSpend);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(clientKey1, new ECKey(), microPaymentTransaction, 100l);
-		sendAndExpect4xxError("/payment/micropayment", dto,  "Inputs must be from one account");
+		sendAndExpect4xxError(dto,  "Inputs must be from one account");
 	}
 
-	@Test public void microPayment_failsOnWrongSignature() throws Exception {
+	@Test public void microPayment_failsOnSignedByWrongAccount() throws Exception {
 		final long lockTime = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
 		final ECKey clientKey = new ECKey();
 
@@ -180,17 +191,17 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		watchAndMineTransactions(tlaTxToSpend);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(new ECKey(), new ECKey(), microPaymentTransaction, 100l);
-		sendAndExpect4xxError("/payment/micropayment", dto,  "Signature is not valid");
+		sendAndExpect4xxError(dto,  "Request was not signed by owner of inputs");
 	}
 
 	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx, long amount) {
 		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
-			DTOUtils.toHex(tx.bitcoinSerialize()), to.getPublicKeyAsHex(), amount);
+			DTOUtils.toHex(tx.bitcoinSerialize()), from.getPublicKeyAsHex(), to.getPublicKeyAsHex(), amount);
 		return DTOUtils.serializeAndSign(microPaymentRequestDTO, from);
 	}
 
-	private void sendAndExpect4xxError(String url, SignedDTO dto, String expectedErrorMessage) throws Exception {
-		MvcResult result = mockMvc.perform(post(url)
+	private void sendAndExpect4xxError(SignedDTO dto, String expectedErrorMessage) throws Exception {
+		MvcResult result = mockMvc.perform(post(URL_MICRO_PAYMENT)
 			.contentType(APPLICATION_JSON)
 			.content(DTOUtils.toJSON(dto)))
 			.andExpect(status().is4xxClientError()).andReturn();

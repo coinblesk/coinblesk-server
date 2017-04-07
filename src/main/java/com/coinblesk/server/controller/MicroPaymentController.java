@@ -1,12 +1,8 @@
 package com.coinblesk.server.controller;
 
-import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dto.*;
-import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.exceptions.*;
-import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.MicropaymentService;
-import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utils.DTOUtils;
 import com.coinblesk.util.InsufficientFunds;
 import lombok.extern.java.Log;
@@ -19,9 +15,6 @@ import javax.validation.Valid;
 
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.OK;
@@ -37,12 +30,6 @@ public class MicroPaymentController {
 
 	private final MicropaymentService micropaymentService;
 
-	@Autowired AppConfig appConfig;
-
-	@Autowired WalletService walletService;
-
-	@Autowired AccountService accountService;
-
 	@Autowired
 	public MicroPaymentController(MicropaymentService micropaymentService) {
 		this.micropaymentService = micropaymentService;
@@ -53,67 +40,25 @@ public class MicroPaymentController {
 		produces = APPLICATION_JSON_UTF8_VALUE)
 	public ResponseEntity micropayment(@RequestBody @Valid SignedDTO request)
 	{
-		// Get the embedded request
-		final MicroPaymentRequestDTO requestDTO;
 		try {
+			// Get the embedded request
+			final MicroPaymentRequestDTO requestDTO;
+			final ECKey senderPublicKey, receiverPublicKey;
+
 			requestDTO = DTOUtils.parseAndValidate(request, MicroPaymentRequestDTO.class);
-		} catch (MissingFieldException|InvalidSignatureException e) {
-			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
-		} catch (Throwable e) {
-			return new ResponseEntity<>(new ErrorDTO("Bad request"), BAD_REQUEST);
-		}
-
-		// Parse the transaction
-		byte[] txInByes = DTOUtils.fromHex(requestDTO.getTx());
-		final Transaction tx;
-		try {
-			tx = new Transaction(appConfig.getNetworkParameters(), txInByes);
-			tx.verify();
-		} catch (VerificationException e) {
-			return new ResponseEntity<>(new ErrorDTO("Invalid transaction: " + e.getMessage()), BAD_REQUEST);
-		} catch (Throwable e) {
-			e.printStackTrace();
-			return new ResponseEntity<>(new ErrorDTO("Could not parse transaction"), BAD_REQUEST);
-		}
-
-		// Make sure all the UTXOs are known to the wallet
-		List<TransactionOutput> spentOutputs = tx.getInputs().stream().map(walletService::findOutputFor).collect(Collectors.toList());
-		if (spentOutputs.stream().anyMatch(Objects::isNull)) {
-			return new ResponseEntity<>(new ErrorDTO("Transaction spends unknown UTXOs"), BAD_REQUEST);
-		}
-
-		// Gather all addresses from the input and make sure they are in the P2SH format
-		List<Address> spentAddresses = spentOutputs.stream()
-			.map(transactionOutput -> transactionOutput.getAddressFromP2SH(appConfig.getNetworkParameters()))
-			.collect(Collectors.toList());
-		if (spentAddresses.stream().anyMatch(Objects::isNull)) {
-			return new ResponseEntity<>(new ErrorDTO("Transaction must spent P2SH addresses"), BAD_REQUEST);
-		}
-
-		// Gather all accounts belonging to the addresses from the inputs
-		List<byte[]> addressHashes = spentAddresses.stream()
-			.map(Address::getHash160)
-			.collect(Collectors.toList());
-
-		// Make sure the addresses belong all to the same single acccount
-		List<Account> spendingAccounts = accountService.getAccountByAddressHashes(addressHashes);
-		if (spendingAccounts.isEmpty()) {
-			return new ResponseEntity<>(new ErrorDTO("Used TLA inputs are not known to server"), BAD_REQUEST);
-		}
-		if (spendingAccounts.size() != 1) {
-			return new ResponseEntity<>(new ErrorDTO("Inputs must be from one account"), BAD_REQUEST);
-		}
-
-		// Now that we know which accounts wants to spend, check signature
-		final ECKey senderPublicKey = ECKey.fromPublicOnly(spendingAccounts.get(0).clientPublicKey());
-		try {
+			senderPublicKey = DTOUtils.getECKeyFromHexPublicKey(requestDTO.getFromPublicKey());
+			receiverPublicKey = DTOUtils.getECKeyFromHexPublicKey(requestDTO.getToPublicKey());
 			DTOUtils.validateSignature(request.getPayload(), request.getSignature(), senderPublicKey);
-		}
-		catch(Throwable e) {
+
+			// Call the service and map failures to error messages
+			micropaymentService.microPayment(senderPublicKey, receiverPublicKey, requestDTO.getTx(),
+				requestDTO.getAmount());
+
+		} catch (Throwable e) {
 			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
 		}
 
-		return new ResponseEntity<>("not yet implemented", OK);
+		return new ResponseEntity<>("OK", OK);
 	}
 
 
