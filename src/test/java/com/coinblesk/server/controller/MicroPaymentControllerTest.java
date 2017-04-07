@@ -276,6 +276,29 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		sendAndExpect4xxError(dto,  "Cannot have multiple change outputs");
 	}
 
+	@Test public void microPayment_failsWhenChangeOutputIsSoonUnlocked() throws Exception {
+		final long lockTime = Instant.now().plus(Duration.ofHours(20)).getEpochSecond();
+		final ECKey senderKey = new ECKey();
+		final ECKey receiverKey = new ECKey();
+
+		ECKey serverPublicKey = accountService.createAcount(senderKey);
+		accountService.createAcount(receiverKey);
+
+		TimeLockedAddress addressClient = accountService.createTimeLockedAddress(senderKey, lockTime)
+			.getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			addressClient.getAddress(params()));
+		watchAndMineTransactions(fundingTx);
+
+		Transaction microPaymentTransaction = new Transaction(params());
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
+		microPaymentTransaction.addOutput(changeOutput(microPaymentTransaction, addressClient));
+		microPaymentTransaction.addInput(fundingTx.getOutput(0));
+
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, senderKey, microPaymentTransaction);
+		sendAndExpect4xxError(dto,  "Change cannot be send to address that is locked for less than 24 hours");
+	}
+
 	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx) {
 		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
 			DTOUtils.toHex(tx.bitcoinSerialize()), from.getPublicKeyAsHex(), to.getPublicKeyAsHex(), 100L);
