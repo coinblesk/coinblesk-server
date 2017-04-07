@@ -134,8 +134,8 @@ public class MicropaymentService {
 			throw new RuntimeException("Inputs must be from one account");
 		}
 
+		// Sender, signer and owner of inputs must be equal
 		Account accountSender = spendingAccounts.get(0);
-
 		if (!ECKey.fromPublicOnly(accountSender.clientPublicKey()).equals(senderPublicKey)) {
 			throw new RuntimeException("Request was not signed by owner of inputs");
 		}
@@ -158,6 +158,11 @@ public class MicropaymentService {
 		final Account accountReceiver = accountService.getByClientPublicKey(receiverPublicKey.getPubKey());
 		if (accountReceiver == null) {
 			throw new RuntimeException("Receiver is unknown to server");
+		}
+
+		// Sending to oneself is not allowed
+		if (accountReceiver.equals(accountSender)) {
+			throw new RuntimeException("Sender and receiver must be different");
 		}
 
 	}

@@ -236,6 +236,24 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		sendAndExpect4xxError(dto,  "Receiver is unknown to server");
 	}
 
+	@Test public void microPayment_failsSendingToOneself() throws Exception {
+		final long lockTime = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
+		final ECKey senderKey = new ECKey();
+
+		ECKey serverPublicKey = accountService.createAcount(senderKey);
+		TimeLockedAddress addressClient = accountService.createTimeLockedAddress(senderKey, lockTime)
+			.getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			addressClient.getAddress(params()));
+		Transaction microPaymentTransaction = new Transaction(params());
+		microPaymentTransaction.addOutput(serverPotOutput(microPaymentTransaction, serverPublicKey));
+		microPaymentTransaction.addInput(fundingTx.getOutput(0));
+		watchAndMineTransactions(fundingTx);
+
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, senderKey, microPaymentTransaction);
+		sendAndExpect4xxError(dto,  "Sender and receiver must be different");
+	}
+
 	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx) {
 		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
 			DTOUtils.toHex(tx.bitcoinSerialize()), from.getPublicKeyAsHex(), to.getPublicKeyAsHex(), 100L);
