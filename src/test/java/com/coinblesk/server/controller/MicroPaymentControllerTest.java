@@ -41,10 +41,10 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	private WebApplicationContext webAppContext;
 
 	@Autowired
-	WalletService walletService;
+	private WalletService walletService;
 
 	@Autowired
-	AccountService accountService;
+	private AccountService accountService;
 
 	@Autowired
 	private AppConfig appConfig;
@@ -95,14 +95,14 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	@Test public void microPayment_failsOnEmptyTransaction() throws Exception {
 		ECKey clientKey = new ECKey();
 		Transaction microPaymentTransaction = new Transaction(params());
-		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction, 100L);
+		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction);
 		sendAndExpect4xxError(dto, "Transaction had no inputs or no outputs");
 	}
 
 	@Test public void microPayment_failsOnUnknownUTXOs() throws Exception {
 		ECKey clientKey = new ECKey();
 		Transaction microPaymentTransaction = FakeTxBuilder.createFakeTx(params());
-		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction, 100L);
+		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Transaction spends unknown UTXOs");
 	}
 
@@ -119,7 +119,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		// Making sure the wallet watches the transactions used as inputs and they are mined
 		watchAndMineTransactions(inputTx1, inputTx2);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction, 100L);
+		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Transaction must spent P2SH addresses");
 	}
 
@@ -140,7 +140,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		// Making sure the wallet watches the transaction used as input and it is are mined
 		watchAndMineTransactions(tlaTxToSpend);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction, 100L);
+		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Used TLA inputs are not known to server");
 	}
 
@@ -170,7 +170,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		watchAndMineTransactions(tla1TxToSpend, tla2TxToSpend);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(clientKey1, new ECKey(), microPaymentTransaction, 100L);
+		SignedDTO dto = createMicroPaymentRequestDTO(clientKey1, new ECKey(), microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Inputs must be from one account");
 	}
 
@@ -190,7 +190,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		watchAndMineTransactions(tlaTxToSpend);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(new ECKey(), new ECKey(), microPaymentTransaction, 100L);
+		SignedDTO dto = createMicroPaymentRequestDTO(new ECKey(), new ECKey(), microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Request was not signed by owner of inputs");
 	}
 
@@ -211,13 +211,13 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		watchAndMineTransactions(fundingTx);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 100L);
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Receiver is unknown to server");
 	}
 
-	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx, long amount) {
+	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx) {
 		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
-			DTOUtils.toHex(tx.bitcoinSerialize()), from.getPublicKeyAsHex(), to.getPublicKeyAsHex(), amount);
+			DTOUtils.toHex(tx.bitcoinSerialize()), from.getPublicKeyAsHex(), to.getPublicKeyAsHex(), 100L);
 		return DTOUtils.serializeAndSign(microPaymentRequestDTO, from);
 	}
 
