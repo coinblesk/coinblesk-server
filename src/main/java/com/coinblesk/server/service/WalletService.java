@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.ArrayUtils;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.BlockChain;
@@ -467,5 +468,10 @@ public class WalletService {
 	 */
 	public List<TransactionOutput> getUnspentOutputs() {
 		return wallet.getUnspents();
+	}
+
+	@VisibleForTesting
+	public Wallet getWallet() {
+		return wallet;
 	}
 }

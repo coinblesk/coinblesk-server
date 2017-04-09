@@ -145,9 +145,58 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		sendAndExpect4xxError(dto,  "Used TLA inputs are not known to server");
 	}
 
+	@Test public void microPayment_failsOnSpentUTXOs() throws Exception {
+		final ECKey clientKey = new ECKey();
+		final long lockTime = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
+		final ECKey serverKeySender = accountService.createAcount(clientKey);
+
+		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(clientKey, lockTime)
+			.getTimeLockedAddress();
+		walletService.addWatching(inputAddress.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			inputAddress.getAddress(params()));
+		mineTransaction(fundingTx);
+
+		// Spend the funding tx
+		walletService.getWallet().maybeCommitTx(createSpendingTransactionForOutput(fundingTx.getOutput(0),
+			inputAddress, clientKey, serverKeySender));
+
+		Transaction microPaymentTransaction = new Transaction(params());
+		microPaymentTransaction.addInput(fundingTx.getOutput(0));
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverKeySender));
+		signAllInputs(microPaymentTransaction, inputAddress.createRedeemScript(), clientKey);
+
+		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction);
+		sendAndExpect4xxError(dto, "Input is already spent");
+	}
+
+	@Test public void microPayment_failsOnNonMinedUTXOs() throws Exception {
+		final ECKey clientKey = new ECKey();
+		final long lockTime = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
+		final ECKey serverKeySender = accountService.createAcount(clientKey);
+
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
+
+		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(clientKey, lockTime)
+			.getTimeLockedAddress();
+		walletService.addWatching(inputAddress.getAddress(params()));
+
+		Transaction fundingTx1 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			inputAddress.getAddress(params()));
+		walletService.getWallet().maybeCommitTx(fundingTx1);
+
+		Transaction microPaymentTransaction = new Transaction(params());
+		microPaymentTransaction.addInput(fundingTx1.getOutput(0));
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverKeySender));
+		signAllInputs(microPaymentTransaction, inputAddress.createRedeemScript(), clientKey);
+
+		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, receiverKey, microPaymentTransaction);
+		sendAndExpect4xxError(dto, "UTXO must be mined");
+	}
+
 	@Test public void microPayment_failsOnSoonLockedInputs() throws Exception {
 		final ECKey clientKey = new ECKey();
-		final ECKey serverKey = new ECKey();
 		final long lockTime = Instant.now().plus(Duration.ofHours(20)).getEpochSecond();
 
 		accountService.createAcount(clientKey);
@@ -383,6 +432,24 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		Transaction spendTXClone = new Transaction(params(), tx.bitcoinSerialize());
 		Block newBlock = FakeTxBuilder.makeSolvedTestBlock(lastBlock, spendTXClone);
 		walletService.blockChain().add(newBlock);
+	}
+
+	// Creates a transaction that spends the given output. Uses the TimeLockedAddress and the keys to create a valid
+	// scriptSig
+	private Transaction createSpendingTransactionForOutput(TransactionOutput output, TimeLockedAddress usedTLA,
+													ECKey clientKey, ECKey serverKey) {
+		Transaction tx = new Transaction(params());
+		tx.addInput(output);
+		TransactionOutput someOutput =
+			new TransactionOutput(params(), tx , Coin.SATOSHI, new ECKey().toAddress(params()));
+		tx.addOutput(someOutput);
+		TransactionSignature serverSig = tx.calculateSignature(0, clientKey, usedTLA.createRedeemScript(),
+			SigHash.ALL, false);
+		TransactionSignature clientSig = tx.calculateSignature(0, serverKey, usedTLA.createRedeemScript(),
+			SigHash.ALL, false);
+		Script scriptSig = usedTLA.createScriptSigBeforeLockTime(clientSig, serverSig);
+		tx.getInput(0).setScriptSig(scriptSig);
+		return tx;
 	}
 
 	@Test

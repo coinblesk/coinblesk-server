@@ -1,6 +1,5 @@
 package com.coinblesk.server.service;
 
-import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dao.AccountRepository;
 import com.coinblesk.server.dao.TimeLockedAddressRepository;
@@ -140,20 +139,31 @@ public class MicropaymentService {
 			throw new RuntimeException("Transaction spends unknown UTXOs");
 		}
 
-		// 1.2 Make sure all inputs are from P2SH addresses
-		List<Address> spentAddresses = spentOutputs.stream()
+		// 1.2 All outputs must be spendable and at least 1 block deep
+		spentOutputs.forEach(transactionOutput -> {
+			if (!transactionOutput.isAvailableForSpending()) {
+				throw new RuntimeException("Input is already spent");
+			}
+
+			if (transactionOutput.getParentTransactionDepthInBlocks() < 1) {
+				throw new RuntimeException("UTXO must be mined");
+			}
+		});
+
+		// 1.3 Make sure all inputs are from P2SH addresses
+		Set<Address> spentAddresses = spentOutputs.stream()
 			.map(transactionOutput -> transactionOutput.getAddressFromP2SH(appConfig.getNetworkParameters()))
-			.collect(Collectors.toList());
-		if (spentAddresses.stream().anyMatch(Objects::isNull)) {
+			.collect(Collectors.toSet());
+		if (spentAddresses.contains(null)) {
 			throw new RuntimeException("Transaction must spent P2SH addresses");
 		}
 
-		// 1.3 Make sure all inputs come from known time locked addresses and from a single account
+		// 1.4 Make sure all inputs come from known time locked addresses and from a single account
 		List<byte[]> addressHashes = spentAddresses.stream()
 			.map(Address::getHash160)
 			.collect(Collectors.toList());
 		List<TimeLockedAddressEntity> addresses = timeLockedAddressRepository.findByAddressHashIn(addressHashes);
-		if (addresses.size() != tx.getInputs().size()) {
+		if (addresses.size() != spentAddresses.size()) {
 			throw new RuntimeException("Used TLA inputs are not known to server");
 		}
 		Map<Account, List<TimeLockedAddressEntity>> inputAccounts = addresses.stream()
@@ -164,14 +174,14 @@ public class MicropaymentService {
 			throw new RuntimeException("Inputs must be from one account");
 		}
 
-		// 1.4 Make sure that owner of inputs is the same as in the request, that signed the DTO
+		// 1.5 Make sure that owner of inputs is the same as in the request, that signed the DTO
 		// 	   (sender, signer and owner of inputs must be equal)
 		Account accountSender = inputAccounts.keySet().iterator().next();
 		if (!ECKey.fromPublicOnly(accountSender.clientPublicKey()).equals(senderPublicKey)) {
 			throw new RuntimeException("Request was not signed by owner of inputs");
 		}
 
-		// 1.5 All time locked addresses used must still be locked for some time
+		// 1.6 All time locked addresses used must still be locked for some time
 		final List<TimeLockedAddressEntity> usedAddresses = inputAccounts.values().iterator().next();
 		final boolean allInputsLocked = usedAddresses.stream().allMatch(tla ->
 			Instant.ofEpochSecond(tla.getLockTime()).isAfter(Instant.now().plus(MINIMUM_LOCKTIME_DURATION)));
@@ -179,7 +189,7 @@ public class MicropaymentService {
 			throw new RuntimeException("Inputs must be locked for 24 hours");
 		}
 
-		// 1.6 Inputs must be correctly partially signed by sender
+		// 1.7 Inputs must be correctly partially signed by sender
 		for (int i=0; i<tx.getInputs().size(); i++) {
 			TransactionInput input = tx.getInput(i);
 			Script spendingScript = input.getScriptSig();
