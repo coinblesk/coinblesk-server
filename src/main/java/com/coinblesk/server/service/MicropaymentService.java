@@ -290,7 +290,7 @@ public class MicropaymentService {
 		}
 
 		// 4.2) Nonce must be valid
-		if (accountSender.nonce() >= nonce) {
+		if (nonce <= accountSender.nonce()) {
 			throw new RuntimeException("Invalid nonce");
 		}
 	}

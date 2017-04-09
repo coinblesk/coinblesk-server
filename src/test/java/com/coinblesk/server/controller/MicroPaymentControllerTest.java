@@ -417,6 +417,34 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		sendAndExpect4xxError(dto,  "Channel is locked");
 	}
 
+	@Test public void microPayment_failsOnInvalidNonce() throws Exception {
+		final ECKey senderKey = new ECKey();
+		ECKey serverPublicKey = accountService.createAcount(senderKey);
+
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
+
+		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
+			.getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			inputAddress.getAddress(params()));
+		watchAndMineTransactions(fundingTx);
+
+		Transaction microPaymentTransaction = new Transaction(params());
+		microPaymentTransaction.addInput(fundingTx.getOutput(0));
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
+		signAllInputs(microPaymentTransaction, inputAddress.createRedeemScript(), senderKey);
+
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 0L);
+		sendAndExpect4xxError(dto,  "Invalid nonce");
+
+		accountRepository.save(accountRepository.findByClientPublicKey(senderKey.getPubKey())
+			.nonce(Instant.now().getEpochSecond()));
+		dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction,
+			Instant.now().minus(Duration.ofMinutes(10)).getEpochSecond());
+		sendAndExpect4xxError(dto,  "Invalid nonce");
+	}
+
 	private static long validLockTime = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
 
 	private void signAllInputs(Transaction tx, Script redeemScript, ECKey signingKey) {
@@ -427,6 +455,10 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	}
 
 	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx) {
+		return createMicroPaymentRequestDTO(from, to, tx, Instant.now().getEpochSecond());
+	}
+
+	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx, Long nonce) {
 		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
 			DTOUtils.toHex(tx.bitcoinSerialize()), from.getPublicKeyAsHex(), to.getPublicKeyAsHex(), 100L, 0L);
 		return DTOUtils.serializeAndSign(microPaymentRequestDTO, from);
