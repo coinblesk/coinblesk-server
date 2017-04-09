@@ -284,7 +284,9 @@ public class MicropaymentService {
 		}
 
 		// 4) Check pending channel rules
-		// 4.1) Channel must not be locked (i.e. the channel is being closed)
-
+		// 4.1) Channel must not be locked (i.e. the channel is being closed);
+		if (accountSender.isLocked()) {
+			throw new RuntimeException("Channel is locked");
+		}
 	}
 }

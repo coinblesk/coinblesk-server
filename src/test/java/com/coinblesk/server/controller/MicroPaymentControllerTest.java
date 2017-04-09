@@ -2,6 +2,7 @@ package com.coinblesk.server.controller;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.dao.AccountRepository;
 import com.coinblesk.server.dto.ErrorDTO;
 import com.coinblesk.server.dto.MicroPaymentRequestDTO;
 import com.coinblesk.server.dto.SignedDTO;
@@ -49,6 +50,9 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 	@Autowired
 	private AccountService accountService;
+
+	@Autowired
+	private AccountRepository accountRepository;
 
 	@Autowired
 	private AppConfig appConfig;
@@ -399,6 +403,30 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Sending to external addresses is not yet supported");
+	}
+
+	@Test public void microPayment_failsWhenChannelIsLocked() throws Exception {
+		final ECKey senderKey = new ECKey();
+		ECKey serverPublicKey = accountService.createAcount(senderKey);
+		accountRepository.save(accountRepository.findByClientPublicKey(senderKey.getPubKey()).locked(true));
+
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
+
+		final long lockTimeInput = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
+		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, lockTimeInput)
+			.getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			inputAddress.getAddress(params()));
+		watchAndMineTransactions(fundingTx);
+
+		Transaction microPaymentTransaction = new Transaction(params());
+		microPaymentTransaction.addInput(fundingTx.getOutput(0));
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
+		signAllInputs(microPaymentTransaction, inputAddress.createRedeemScript(), senderKey);
+
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction);
+		sendAndExpect4xxError(dto,  "Channel is locked");
 	}
 
 	private void signAllInputs(Transaction tx, Script redeemScript, ECKey signingKey) {
