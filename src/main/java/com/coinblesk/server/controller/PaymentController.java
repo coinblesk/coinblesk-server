@@ -132,7 +132,7 @@ public class PaymentController {
 			return new ResponseEntity<>(new ErrorDTO("Could not create Address"), INTERNAL_SERVER_ERROR);
 
 		// Start watching the address
-		walletService.addWatching(address.createPubkeyScript());
+		walletService.addWatching(address.getAddress(appConfig.getNetworkParameters()));
 
 		// Create response
 		CreateAddressResponseDTO innerResponse = new CreateAddressResponseDTO(

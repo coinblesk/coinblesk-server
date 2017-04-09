@@ -286,12 +286,6 @@ public class WalletService {
 		return blockChain;
 	}
 
-	public void addWatching(Script script) {
-		List<Script> list = new ArrayList<>(1);
-		list.add(script);
-		wallet.addWatchedScripts(list);
-	}
-
 	public void addWatching(Address address) {
 		wallet.addWatchedAddress(address);
 	}
