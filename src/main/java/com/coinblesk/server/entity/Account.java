@@ -54,6 +54,12 @@ public class Account implements Serializable {
 	@Column(name = "NONCE", nullable = false)
 	private long nonce = 0L;
 
+	@Column(name = "CHANNEL_TRANSACTION")
+	private byte[] channelTransaction;
+
+	@Column(name = "LOCKED", nullable = false)
+	private boolean locked;
+
 	@OneToMany(mappedBy = "account", fetch = FetchType.EAGER)
 	@OrderBy("TIME_CREATED ASC")
 	private List<TimeLockedAddressEntity> timeLockedAddresses;
@@ -122,6 +128,24 @@ public class Account implements Serializable {
 
 	public Account timeLockedAddresses(List<TimeLockedAddressEntity> timeLockedAddresses) {
 		this.timeLockedAddresses = timeLockedAddresses;
+		return this;
+	}
+
+	public byte[] getChannelTransaction() {
+		return channelTransaction;
+	}
+
+	public Account channelTransaction(byte[] channelTransaction) {
+		this.channelTransaction = channelTransaction;
+		return this;
+	}
+
+	public boolean isLocked() {
+		return locked;
+	}
+
+	public Account locked(boolean locked) {
+		this.locked = locked;
 		return this;
 	}
 
