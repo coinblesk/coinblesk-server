@@ -266,16 +266,25 @@ public class MicropaymentService {
 			throw new RuntimeException("Cannot have multiple change outputs");
 		}
 
-		// Make sure the receiving public key is known to the server
+		// 2.3) No other outputs are allowed (i.e. sending to an external address) since this would require closing
+		//      the transaction, which is not yet supported.
+		if (!remainingOutputs.isEmpty()) {
+			throw new RuntimeException("Sending to external addresses is not yet supported");
+		}
+
+		// 3) Check receiver
+		// 3.1) Make sure the receiving public key is known to the server
 		final Account accountReceiver = accountService.getByClientPublicKey(receiverPublicKey.getPubKey());
 		if (accountReceiver == null) {
 			throw new RuntimeException("Receiver is unknown to server");
 		}
-
-		// Sending to oneself is not allowed
+		// 3.2) Sending to oneself is not allowed
 		if (accountReceiver.equals(accountSender)) {
 			throw new RuntimeException("Sender and receiver must be different");
 		}
+
+		// 4) Check pending channel rules
+		// 4.1) Channel must not be locked (i.e. the channel is being closed)
 
 	}
 }

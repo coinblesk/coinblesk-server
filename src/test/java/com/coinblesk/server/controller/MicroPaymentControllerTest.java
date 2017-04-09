@@ -378,6 +378,29 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		sendAndExpect4xxError(dto,  "Change cannot be send to address that is locked for less than 24 hours");
 	}
 
+	@Test public void microPayment_failsWhenTryingToSendToThirdParty() throws Exception {
+		final long lockTimeInput = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
+		final ECKey senderKey = new ECKey();
+		final ECKey receiverKey = new ECKey();
+		ECKey serverPublicKey = accountService.createAcount(senderKey);
+		accountService.createAcount(receiverKey);
+
+		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, lockTimeInput)
+			.getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			inputAddress.getAddress(params()));
+		watchAndMineTransactions(fundingTx);
+
+		Transaction microPaymentTransaction = new Transaction(params());
+		microPaymentTransaction.addInput(fundingTx.getOutput(0));
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
+		microPaymentTransaction.addOutput(anyP2PKOutput(microPaymentTransaction));
+		signAllInputs(microPaymentTransaction, inputAddress.createRedeemScript(), senderKey);
+
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction);
+		sendAndExpect4xxError(dto,  "Sending to external addresses is not yet supported");
+	}
+
 	private void signAllInputs(Transaction tx, Script redeemScript, ECKey signingKey) {
 		for (int i=0; i<tx.getInputs().size(); i++){
 			TransactionSignature sig = tx.calculateSignature(i, signingKey, redeemScript.getProgram(), SigHash.ALL, false);
