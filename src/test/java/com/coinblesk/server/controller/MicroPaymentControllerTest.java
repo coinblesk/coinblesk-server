@@ -87,7 +87,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		Transaction microPaymentTransaction = new Transaction(params());
 		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
 			DTOUtils.toHex(microPaymentTransaction.bitcoinSerialize()), fromPublicKey.getPublicKeyAsHex(),
-			new ECKey().getPublicKeyAsHex(), 100L);
+			new ECKey().getPublicKeyAsHex(), 100L, 0L);
 		SignedDTO dto = DTOUtils.serializeAndSign(microPaymentRequestDTO, signingKey);
 		sendAndExpect4xxError(dto,  "Signature is not valid");
 	}
@@ -95,7 +95,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	@Test public void microPayment_failsOnNoTransaction() throws Exception {
 		ECKey clientKey = new ECKey();
 		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
-			"", new ECKey().getPublicKeyAsHex(), new ECKey().getPublicKeyAsHex(), 10L);
+			"", new ECKey().getPublicKeyAsHex(), new ECKey().getPublicKeyAsHex(), 10L, 0L);
 		SignedDTO dto = DTOUtils.serializeAndSign(microPaymentRequestDTO, clientKey);
 		sendAndExpect4xxError(dto, "");
 	}
@@ -428,7 +428,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx) {
 		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
-			DTOUtils.toHex(tx.bitcoinSerialize()), from.getPublicKeyAsHex(), to.getPublicKeyAsHex(), 100L);
+			DTOUtils.toHex(tx.bitcoinSerialize()), from.getPublicKeyAsHex(), to.getPublicKeyAsHex(), 100L, 0L);
 		return DTOUtils.serializeAndSign(microPaymentRequestDTO, from);
 	}
 

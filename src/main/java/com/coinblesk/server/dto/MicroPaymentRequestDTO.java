@@ -7,4 +7,5 @@ public @Data class MicroPaymentRequestDTO {
 	private final String fromPublicKey;
 	private final String toPublicKey;
 	private final Long amount;
+	private final Long nonce;
 }

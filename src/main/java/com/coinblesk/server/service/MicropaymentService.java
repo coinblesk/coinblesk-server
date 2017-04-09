@@ -123,7 +123,7 @@ public class MicropaymentService {
 	}
 
 	@Transactional(isolation = Isolation.SERIALIZABLE)
-	public void microPayment(ECKey senderPublicKey, ECKey receiverPublicKey, String txInHex, Long amount) {
+	public void microPayment(ECKey senderPublicKey, ECKey receiverPublicKey, String txInHex, Long amount, Long nonce) {
 
 		// Parse the transaction
 		byte[] txInByes = DTOUtils.fromHex(txInHex);
@@ -287,6 +287,11 @@ public class MicropaymentService {
 		// 4.1) Channel must not be locked (i.e. the channel is being closed);
 		if (accountSender.isLocked()) {
 			throw new RuntimeException("Channel is locked");
+		}
+
+		// 4.2) Nonce must be valid
+		if (accountSender.nonce() >= nonce) {
+			throw new RuntimeException("Invalid nonce");
 		}
 	}
 }

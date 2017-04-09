@@ -50,7 +50,7 @@ public class MicroPaymentController {
 
 			// Call the service and map failures to error messages
 			micropaymentService.microPayment(senderPublicKey, receiverPublicKey, requestDTO.getTx(),
-				requestDTO.getAmount());
+				requestDTO.getAmount(), requestDTO.getNonce());
 
 		} catch (CoinbleskInternalError e) {
 			return new ResponseEntity<>(new ErrorDTO("Internal server error"), INTERNAL_SERVER_ERROR);
