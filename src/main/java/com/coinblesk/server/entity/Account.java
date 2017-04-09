@@ -33,7 +33,7 @@ public class Account implements Serializable {
 	private static final long serialVersionUID = -7496348013847426913L;
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE)
+	@GeneratedValue(strategy = GenerationType.AUTO)
 	private long id;
 
 	@Column(name = "CLIENT_PUBLIC_KEY", unique = true, nullable = false, updatable = false)

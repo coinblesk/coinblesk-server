@@ -40,7 +40,7 @@ public class TimeLockedAddressEntity {
 
 	@Id
 	@Column(name = "ID", nullable = false, unique = true, updatable = false)
-	@GeneratedValue(strategy = GenerationType.SEQUENCE)
+	@GeneratedValue(strategy = GenerationType.AUTO)
 	private long id;
 
 	@ManyToOne
