@@ -374,7 +374,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		microPaymentTransaction.addOutput(changeOutput(microPaymentTransaction, changeAddress));
 		signAllInputs(microPaymentTransaction, inputAddress.createRedeemScript(), senderKey);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, senderKey, microPaymentTransaction);
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction);
 		sendAndExpect4xxError(dto,  "Change cannot be send to address that is locked for less than 24 hours");
 	}
 
