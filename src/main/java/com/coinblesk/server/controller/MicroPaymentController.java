@@ -5,8 +5,9 @@ import com.coinblesk.server.exceptions.*;
 import com.coinblesk.server.service.MicropaymentService;
 import com.coinblesk.server.utils.DTOUtils;
 import com.coinblesk.util.InsufficientFunds;
-import lombok.extern.java.Log;
 import org.bitcoinj.core.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,8 +24,9 @@ import static org.springframework.web.bind.annotation.RequestMethod.POST;
 @RestController
 @RequestMapping(value = "/payment")
 @CrossOrigin
-@Log
 public class MicroPaymentController {
+
+	private final Logger LOG = LoggerFactory.getLogger(MicroPaymentController.class);
 
 	private final MicropaymentService micropaymentService;
 
@@ -53,8 +55,10 @@ public class MicroPaymentController {
 				requestDTO.getAmount(), requestDTO.getNonce());
 
 		} catch (CoinbleskInternalError e) {
+			LOG.error("Error during micropayment: " + e.getMessage(), e);
 			return new ResponseEntity<>(new ErrorDTO("Internal server error"), INTERNAL_SERVER_ERROR);
 		} catch (Throwable e) {
+			LOG.warn("Bad request for /micropayment: " + e.getMessage(), e.getCause());
 			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
 		}
 
