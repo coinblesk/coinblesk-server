@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -43,15 +44,18 @@ public class MicropaymentService {
 
 	private final AccountService accountService;
 
+	private final FeeService feeService;
+
 	private final Duration MINIMUM_LOCKTIME_DURATION = Duration.ofHours(24);
 
 	@Autowired
-	public MicropaymentService(AccountRepository accountRepository, TimeLockedAddressRepository timeLockedAddressRepository, AppConfig appConfig, WalletService walletService, AccountService accountService) {
+	public MicropaymentService(AccountRepository accountRepository, TimeLockedAddressRepository timeLockedAddressRepository, AppConfig appConfig, WalletService walletService, AccountService accountService, FeeService feeService) {
 		this.accountRepository = accountRepository;
 		this.timeLockedAddressRepository = timeLockedAddressRepository;
 		this.appConfig = appConfig;
 		this.walletService = walletService;
 		this.accountService = accountService;
+		this.feeService = feeService;
 	}
 
 	@Transactional(isolation = Isolation.SERIALIZABLE)
@@ -123,7 +127,7 @@ public class MicropaymentService {
 	}
 
 	@Transactional(isolation = Isolation.SERIALIZABLE)
-	public void microPayment(ECKey senderPublicKey, ECKey receiverPublicKey, String txInHex, Long amount, Long nonce) {
+	public void microPayment(ECKey senderPublicKey, ECKey receiverPublicKey, String txInHex, Long amount, Long nonce) throws IOException {
 
 		// Parse the transaction
 		byte[] txInByes = DTOUtils.fromHex(txInHex);
@@ -225,17 +229,7 @@ public class MicropaymentService {
 
 		// 2.1) Transaction must have one and only one output to the server pot
 		final ECKey serverPubKey = ECKey.fromPublicOnly(accountSender.serverPublicKey());
-		final Address serverPot = serverPubKey.toAddress(appConfig.getNetworkParameters());
-		final List<TransactionOutput> outputsForServer = remainingOutputs.stream()
-			.filter(output -> {
-					Address p2PKAddress = output.getAddressFromP2PKHScript(appConfig.getNetworkParameters());
-					return (p2PKAddress != null && p2PKAddress.equals(serverPot));
-			})
-			.collect(Collectors.toList());
-		if (outputsForServer.size() != 1) {
-			throw new RuntimeException("Transaction must have exactly one output for server");
-		}
-		final TransactionOutput outputForServer = outputsForServer.get(0);
+		final TransactionOutput outputForServer = getOutputForServer(tx, serverPubKey);
 		if (!remainingOutputs.remove(outputForServer)) {
 			throw new CoinbleskInternalError("Could not remove server output from set");
 		}
@@ -284,6 +278,12 @@ public class MicropaymentService {
 		}
 
 		// 4) Check pending channel rules
+		Transaction prevChannelTransaction = null;
+		if (accountSender.getChannelTransaction() != null) {
+			prevChannelTransaction = new Transaction(appConfig.getNetworkParameters(),
+				accountSender.getChannelTransaction());
+		}
+
 		// 4.1) Channel must not be locked (i.e. the channel is being closed);
 		if (accountSender.isLocked()) {
 			throw new RuntimeException("Channel is locked");
@@ -293,5 +293,50 @@ public class MicropaymentService {
 		if (nonce <= accountSender.nonce()) {
 			throw new RuntimeException("Invalid nonce");
 		}
+
+		// 4.3) Check for valid amount
+		final Coin amountFromRequest = Coin.valueOf(amount);
+		if (amountFromRequest.isNegative() || amountFromRequest.isZero()) {
+			throw new RuntimeException("Can't send zero or negative amont");
+		}
+		final Coin actualAmountSent;
+		if (prevChannelTransaction == null) {
+			actualAmountSent = outputForServer.getValue();
+		} else {
+			actualAmountSent = outputForServer.getValue()
+				.minus(getOutputForServer(prevChannelTransaction, serverPubKey).getValue());
+		}
+		if (!actualAmountSent.equals(amountFromRequest)) {
+			throw new RuntimeException("Invalid amount. " + amountFromRequest + " requested but "
+				+ actualAmountSent + " given");
+		}
+
+		// 4.4) Check for enough fee
+		long neededSatoshiPerByte = feeService.fee();
+		final Coin neededFee = Coin.valueOf(tx.bitcoinSerialize().length * neededSatoshiPerByte);
+		Coin givenFee = spentOutputs.stream()
+			.map(TransactionOutput::getValue)
+			.reduce(Coin.ZERO, Coin::add)
+			.minus(tx.getOutputSum());
+		if (givenFee.isLessThan(neededFee)) {
+			throw new RuntimeException("Insufficient transaction fee. Given: "
+				+ givenFee.divide(tx.bitcoinSerialize().length) + " satoshi per byte. Needed: "
+				+ neededSatoshiPerByte);
+		}
+
+	}
+
+	private TransactionOutput getOutputForServer(Transaction micropaymentTransaction, ECKey serverPubKey) {
+		final Address serverPot = serverPubKey.toAddress(appConfig.getNetworkParameters());
+		final List<TransactionOutput> outputsForServer =micropaymentTransaction.getOutputs().stream()
+			.filter(output -> {
+				Address p2PKAddress = output.getAddressFromP2PKHScript(appConfig.getNetworkParameters());
+				return (p2PKAddress != null && p2PKAddress.equals(serverPot));
+			})
+			.collect(Collectors.toList());
+		if (outputsForServer.size() != 1) {
+			throw new RuntimeException("Transaction must have exactly one output for server");
+		}
+		return outputsForServer.get(0);
 	}
 }

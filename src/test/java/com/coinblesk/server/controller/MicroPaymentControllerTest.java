@@ -7,6 +7,7 @@ import com.coinblesk.server.dto.ErrorDTO;
 import com.coinblesk.server.dto.MicroPaymentRequestDTO;
 import com.coinblesk.server.dto.SignedDTO;
 import com.coinblesk.server.service.AccountService;
+import com.coinblesk.server.service.FeeService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.FakeTxBuilder;
@@ -53,6 +54,9 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 	@Autowired
 	private AccountRepository accountRepository;
+
+	@Autowired
+	private FeeService feeService;
 
 	@Autowired
 	private AppConfig appConfig;
@@ -435,7 +439,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
 		signAllInputs(microPaymentTransaction, inputAddress.createRedeemScript(), senderKey);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 0L);
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 1000L, 0L);
 		sendAndExpect4xxError(dto,  "Invalid nonce");
 
 		accountRepository.save(accountRepository.findByClientPublicKey(senderKey.getPubKey())
@@ -443,6 +447,117 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction,
 			Instant.now().minus(Duration.ofMinutes(10)).getEpochSecond());
 		sendAndExpect4xxError(dto,  "Invalid nonce");
+	}
+
+	@Test public void microPayment_failsWithWrongAmountOnOpenChannel() throws Exception {
+		final ECKey senderKey = new ECKey();
+		ECKey serverPublicKey = accountService.createAcount(senderKey);
+
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
+
+		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
+			.getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			inputAddress.getAddress(params()));
+		watchAndMineTransactions(fundingTx);
+
+		// Try to send 42 satoshis, but actally give only 41
+		Transaction microPaymentTransaction =  createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey,
+			inputAddress, 41L);
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 42L);
+		sendAndExpect4xxError(dto, "Invalid amount. 42 requested but 41 given");
+
+		// Previous transaction has 100 to server
+		Transaction prevChannelTX = createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey,
+			inputAddress, 100L);
+		accountRepository.save(accountRepository.findByClientPublicKey(senderKey.getPubKey())
+			.channelTransaction(prevChannelTX.bitcoinSerialize()));
+
+		// Try to send 200 satoshis, but actally give only 100 (200 - previous 100)
+		microPaymentTransaction =  createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey,
+			inputAddress, 200L);
+		dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 200L);
+		sendAndExpect4xxError(dto, "Invalid amount. 200 requested but 100 given");
+
+		// Try to send 50 satoshis, but actually give 100 to server.
+		microPaymentTransaction =  createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey,
+			inputAddress, 200L);
+		dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 50L);
+		sendAndExpect4xxError(dto, "Invalid amount. 50 requested but 100 given");
+
+		// Try to send negative amount
+		microPaymentTransaction =  createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey,
+			inputAddress, 50L);
+		dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, -50L);
+		sendAndExpect4xxError(dto, "Can't send zero or negative amont");
+
+		// Try to send zero amount
+		microPaymentTransaction =  createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey,
+			inputAddress, 400L);
+		dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 0L);
+		sendAndExpect4xxError(dto, "Can't send zero or negative amont");
+	}
+
+	@Test public void microPayment_failsWithInsufficientFee() throws Exception {
+		final ECKey senderKey = new ECKey();
+		ECKey serverPublicKey = accountService.createAcount(senderKey);
+
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
+
+		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
+			.getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			inputAddress.getAddress(params()));
+		watchAndMineTransactions(fundingTx);
+
+		long estimatedSize = calculateChannelTxSize(fundingTx.getOutput(0), senderKey, serverPublicKey, inputAddress);
+		final Coin amountToServer = Coin.valueOf(1000L);
+		final Coin fee = Coin.valueOf(estimatedSize * 80L); // 80 satoshis per byte (too low)
+		final Coin changeAmount = fundingTx.getOutput(0).getValue().minus(amountToServer).minus(fee);
+		Transaction microPaymentTransaction = createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey,
+			inputAddress, amountToServer.getValue(), changeAmount.getValue());
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction,
+			amountToServer.getValue());
+		sendAndExpect4xxError(dto, "Insufficient transaction fee");
+
+	}
+
+
+	private Transaction createChannelTx(TransactionOutput input, ECKey senderKey, ECKey serverPK,
+										TimeLockedAddress changeAddress, long amountToServer) {
+		return createChannelTx(input, senderKey, serverPK, changeAddress, amountToServer,
+			input.getValue().getValue() - amountToServer);
+	}
+	private Transaction createChannelTx(TransactionOutput input, ECKey senderKey, ECKey serverPK,
+										TimeLockedAddress change, long amountToServer, long amountToChange) {
+		Transaction channelTransaction = new Transaction(params());
+		channelTransaction.addInput(input);
+		channelTransaction.addOutput(P2PKOutput(channelTransaction, serverPK, amountToServer));
+		channelTransaction.addOutput(changeOutput(channelTransaction, change, amountToChange));
+		signAllInputs(channelTransaction, change.createRedeemScript(), senderKey);
+		return channelTransaction;
+	}
+
+	private long calculateChannelTxSize (TransactionOutput input, ECKey senderKey, ECKey serverPK, TimeLockedAddress change) {
+		Transaction tx = new Transaction(params());
+		tx.addInput(input);
+		tx.addOutput(P2PKOutput(tx, serverPK, 1L));
+		tx.addOutput(changeOutput(tx, change, 1L));
+		for (int i=0; i<tx.getInputs().size(); i++){
+			TransactionSignature clientSig = tx.calculateSignature(i, senderKey, change.createRedeemScript().getProgram(), SigHash.ALL, false);
+			// Server sig is fake, but we're only interested in the resulting size of the script sig
+			TransactionSignature serverSig = tx.calculateSignature(i, new ECKey(), change.createRedeemScript(), SigHash.ALL, false);
+			Script finalSig  = new ScriptBuilder()
+				.data(clientSig.encodeToBitcoin())
+				.data(serverSig.encodeToBitcoin())
+				.smallNum(1)
+				.data(change.createRedeemScript().getProgram())
+				.build();
+			tx.getInput(i).setScriptSig(finalSig);
+		}
+		return tx.bitcoinSerialize().length;
 	}
 
 	private static long validLockTime = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
@@ -458,9 +573,12 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		return createMicroPaymentRequestDTO(from, to, tx, Instant.now().getEpochSecond());
 	}
 
-	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx, Long nonce) {
+	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx, Long amount) {
+		return createMicroPaymentRequestDTO(from, to, tx, amount, Instant.now().getEpochSecond());
+	}
+	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx, Long amount, Long nonce) {
 		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
-			DTOUtils.toHex(tx.bitcoinSerialize()), from.getPublicKeyAsHex(), to.getPublicKeyAsHex(), 100L, 0L);
+			DTOUtils.toHex(tx.bitcoinSerialize()), from.getPublicKeyAsHex(), to.getPublicKeyAsHex(), amount, nonce);
 		return DTOUtils.serializeAndSign(microPaymentRequestDTO, from);
 	}
 
@@ -476,11 +594,17 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	private TransactionOutput anyP2PKOutput(Transaction forTransaction) {
 		return new TransactionOutput(params(), forTransaction, Coin.valueOf(100), new ECKey().toAddress(params()));
 	}
+	private TransactionOutput P2PKOutput(Transaction forTransaction, ECKey to, long value) {
+		return new TransactionOutput(params(), forTransaction, Coin.valueOf(value), to.toAddress(params()));
+	}
 	private TransactionOutput P2PKOutput(Transaction forTransaction, ECKey to) {
-		return new TransactionOutput(params(), forTransaction, Coin.valueOf(100), to.toAddress(params()));
+		return P2PKOutput(forTransaction, to, 100);
 	}
 	private TransactionOutput changeOutput(Transaction forTransaction, TimeLockedAddress changeTo) {
-		return new TransactionOutput(params(), forTransaction, Coin.valueOf(100), changeTo.getAddress(params()));
+		return changeOutput(forTransaction, changeTo, 100);
+	}
+	private TransactionOutput changeOutput(Transaction forTransaction, TimeLockedAddress changeTo, long value) {
+		return new TransactionOutput(params(), forTransaction, Coin.valueOf(value), changeTo.getAddress(params()));
 	}
 
 	private void watchAndMineTransactions(Transaction... txs) throws PrunedException, BlockStoreException {
