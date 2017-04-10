@@ -17,10 +17,13 @@ package com.coinblesk.server.config;
 
 import static java.util.Arrays.asList;
 
+import java.util.Arrays;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.GsonHttpMessageConverter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -38,6 +41,13 @@ import com.coinblesk.util.SerializeUtils;
 @EnableWebMvc
 public class WebMvcConfiguration extends WebMvcConfigurerAdapter {
 
+	private final Environment environment;
+
+	@Autowired
+	public WebMvcConfiguration(Environment environment) {
+		this.environment = environment;
+	}
+
 	@Bean
 	public RequestMappingHandlerMapping requestMappingHandlerMapping() {
 		return new ApiVersionRequestMappingHandlerMapping();
@@ -52,15 +62,20 @@ public class WebMvcConfiguration extends WebMvcConfigurerAdapter {
 
 	@Override
 	public void addResourceHandlers(ResourceHandlerRegistry registry) {
-		// swagger configuration:
-		registry.addResourceHandler("swagger-ui.html").addResourceLocations("classpath:/META-INF/resources/");
-		registry.addResourceHandler("/webjars/**").addResourceLocations("classpath:/META-INF/resources/webjars/");
+		if (!Arrays.asList(environment.getActiveProfiles()).contains("prod")) {
+			// swagger configuration:
+			registry.addResourceHandler("swagger-ui.html").addResourceLocations("classpath:/META-INF/resources/");
+			registry.addResourceHandler("/webjars/**").addResourceLocations("classpath:/META-INF/resources/webjars/");
+
+			// debug frontend files which allows for creating accounts and time locked addresses
+			registry.addResourceHandler("/debug/**").addResourceLocations("classpath:/web/");
+		}
 	}
 
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration corsConfig = new CorsConfiguration();
-		corsConfig.setAllowedOrigins(asList("http://localhost:9090"));
+		corsConfig.setAllowedOrigins(asList("*"));
 		corsConfig.setAllowedMethods(asList("GET", "PUT", "POST", "DELETE", "OPTIONS"));
 		corsConfig.setAllowedHeaders(asList("*"));
 		corsConfig.setMaxAge(1800L);

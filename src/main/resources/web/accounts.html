@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="UTF-8">
+  <title>Debug Console</title>
+
+  <style>
+  h1 {
+    font-size: 1.5em;
+  }
+  h2 {
+    font-size: 1em;
+  }
+  pre{
+    width: 100%;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+  ol {
+    font-family: monospace;
+  }
+  .green {
+    background-color: #afa;
+  }
+  </style>
+
+</head>
+
+<div id="app">
+  <h2>Accounts</h2>
+  <div id="app-4">
+    <ol>
+      <li :class="{ green: key.exchanged === true }" v-for="key in keys">
+        <button @click="removeKey(key)">remove</button>
+        <button @click="keyExchange(key)">keyExchange</button>
+        <button @click="createTimeLockedAddress(key)" :disabled="!key.exchanged">createAddress</button>
+        privKey: {{ key.wif }} pubKey: {{ key.eckey.getPublicKeyBuffer().toString('hex') }} / exchanged: {{ key.exchanged }}
+        <ol>
+          <li v-for="address in key.addresses">{{ address }}</li>
+        </ol>
+      </li>
+    </ol>
+  </div>
+  <button v-on:click="newKeyPair">Create new Keypair</button>
+
+  <h2>/admin/accounts</h2>
+  <pre>{{ accountsFromEndpoint }}</pre>
+</div>
+
+<script src="vue.js"></script>
+<script src="axios.min.js"></script>
+<script src="lodash.min.js"></script>
+<script src="bitcoinjs.min.js"></script>
+
+<script>
+var bitcoin = coin.bitcoin
+var sha256 = bitcoin.crypto.sha256
+
+// Helper
+var signedDTO = function(innerDTO, key) {
+  var base64 = btoa(JSON.stringify(innerDTO))
+  var sig = key.eckey.sign(sha256(base64))
+  return  {
+    payload: base64,
+    signature: {
+      sigR: sig.r.toString(),
+      sigS: sig.s.toString()
+    }
+  }
+}
+
+// Local Storage
+var keyStorage = {
+  fetch: function () {
+    var keys = JSON.parse(localStorage.getItem("keys") || '[]')
+    keys.forEach(function(key, index) {
+      key.eckey = bitcoin.ECPair.fromWIF(key.wif)
+    })
+    return keys
+  },
+
+  save: function (keys) {
+    var toSave = keys.map(function(key) {
+      return {
+        wif: key.wif,
+        exchanged: key.exchanged,
+        addresses: key.addresses
+      }
+    })
+    localStorage.setItem("keys", JSON.stringify(toSave))
+  },
+}
+
+// API calls
+var api = axios.create({
+  baseURL: 'http://localhost:8080/',
+  timeout: 1000,
+  headers: {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJxcXFhY0B1NGhnci5nciIsImF1dGgiOiJST0xFX0FETUlOIiwiZXhwIjoxNTIzMzk1NzA2fQ.fbc3TRzaw7ADD2iv6SaJr8KaKosaRCA3vo95LdjRFmU'}
+});
+
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    keys: keyStorage.fetch(),
+    accountsFromEndpoint: '',
+  },
+
+  computed: {
+    watchedKeys: function() {
+      return this.keys.map(function(key) {
+        return {
+          wif: key.wif,
+          exchanged: key.exchanged,
+          addresses: key.addresses
+        }
+      })
+    },
+  },
+
+  watch: {
+    watchedKeys: {
+      handler: function() {
+        keyStorage.save(this.keys)
+        this.getAccountsFromAdminEndpoint()
+      },
+      deep: true
+    },
+  },
+
+  methods: {
+
+    newKeyPair: function() {
+      var newECKey = bitcoin.ECPair.makeRandom()
+      var newKey = {
+        wif: newECKey.toWIF(),
+        eckey: newECKey,
+        exchanged: false,
+        addresses: []
+      }
+      this.keys.push(newKey)
+    },
+
+    removeKey: function(keyToDelete) {
+      var index = this.keys.findIndex(function (key) {
+        return key.wif === keyToDelete.wif
+      })
+      if (index != -1)
+        this.keys.splice(index, 1)
+    },
+
+    keyExchange: function(key) {
+      var that = this
+      api.post('/payment/key-exchange', {
+        publicKey: key.eckey.getPublicKeyBuffer().toString('hex')
+      }).then(function (response) {
+        key.exchanged = true
+      })
+    },
+
+    createTimeLockedAddress: function(key) {
+      var innerDTO = {
+        lockTime: Math.floor(new Date() / 1000) + 3600 * 24 * 100,
+        publicKey: key.eckey.getPublicKeyBuffer().toString('hex')
+      }
+      api.post('/payment/createTimeLockedAddress', signedDTO(innerDTO, key))
+        .then(function (response) {
+          // Normally: check signature
+          key.addresses.push(atob(response.data.payload))
+        }).catch(function (error) {
+          alert(JSON.stringify(error.data))
+        })
+    },
+
+    getAccountsFromAdminEndpoint: function() {
+      var that = this
+      api.get('/admin/accounts').then(function (response) {
+        that.accountsFromEndpoint = JSON.stringify(response.data, null, 3)
+      })
+    },
+
+  },
+
+})
+</script>
