@@ -54,7 +54,7 @@ public class Account implements Serializable {
 	@Column(name = "NONCE", nullable = false)
 	private long nonce = 0L;
 
-	@Column(name = "CHANNEL_TRANSACTION")
+	@Column(name = "CHANNEL_TRANSACTION", length = 5000)
 	private byte[] channelTransaction;
 
 	@Column(name = "LOCKED", nullable = false)
