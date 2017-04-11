@@ -11,6 +11,10 @@
    spring.datasource.url                  = ${spring.datasource.url}
    coinblesk.url                          = ${coinblesk.url}
    coinblesk.config.dir                   = ${coinblesk.config.dir}
+   coinblesk.minimumLockTimeSeconds       = ${coinblesk.minimumLockTimeSeconds}
+   coinblesk.maximumLockTimeDays          = ${coinblesk.maximumLockTimeDays}
+   coinblesk.maximumChannelAmountUSD      = ${coinblesk.maximumChannelAmountUSD}
+   coinblesk.channelClosingThresholdUSD   = ${coinblesk.channelClosingThresholdUSD}
    security.jwt.validityInSeconds         = ${security.jwt.validityInSeconds}
    security.jwt.adminValidityInSeconds    = ${security.jwt.adminValidityInSeconds}
    bitcoin.net                            = ${bitcoin.net}
