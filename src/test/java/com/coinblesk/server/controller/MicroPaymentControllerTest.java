@@ -524,6 +524,24 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		sendAndExpect4xxError(dto, "Can't send zero or negative amont");
 	}
 
+	@Test public void microPayment_failsWhenSendingMoreThanAllowed() throws Exception {
+		final ECKey senderKey = new ECKey();
+		final ECKey serverPublicKey = accountService.createAcount(senderKey);
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
+		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
+			.getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			inputAddress.getAddress(params()));
+		watchAndMineTransactions(fundingTx);
+		long amountTryingToSend = Coin.MILLICOIN.multiply(800).getValue();
+		Transaction microPaymentTransaction =  createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey,
+			inputAddress, amountTryingToSend);
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction,
+			amountTryingToSend);
+		sendAndExpect4xxError(dto, "Maximum channel value reached");
+	}
+
 	@Test public void microPayment_failsWithInsufficientFee() throws Exception {
 		final ECKey senderKey = new ECKey();
 		ECKey serverPublicKey = accountService.createAcount(senderKey);

@@ -24,7 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -46,16 +46,19 @@ public class MicropaymentService {
 
 	private final FeeService feeService;
 
+	private final ForexService forexService;
+
 	private final Duration MINIMUM_LOCKTIME_DURATION = Duration.ofHours(24);
 
 	@Autowired
-	public MicropaymentService(AccountRepository accountRepository, TimeLockedAddressRepository timeLockedAddressRepository, AppConfig appConfig, WalletService walletService, AccountService accountService, FeeService feeService) {
+	public MicropaymentService(AccountRepository accountRepository, TimeLockedAddressRepository timeLockedAddressRepository, AppConfig appConfig, WalletService walletService, AccountService accountService, FeeService feeService, ForexService forexService) {
 		this.accountRepository = accountRepository;
 		this.timeLockedAddressRepository = timeLockedAddressRepository;
 		this.appConfig = appConfig;
 		this.walletService = walletService;
 		this.accountService = accountService;
 		this.feeService = feeService;
+		this.forexService = forexService;
 	}
 
 	@Transactional(isolation = Isolation.SERIALIZABLE)
@@ -127,7 +130,7 @@ public class MicropaymentService {
 	}
 
 	@Transactional(isolation = Isolation.SERIALIZABLE)
-	public MicropaymentResult microPayment(ECKey senderPublicKey, ECKey receiverPublicKey, String txInHex, Long amount, Long nonce) throws IOException {
+	public MicropaymentResult microPayment(ECKey senderPublicKey, ECKey receiverPublicKey, String txInHex, Long amount, Long nonce) throws Exception {
 
 		// Parse the transaction
 		byte[] txInByes = DTOUtils.fromHex(txInHex);
@@ -309,6 +312,11 @@ public class MicropaymentService {
 		if (!actualAmountSent.equals(amountFromRequest)) {
 			throw new RuntimeException("Invalid amount. " + amountFromRequest + " requested but "
 				+ actualAmountSent + " given");
+		}
+		final BigDecimal btc_usd = forexService.getExchangeRate("BTC", "USD");
+		final long amountInUSD = btc_usd.divide(new BigDecimal(100000000)).multiply(new BigDecimal(amount)).longValue();
+		if (amountInUSD > appConfig.getMaximumChannelAmountUSD()) {
+			throw new RuntimeException("Maximum channel value reached");
 		}
 
 		// 4.4) Check for enough fee
