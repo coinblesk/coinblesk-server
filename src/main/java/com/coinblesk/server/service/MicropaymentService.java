@@ -127,7 +127,7 @@ public class MicropaymentService {
 	}
 
 	@Transactional(isolation = Isolation.SERIALIZABLE)
-	public void microPayment(ECKey senderPublicKey, ECKey receiverPublicKey, String txInHex, Long amount, Long nonce) throws IOException {
+	public MicropaymentResult microPayment(ECKey senderPublicKey, ECKey receiverPublicKey, String txInHex, Long amount, Long nonce) throws IOException {
 
 		// Parse the transaction
 		byte[] txInByes = DTOUtils.fromHex(txInHex);
@@ -324,6 +324,22 @@ public class MicropaymentService {
 				+ neededSatoshiPerByte);
 		}
 
+		// Execute micro payments
+		accountSender
+			.nonce(nonce)
+			.channelTransaction(tx.bitcoinSerialize());
+		accountReceiver
+			.virtualBalance(amount);
+
+		return new MicropaymentResult().closed(false);
+	}
+
+	public static class MicropaymentResult {
+		public boolean closed;
+		public MicropaymentResult closed(boolean closed) {
+			this.closed = closed;
+			return this;
+		}
 	}
 
 	private TransactionOutput getOutputForServer(Transaction micropaymentTransaction, ECKey serverPubKey) {
