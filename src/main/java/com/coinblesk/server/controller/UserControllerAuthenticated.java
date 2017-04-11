@@ -136,19 +136,6 @@ public class UserControllerAuthenticated {
 	}
 
 	@RequestMapping(
-			value = "/logout",
-			method = GET,
-			produces = APPLICATION_JSON_UTF8_VALUE)
-	public UserAccountStatusTO logout(HttpServletRequest request, HttpServletResponse response) {
-		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-		LOG.debug("Logout account for {}", auth.getName());
-		if (auth != null) {
-			new SecurityContextLogoutHandler().logout(request, response, auth);
-		}
-		return new UserAccountStatusTO().setSuccess();
-	}
-
-	@RequestMapping(
 			value = "/change-password",
 			method = POST,
 			produces = APPLICATION_JSON_UTF8_VALUE,
