@@ -319,7 +319,12 @@ public class MicropaymentService {
 			throw new RuntimeException("Maximum channel value reached");
 		}
 
-		// 4.4) Check for enough fee
+		// 4.4) Close if threshold reached
+		if (amountInUSD > appConfig.getChannelClosingThresholdUSD()) {
+			mustClose = true;
+		}
+
+		// 4.5) Check for enough fee
 		long neededSatoshiPerByte = feeService.fee();
 		final Coin neededFee = Coin.valueOf(tx.bitcoinSerialize().length * neededSatoshiPerByte);
 		Coin givenFee = spentOutputs.stream()
@@ -338,6 +343,10 @@ public class MicropaymentService {
 			.channelTransaction(tx.bitcoinSerialize());
 		accountReceiver
 			.virtualBalance(amount);
+
+		// Close if needed
+		// TODO: broadcast
+		accountSender.locked(mustClose);
 
 		return new MicropaymentResult().closed(false);
 	}

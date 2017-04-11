@@ -566,6 +566,25 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	}
 
 	@Test
+	public void microPayment_locksAccountWhenSendingOverThreshold() throws Exception {
+		final ECKey senderKey = new ECKey();
+		accountService.createAcount(senderKey);
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
+
+		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
+			.getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			tla.getAddress(params()));
+		walletService.addWatching(tla.getAddress(params()));
+		mineTransaction(fundingTx);
+
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 12000000L, fundingTx.getOutput(0), tla);
+		sendAndExpect2xxSuccess(dto);
+		assertThat(accountService.getByClientPublicKey(senderKey.getPubKey()).isLocked(), is(true));
+	}
+
+	@Test
 	public void microPayment_sendsAmountToReceiver() throws Exception {
 		final ECKey senderKey = new ECKey();
 		accountService.createAcount(senderKey);
@@ -737,7 +756,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	}
 
 	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx) {
-		return createMicroPaymentRequestDTO(from, to, tx, Instant.now().getEpochSecond());
+		return createMicroPaymentRequestDTO(from, to, tx, 100L, Instant.now().getEpochSecond());
 	}
 
 	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx, Long amount) {
