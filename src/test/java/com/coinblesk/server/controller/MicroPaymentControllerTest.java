@@ -575,6 +575,55 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		walletService.getWallet().maybeCommitTx(openChannelTx);
 	}
 
+	@Test
+	public void microPayment_replayAttackFails() throws Exception {
+		final ECKey senderKey = new ECKey();
+		accountService.createAcount(senderKey);
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
+
+		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
+			.getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			tla.getAddress(params()));
+		walletService.addWatching(tla.getAddress(params()));
+		mineTransaction(fundingTx);
+
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1337L, fundingTx.getOutput(0), tla);
+		mockMvc.perform(post(URL_MICRO_PAYMENT) .contentType(APPLICATION_JSON)
+			.content(DTOUtils.toJSON(dto)))
+			.andExpect(status().is2xxSuccessful());
+
+		assertThat(accountService.getByClientPublicKey(receiverKey.getPubKey()).virtualBalance(), is(1337L));
+
+		// Send again unmodified fails because nonce is the same
+		sendAndExpect4xxError(dto, "Invalid nonce");
+
+		// Increasing nonce fails because now the signature is wrong
+		MicroPaymentRequestDTO orig =  DTOUtils.fromJSON(DTOUtils.fromBase64(dto.getPayload()),
+			MicroPaymentRequestDTO.class);
+		MicroPaymentRequestDTO modifiedRequest = new MicroPaymentRequestDTO(orig.getTx(), orig.getFromPublicKey(),
+			orig.getToPublicKey(), orig.getAmount(), Instant.now().plus(Duration.ofMinutes(1L)).getEpochSecond());
+		sendAndExpect4xxError(new SignedDTO(DTOUtils.toBase64(DTOUtils.toJSON(modifiedRequest)), dto.getSignature()),
+			"Signature is not valid");
+
+		// Signing again with some other key (that of the receiver) fails as well
+		sendAndExpect4xxError(DTOUtils.serializeAndSign(modifiedRequest, receiverKey), "Signature is not valid");
+
+		// Change sender to some other account's public key (that we own) in order to 'trick' system
+		ECKey otherOwnedAccount = new ECKey();
+		accountService.createAcount(otherOwnedAccount);
+		MicroPaymentRequestDTO modifiedRequest2 = new MicroPaymentRequestDTO(orig.getTx(), otherOwnedAccount.getPublicKeyAsHex(),
+			orig.getToPublicKey(), orig.getAmount(), Instant.now().plus(Duration.ofMinutes(1L)).getEpochSecond());
+		sendAndExpect4xxError(DTOUtils.serializeAndSign(modifiedRequest2, otherOwnedAccount),
+			"Request was not signed by owner of inputs");
+
+		// Amount stayed the same during all failed attacks
+		assertThat(accountService.getByClientPublicKey(receiverKey.getPubKey()).virtualBalance(), is(1337L));
+
+	}
+
+
 	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Long amount,
 												   TransactionOutput usedOutput, TimeLockedAddress address) {
 		ECKey serverPublicKey = ECKey.fromPublicOnly(address.getServerPubKey());
