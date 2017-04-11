@@ -29,6 +29,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -281,6 +282,21 @@ public class WalletService {
 		}
 		return retVal;
 	}
+
+	public Coin microPaymentPot() {
+		final Set<Address> serverPotAddresses =accountService.allAccounts().stream()
+			.map(account -> ECKey.fromPublicOnly(account.serverPublicKey()).toAddress(appConfig.getNetworkParameters()))
+			.collect(Collectors.toSet());
+
+		return wallet.calculateAllSpendCandidates().stream()
+			.filter(output -> {
+				Address address =output.getAddressFromP2PKHScript(appConfig.getNetworkParameters());
+				return serverPotAddresses.contains(address);
+			})
+			.map(TransactionOutput::getValue)
+			.reduce(Coin.ZERO, Coin::add);
+	}
+
 
 	public BlockChain blockChain() {
 		return blockChain;
