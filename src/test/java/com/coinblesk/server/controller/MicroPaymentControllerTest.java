@@ -456,6 +456,24 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		sendAndExpect4xxError(dto,  "Invalid nonce");
 	}
 
+	@Test public void microPayment_failsWhenInputAmountIsTooSmall() throws Exception {
+		final ECKey senderKey = new ECKey();
+		ECKey serverPublicKey = accountService.createAcount(senderKey);
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
+		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
+			.getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			inputAddress.getAddress(params()));
+		watchAndMineTransactions(fundingTx);
+
+		// Try to send more than the inputs are worth
+		Transaction microPaymentTransaction =  createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey,
+			inputAddress, Coin.COIN.plus(Coin.SATOSHI).getValue());
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 800L);
+		sendAndExpect4xxError(dto, "Transaction output negative");
+	}
+
 	@Test public void microPayment_failsWithWrongAmountOnOpenChannel() throws Exception {
 		final ECKey senderKey = new ECKey();
 		ECKey serverPublicKey = accountService.createAcount(senderKey);
