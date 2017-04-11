@@ -31,6 +31,7 @@ import java.time.Instant;
 import java.util.Arrays;
 
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -42,6 +43,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class MicroPaymentControllerTest extends CoinbleskTest {
 	private static final String URL_MICRO_PAYMENT = "/payment/micropayment";
 	private static final String URL_VIRTUAL_PAYMENT = "/payment/virtualpayment";
+	private static final long VALID_FEE = 250L;
+	private static final long LOW_FEE = 50L;
 
 	@Autowired
 	private WebApplicationContext webAppContext;
@@ -514,16 +517,75 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		long estimatedSize = calculateChannelTxSize(fundingTx.getOutput(0), senderKey, serverPublicKey, inputAddress);
 		final Coin amountToServer = Coin.valueOf(1000L);
-		final Coin fee = Coin.valueOf(estimatedSize * 80L); // 80 satoshis per byte (too low)
+		final Coin fee = Coin.valueOf(estimatedSize * LOW_FEE);
 		final Coin changeAmount = fundingTx.getOutput(0).getValue().minus(amountToServer).minus(fee);
 		Transaction microPaymentTransaction = createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey,
 			inputAddress, amountToServer.getValue(), changeAmount.getValue());
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction,
 			amountToServer.getValue());
 		sendAndExpect4xxError(dto, "Insufficient transaction fee");
-
 	}
 
+	@Test
+	public void microPayment_sendsAmountToReceiver() throws Exception {
+		final ECKey senderKey = new ECKey();
+		accountService.createAcount(senderKey);
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
+
+		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
+			.getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			tla.getAddress(params()));
+		walletService.addWatching(tla.getAddress(params()));
+		mineTransaction(fundingTx);
+
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1000L, fundingTx.getOutput(0), tla);
+
+		mockMvc.perform(post(URL_MICRO_PAYMENT) .contentType(APPLICATION_JSON)
+			.content(DTOUtils.toJSON(dto)))
+			.andExpect(status().is2xxSuccessful());
+
+		assertThat(accountService.getVirtualBalanceByClientPublicKey(receiverKey.getPubKey()), is(1000L));
+	}
+
+	@Test
+	public void microPayment_savesBroadcastableTransaction() throws Exception {
+		final ECKey senderKey = new ECKey();
+		accountService.createAcount(senderKey);
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
+
+		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
+			.getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			tla.getAddress(params()));
+		walletService.addWatching(tla.getAddress(params()));
+		mineTransaction(fundingTx);
+
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1000L, fundingTx.getOutput(0), tla);
+
+		mockMvc.perform(post(URL_MICRO_PAYMENT) .contentType(APPLICATION_JSON)
+			.content(DTOUtils.toJSON(dto)))
+			.andExpect(status().is2xxSuccessful());
+
+		Transaction openChannelTx = new Transaction(params(),
+			accountService.getByClientPublicKey(senderKey.getPubKey()).getChannelTransaction());
+		openChannelTx.verify();
+		walletService.getWallet().maybeCommitTx(openChannelTx);
+	}
+
+	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Long amount,
+												   TransactionOutput usedOutput, TimeLockedAddress address) {
+		ECKey serverPublicKey = ECKey.fromPublicOnly(address.getServerPubKey());
+		long estimatedSize = calculateChannelTxSize(usedOutput, from, serverPublicKey, address);
+		final Coin amountToServer = Coin.valueOf(amount);
+		final Coin fee = Coin.valueOf(estimatedSize * VALID_FEE);
+		final Coin changeAmount = usedOutput.getValue().minus(amountToServer).minus(fee);
+		Transaction microPaymentTransaction = createChannelTx(usedOutput, from, serverPublicKey,
+			address, amountToServer.getValue(), changeAmount.getValue());
+		return createMicroPaymentRequestDTO(from, to, microPaymentTransaction, amount);
+	}
 
 	private Transaction createChannelTx(TransactionOutput input, ECKey senderKey, ECKey serverPK,
 										TimeLockedAddress changeAddress, long amountToServer) {
