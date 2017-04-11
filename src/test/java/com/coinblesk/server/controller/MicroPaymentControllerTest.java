@@ -623,6 +623,34 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 	}
 
+	@Test
+	public void microPayment_increasesServerPotWhenMined() throws Exception {
+		final ECKey senderKey = new ECKey();
+		accountService.createAcount(senderKey);
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
+
+		assertThat(walletService.microPaymentPot(), is(Coin.ZERO));
+
+		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
+			.getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+			tla.getAddress(params()));
+		walletService.addWatching(tla.getAddress(params()));
+		walletService.getWallet().importKey(ECKey.fromPrivate(accountRepository.findByClientPublicKey(senderKey.getPubKey()).serverPrivateKey()));
+		mineTransaction(fundingTx);
+
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1337L, fundingTx.getOutput(0), tla);
+		mockMvc.perform(post(URL_MICRO_PAYMENT) .contentType(APPLICATION_JSON)
+			.content(DTOUtils.toJSON(dto)))
+			.andExpect(status().is2xxSuccessful());
+
+		Transaction openChannelTx = new Transaction(params(),
+			accountService.getByClientPublicKey(senderKey.getPubKey()).getChannelTransaction());
+		mineTransaction(openChannelTx);
+
+		assertThat(walletService.microPaymentPot(), is(Coin.valueOf((1337))));
+	}
 
 	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Long amount,
 												   TransactionOutput usedOutput, TimeLockedAddress address) {
