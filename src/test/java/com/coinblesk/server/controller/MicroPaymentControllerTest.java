@@ -32,6 +32,7 @@ import java.util.Arrays;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -379,11 +380,13 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		sendAndExpect4xxError(dto,  "Change cannot be send to address that is locked for less than 24 hours");
 	}
 
-	@Test public void microPayment_failsWhenTryingToSendToThirdParty() throws Exception {
+	@Test public void microPayment_closesChannelWhenSendingToThirdParty() throws Exception {
 		final ECKey senderKey = new ECKey();
 		final ECKey receiverKey = new ECKey();
 		ECKey serverPublicKey = accountService.createAcount(senderKey);
 		accountService.createAcount(receiverKey);
+
+		assertThat(accountService.getByClientPublicKey(senderKey.getPubKey()).isLocked(), is(false));
 
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
@@ -398,7 +401,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		signAllInputs(microPaymentTransaction, inputAddress.createRedeemScript(), senderKey);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction);
-		sendAndExpect4xxError(dto,  "Sending to external addresses is not yet supported");
+		sendAndExpect2xxSuccess(dto);
+		assertThat(accountService.getByClientPublicKey(senderKey.getPubKey()).isLocked(), is(true));
 	}
 
 	@Test public void microPayment_failsWhenChannelIsLocked() throws Exception {
@@ -541,11 +545,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		mineTransaction(fundingTx);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1000L, fundingTx.getOutput(0), tla);
-
-		mockMvc.perform(post(URL_MICRO_PAYMENT) .contentType(APPLICATION_JSON)
-			.content(DTOUtils.toJSON(dto)))
-			.andExpect(status().is2xxSuccessful());
-
+		sendAndExpect2xxSuccess(dto);
 		assertThat(accountService.getVirtualBalanceByClientPublicKey(receiverKey.getPubKey()), is(1000L));
 	}
 
@@ -564,10 +564,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		mineTransaction(fundingTx);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1000L, fundingTx.getOutput(0), tla);
-
-		mockMvc.perform(post(URL_MICRO_PAYMENT) .contentType(APPLICATION_JSON)
-			.content(DTOUtils.toJSON(dto)))
-			.andExpect(status().is2xxSuccessful());
+		sendAndExpect2xxSuccess(dto);
 
 		Transaction openChannelTx = new Transaction(params(),
 			accountService.getByClientPublicKey(senderKey.getPubKey()).getChannelTransaction());
@@ -590,9 +587,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		mineTransaction(fundingTx);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1337L, fundingTx.getOutput(0), tla);
-		mockMvc.perform(post(URL_MICRO_PAYMENT) .contentType(APPLICATION_JSON)
-			.content(DTOUtils.toJSON(dto)))
-			.andExpect(status().is2xxSuccessful());
+		sendAndExpect2xxSuccess(dto);
 
 		assertThat(accountService.getByClientPublicKey(receiverKey.getPubKey()).virtualBalance(), is(1337L));
 
@@ -641,9 +636,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		mineTransaction(fundingTx);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1337L, fundingTx.getOutput(0), tla);
-		mockMvc.perform(post(URL_MICRO_PAYMENT) .contentType(APPLICATION_JSON)
-			.content(DTOUtils.toJSON(dto)))
-			.andExpect(status().is2xxSuccessful());
+		sendAndExpect2xxSuccess(dto);
 
 		Transaction openChannelTx = new Transaction(params(),
 			accountService.getByClientPublicKey(senderKey.getPubKey()).getChannelTransaction());
@@ -728,6 +721,13 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 			.andExpect(status().is4xxClientError()).andReturn();
 		String errorMessage = DTOUtils.fromJSON(result.getResponse().getContentAsString(), ErrorDTO.class).getError();
 		assertThat(errorMessage, containsString(expectedErrorMessage));
+	}
+
+	private void sendAndExpect2xxSuccess(SignedDTO dto) throws Exception {
+		mockMvc.perform(post(URL_MICRO_PAYMENT)
+			.contentType(APPLICATION_JSON)
+			.content(DTOUtils.toJSON(dto)))
+			.andExpect(status().is2xxSuccessful());
 	}
 
 	private TransactionOutput anyP2PKOutput(Transaction forTransaction) {

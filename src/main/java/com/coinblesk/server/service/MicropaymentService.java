@@ -260,10 +260,10 @@ public class MicropaymentService {
 			throw new RuntimeException("Cannot have multiple change outputs");
 		}
 
-		// 2.3) No other outputs are allowed (i.e. sending to an external address) since this would require closing
-		//      the transaction, which is not yet supported.
+		// 2.3) If there are other outputs, we must close the channel
+		boolean mustClose = false;
 		if (!remainingOutputs.isEmpty()) {
-			throw new RuntimeException("Sending to external addresses is not yet supported");
+			mustClose = true;
 		}
 
 		// 3) Check receiver
