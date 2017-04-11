@@ -366,19 +366,6 @@ public class WalletService {
 	public TransactionOutput findOutputFor(TransactionInput input) {
 		Transaction tx = wallet.getTransaction(input.getOutpoint().getHash());
 		if (tx == null) {
-			// TODO: useDB?
-			/*List<TransactionOutput> touts = wallet.getWatchedOutputs(true);
-			for(TransactionOutput to:touts) {
-				if(to.getOutPointFor().getHash().equals(input.getOutpoint().getHash()) &&
-						to.getOutPointFor().getIndex() == input.getOutpoint().getIndex()) {
-					LOG.debug("could not get TX from wallet, but we have it..." + to);
-					return to;
-				}
-			}
-			LOG.debug("we only have the following tx hashes:");
-			for(TransactionOutput to:touts) {
-				LOG.debug("to:"+to.getOutPointFor().getHash()+":"+to.getOutPointFor().getIndex());
-			}*/
 			return null;
 		}
 		return tx.getOutput(input.getOutpoint().getIndex());
