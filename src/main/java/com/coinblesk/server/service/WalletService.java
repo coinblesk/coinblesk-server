@@ -370,10 +370,6 @@ public class WalletService {
 		}
 	}
 
-	public PeerGroup peerGroup() {
-		return peerGroup;
-	}
-
 	public Transaction receivePending(Transaction fullTx) {
 		wallet.receivePending(fullTx, null, false);
 		return wallet.getTransaction(fullTx.getHash());
@@ -390,7 +386,7 @@ public class WalletService {
 	public void broadcast(final Transaction fullTx) {
 		txQueueService.addTx(fullTx);
 		// broadcast immediately
-		final TransactionBroadcast broadcast = peerGroup().broadcastTransaction(fullTx);
+		final TransactionBroadcast broadcast = peerGroup.broadcastTransaction(fullTx);
 		Futures.addCallback(broadcast.future(), new FutureCallback<Transaction>() {
 			@Override
 			public void onSuccess(Transaction transaction) {
