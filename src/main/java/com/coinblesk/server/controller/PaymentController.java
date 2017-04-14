@@ -15,52 +15,37 @@
  */
 package com.coinblesk.server.controller;
 
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
-import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
-import static org.springframework.http.HttpStatus.OK;
-import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
-import static org.springframework.web.bind.annotation.RequestMethod.POST;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-
-import com.coinblesk.server.dto.*;
-import com.coinblesk.server.exceptions.InvalidLockTimeException;
-import com.coinblesk.server.exceptions.InvalidSignatureException;
-import com.coinblesk.server.exceptions.MissingFieldException;
-import com.coinblesk.server.exceptions.UserNotFoundException;
-import com.coinblesk.server.utils.DTOUtils;
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.crypto.TransactionSignature;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.json.v1.BalanceTO;
 import com.coinblesk.json.v1.SignVerifyTO;
 import com.coinblesk.json.v1.TxSig;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.dto.*;
 import com.coinblesk.server.entity.Account;
+import com.coinblesk.server.exceptions.InvalidLockTimeException;
+import com.coinblesk.server.exceptions.InvalidSignatureException;
+import com.coinblesk.server.exceptions.MissingFieldException;
+import com.coinblesk.server.exceptions.UserNotFoundException;
 import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.TransactionService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utils.ApiVersion;
+import com.coinblesk.server.utils.DTOUtils;
 import com.coinblesk.server.utils.ToUtils;
-import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.SerializeUtils;
+import org.bitcoinj.core.ECKey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+
+import static org.springframework.http.HttpStatus.*;
+import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
+import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
 /**
  *
@@ -145,127 +130,6 @@ public class PaymentController {
 		return new ResponseEntity<>(responseDTO, OK);
 	}
 
-	@RequestMapping(
-			value = "/signverify",
-			method = POST,
-			consumes = APPLICATION_JSON_UTF8_VALUE,
-			produces = APPLICATION_JSON_UTF8_VALUE)
-	@ResponseBody
-	public SignVerifyTO signVerify(@RequestBody SignVerifyTO request) {
-		final String tag = "{signverify}";
-		final Instant startTime = Instant.now();
-		String clientPubKeyHex = "(UNKNOWN)";
-
-		try {
-			final NetworkParameters params = appConfig.getNetworkParameters();
-			final Account account;
-			final ECKey clientKey = ECKey.fromPublicOnly(request.publicKey());
-			clientPubKeyHex = clientKey.getPublicKeyAsHex();
-			final ECKey serverKey;
-			final Transaction transaction;
-			final List<TransactionSignature> clientSigs;
-
-			// clear payeeSig since client sig does not cover it
-			final TxSig payeeSigInput = request.payeeMessageSig();
-			request.payeeMessageSig(null);
-			final byte[] payeePubKey = request.payeePublicKey();
-			request.payeePublicKey(null);
-
-			// NFC has a hard limit of 245, thus we have no space for the date
-			// yet.
-			final SignVerifyTO error = ToUtils.checkInput(request, false);
-			if (error != null) {
-				LOG.info("{} - clientPubKey={} - input error - type={}", tag, clientPubKeyHex, error.type());
-				return error;
-			}
-
-			LOG.debug("{} - clientPubKey={} - request", tag, clientPubKeyHex);
-			account = accountService.getByClientPublicKey(clientKey.getPubKey());
-			if (account == null
-					|| account.clientPublicKey() == null
-					|| account.serverPrivateKey() == null
-					|| account.serverPublicKey() == null) {
-				LOG.debug("{} - clientPubKey={} - KEYS_NOT_FOUND", tag, clientPubKeyHex);
-				return ToUtils.newInstance(SignVerifyTO.class, Type.KEYS_NOT_FOUND);
-			}
-			serverKey = ECKey.fromPrivateAndPrecalculatedPublic(account.serverPrivateKey(), account.serverPublicKey());
-
-			if (account.timeLockedAddresses().isEmpty()) {
-				LOG.debug("{} - clientPubKey={} - ADDRESS_EMPTY", tag, clientPubKeyHex);
-				return ToUtils.newInstance(SignVerifyTO.class, Type.ADDRESS_EMPTY, serverKey);
-			}
-
-			/*
-			 * Got a transaction in the request - sign
-			 */
-			if (request.transaction() != null) {
-				transaction = new Transaction(params, request.transaction());
-				LOG.debug("{} - clientPubKey={} - transaction from input: \n{}", tag, clientPubKeyHex, transaction);
-
-				List<TransactionOutput> outputsToAdd = new ArrayList<>();
-				// if amount to spend && address provided, add corresponding
-				// output
-				if (request.amountToSpend() > 0 && request.addressTo() != null && !request.addressTo().isEmpty()) {
-					TransactionOutput txOut = transaction.addOutput(Coin.valueOf(request.amountToSpend()),
-							Address.fromBase58(params, request.addressTo()));
-					outputsToAdd.add(txOut);
-					LOG.debug("{} - added output={} to Tx={}", tag, txOut, transaction.getHash());
-				}
-
-				// if change amount is provided, we add an output to the most
-				// recently created address of the client.
-				if (request.amountChange() > 0) {
-					Address changeAddress = account.latestTimeLockedAddresses().toAddress(params);
-					Coin changeAmount = Coin.valueOf(request.amountChange());
-					TransactionOutput changeOut = transaction.addOutput(changeAmount, changeAddress);
-					outputsToAdd.add(changeOut);
-					LOG.debug("{} - added change output={} to Tx={}", tag, changeOut, transaction.getHash());
-				}
-
-				if (!outputsToAdd.isEmpty()) {
-					outputsToAdd = BitcoinUtils.sortOutputs(outputsToAdd);
-					transaction.clearOutputs();
-					for (TransactionOutput to : outputsToAdd) {
-						transaction.addOutput(to);
-					}
-				}
-
-			} else {
-				LOG.debug("{} - clientPubKey={} - INPUT_MISMATCH", tag, clientPubKeyHex);
-				return ToUtils.newInstance(SignVerifyTO.class, Type.INPUT_MISMATCH, serverKey);
-			}
-
-			// check signatures
-			if (request.signatures() == null || (request.signatures().size() != transaction.getInputs().size())) {
-				LOG.debug("{} - clientPubKey={} - INPUT_MISMATCH - number of signatures ({}) != number of inputs ({})",
-						tag, clientPubKeyHex, request.signatures().size(), transaction.getInputs().size());
-				return ToUtils.newInstance(SignVerifyTO.class, Type.INPUT_MISMATCH, serverKey);
-			}
-
-			clientSigs = SerializeUtils.deserializeSignatures(request.signatures());
-			SignVerifyTO responseTO = txService.signVerifyTransaction(transaction, clientKey, serverKey, clientSigs);
-			SerializeUtils.signJSON(responseTO, serverKey);
-
-			// if we know the receiver, we create an additional signature with
-			// the key of the payee.
-			if (maybeAppendPayeeSignature(request, payeePubKey, payeeSigInput, responseTO)) {
-				LOG.debug("{} - created additional signature for payee.", tag);
-			} else {
-				LOG.debug("{} - payee unknown (no additional signature)");
-			}
-
-			return responseTO;
-		} catch (Exception e) {
-			LOG.error("{} - clientPubKey={} - SERVER_ERROR: ", tag, clientPubKeyHex, e);
-			return new SignVerifyTO()
-					.currentDate(System.currentTimeMillis())
-					.type(Type.SERVER_ERROR)
-					.message(e.getMessage());
-		} finally {
-			LOG.debug("{} - clientPubKey={} - finished in {} ms", tag, clientPubKeyHex,
-					Duration.between(startTime, Instant.now()).toMillis());
-		}
-	}
 
 	private boolean maybeAppendPayeeSignature(SignVerifyTO request, byte[] payeePubKey, TxSig payeeTxSig,
 			SignVerifyTO response) {
