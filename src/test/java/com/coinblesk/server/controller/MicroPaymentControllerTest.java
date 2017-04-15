@@ -57,6 +57,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	@Autowired
 	private AccountRepository accountRepository;
 
+
 	@Autowired
 	private AppConfig appConfig;
 	private NetworkParameters params() {
@@ -350,7 +351,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		sendAndExpect4xxError(dto,  "Cannot have multiple change outputs");
 	}
 
-	@Test public void microPayment_failsWhenChangeOutputIsSoonUnlocked() throws Exception {
+	@Test public void microPayment_closesChannelWhenChangeOutputIsSoonUnlocked() throws Exception {
 		final ECKey senderKey = new ECKey();
 		final ECKey receiverKey = new ECKey();
 
@@ -372,7 +373,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		signAllInputs(microPaymentTransaction, inputAddress.createRedeemScript(), senderKey);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction);
-		sendAndExpect4xxError(dto,  "Change cannot be send to address that is locked for less than 24 hours");
+		sendAndExpect2xxSuccess(dto);
+		assertThat(accountService.getByClientPublicKey(senderKey.getPubKey()).isLocked(), is(true));
 	}
 
 	@Test public void microPayment_closesChannelWhenSendingToThirdParty() throws Exception {

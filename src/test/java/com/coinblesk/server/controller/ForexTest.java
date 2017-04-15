@@ -15,9 +15,9 @@
  */
 package com.coinblesk.server.controller;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
+import com.coinblesk.json.v1.ExchangeRateTO;
+import com.coinblesk.server.utilTest.CoinbleskTest;
+import com.coinblesk.util.SerializeUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,9 +27,8 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import com.coinblesk.json.v1.ExchangeRateTO;
-import com.coinblesk.server.utilTest.CoinbleskTest;
-import com.coinblesk.util.SerializeUtils;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  *

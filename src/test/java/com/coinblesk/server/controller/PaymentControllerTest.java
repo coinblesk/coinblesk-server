@@ -15,18 +15,16 @@
  */
 package com.coinblesk.server.controller;
 
-import static org.junit.Assert.*;
-import static org.springframework.http.MediaType.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.time.Duration;
-import java.time.Instant;
-
+import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.dao.TimeLockedAddressRepository;
 import com.coinblesk.server.dto.*;
+import com.coinblesk.server.service.AccountService;
+import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utils.DTOUtils;
+import com.coinblesk.util.BitcoinUtils;
+import com.coinblesk.util.SerializeUtils;
+import com.github.springtestdbunit.annotation.DatabaseSetup;
+import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import org.bitcoinj.core.ECKey;
 import org.junit.Before;
 import org.junit.Test;
@@ -35,13 +33,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.server.service.AccountService;
-import com.coinblesk.server.utilTest.CoinbleskTest;
-import com.coinblesk.util.BitcoinUtils;
-import com.coinblesk.util.SerializeUtils;
-import com.github.springtestdbunit.annotation.DatabaseSetup;
-import com.github.springtestdbunit.annotation.DatabaseTearDown;
+import java.time.Duration;
+import java.time.Instant;
+
+import static org.junit.Assert.*;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  *

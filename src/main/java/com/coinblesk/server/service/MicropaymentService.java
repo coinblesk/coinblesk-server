@@ -1,5 +1,6 @@
 package com.coinblesk.server.service;
 
+import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dao.AccountRepository;
 import com.coinblesk.server.dao.TimeLockedAddressRepository;
@@ -237,19 +238,21 @@ public class MicropaymentService {
 			throw new CoinbleskInternalError("Could not remove server output from set");
 		}
 
-		// 2.2) Transaction must have at most one change output back to sender, which is the newest TLA
-		final Address expectedChangeAddress = Address.fromP2SHHash(appConfig.getNetworkParameters(),
-			accountSender.latestTimeLockedAddresses().getAddressHash());
+		// 2.2) Transaction must have at most one change output back to sender, which is the TLA last to expire
+		final TimeLockedAddress latestTimeLockedAddress =
+			timeLockedAddressRepository.findTopByAccount_clientPublicKeyOrderByLockTimeDesc(senderPublicKey.getPubKey())
+			.toTimeLockedAddress();
 		List<TransactionOutput> changeOutputs = remainingOutputs.stream()
 			.filter(output -> {
 				Address p2SHAddress = output.getAddressFromP2SH(appConfig.getNetworkParameters());
-				return (p2SHAddress != null && p2SHAddress.equals(expectedChangeAddress));
+				return (p2SHAddress != null && p2SHAddress.equals(latestTimeLockedAddress.getAddress(
+					appConfig.getNetworkParameters())));
 			})
 			.collect(Collectors.toList());
 		if (changeOutputs.size() == 0) {
 			LOG.warn("Client provided no change in micropayment");
 		} else if (changeOutputs.size() == 1) {
-			final long lockTimeOfChange = accountSender.latestTimeLockedAddresses().getLockTime();
+			final long lockTimeOfChange = latestTimeLockedAddress.getLockTime();
 			if (Instant.ofEpochSecond(lockTimeOfChange).isBefore(Instant.now().plus(MINIMUM_LOCKTIME_DURATION))) {
 				throw new RuntimeException("Change cannot be send to address that is locked for less than " +
 					"24 hours");

@@ -5,20 +5,14 @@
  */
 package com.coinblesk.server.service;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Date;
-import java.util.List;
-
+import com.coinblesk.json.v1.UserAccountTO;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.exceptions.InvalidLockTimeException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.PrunedException;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.VerificationException;
+import com.coinblesk.server.utilTest.CoinbleskTest;
+import com.coinblesk.server.utilTest.FakeTxBuilder;
+import org.bitcoinj.core.*;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.wallet.UnreadableWalletException;
@@ -30,22 +24,18 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.TestExecutionListeners;
 
-import com.coinblesk.json.v1.UserAccountTO;
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.entity.UserAccount;
-import com.coinblesk.server.utilTest.CoinbleskTest;
-import com.coinblesk.server.utilTest.FakeTxBuilder;
-import com.github.springtestdbunit.DbUnitTestExecutionListener;
-import com.github.springtestdbunit.annotation.DatabaseSetup;
-import com.github.springtestdbunit.annotation.DatabaseTearDown;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
+import java.util.List;
 
 /**
  *
  * @author Thomas Bocek
  */
-@TestExecutionListeners(listeners = DbUnitTestExecutionListener.class, mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
 public class UserAccountServiceTest extends CoinbleskTest {
 	@MockBean
 	private MailService mailService;
@@ -100,8 +90,6 @@ public class UserAccountServiceTest extends CoinbleskTest {
 	}
 
 	@Test
-	@DatabaseSetup("/EmptyDatabase.xml")
-	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testTransferFailed() {
 		UserAccountTO result = userAccountService.transferP2SH(ecKeyClient, "test@test.test");
 		Mockito.verify(mailService, Mockito.times(1)).sendAdminMail(Mockito.anyString(), Mockito.anyString());
@@ -109,8 +97,6 @@ public class UserAccountServiceTest extends CoinbleskTest {
 	}
 
 	@Test
-	@DatabaseSetup("/EmptyDatabase.xml")
-	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void testTransferSuccess() throws BlockStoreException, VerificationException, PrunedException {
 		Block block = FakeTxBuilder.makeSolvedTestBlock(walletService.blockChain().getBlockStore(),
 				cfg.getPotPrivateKeyAddress().toAddress(cfg.getNetworkParameters()));

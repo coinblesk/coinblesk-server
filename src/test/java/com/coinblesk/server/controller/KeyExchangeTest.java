@@ -15,10 +15,11 @@
  */
 package com.coinblesk.server.controller;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 import com.coinblesk.server.dto.KeyExchangeRequestDTO;
+import com.coinblesk.server.utilTest.CoinbleskTest;
+import com.coinblesk.util.SerializeUtils;
+import com.github.springtestdbunit.annotation.DatabaseSetup;
+import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import org.bitcoinj.core.ECKey;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,10 +29,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import com.coinblesk.server.utilTest.CoinbleskTest;
-import com.coinblesk.util.SerializeUtils;
-import com.github.springtestdbunit.annotation.DatabaseSetup;
-import com.github.springtestdbunit.annotation.DatabaseTearDown;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  *

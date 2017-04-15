@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import java.time.Duration;
 import java.time.Instant;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -19,9 +20,11 @@ import static org.junit.Assert.assertNotNull;
 public class TimeLockedAddressDaoTest {
 
 	@Autowired
+	private
 	TimeLockedAddressRepository timeLockedAddressRepository;
 
 	@Autowired
+	private
 	AccountRepository accountRepository;
 
 	@Test
@@ -37,24 +40,31 @@ public class TimeLockedAddressDaoTest {
 
 		timeLockedAddressRepository.save(new TimeLockedAddressEntity()
 			.setAccount(account)
-			.setLockTime(0)
-			.setAddressHash("old".getBytes())
+			.setLockTime(Instant.now().plus(Duration.ofMinutes(2)).getEpochSecond())
+			.setAddressHash("firstToExpire".getBytes())
 			.setRedeemScript("fake".getBytes())
-			.setTimeCreated(100)
-			);
+			.setTimeCreated(Instant.now().getEpochSecond())
+		);
 		timeLockedAddressRepository.save(new TimeLockedAddressEntity()
 			.setAccount(account)
-			.setLockTime(0)
-			.setAddressHash("new".getBytes())
+			.setLockTime(Instant.now().plus(Duration.ofMinutes(10)).getEpochSecond())
+			.setAddressHash("lastToExpire".getBytes())
 			.setRedeemScript("fake".getBytes())
-			.setTimeCreated(200)
+			.setTimeCreated(Instant.now().getEpochSecond())
+		);
+		timeLockedAddressRepository.save(new TimeLockedAddressEntity()
+			.setAccount(account)
+			.setLockTime(Instant.now().plus(Duration.ofMinutes(8)).getEpochSecond())
+			.setAddressHash("middleToExpire".getBytes())
+			.setRedeemScript("fake".getBytes())
+			.setTimeCreated(Instant.now().getEpochSecond())
 		);
 
-		// Make sure we get the newest address
+		// Make sure we get the address with the longest lock time
 		TimeLockedAddressEntity tlaEntity =
-			timeLockedAddressRepository.findTopByAccount_clientPublicKeyOrderByTimeCreatedDesc(clientKey.getPubKey());
+			timeLockedAddressRepository.findTopByAccount_clientPublicKeyOrderByLockTimeDesc(clientKey.getPubKey());
 		assertNotNull(tlaEntity);
-		assertArrayEquals("new".getBytes(), tlaEntity.getAddressHash());
+		assertArrayEquals("lastToExpire".getBytes(), tlaEntity.getAddressHash());
 	}
 
 }

@@ -41,7 +41,6 @@ import com.coinblesk.json.v1.UserAccountTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.config.UserRole;
 import com.coinblesk.server.dao.UserAccountRepository;
-import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.CoinbleskException;
@@ -207,12 +206,13 @@ public class UserAccountService {
 
 		List<TransactionOutput> outputs = walletService.potTransactionOutput(params);
 
-		// TODO: get current timelocked multisig address
-		Account account = accountService.getByClientPublicKey(clientKey.getPubKey());
 		Transaction tx;
 		try {
+			TimeLockedAddress latestTLA =
+				addressRepository.findTopByAccount_clientPublicKeyOrderByLockTimeDesc(clientKey.getPubKey())
+				.toTimeLockedAddress();
 			tx = BitcoinUtils.createTx(params, outputs, pot.toAddress(params),
-					account.latestTimeLockedAddresses().toAddress(params), satoshi, false);
+					latestTLA.getAddress(params), satoshi, false);
 
 			tx = BitcoinUtils.sign(params, tx, pot);
 			BitcoinUtils.verifyTxFull(tx);
@@ -233,16 +233,6 @@ public class UserAccountService {
 			mailService.sendAdminMail("transfer-p2sh error", "Cannot create transaction: " + e.getMessage());
 			return new UserAccountTO().type(Type.ACCOUNT_ERROR).message(e.getMessage());
 		}
-	}
-
-	// for debugging
-	@Transactional(readOnly = true)
-	public String getToken(String email) {
-		final UserAccount userAccount = repository.findByEmail(email);
-		if (userAccount == null) {
-			return null;
-		}
-		return userAccount.getEmailToken();
 	}
 
 	@Transactional()

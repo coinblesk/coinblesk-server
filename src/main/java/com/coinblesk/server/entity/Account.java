@@ -60,10 +60,6 @@ public class Account implements Serializable {
 	@Column(name = "LOCKED", nullable = false)
 	private boolean locked;
 
-	@OneToMany(mappedBy = "account", fetch = FetchType.EAGER)
-	@OrderBy("TIME_CREATED ASC")
-	private List<TimeLockedAddressEntity> timeLockedAddresses;
-
 	public byte[] clientPublicKey() {
 		return clientPublicKey;
 	}
@@ -116,14 +112,6 @@ public class Account implements Serializable {
 	public Account nonce(long nonce) {
 		this.nonce = nonce;
 		return this;
-	}
-
-	public List<TimeLockedAddressEntity> timeLockedAddresses() {
-		return timeLockedAddresses;
-	}
-
-	public TimeLockedAddressEntity latestTimeLockedAddresses() {
-		return timeLockedAddresses.get(timeLockedAddresses.size() - 1);
 	}
 
 	public byte[] getChannelTransaction() {

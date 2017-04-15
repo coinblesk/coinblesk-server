@@ -13,5 +13,5 @@ public interface TimeLockedAddressRepository extends CrudRepository<TimeLockedAd
 	List<TimeLockedAddressEntity> findByAddressHashIn(Collection<byte[]> addressHashes);
 
 	// Get oldest time locked address for given public key
-	TimeLockedAddressEntity findTopByAccount_clientPublicKeyOrderByTimeCreatedDesc(byte[] clientPublicKey);
+	TimeLockedAddressEntity findTopByAccount_clientPublicKeyOrderByLockTimeDesc(byte[] clientPublicKey);
 }

@@ -26,6 +26,7 @@ import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dto.AccountDTO;
 import com.coinblesk.server.dto.TimeLockedAddressDTO;
 import com.coinblesk.server.entity.Account;
+import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.service.AccountService;
 import com.coinblesk.util.SerializeUtils;
 import org.bitcoinj.core.Address;
@@ -103,31 +104,13 @@ public class AdminController {
 		// Pre-calculate balances for each address
 		Map<Address, Coin> balances = walletService.getBalanceByAddresses();
 
-		List<Account> keys = accountService.allAccounts();
-
-		// ...and summed for each account
-		Map<Account, Long> balancesPerKeys = keys.stream()
-				.collect(Collectors.toMap(Function.identity(),
-						account ->
-								account.timeLockedAddresses()
-										.stream()
-										.map(tla -> tla.toAddress(params))
-										.map(balances::get)
-										.mapToLong(Coin::longValue)
-										.sum()
-				));
-
-		// Map the Account entities to DTOs including the containing TimeLockedAddresses
-		return keys.stream()
-				.map(account -> new AccountDTO(
-						SerializeUtils.bytesToHex(account.clientPublicKey()),
-						SerializeUtils.bytesToHex(account.serverPublicKey()),
-						SerializeUtils.bytesToHex(account.serverPrivateKey()),
-						Date.from(Instant.ofEpochSecond(account.timeCreated())),
-						account.virtualBalance(),
-						balancesPerKeys.get(account),
-						account.virtualBalance() + balancesPerKeys.get(account),
-						account.timeLockedAddresses().stream() .map(tla -> {
+		return accountService.allAddresses().stream()
+			.collect(Collectors.groupingBy(TimeLockedAddressEntity::getAccount))
+			.entrySet().stream()
+			.map(accountListEntry -> {
+				Account account = accountListEntry.getKey();
+				List<TimeLockedAddressDTO> addresses = accountListEntry.getValue().stream()
+					.map(tla -> {
 									Instant createdAt = Instant.ofEpochSecond(tla.getTimeCreated());
 									Instant lockedUntil = Instant.ofEpochSecond(tla.getLockTime());
 									Coin balance = balances.get(tla.toAddress(params));
@@ -141,8 +124,19 @@ public class AdminController {
 											balance.longValue()
 									);
 								}
-						).collect(Collectors.toList())
-				))
-				.collect(Collectors.toList());
+						).collect(Collectors.toList());
+
+				long satoshiBalance = addresses.stream().mapToLong(TimeLockedAddressDTO::getBalance).sum();
+				return new AccountDTO(
+					SerializeUtils.bytesToHex(account.clientPublicKey()),
+					SerializeUtils.bytesToHex(account.serverPublicKey()),
+					SerializeUtils.bytesToHex(account.serverPrivateKey()),
+					Date.from(Instant.ofEpochSecond(account.timeCreated())),
+					account.virtualBalance(),
+					satoshiBalance,
+					account.virtualBalance() + satoshiBalance,
+					addresses);
+			})
+			.collect(Collectors.toList());
 	}
 }
