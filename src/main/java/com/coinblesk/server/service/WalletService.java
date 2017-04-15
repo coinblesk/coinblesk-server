@@ -198,11 +198,9 @@ public class WalletService {
 
 	private void walletWatchKeysCLTV(final NetworkParameters params) {
 		StringBuilder sb = new StringBuilder();
-		for (Account key : accountService.allAccounts()) {
-			for (TimeLockedAddressEntity address : key.timeLockedAddresses()) {
-				wallet.addWatchedAddress(address.toAddress(params), address.getTimeCreated());
-				sb.append(address.toAddress(params)).append("\n");
-			}
+		for (TimeLockedAddressEntity address : accountService.allAddresses()) {
+			wallet.addWatchedAddress(address.toAddress(params), address.getTimeCreated());
+			sb.append(address.toAddress(params)).append("\n");
 		}
 		LOG.info("walletWatchKeysCLTV:\n{}", sb.toString());
 	}

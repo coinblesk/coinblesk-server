@@ -105,6 +105,12 @@ public class AccountService {
 				.collect(Collectors.toList());
 	}
 
+	@Transactional(readOnly = true)
+	public List<TimeLockedAddressEntity> allAddresses() {
+		return StreamSupport.stream(timeLockedAddressRepository.findAll().spliterator(), false)
+			.collect(Collectors.toList());
+	}
+
 	@Data public static class CreateTimeLockedAddressResponse {
 		@NonNull final private TimeLockedAddress timeLockedAddress;
 		@NonNull final private ECKey serverPrivateKey;
@@ -158,7 +164,7 @@ public class AccountService {
 	}
 
 	@Data public static class GetVirtualBalanceResponse {
-		@NonNull final private long balance;
+		final private long balance;
 		@NonNull final private ECKey serverPrivateKey;
 	}
 	@Transactional(readOnly = true)
