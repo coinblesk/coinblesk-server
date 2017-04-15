@@ -42,11 +42,6 @@ public class BeanConfig {
 	}
 
 	@Bean
-	public static ForexService.ForexTask forexTask() {
-		return new ForexService.ForexTask();
-	}
-
-	@Bean
 	public static TaskScheduler taskScheduler() {
 		return new ThreadPoolTaskScheduler();
 	}

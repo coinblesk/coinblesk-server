@@ -24,8 +24,12 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import com.coinblesk.server.utils.DTOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import com.google.common.cache.Cache;
@@ -79,7 +83,7 @@ final public class ForexService {
 		return getExchangeRates(pair).get(pair);
 	}
 
-	public Map<String, BigDecimal> getExchangeRates(final String... pairs) throws Exception {
+	Map<String, BigDecimal> getExchangeRates(final String... pairs) throws Exception {
 		// mark as used
 		Map<String, BigDecimal> exchangeRates = new HashMap<>(pairs.length);
 		// this empty most of the times:
@@ -177,14 +181,22 @@ final public class ForexService {
 		}
 	}
 
+	@Component
 	final static public class ForexTask {
 
+		private final static Logger Log = LoggerFactory.getLogger(ForexTask.class);
+
+		private final ForexService service;
+
 		@Autowired
-		private ForexService service;
+		public ForexTask(ForexService service) {
+			this.service = service;
+		}
 
 		// call every 6 minutes
 		@Scheduled(fixedRate = ForexService.CACHING_TIME_RATE_MILLIS / 3)
 		public void doTask() throws Exception {
+			Log.debug("Scheduled: Getting new rates...");
 			Set<String> set = service.exchangeRatesSymbolCache.asMap().keySet();
 			service.getExchangeRates(set.toArray(new String[set.size()]));
 		}
