@@ -7,7 +7,6 @@ import com.coinblesk.server.dto.ErrorDTO;
 import com.coinblesk.server.dto.MicroPaymentRequestDTO;
 import com.coinblesk.server.dto.SignedDTO;
 import com.coinblesk.server.service.AccountService;
-import com.coinblesk.server.service.FeeService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.FakeTxBuilder;
@@ -57,9 +56,6 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 	@Autowired
 	private AccountRepository accountRepository;
-
-	@Autowired
-	private FeeService feeService;
 
 	@Autowired
 	private AppConfig appConfig;
