@@ -71,23 +71,28 @@ public class UserController {
 
 	private final static Logger LOG = LoggerFactory.getLogger(UserController.class);
 
-	@Autowired
-	private UserAccountService userAccountService;
+	private final UserAccountService userAccountService;
+
+	private final MailService mailService;
+
+	private final MessageSource messageSource;
+
+	private final AppConfig cfg;
+
+	private final TokenProvider tokenProvider;
+
+	private final AuthenticationManager authenticationManager;
 
 	@Autowired
-	private MailService mailService;
-
-	@Autowired
-	private MessageSource messageSource;
-
-	@Autowired
-	private AppConfig cfg;
-
-	@Autowired
-	private TokenProvider tokenProvider;
-
-	@Autowired
-	private AuthenticationManager authenticationManager;
+	public UserController(UserAccountService userAccountService, MailService mailService, MessageSource messageSource,
+						  AppConfig cfg, TokenProvider tokenProvider, AuthenticationManager authenticationManager) {
+		this.userAccountService = userAccountService;
+		this.mailService = mailService;
+		this.messageSource = messageSource;
+		this.cfg = cfg;
+		this.tokenProvider = tokenProvider;
+		this.authenticationManager = authenticationManager;
+	}
 
 	@RequestMapping(
 			value = "/login",
