@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
+import com.coinblesk.bitcoin.TimeLockedAddress;
+import com.coinblesk.server.dao.TimeLockedAddressRepository;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
@@ -62,23 +64,32 @@ public class UserAccountService {
 
 	private final static Logger LOG = LoggerFactory.getLogger(UserAccountService.class);
 
-	@Autowired
-	private UserAccountRepository repository;
+	private final UserAccountRepository repository;
+
+	private final TimeLockedAddressRepository addressRepository;
+
+	private final PasswordEncoder passwordEncoder;
+
+	private final MailService mailService;
+
+	private final AppConfig appConfig;
+
+	private final WalletService walletService;
+
+	private final AccountService accountService;
 
 	@Autowired
-	private PasswordEncoder passwordEncoder;
-
-	@Autowired
-	private MailService mailService;
-
-	@Autowired
-	private AppConfig appConfig;
-
-	@Autowired
-	private WalletService walletService;
-
-	@Autowired
-	private AccountService accountService;
+	public UserAccountService(UserAccountRepository repository, TimeLockedAddressRepository addressRepository, PasswordEncoder passwordEncoder,
+							  MailService mailService, AppConfig appConfig, WalletService walletService,
+							  AccountService accountService) {
+		this.repository = repository;
+		this.addressRepository = addressRepository;
+		this.passwordEncoder = passwordEncoder;
+		this.mailService = mailService;
+		this.appConfig = appConfig;
+		this.walletService = walletService;
+		this.accountService = accountService;
+	}
 
 	@Transactional(readOnly = true)
 	public UserAccount getByEmail(String email) {
