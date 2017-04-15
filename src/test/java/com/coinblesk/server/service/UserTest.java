@@ -31,7 +31,6 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 /**
- *
  * @author Thomas Bocek
  */
 @TestExecutionListeners(listeners = DbUnitTestExecutionListener.class, mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)

@@ -31,27 +31,26 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- *
  * @author Thomas Bocek
  */
 public class FeeTest extends CoinbleskTest {
 
-    @Autowired
-    private WebApplicationContext webAppContext;
+	@Autowired
+	private WebApplicationContext webAppContext;
 
-    private static MockMvc mockMvc;
+	private static MockMvc mockMvc;
 
-    @Before
-    public void setUp() {
-        mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();
-    }
+	@Before
+	public void setUp() {
+		mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();
+	}
 
-    @Test
-    public void testFee() throws Exception {
-        MvcResult res = mockMvc
-                .perform(get("/v1/fee").secure(true))
-                .andExpect(status().isOk())
-                .andReturn();
+	@Test
+	public void testFee() throws Exception {
+		MvcResult res = mockMvc
+			.perform(get("/v1/fee").secure(true))
+			.andExpect(status().isOk())
+			.andReturn();
 		FeeTO fee = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
 			FeeTO.class);
 		System.out.println("fee is: " + fee.fee() + "/" + fee.message());

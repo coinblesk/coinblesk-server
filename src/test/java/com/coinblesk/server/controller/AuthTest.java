@@ -56,7 +56,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- *
  * @author Thomas Bocek
  * @author Sebastian Stephan
  */
@@ -223,9 +222,9 @@ public class AuthTest extends CoinbleskTest {
 			.compact();
 
 		MvcResult res = mockMvc
-				.perform(get("/v1/user/auth/get").header("Authorization", "Bearer " + jwt))
-				.andExpect(status().isOk())
-				.andReturn();
+			.perform(get("/v1/user/auth/get").header("Authorization", "Bearer " + jwt))
+			.andExpect(status().isOk())
+			.andReturn();
 		UserAccountTO userAccountTO = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
 			UserAccountTO.class);
 		Assert.assertEquals(mail, userAccountTO.email());
@@ -253,8 +252,8 @@ public class AuthTest extends CoinbleskTest {
 	private ResultActions loginUser(String username, String password) throws Exception {
 		return mockMvc.perform(post("/user/login").contentType(MediaType.APPLICATION_JSON)
 			.content("{" +
-				"\"username\":\""+ username + "\"," +
-				"\"password\":\""+ password + "\"" +
+				"\"username\":\"" + username + "\"," +
+				"\"password\":\"" + password + "\"" +
 				"}"));
 	}
 }

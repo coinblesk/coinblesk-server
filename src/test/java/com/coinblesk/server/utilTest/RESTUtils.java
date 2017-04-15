@@ -25,9 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 
  * @author Andreas Albrecht
- *
  */
 public final class RESTUtils {
 	private RESTUtils() {
@@ -35,22 +33,21 @@ public final class RESTUtils {
 	}
 
 	@SuppressWarnings("unchecked")
-	public static <T extends BaseTO<?>> T postRequest(MockMvc mockMvc, String url, T requestTO) throws Exception {
+	public static <T extends BaseTO<?>> T postRequest(MockMvc mockMvc, T requestTO) throws Exception {
 		String requestJSON = SerializeUtils.GSON.toJson(requestTO);
-		return (T) postRequest(mockMvc, url, requestJSON, requestTO.getClass());
+		return (T) postRequest(mockMvc, com.coinblesk.server.controller.VersionControllerTest.URL_VERSION, requestJSON, requestTO.getClass());
 	}
 
-	public static <T> T postRequest(MockMvc mockMvc, String url, String requestJSON, Class<T> responseClass) throws Exception {
+	private static <T> T postRequest(MockMvc mockMvc, String url, String requestJSON, Class<T> responseClass) throws Exception {
 		final MvcResult res = mockMvc
-				.perform(
-						post(url)
-						.secure(true)
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(requestJSON))
-						.andExpect(status().isOk())
-						.andReturn();
+			.perform(
+				post(url)
+					.secure(true)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(requestJSON))
+			.andExpect(status().isOk())
+			.andReturn();
 		final String responseJson = res.getResponse().getContentAsString();
-		final T responseTO = SerializeUtils.GSON.fromJson(responseJson, responseClass);
-		return responseTO;
+		return SerializeUtils.GSON.fromJson(responseJson, responseClass);
 	}
 }

@@ -32,7 +32,9 @@ import java.util.Random;
 import static org.bitcoinj.core.Coin.valueOf;
 
 public class FakeTxBuilder {
-	/** Create a fake transaction, without change. */
+	/**
+	 * Create a fake transaction, without change.
+	 */
 	public static Transaction createFakeTx(final NetworkParameters params) {
 		return createFakeTxWithoutChangeAddress(params, Coin.COIN, new ECKey().toAddress(params));
 	}
@@ -48,7 +50,7 @@ public class FakeTxBuilder {
 	 * one random input.
 	 */
 	public static Transaction createFakeTxWithChangeAddress(NetworkParameters params, Coin value, Address to,
-			Address changeOutput) {
+															Address changeOutput) {
 		Transaction t = new Transaction(params);
 		TransactionOutput outputToMe = new TransactionOutput(params, t, value, to);
 		t.addOutput(outputToMe);
@@ -116,7 +118,7 @@ public class FakeTxBuilder {
 	 * Roundtrip a transaction so that it appears as if it has just come from
 	 * the wire
 	 */
-	public static Transaction roundTripTransaction(NetworkParameters params, Transaction tx) {
+	private static Transaction roundTripTransaction(NetworkParameters params, Transaction tx) {
 		try {
 			MessageSerializer bs = params.getDefaultSerializer();
 			ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -131,9 +133,11 @@ public class FakeTxBuilder {
 		public StoredBlock storedBlock;
 	}
 
-	/** Emulates receiving a valid block */
+	/**
+	 * Emulates receiving a valid block
+	 */
 	public static BlockPair createFakeBlock(BlockStore blockStore, StoredBlock previousStoredBlock, long version,
-			long timeSeconds, int height, Transaction... transactions) {
+											long timeSeconds, int height, Transaction... transactions) {
 		try {
 			Block previousBlock = previousStoredBlock.getHeader();
 			Address to = new ECKey().toAddress(previousBlock.getParams());
@@ -149,9 +153,7 @@ public class FakeTxBuilder {
 			blockStore.put(pair.storedBlock);
 			blockStore.setChainHead(pair.storedBlock);
 			return pair;
-		} catch (VerificationException e) {
-			throw new RuntimeException(e); // Cannot happen.
-		} catch (BlockStoreException e) {
+		} catch (VerificationException | BlockStoreException e) {
 			throw new RuntimeException(e); // Cannot happen.
 		}
 	}
@@ -162,7 +164,7 @@ public class FakeTxBuilder {
 		return b;
 	}
 
-	public static Block makeSolvedTestBlock(Block prev, Transaction... transactions) throws BlockStoreException {
+	public static Block makeSolvedTestBlock(Block prev, Transaction... transactions) {
 		Address to = new ECKey().toAddress(prev.getParams());
 		Block b = prev.createNextBlock(to);
 		// Coinbase tx already exists.

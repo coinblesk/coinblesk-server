@@ -75,7 +75,7 @@ public class AccountServiceTest extends CoinbleskTest {
 		ECKey returnedServerPublicKey = accountService.createAcount(clientKey);
 		Account account = accountRepository.findByClientPublicKey(clientKey.getPubKey());
 		assertArrayEquals("Returned serverKey must be the one saved",
-				returnedServerPublicKey.getPubKey(), account.serverPublicKey());
+			returnedServerPublicKey.getPubKey(), account.serverPublicKey());
 	}
 
 	@Test
@@ -101,7 +101,7 @@ public class AccountServiceTest extends CoinbleskTest {
 		Account account = accountRepository.findByClientPublicKey(clientKey.getPubKey());
 		assertTrue("timeCreated must not be in the future", account.timeCreated() <= Instant.now().getEpochSecond());
 		assertTrue("timeCreated must be somthing in the last 10 seconds",
-				account.timeCreated() >= Instant.now().minus(Duration.ofSeconds(10)).getEpochSecond());
+			account.timeCreated() >= Instant.now().minus(Duration.ofSeconds(10)).getEpochSecond());
 	}
 
 	@Test
@@ -110,8 +110,8 @@ public class AccountServiceTest extends CoinbleskTest {
 		accountService.createAcount(clientKey);
 		accountService.createAcount(clientKey);
 		List resultList = em.createQuery("SELECT a FROM ACCOUNT a WHERE CLIENT_PUBLIC_KEY = :pubKey")
-				.setParameter("pubKey", clientKey.getPubKey())
-				.getResultList();
+			.setParameter("pubKey", clientKey.getPubKey())
+			.getResultList();
 		assertEquals(resultList.size(), 1);
 	}
 
@@ -138,44 +138,30 @@ public class AccountServiceTest extends CoinbleskTest {
 
 	@Test
 	public void createTimeLockedAddressFailsWithUnknownUser() {
-		Assertions.assertThatThrownBy(() -> {
-			accountService.createTimeLockedAddress(new ECKey(), validLocktime());
-		}).isInstanceOf(UserNotFoundException.class);
+		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(new ECKey(), validLocktime())).isInstanceOf(UserNotFoundException.class);
 	}
 
 	@Test
 	public void createTimeLockedAddressFailsWithInvalidLocktime() {
 		// Zero locktime
-		Assertions.assertThatThrownBy(() -> {
-			accountService.createTimeLockedAddress(new ECKey(), 0L);
-		}).isInstanceOf(InvalidLockTimeException.class);
+		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(new ECKey(), 0L)).isInstanceOf(InvalidLockTimeException.class);
 
 		// Locktime that could be interpreted as block height
-		Assertions.assertThatThrownBy(() -> {
-			accountService.createTimeLockedAddress(new ECKey(), Transaction.LOCKTIME_THRESHOLD - 1);
-		}).isInstanceOf(InvalidLockTimeException.class);
+		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(new ECKey(), Transaction.LOCKTIME_THRESHOLD - 1)).isInstanceOf(InvalidLockTimeException.class);
 
 		// In the past
-		Assertions.assertThatThrownBy(() -> {
-			accountService.createTimeLockedAddress(new ECKey(), Instant.now().minus(Duration.ofDays(1)).getEpochSecond());
-		}).isInstanceOf(InvalidLockTimeException.class);
+		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(new ECKey(), Instant.now().minus(Duration.ofDays(1)).getEpochSecond())).isInstanceOf(InvalidLockTimeException.class);
 
 		// Now
-		Assertions.assertThatThrownBy(() -> {
-			accountService.createTimeLockedAddress(new ECKey(), Instant.now().getEpochSecond());
-		}).isInstanceOf(InvalidLockTimeException.class);
+		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(new ECKey(), Instant.now().getEpochSecond())).isInstanceOf(InvalidLockTimeException.class);
 
 		// Not enough into the future
-		Assertions.assertThatThrownBy(() -> {
-			accountService.createTimeLockedAddress(new ECKey(),
-					Instant.now().getEpochSecond() + appConfig.getMinimumLockTimeSeconds() - 1);
-		}).isInstanceOf(InvalidLockTimeException.class);
+		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(new ECKey(),
+			Instant.now().getEpochSecond() + appConfig.getMinimumLockTimeSeconds() - 1)).isInstanceOf(InvalidLockTimeException.class);
 
 		// Too far into the future
-		Assertions.assertThatThrownBy(() -> {
-			accountService.createTimeLockedAddress(new ECKey(),
-					Instant.now().plus(Duration.ofDays(appConfig.getMaximumLockTimeDays() + 1)).getEpochSecond());
-		}).isInstanceOf(InvalidLockTimeException.class);
+		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(new ECKey(),
+			Instant.now().plus(Duration.ofDays(appConfig.getMaximumLockTimeDays() + 1)).getEpochSecond())).isInstanceOf(InvalidLockTimeException.class);
 	}
 
 	@Test
@@ -183,7 +169,7 @@ public class AccountServiceTest extends CoinbleskTest {
 		final ECKey clientKey = new ECKey();
 		accountService.createAcount(clientKey);
 		TimeLockedAddress address = accountService.createTimeLockedAddress(clientKey, validLocktime())
-				.getTimeLockedAddress();
+			.getTimeLockedAddress();
 		assertNotNull(address);
 	}
 
@@ -192,7 +178,7 @@ public class AccountServiceTest extends CoinbleskTest {
 		final ECKey clientKey = new ECKey();
 		accountService.createAcount(clientKey);
 		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, validLocktime())
-				.getTimeLockedAddress();
+			.getTimeLockedAddress();
 		TimeLockedAddress fromDB = accountService.getTimeLockedAddressByAddressHash(intoDB.getAddressHash());
 
 		assertEquals(intoDB, fromDB);
@@ -204,10 +190,10 @@ public class AccountServiceTest extends CoinbleskTest {
 		final ECKey clientKey = new ECKey();
 		accountService.createAcount(clientKey);
 		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, validLocktime())
-				.getTimeLockedAddress();
+			.getTimeLockedAddress();
 
 		List result = em.createQuery("SELECT a FROM TIME_LOCKED_ADDRESS a WHERE ADDRESS_HASH = :addressHash")
-				.setParameter("addressHash", intoDB.getAddressHash()).getResultList();
+			.setParameter("addressHash", intoDB.getAddressHash()).getResultList();
 		assertEquals(result.size(), 1);
 		TimeLockedAddressEntity saved = (TimeLockedAddressEntity) result.get(0);
 
@@ -220,10 +206,10 @@ public class AccountServiceTest extends CoinbleskTest {
 		final ECKey clientKey = new ECKey();
 		accountService.createAcount(clientKey);
 		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, validLocktime())
-				.getTimeLockedAddress();
+			.getTimeLockedAddress();
 
 		List result = em.createQuery("SELECT a FROM TIME_LOCKED_ADDRESS a WHERE ADDRESS_HASH = :addressHash")
-				.setParameter("addressHash", intoDB.getAddressHash()).getResultList();
+			.setParameter("addressHash", intoDB.getAddressHash()).getResultList();
 		assertEquals(result.size(), 1);
 		TimeLockedAddressEntity saved = (TimeLockedAddressEntity) result.get(0);
 

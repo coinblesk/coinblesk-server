@@ -31,7 +31,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- *
  * @author Thomas Bocek
  */
 
@@ -50,11 +49,11 @@ public class ForexTest extends CoinbleskTest {
 	@Test
 	public void testV1() throws Exception {
 		MvcResult res = mockMvc
-				.perform(get("/forex/exchangeRate/CHF").secure(true))
-				.andExpect(status().isOk())
-				.andReturn();
+			.perform(get("/forex/exchangeRate/CHF").secure(true))
+			.andExpect(status().isOk())
+			.andReturn();
 		ExchangeRateTO rate = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
-				ExchangeRateTO.class);
+			ExchangeRateTO.class);
 		System.out.println("rate is: " + rate.rate() + "/" + rate.name());
 		Assert.assertNotNull(rate);
 	}
@@ -62,11 +61,11 @@ public class ForexTest extends CoinbleskTest {
 	@Test
 	public void testV2() throws Exception {
 		MvcResult res = mockMvc
-				.perform(get("/v2/forex/rate/CHF-EUR").secure(true))
-				.andExpect(status().isOk())
-				.andReturn();
+			.perform(get("/v2/forex/rate/CHF-EUR").secure(true))
+			.andExpect(status().isOk())
+			.andReturn();
 		ExchangeRateTO rate = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
-				ExchangeRateTO.class);
+			ExchangeRateTO.class);
 		System.out.println("rate is: " + rate.rate() + "/" + rate.name());
 		Assert.assertNotNull(rate);
 	}

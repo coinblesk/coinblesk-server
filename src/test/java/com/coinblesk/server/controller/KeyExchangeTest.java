@@ -33,10 +33,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- *
  * @author Thomas Bocek
  * @author Sebastian Stephan
- *
  */
 public class KeyExchangeTest extends CoinbleskTest {
 
@@ -55,13 +53,13 @@ public class KeyExchangeTest extends CoinbleskTest {
 	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void noPayloadFails() throws Exception {
 		mockMvc
-				.perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON))
-				.andExpect(status().isBadRequest());
+			.perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON))
+			.andExpect(status().isBadRequest());
 
 		mockMvc
-				.perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON)
-						.content("{}"))
-				.andExpect(status().isBadRequest());
+			.perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON)
+				.content("{}"))
+			.andExpect(status().isBadRequest());
 	}
 
 	@Test
@@ -69,9 +67,9 @@ public class KeyExchangeTest extends CoinbleskTest {
 	@DatabaseTearDown("/EmptyDatabase.xml")
 	public void emptyPublicKeyFails() throws Exception {
 		mockMvc.
-				perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON)
-						.content("{\"publicKey\": \"\"}"))
-				.andExpect(status().isBadRequest());
+			perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON)
+				.content("{\"publicKey\": \"\"}"))
+			.andExpect(status().isBadRequest());
 	}
 
 
@@ -81,11 +79,11 @@ public class KeyExchangeTest extends CoinbleskTest {
 	public void invalidPublicKeyFails() throws Exception {
 		String bogusKey = "02a485c51c0cef798620ea81054100000BOGUSKEY000001a046d50ca3ca0ad148f";
 		mockMvc
-				.perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON)
-						.content(SerializeUtils.GSON.toJson(
-								new KeyExchangeRequestDTO(bogusKey))
-						))
-				.andExpect(status().isBadRequest());
+			.perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON)
+				.content(SerializeUtils.GSON.toJson(
+					new KeyExchangeRequestDTO(bogusKey))
+				))
+			.andExpect(status().isBadRequest());
 	}
 
 	@Test
@@ -94,10 +92,10 @@ public class KeyExchangeTest extends CoinbleskTest {
 	public void resultIs200OK() throws Exception {
 		ECKey goodKey = new ECKey();
 		mockMvc
-				.perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON)
-						.content(SerializeUtils.GSON.toJson(
-								new KeyExchangeRequestDTO(goodKey.getPublicKeyAsHex()))
-						))
-				.andExpect(status().isOk()).andReturn();
+			.perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON)
+				.content(SerializeUtils.GSON.toJson(
+					new KeyExchangeRequestDTO(goodKey.getPublicKeyAsHex()))
+				))
+			.andExpect(status().isOk()).andReturn();
 	}
 }
