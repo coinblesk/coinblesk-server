@@ -129,10 +129,6 @@ public class FakeTxBuilder {
 		}
 	}
 
-	public static class BlockPair {
-		public StoredBlock storedBlock;
-	}
-
 	/**
 	 * Emulates receiving a valid block
 	 */
@@ -173,6 +169,10 @@ public class FakeTxBuilder {
 		}
 		b.solve();
 		return b;
+	}
+
+	public static class BlockPair {
+		public StoredBlock storedBlock;
 	}
 
 }

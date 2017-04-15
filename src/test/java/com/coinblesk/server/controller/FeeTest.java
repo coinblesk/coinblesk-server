@@ -35,10 +35,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 public class FeeTest extends CoinbleskTest {
 
+	private static MockMvc mockMvc;
 	@Autowired
 	private WebApplicationContext webAppContext;
-
-	private static MockMvc mockMvc;
 
 	@Before
 	public void setUp() {

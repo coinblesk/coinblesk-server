@@ -18,8 +18,6 @@ package com.coinblesk.server.controller;
 import com.coinblesk.server.dto.KeyExchangeRequestDTO;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.util.SerializeUtils;
-import com.github.springtestdbunit.annotation.DatabaseSetup;
-import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import org.bitcoinj.core.ECKey;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,10 +36,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 public class KeyExchangeTest extends CoinbleskTest {
 
+	private static MockMvc mockMvc;
 	@Autowired
 	private WebApplicationContext webAppContext;
-
-	private static MockMvc mockMvc;
 
 	@Before
 	public void setUp() {
@@ -49,8 +46,8 @@ public class KeyExchangeTest extends CoinbleskTest {
 	}
 
 	@Test
-	@DatabaseSetup("/EmptyDatabase.xml")
-	@DatabaseTearDown("/EmptyDatabase.xml")
+
+
 	public void noPayloadFails() throws Exception {
 		mockMvc
 			.perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON))
@@ -63,8 +60,8 @@ public class KeyExchangeTest extends CoinbleskTest {
 	}
 
 	@Test
-	@DatabaseSetup("/EmptyDatabase.xml")
-	@DatabaseTearDown("/EmptyDatabase.xml")
+
+
 	public void emptyPublicKeyFails() throws Exception {
 		mockMvc.
 			perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON)
@@ -74,8 +71,8 @@ public class KeyExchangeTest extends CoinbleskTest {
 
 
 	@Test
-	@DatabaseSetup("/EmptyDatabase.xml")
-	@DatabaseTearDown("/EmptyDatabase.xml")
+
+
 	public void invalidPublicKeyFails() throws Exception {
 		String bogusKey = "02a485c51c0cef798620ea81054100000BOGUSKEY000001a046d50ca3ca0ad148f";
 		mockMvc
@@ -87,8 +84,8 @@ public class KeyExchangeTest extends CoinbleskTest {
 	}
 
 	@Test
-	@DatabaseSetup("/EmptyDatabase.xml")
-	@DatabaseTearDown("/EmptyDatabase.xml")
+
+
 	public void resultIs200OK() throws Exception {
 		ECKey goodKey = new ECKey();
 		mockMvc

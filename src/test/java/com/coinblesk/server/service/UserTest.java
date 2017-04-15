@@ -18,8 +18,6 @@ package com.coinblesk.server.service;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.github.springtestdbunit.DbUnitTestExecutionListener;
-import com.github.springtestdbunit.annotation.DatabaseSetup;
-import com.github.springtestdbunit.annotation.DatabaseTearDown;
 import com.github.springtestdbunit.annotation.ExpectedDatabase;
 import com.github.springtestdbunit.assertion.DatabaseAssertionMode;
 import org.junit.Assert;
@@ -40,9 +38,9 @@ public class UserTest extends CoinbleskTest {
 	private UserAccountService userAccountService;
 
 	@Test
-	@DatabaseSetup("/EmptyDatabase.xml")
+
 	@ExpectedDatabase(value = "/UserTestAddUser.xml", assertionMode = DatabaseAssertionMode.NON_STRICT_UNORDERED)
-	@DatabaseTearDown("/EmptyDatabase.xml")
+
 	public void testAddUser() throws Exception {
 		UserAccount userAccount = new UserAccount();
 		userAccount.setBalance(BigDecimal.ONE)
@@ -56,9 +54,8 @@ public class UserTest extends CoinbleskTest {
 	}
 
 	@Test
-	@DatabaseSetup("/EmptyDatabase.xml")
-	@DatabaseSetup("/UserTestGetUser.xml")
-	@DatabaseTearDown("/EmptyDatabase.xml")
+
+
 	public void testGetUser() throws Exception {
 		UserAccount u1 = userAccountService.getByEmail("test");
 		Assert.assertNull(u1);

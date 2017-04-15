@@ -39,17 +39,15 @@ public class VersionControllerTest extends CoinbleskTest {
 	public static final String URL_VERSION = "/v1/version";
 
 	private static final String SUPPORTED_CLIENT_VERSION;
+	private static final String UNSUPPORTED_CLIENT_VERSION = "not supported";
+	private static MockMvc mockMvc;
 
 	static {
 		SUPPORTED_CLIENT_VERSION = new AppConfig().getSupportedClientVersions().iterator().next();
 	}
 
-	private static final String UNSUPPORTED_CLIENT_VERSION = "not supported";
-
 	@Autowired
 	private WebApplicationContext webAppContext;
-
-	private static MockMvc mockMvc;
 
 	@Before
 	public void setUp() {

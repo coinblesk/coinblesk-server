@@ -61,22 +61,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 
 public class AuthTest extends CoinbleskTest {
+	private static MockMvc mockMvc;
 	@Autowired
 	private WebApplicationContext webAppContext;
-
 	@Autowired
 	private UserAccountService userAccountService;
-
 	@Autowired
 	private UserAccountRepository userAccountRepository;
-
 	@Autowired
 	private AppConfig appConfig;
-
 	@MockBean
 	private MailService mailService;
-
-	private static MockMvc mockMvc;
 
 	@Before
 	public void setUp() {

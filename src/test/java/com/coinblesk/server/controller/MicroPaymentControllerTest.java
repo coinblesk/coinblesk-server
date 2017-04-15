@@ -44,28 +44,22 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	private static final String URL_VIRTUAL_PAYMENT = "/payment/virtualpayment";
 	private static final long VALID_FEE = 250L;
 	private static final long LOW_FEE = 50L;
-
+	private static final long validLockTime = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
+	private static MockMvc mockMvc;
 	@Autowired
 	private WebApplicationContext webAppContext;
-
 	@Autowired
 	private WalletService walletService;
-
 	@Autowired
 	private AccountService accountService;
-
 	@Autowired
 	private AccountRepository accountRepository;
-
-
 	@Autowired
 	private AppConfig appConfig;
 
 	private NetworkParameters params() {
 		return appConfig.getNetworkParameters();
 	}
-
-	private static MockMvc mockMvc;
 
 	@Before
 	public void setUp() {
@@ -768,8 +762,6 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		}
 		return tx.bitcoinSerialize().length;
 	}
-
-	private static final long validLockTime = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
 
 	private void signAllInputs(Transaction tx, Script redeemScript, ECKey signingKey) {
 		for (int i = 0; i < tx.getInputs().size(); i++) {

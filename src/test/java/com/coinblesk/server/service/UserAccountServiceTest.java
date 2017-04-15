@@ -36,29 +36,21 @@ import java.util.List;
  * @author Thomas Bocek
  */
 public class UserAccountServiceTest extends CoinbleskTest {
+	final private ECKey ecKeyClient = new ECKey();
 	@MockBean
 	private MailService mailService;
-
 	@Autowired
 	private UserAccountService userAccountService;
-
 	@Autowired
 	private PasswordEncoder passwordEncoder;
-
 	@Autowired
 	private TxQueueService txQueueService;
-
 	@Autowired
 	private AccountService accountService;
-
 	@Autowired
 	private WalletService walletService;
-
 	@Autowired
 	private AppConfig cfg;
-
-	final private ECKey ecKeyClient = new ECKey();
-
 	private int counter = 0;
 
 	@Before
