@@ -106,7 +106,8 @@ public class VersionControllerTest extends CoinbleskTest {
 
 	@Test
 	public void testVersion_UnsupportedVersion_SameNetwork() throws Exception {
-		VersionTO requestTO = new VersionTO().clientVersion(UNSUPPORTED_CLIENT_VERSION).bitcoinNet(BitcoinNet.UNITTEST);
+		VersionTO requestTO = new VersionTO().clientVersion(UNSUPPORTED_CLIENT_VERSION).bitcoinNet(BitcoinNet
+			.UNITTEST);
 		VersionTO responseTO = RESTUtils.postRequest(mockMvc, requestTO);
 		assertSuccessWithSupport(responseTO, false);
 	}

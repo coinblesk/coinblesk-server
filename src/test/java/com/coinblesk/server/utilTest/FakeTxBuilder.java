@@ -77,7 +77,8 @@ public class FakeTxBuilder {
 
 		// Do it again
 		Transaction prevTx2 = new Transaction(params);
-		TransactionOutput prevOut2 = new TransactionOutput(params, prevTx2, Coin.valueOf(Coin.COIN.getValue() - split), to);
+		TransactionOutput prevOut2 = new TransactionOutput(params, prevTx2, Coin.valueOf(Coin.COIN.getValue() - split)
+			, to);
 		prevTx2.addOutput(prevOut2);
 		t.addInput(prevOut2).setScriptSig(ScriptBuilder.createInputScript(TransactionSignature.dummy()));
 

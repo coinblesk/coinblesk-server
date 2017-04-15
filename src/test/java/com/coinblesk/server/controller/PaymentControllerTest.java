@@ -283,9 +283,11 @@ public class PaymentControllerTest extends CoinbleskTest {
 		ECKey serverKey = accountService.createAcount(clientKey);
 		long requestedLockTime = validLocktime();
 
-		TimeLockedAddress expectedAddress = new TimeLockedAddress(clientKey.getPubKey(), serverKey.getPubKey(), requestedLockTime);
+		TimeLockedAddress expectedAddress = new TimeLockedAddress(clientKey.getPubKey(), serverKey.getPubKey(),
+			requestedLockTime);
 
-		CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO(clientKey.getPublicKeyAsHex(), requestedLockTime);
+		CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO(clientKey.getPublicKeyAsHex(),
+			requestedLockTime);
 		SignedDTO requestDTO = DTOUtils.serializeAndSign(innerDTO, clientKey);
 
 		String responseString = mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)
@@ -296,11 +298,14 @@ public class PaymentControllerTest extends CoinbleskTest {
 
 		SignedDTO responseDTO = DTOUtils.fromJSON(responseString, SignedDTO.class);
 		DTOUtils.validateSignature(responseDTO.getPayload(), responseDTO.getSignature(), serverKey);
-		CreateAddressResponseDTO createAddressResponse = DTOUtils.parseAndValidate(responseDTO, CreateAddressResponseDTO.class);
+		CreateAddressResponseDTO createAddressResponse = DTOUtils.parseAndValidate(responseDTO,
+			CreateAddressResponseDTO.class);
 
 		// Construct TLA from response
-		byte[] clientPublicKey = DTOUtils.getECKeyFromHexPublicKey(createAddressResponse.getClientPublicKey()).getPubKey();
-		byte[] serverPublicKey = DTOUtils.getECKeyFromHexPublicKey(createAddressResponse.getServerPublicKey()).getPubKey();
+		byte[] clientPublicKey = DTOUtils.getECKeyFromHexPublicKey(createAddressResponse.getClientPublicKey())
+			.getPubKey();
+		byte[] serverPublicKey = DTOUtils.getECKeyFromHexPublicKey(createAddressResponse.getServerPublicKey())
+			.getPubKey();
 		long receivedLockTime = createAddressResponse.getLockTime();
 		TimeLockedAddress address = new TimeLockedAddress(clientPublicKey, serverPublicKey, receivedLockTime);
 
@@ -320,7 +325,8 @@ public class PaymentControllerTest extends CoinbleskTest {
 
 	private long validLocktime() {
 		final long minLockTime = Instant.now().getEpochSecond() + appConfig.getMinimumLockTimeSeconds();
-		final long maxLockTime = Instant.now().plus(Duration.ofDays(appConfig.getMaximumLockTimeDays())).getEpochSecond();
+		final long maxLockTime = Instant.now().plus(Duration.ofDays(appConfig.getMaximumLockTimeDays()))
+			.getEpochSecond();
 		return (minLockTime + maxLockTime) / 2;
 	}
 }

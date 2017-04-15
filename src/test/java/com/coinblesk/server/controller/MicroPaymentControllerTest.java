@@ -677,7 +677,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		// Change sender to some other account's public key (that we own) in order to 'trick' system
 		ECKey otherOwnedAccount = new ECKey();
 		accountService.createAcount(otherOwnedAccount);
-		MicroPaymentRequestDTO modifiedRequest2 = new MicroPaymentRequestDTO(orig.getTx(), otherOwnedAccount.getPublicKeyAsHex(),
+		MicroPaymentRequestDTO modifiedRequest2 = new MicroPaymentRequestDTO(orig.getTx(), otherOwnedAccount
+			.getPublicKeyAsHex(),
 			orig.getToPublicKey(), orig.getAmount(), Instant.now().plus(Duration.ofMinutes(1L)).getEpochSecond());
 		sendAndExpect4xxError(DTOUtils.serializeAndSign(modifiedRequest2, otherOwnedAccount),
 			"Request was not signed by owner of inputs");
@@ -701,7 +702,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			tla.getAddress(params()));
 		walletService.addWatching(tla.getAddress(params()));
-		walletService.getWallet().importKey(ECKey.fromPrivate(accountRepository.findByClientPublicKey(senderKey.getPubKey()).serverPrivateKey()));
+		walletService.getWallet().importKey(ECKey.fromPrivate(accountRepository.findByClientPublicKey(senderKey
+			.getPubKey()).serverPrivateKey()));
 		mineTransaction(fundingTx);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1337L, fundingTx.getOutput(0), tla);
@@ -742,15 +744,18 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		return channelTransaction;
 	}
 
-	private long calculateChannelTxSize(TransactionOutput input, ECKey senderKey, ECKey serverPK, TimeLockedAddress change) {
+	private long calculateChannelTxSize(TransactionOutput input, ECKey senderKey, ECKey serverPK, TimeLockedAddress
+		change) {
 		Transaction tx = new Transaction(params());
 		tx.addInput(input);
 		tx.addOutput(P2PKOutput(tx, serverPK, 1L));
 		tx.addOutput(changeOutput(tx, change, 1L));
 		for (int i = 0; i < tx.getInputs().size(); i++) {
-			TransactionSignature clientSig = tx.calculateSignature(i, senderKey, change.createRedeemScript().getProgram(), SigHash.ALL, false);
+			TransactionSignature clientSig = tx.calculateSignature(i, senderKey, change.createRedeemScript()
+				.getProgram(), SigHash.ALL, false);
 			// Server sig is fake, but we're only interested in the resulting size of the script sig
-			TransactionSignature serverSig = tx.calculateSignature(i, new ECKey(), change.createRedeemScript(), SigHash.ALL, false);
+			TransactionSignature serverSig = tx.calculateSignature(i, new ECKey(), change.createRedeemScript(),
+				SigHash.ALL, false);
 			Script finalSig = new ScriptBuilder()
 				.data(clientSig.encodeToBitcoin())
 				.data(serverSig.encodeToBitcoin())
@@ -764,7 +769,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 	private void signAllInputs(Transaction tx, Script redeemScript, ECKey signingKey) {
 		for (int i = 0; i < tx.getInputs().size(); i++) {
-			TransactionSignature sig = tx.calculateSignature(i, signingKey, redeemScript.getProgram(), SigHash.ALL, false);
+			TransactionSignature sig = tx.calculateSignature(i, signingKey, redeemScript.getProgram(), SigHash.ALL,
+				false);
 			tx.getInput(i).setScriptSig(new ScriptBuilder().data(sig.encodeToBitcoin()).build());
 		}
 	}

@@ -125,41 +125,50 @@ public class AccountServiceTest extends CoinbleskTest {
 
 	private long validLocktime() {
 		final long minLockTime = Instant.now().getEpochSecond() + appConfig.getMinimumLockTimeSeconds();
-		final long maxLockTime = Instant.now().plus(Duration.ofDays(appConfig.getMaximumLockTimeDays())).getEpochSecond();
+		final long maxLockTime = Instant.now().plus(Duration.ofDays(appConfig.getMaximumLockTimeDays()))
+			.getEpochSecond();
 		return (minLockTime + maxLockTime) / 2;
 	}
 
 	@Test
 	public void createTimeLockedAddressFailsWithNullParameters() {
-		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(null, validLocktime())).isInstanceOf(RuntimeException.class);
+		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(null, validLocktime()))
+			.isInstanceOf(RuntimeException.class);
 	}
 
 	@Test
 	public void createTimeLockedAddressFailsWithUnknownUser() {
-		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(new ECKey(), validLocktime())).isInstanceOf(UserNotFoundException.class);
+		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(new ECKey(), validLocktime()))
+			.isInstanceOf(UserNotFoundException.class);
 	}
 
 	@Test
 	public void createTimeLockedAddressFailsWithInvalidLocktime() {
 		// Zero locktime
-		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(new ECKey(), 0L)).isInstanceOf(InvalidLockTimeException.class);
+		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(new ECKey(), 0L)).isInstanceOf
+			(InvalidLockTimeException.class);
 
 		// Locktime that could be interpreted as block height
-		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(new ECKey(), Transaction.LOCKTIME_THRESHOLD - 1)).isInstanceOf(InvalidLockTimeException.class);
+		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(new ECKey(), Transaction
+			.LOCKTIME_THRESHOLD - 1)).isInstanceOf(InvalidLockTimeException.class);
 
 		// In the past
-		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(new ECKey(), Instant.now().minus(Duration.ofDays(1)).getEpochSecond())).isInstanceOf(InvalidLockTimeException.class);
+		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(new ECKey(), Instant.now().minus
+			(Duration.ofDays(1)).getEpochSecond())).isInstanceOf(InvalidLockTimeException.class);
 
 		// Now
-		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(new ECKey(), Instant.now().getEpochSecond())).isInstanceOf(InvalidLockTimeException.class);
+		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(new ECKey(), Instant.now()
+			.getEpochSecond())).isInstanceOf(InvalidLockTimeException.class);
 
 		// Not enough into the future
 		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(new ECKey(),
-			Instant.now().getEpochSecond() + appConfig.getMinimumLockTimeSeconds() - 1)).isInstanceOf(InvalidLockTimeException.class);
+			Instant.now().getEpochSecond() + appConfig.getMinimumLockTimeSeconds() - 1)).isInstanceOf
+			(InvalidLockTimeException.class);
 
 		// Too far into the future
 		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(new ECKey(),
-			Instant.now().plus(Duration.ofDays(appConfig.getMaximumLockTimeDays() + 1)).getEpochSecond())).isInstanceOf(InvalidLockTimeException.class);
+			Instant.now().plus(Duration.ofDays(appConfig.getMaximumLockTimeDays() + 1)).getEpochSecond()))
+			.isInstanceOf(InvalidLockTimeException.class);
 	}
 
 	@Test
@@ -200,7 +209,8 @@ public class AccountServiceTest extends CoinbleskTest {
 	}
 
 	@Test
-	public void createTimeLockedAddressCreatesCorrentRedeemScript() throws InvalidLockTimeException, UserNotFoundException {
+	public void createTimeLockedAddressCreatesCorrentRedeemScript() throws InvalidLockTimeException,
+		UserNotFoundException {
 		final ECKey clientKey = new ECKey();
 		accountService.createAcount(clientKey);
 		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, validLocktime())
