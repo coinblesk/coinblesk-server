@@ -15,20 +15,6 @@ public final class ToUtils {
 		// prevent instances
 	}
 
-	public static <K extends BaseTO> K newInstance(K k, Type returnType, ECKey signKey) {
-		return newInstance(k.getClass(), returnType, signKey);
-	}
-
-	public static <K extends BaseTO> K newInstance(Class<? extends BaseTO> clazz, Type returnType, ECKey signKey) {
-		K instance = newInstance(clazz, returnType);
-		if (instance == null) {
-			return instance;
-		}
-		instance.publicKey(signKey.getPubKey());
-		SerializeUtils.signJSON(instance, signKey);
-		return instance;
-	}
-
 	public static <K extends BaseTO> K newInstance(K k, Type returnType) {
 		return newInstance(k.getClass(), returnType);
 	}

@@ -71,9 +71,7 @@ public class MailService {
 		properties.setProperty("mail.debug", Boolean.toString(this.debug));
 		properties.setProperty("mail.smtp.host", this.host);
 		properties.setProperty("mail.smtp.port", Integer.toString(this.port));
-		if (this.trust != null) {
-			properties.setProperty("mail.smtp.ssl.trust", this.trust);
-		}
+		properties.setProperty("mail.smtp.ssl.trust", this.trust);
 		javaMailSender.setJavaMailProperties(properties);
 
 		return javaMailSender;

@@ -9,7 +9,4 @@ public class MissingFieldException extends RuntimeException {
 		this.fieldName = fieldName;
 	}
 
-	public String getFieldName() {
-		return fieldName;
-	}
 }

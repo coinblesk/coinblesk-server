@@ -19,12 +19,7 @@ package com.coinblesk.server.entity;
 import java.io.Serializable;
 import java.util.Date;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Lob;
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
+import javax.persistence.*;
 
 /**
  *
@@ -48,17 +43,10 @@ public class TxQueue implements Serializable {
 	@Column(name = "CREATION_DATE", nullable = false)
 	private Date creationDate;
 
-	public byte[] txHash() {
-		return txHash;
-	}
 
 	public TxQueue txHash(byte[] txHash) {
 		this.txHash = txHash;
 		return this;
-	}
-
-	public byte[] tx() {
-		return tx;
 	}
 
 	public TxQueue tx(byte[] tx) {
@@ -66,12 +54,13 @@ public class TxQueue implements Serializable {
 		return this;
 	}
 
-	public Date creationDate() {
-		return creationDate;
-	}
-
 	public TxQueue creationDate(Date creationDate) {
 		this.creationDate = creationDate;
 		return this;
 	}
+
+	public byte[] tx() {
+		return tx;
+	}
+
 }

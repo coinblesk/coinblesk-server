@@ -85,11 +85,6 @@ public class UserAccount implements Serializable {
 		return id;
 	}
 
-	public UserAccount setId(long id) {
-		this.id = id;
-		return this;
-	}
-
 	public String getUsername() {
 		return username;
 	}

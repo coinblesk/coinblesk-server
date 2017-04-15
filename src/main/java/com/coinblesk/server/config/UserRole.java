@@ -18,14 +18,14 @@ package com.coinblesk.server.config;
 import org.springframework.security.core.GrantedAuthority;
 
 /**
- * 
+ *
  * @author Andreas Albrecht
  * @author Thomas Bocek
  *
  */
 public enum UserRole implements GrantedAuthority {
 	// Note: no "ROLE_" prefix.
-	USER, 
+	USER,
 	ADMIN;
 
 	private static final long serialVersionUID = 13449904136869644L;
@@ -34,11 +34,6 @@ public enum UserRole implements GrantedAuthority {
 	public String getAuthority() {
 		// Spring convention: authority starts with "ROLE_".
 		return String.format("ROLE_%s", name());
-	}
-
-	public String getRole() {
-		// Spring convention: Role without "ROLE_" prefix
-		return name();
 	}
 
 }

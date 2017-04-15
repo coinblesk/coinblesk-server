@@ -57,7 +57,7 @@ public class UserAccountService {
 
 	// as senn in:
 	// http://www.mkyong.com/regular-expressions/how-to-validate-email-address-with-regular-expression/
-	public static final String EMAIL_PATTERN = "^[_A-Za-z0-9-\\+]+(\\.[_A-Za-z0-9-]+)*@"
+	public static final String EMAIL_PATTERN = "^[_A-Za-z0-9-+]+(\\.[_A-Za-z0-9-]+)*@"
 			+ "[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$";
 
 	private final static Logger LOG = LoggerFactory.getLogger(UserAccountService.class);

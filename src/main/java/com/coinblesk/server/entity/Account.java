@@ -126,11 +126,6 @@ public class Account implements Serializable {
 		return timeLockedAddresses.get(timeLockedAddresses.size() - 1);
 	}
 
-	public Account timeLockedAddresses(List<TimeLockedAddressEntity> timeLockedAddresses) {
-		this.timeLockedAddresses = timeLockedAddresses;
-		return this;
-	}
-
 	public byte[] getChannelTransaction() {
 		return channelTransaction;
 	}

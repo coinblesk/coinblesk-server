@@ -17,8 +17,6 @@ package com.coinblesk.server.controller;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.json.v1.BalanceTO;
-import com.coinblesk.json.v1.SignVerifyTO;
-import com.coinblesk.json.v1.TxSig;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dto.*;
@@ -28,15 +26,12 @@ import com.coinblesk.server.exceptions.InvalidSignatureException;
 import com.coinblesk.server.exceptions.MissingFieldException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
 import com.coinblesk.server.service.AccountService;
-import com.coinblesk.server.service.TransactionService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.server.utils.DTOUtils;
 import com.coinblesk.server.utils.ToUtils;
 import com.coinblesk.util.SerializeUtils;
 import org.bitcoinj.core.ECKey;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -58,8 +53,6 @@ import static org.springframework.web.bind.annotation.RequestMethod.POST;
 @RequestMapping(value = "/payment")
 @ApiVersion({ "v1", "" })
 public class PaymentController {
-
-	private final static Logger LOG = LoggerFactory.getLogger(PaymentController.class);
 
 	private final AppConfig appConfig;
 
@@ -125,35 +118,6 @@ public class PaymentController {
 		SignedDTO responseDTO = DTOUtils.serializeAndSign(innerResponse, serverPrivateKeyForSigning);
 
 		return new ResponseEntity<>(responseDTO, OK);
-	}
-
-
-	private boolean maybeAppendPayeeSignature(SignVerifyTO request, byte[] payeePubKey, TxSig payeeTxSig,
-			SignVerifyTO response) {
-		if (payeePubKey == null || !ECKey.isPubKeyCanonical(payeePubKey) || payeeTxSig == null) {
-			return false;
-		}
-
-		Account payeeAccount = accountService.getByClientPublicKey(payeePubKey);
-		if (payeeAccount == null) {
-			return false; // payee unknown / external user.
-		}
-		ECKey payeeClientKey = ECKey.fromPublicOnly(payeePubKey);
-		ECKey payeeServerKey = ECKey.fromPrivateAndPrecalculatedPublic(payeeAccount.serverPrivateKey(),
-				payeeAccount.serverPublicKey());
-
-		// check that payee signature is valid
-		request.payeePublicKey(payeePubKey);
-		if (!SerializeUtils.verifyJSONSignatureRaw(request, payeeTxSig, payeeClientKey)) {
-			return false;
-		}
-		request.payeePublicKey(null);
-
-		// all checks OK - sign and append signature
-		response.payeePublicKey(payeeServerKey.getPubKey());
-		TxSig payeeSigOutput = SerializeUtils.signJSONRaw(response, payeeServerKey);
-		response.payeeMessageSig(payeeSigOutput);
-		return true;
 	}
 
 	/**

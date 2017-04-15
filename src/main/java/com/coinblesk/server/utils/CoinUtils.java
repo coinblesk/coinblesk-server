@@ -19,7 +19,6 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.params.UnitTestParams;
 
 import com.coinblesk.bitcoin.BitcoinNet;
 

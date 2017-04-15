@@ -18,10 +18,8 @@ package com.coinblesk.server.service;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,7 +40,6 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerGroup;
-import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBroadcast;
 import org.bitcoinj.core.TransactionInput;
@@ -58,13 +55,10 @@ import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
-import org.bitcoinj.wallet.WalletTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.coinblesk.bitcoin.AddressCoinSelector;
 import com.coinblesk.bitcoin.BitcoinNet;
@@ -90,9 +84,6 @@ public class WalletService {
 	private AccountService accountService;
 
 	@Autowired
-	private TransactionService transactionService;
-
-	@Autowired
 	private TxQueueService txQueueService;
 
 	private Wallet wallet;
@@ -102,8 +93,6 @@ public class WalletService {
 	private PeerGroup peerGroup;
 
 	private BlockStore blockStore;
-
-	private Set<Sha256Hash> removed = Collections.synchronizedSet(new HashSet<Sha256Hash>());
 
 	@PostConstruct
 	public void init() throws IOException, UnreadableWalletException, BlockStoreException, InterruptedException {
@@ -178,15 +167,10 @@ public class WalletService {
 			protected void doneDownload() {
 				LOG.info("downloading done");
 
-				// once we downloaded all the blocks we need to broadcast the
-				// stored approved tx
-				List<Transaction> txs = transactionService.listApprovedTransactions(params);
-				for (Transaction tx : txs) {
-					broadcast(tx);
-				}
+				// TODO (Re)broadcast all pending micro payment transactions
 
 				// Be notified when the confidence of relevant transactions
-				// change (number of confirmations).
+				// change (number of confirmations). Needed for reopening channels.
 				addConficenceChangedHandler();
 			}
 
@@ -249,22 +233,9 @@ public class WalletService {
 				new LinkedBlockingQueue<Runnable>(10000), factory, new ThreadPoolExecutor.CallerRunsPolicy());
 
 		wallet.addTransactionConfidenceEventListener(listenerExecutor, (wallet, tx) -> {
-			if (tx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf() && !removed.contains(tx.getHash())) {
-				LOG.debug("remove tx we got from the network {}", tx);
-
-				try {
-					transactionService.removeTransaction(tx);
-				} catch (EmptyResultDataAccessException e) {
-					LOG.debug("tx was not in tx table {}", tx);
-				}
-
-				try {
-					txQueueService.removeTx(tx);
-				} catch (EmptyResultDataAccessException e) {
-					LOG.debug("tx was not in txqueue table {}", tx);
-				}
-
-				removed.add(tx.getHash());
+			if (tx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf()) {
+				// TODO: Check for mined micro payment transactions and unlock account if pending
+				// micro payment transaction is enough blocks deep
 			}
 		});
 	}
@@ -306,37 +277,6 @@ public class WalletService {
 		wallet.addWatchedAddress(address);
 	}
 
-	/**
-	 * The unspent tx also contains spentOutputs, where the approved tx should
-	 * mark the unspent as spent!
-	 *
-	 * @param params
-	 * @return
-	 */
-	@Transactional(readOnly = true)
-	public Map<Sha256Hash, Transaction> verifiedTransactions(NetworkParameters params) {
-		Map<Sha256Hash, Transaction> copy = new HashMap<>(wallet.getTransactionPool(WalletTransaction.Pool.UNSPENT));
-		Map<Sha256Hash, Transaction> copy2 = new HashMap<>(copy);
-		// also add approved Tx
-		for (Transaction t : copy.values()) {
-			if (t.getConfidence().getDepthInBlocks() < appConfig.getMinConf()) {
-				LOG.debug("not enough confirmations for {}", t.getHash());
-				copy2.remove(t.getHash());
-			}
-		}
-
-		for (Transaction t : copy2.values()) {
-			LOG.debug("unspent tx from Network: {}", t.getHash());
-		}
-
-		List<Transaction> approvedTx = transactionService.listApprovedTransactions(params);
-		for (Transaction t : approvedTx) {
-			LOG.debug("adding approved tx, which can be used for spending: {}", t);
-			copy2.put(t.getHash(), t);
-		}
-		return copy2;
-	}
-
 	@PreDestroy
 	public void shutdown() {
 		try {
@@ -368,11 +308,6 @@ public class WalletService {
 		} catch (Exception e) {
 			LOG.error("cannot shutdown wallet in shutdown", e);
 		}
-	}
-
-	public Transaction receivePending(Transaction fullTx) {
-		wallet.receivePending(fullTx, null, false);
-		return wallet.getTransaction(fullTx.getHash());
 	}
 
 	public TransactionOutput findOutputFor(TransactionInput input) {

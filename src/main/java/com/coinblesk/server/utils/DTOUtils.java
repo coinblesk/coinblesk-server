@@ -24,7 +24,7 @@ import java.math.BigInteger;
  * @author Sebastian Stephan
  */
 public class DTOUtils {
-	private static Gson gson = new GsonBuilder().create();
+	private static final Gson gson = new GsonBuilder().create();
 
 	public static <T> T parseAndValidate(SignedDTO signedDTO , Class<T> typeOfPayload) {
 		final String payloadBase64String = signedDTO.getPayload();
