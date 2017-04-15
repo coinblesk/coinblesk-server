@@ -16,7 +16,6 @@ import org.bitcoinj.core.Transaction.SigHash;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.store.BlockStoreException;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -141,7 +140,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		// Create a tla but without registering it in any way with the server
 		TimeLockedAddress tla = new TimeLockedAddress(clientKey.getPubKey(), serverKey.getPubKey(), validLockTime);
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			tla.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
@@ -161,7 +160,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(clientKey, validLockTime)
 			.getTimeLockedAddress();
 		walletService.addWatching(inputAddress.getAddress(params()));
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			inputAddress.getAddress(params()));
 		mineTransaction(fundingTx);
 
@@ -190,7 +189,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 			.getTimeLockedAddress();
 		walletService.addWatching(inputAddress.getAddress(params()));
 
-		Transaction fundingTx1 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx1 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			inputAddress.getAddress(params()));
 		walletService.getWallet().maybeCommitTx(fundingTx1);
 
@@ -211,7 +210,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		accountService.createAcount(clientKey);
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(clientKey, lockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			inputAddress.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
@@ -237,9 +236,9 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 			.getTimeLockedAddress();
 
 		// Fund both addresses
-		Transaction fundingTx1 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx1 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			addressClient1.getAddress(params()));
-		Transaction fundingTx2 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx2 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			addressClient2.getAddress(params()));
 		watchAndMineTransactions(fundingTx1, fundingTx2);
 
@@ -260,7 +259,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		accountService.createAcount(clientKey);
 		TimeLockedAddress addressClient = accountService.createTimeLockedAddress(clientKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			addressClient.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
@@ -281,7 +280,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		accountService.createAcount(senderKey);
 		TimeLockedAddress timeLockedAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			timeLockedAddress.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
@@ -302,7 +301,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		ECKey serverPublicKey = accountService.createAcount(senderKey);
 		TimeLockedAddress timeLockedAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			timeLockedAddress.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
@@ -323,7 +322,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		ECKey serverPublicKey = accountService.createAcount(senderKey);
 		TimeLockedAddress timeLockedAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			timeLockedAddress.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
@@ -346,7 +345,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress timeLockedAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			timeLockedAddress.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
@@ -373,7 +372,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 			.getTimeLockedAddress();
 		TimeLockedAddress changeAddress = accountService.createTimeLockedAddress(senderKey,
 			Instant.now().plus(Duration.ofHours(20)).getEpochSecond()).getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			inputAddress.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
@@ -399,7 +398,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			inputAddress.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
@@ -425,7 +424,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			inputAddress.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
@@ -448,7 +447,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			inputAddress.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
@@ -475,7 +474,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		accountService.createAcount(receiverKey);
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			inputAddress.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
@@ -496,7 +495,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			inputAddress.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
@@ -545,7 +544,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		accountService.createAcount(receiverKey);
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			inputAddress.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 		long amountTryingToSend = Coin.MILLICOIN.multiply(800).getValue();
@@ -566,7 +565,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			inputAddress.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
@@ -590,7 +589,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			tla.getAddress(params()));
 		walletService.addWatching(tla.getAddress(params()));
 		mineTransaction(fundingTx);
@@ -609,7 +608,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			tla.getAddress(params()));
 		walletService.addWatching(tla.getAddress(params()));
 		mineTransaction(fundingTx);
@@ -628,7 +627,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			tla.getAddress(params()));
 		walletService.addWatching(tla.getAddress(params()));
 		mineTransaction(fundingTx);
@@ -651,7 +650,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			tla.getAddress(params()));
 		walletService.addWatching(tla.getAddress(params()));
 		mineTransaction(fundingTx);
@@ -699,7 +698,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), Coin.COIN,
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
 			tla.getAddress(params()));
 		walletService.addWatching(tla.getAddress(params()));
 		walletService.getWallet().importKey(ECKey.fromPrivate(accountRepository.findByClientPublicKey(senderKey.getPubKey()).serverPrivateKey()));
@@ -820,7 +819,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		return new TransactionOutput(params(), forTransaction, Coin.valueOf(value), changeTo.getAddress(params()));
 	}
 
-	private void watchAndMineTransactions(Transaction... txs) throws PrunedException, BlockStoreException {
+	private void watchAndMineTransactions(Transaction... txs) throws PrunedException {
 		for (Transaction tx : Arrays.asList(txs)) {
 			watchAllOutputs(tx);
 			mineTransaction(tx);
@@ -838,7 +837,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		);
 	}
 
-	private void mineTransaction(Transaction tx) throws BlockStoreException, PrunedException {
+	private void mineTransaction(Transaction tx) throws PrunedException {
 		Block lastBlock = walletService.blockChain().getChainHead().getHeader();
 		Transaction spendTXClone = new Transaction(params(), tx.bitcoinSerialize());
 		Block newBlock = FakeTxBuilder.makeSolvedTestBlock(lastBlock, spendTXClone);

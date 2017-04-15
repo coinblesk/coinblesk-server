@@ -7,6 +7,7 @@ package com.coinblesk.server.service;
 
 import com.coinblesk.json.v1.UserAccountTO;
 import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.dao.UserAccountRepository;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.exceptions.InvalidLockTimeException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
@@ -42,6 +43,8 @@ public class UserAccountServiceTest extends CoinbleskTest {
 	@Autowired
 	private UserAccountService userAccountService;
 	@Autowired
+	private UserAccountRepository userAccountRepository;
+	@Autowired
 	private PasswordEncoder passwordEncoder;
 	@Autowired
 	private TxQueueService txQueueService;
@@ -69,7 +72,7 @@ public class UserAccountServiceTest extends CoinbleskTest {
 			.setEmailToken(null)
 			.setPassword(passwordEncoder.encode("test"))
 			.setUsername("blib");
-		userAccountService.save(userAccount);
+		userAccountRepository.save(userAccount);
 
 		accountService.createAcount(ecKeyClient);
 		accountService.createTimeLockedAddress(ecKeyClient, Instant.now().plus(Duration.ofDays(7)).getEpochSecond());

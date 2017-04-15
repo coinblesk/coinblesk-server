@@ -109,7 +109,7 @@ public class AccountServiceTest extends CoinbleskTest {
 		ECKey clientKey = new ECKey();
 		accountService.createAcount(clientKey);
 		accountService.createAcount(clientKey);
-		List resultList = em.createQuery("SELECT a FROM ACCOUNT a WHERE CLIENT_PUBLIC_KEY = :pubKey")
+		List resultList = em.createQuery("SELECT a FROM ACCOUNT a WHERE a.clientPublicKey = :pubKey")
 			.setParameter("pubKey", clientKey.getPubKey())
 			.getResultList();
 		assertEquals(resultList.size(), 1);
@@ -131,9 +131,7 @@ public class AccountServiceTest extends CoinbleskTest {
 
 	@Test
 	public void createTimeLockedAddressFailsWithNullParameters() {
-		Assertions.assertThatThrownBy(() -> {
-			accountService.createTimeLockedAddress(null, validLocktime());
-		}).isInstanceOf(RuntimeException.class);
+		Assertions.assertThatThrownBy(() -> accountService.createTimeLockedAddress(null, validLocktime())).isInstanceOf(RuntimeException.class);
 	}
 
 	@Test
@@ -192,7 +190,7 @@ public class AccountServiceTest extends CoinbleskTest {
 		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, validLocktime())
 			.getTimeLockedAddress();
 
-		List result = em.createQuery("SELECT a FROM TIME_LOCKED_ADDRESS a WHERE ADDRESS_HASH = :addressHash")
+		List result = em.createQuery("SELECT a FROM TIME_LOCKED_ADDRESS a WHERE a.addressHash = :addressHash")
 			.setParameter("addressHash", intoDB.getAddressHash()).getResultList();
 		assertEquals(result.size(), 1);
 		TimeLockedAddressEntity saved = (TimeLockedAddressEntity) result.get(0);
@@ -208,7 +206,7 @@ public class AccountServiceTest extends CoinbleskTest {
 		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, validLocktime())
 			.getTimeLockedAddress();
 
-		List result = em.createQuery("SELECT a FROM TIME_LOCKED_ADDRESS a WHERE ADDRESS_HASH = :addressHash")
+		List result = em.createQuery("SELECT a FROM TIME_LOCKED_ADDRESS a WHERE a.addressHash = :addressHash")
 			.setParameter("addressHash", intoDB.getAddressHash()).getResultList();
 		assertEquals(result.size(), 1);
 		TimeLockedAddressEntity saved = (TimeLockedAddressEntity) result.get(0);

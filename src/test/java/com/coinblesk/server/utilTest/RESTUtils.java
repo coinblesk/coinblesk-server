@@ -35,13 +35,13 @@ public final class RESTUtils {
 	@SuppressWarnings("unchecked")
 	public static <T extends BaseTO<?>> T postRequest(MockMvc mockMvc, T requestTO) throws Exception {
 		String requestJSON = SerializeUtils.GSON.toJson(requestTO);
-		return (T) postRequest(mockMvc, com.coinblesk.server.controller.VersionControllerTest.URL_VERSION, requestJSON, requestTO.getClass());
+		return (T) postRequest(mockMvc, requestJSON, requestTO.getClass());
 	}
 
-	private static <T> T postRequest(MockMvc mockMvc, String url, String requestJSON, Class<T> responseClass) throws Exception {
+	private static <T> T postRequest(MockMvc mockMvc, String requestJSON, Class<T> responseClass) throws Exception {
 		final MvcResult res = mockMvc
 			.perform(
-				post(url)
+				post(com.coinblesk.server.controller.VersionControllerTest.URL_VERSION)
 					.secure(true)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(requestJSON))

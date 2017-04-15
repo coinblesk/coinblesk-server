@@ -95,12 +95,6 @@ public class UserAccountService {
 		return repository.findByEmail(email);
 	}
 
-	// TODO: only used for testing. remove if possible
-	@Transactional()
-	public void save(UserAccount userAccount) {
-		repository.save(userAccount);
-	}
-
 	@Transactional()
 	public Pair<UserAccountStatusTO, UserAccount> create(final UserAccountTO userAccountTO) {
 		final String email = userAccountTO.email();
