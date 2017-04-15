@@ -38,8 +38,12 @@ public class TokenProvider {
 
 	private long adminTokenValidityInMilliseconds;
 
+	private final AppConfig appConfig;
+
 	@Autowired
-	private AppConfig appConfig;
+	public TokenProvider(AppConfig appConfig) {
+		this.appConfig = appConfig;
+	}
 
 	@PostConstruct
 	public void init() {
@@ -72,7 +76,7 @@ public class TokenProvider {
 				.compact();
 	}
 
-	public Authentication getAuthentication(String token) {
+	Authentication getAuthentication(String token) {
 		Claims claims = Jwts.parser()
 			.setSigningKey(secretKey)
 			.parseClaimsJws(token)
@@ -88,7 +92,7 @@ public class TokenProvider {
 		return new UsernamePasswordAuthenticationToken(principal, "", authorities);
 	}
 
-	public boolean validateToken(String authToken) {
+	boolean validateToken(String authToken) {
 		try {
 			Jwts.parser().setSigningKey(secretKey).parseClaimsJws(authToken);
 			return true;
