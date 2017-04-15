@@ -67,14 +67,11 @@ public class PaymentController {
 
 	private final AccountService accountService;
 
-	private final TransactionService txService;
-
 	@Autowired
-	public PaymentController(AppConfig appConfig, WalletService walletService, AccountService accountService, TransactionService txService) {
+	public PaymentController(AppConfig appConfig, WalletService walletService, AccountService accountService) {
 		this.appConfig = appConfig;
 		this.walletService = walletService;
 		this.accountService = accountService;
-		this.txService = txService;
 	}
 
 	@RequestMapping(value = "/createTimeLockedAddress",
