@@ -32,14 +32,14 @@ public class FeeService {
 	private final static Logger LOG = LoggerFactory.getLogger(FeeService.class);
 
 	// current limit is 5000 requests per hour
-	public final static int ONE_MINUTE_MILLIS = 60 * 1000;
+	private final static int ONE_MINUTE_MILLIS = 60 * 1000;
 	// 5min
-	public final static int CACHING_FEE_MILLIS = 15 * ONE_MINUTE_MILLIS;
+	private final static int CACHING_FEE_MILLIS = 15 * ONE_MINUTE_MILLIS;
 
 	//satoshis per bytes, see https://bitcoinfees.21.co/
-	public final static int DEFAULT_FEE = 150;
+	private final static int DEFAULT_FEE = 150;
 
-	public final static String URL = "https://bitcoinfees.21.co/api/v1/fees/recommended";
+	private final static String URL = "https://bitcoinfees.21.co/api/v1/fees/recommended";
 
 	private Pair<Long, Integer> cachedFee;
 

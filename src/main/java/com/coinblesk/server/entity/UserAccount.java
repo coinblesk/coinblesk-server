@@ -81,11 +81,11 @@ public class UserAccount implements Serializable {
 		return this;
 	}
 
-	public long getId() {
+	private long getId() {
 		return id;
 	}
 
-	public String getUsername() {
+	private String getUsername() {
 		return username;
 	}
 
@@ -121,7 +121,7 @@ public class UserAccount implements Serializable {
 		return this;
 	}
 
-	public Date getCreationDate() {
+	private Date getCreationDate() {
 		return creationDate;
 	}
 

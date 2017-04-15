@@ -15,11 +15,11 @@ public final class ToUtils {
 		// prevent instances
 	}
 
-	public static <K extends BaseTO> K newInstance(K k, Type returnType) {
+	private static <K extends BaseTO> K newInstance(K k, Type returnType) {
 		return newInstance(k.getClass(), returnType);
 	}
 
-	public static <K extends BaseTO> K newInstance(Class<? extends BaseTO> clazz, Type returnType) {
+	private static <K extends BaseTO> K newInstance(Class<? extends BaseTO> clazz, Type returnType) {
 		try {
 			BaseTO b = clazz.newInstance();
 			b.currentDate(System.currentTimeMillis());
@@ -34,7 +34,7 @@ public final class ToUtils {
 		return checkInput(input, true);
 	}
 
-	public static <K extends BaseTO> K checkInput(final K input, boolean checkDate) {
+	private static <K extends BaseTO> K checkInput(final K input, boolean checkDate) {
 
 		if (!input.isInputSet()) {
 			return newInstance(input, Type.INPUT_MISMATCH);

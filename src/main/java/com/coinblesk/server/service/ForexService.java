@@ -44,9 +44,9 @@ import com.google.common.cache.CacheBuilder;
 final public class ForexService {
 
 	// 18min
-	public final static int CACHING_TIME_RATE_MILLIS = 18 * 60 * 1000;
+	private final static int CACHING_TIME_RATE_MILLIS = 18 * 60 * 1000;
 	// 2 days
-	public final static int CACHING_TIME_SYMBOL_MILLIS = 2 * 24 * 60 * 60 * 1000;
+	private final static int CACHING_TIME_SYMBOL_MILLIS = 2 * 24 * 60 * 60 * 1000;
 
 
 	private final static String PLACEHOLDER = "{{PLACEHOLDER}}";

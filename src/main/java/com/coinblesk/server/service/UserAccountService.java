@@ -110,7 +110,7 @@ public class UserAccountService {
 
 	// call this for testing only directy!!
 	@Transactional(readOnly = false)
-	public Pair<UserAccountStatusTO, UserAccount> createEntity(final UserAccountTO userAccountTO) {
+	private Pair<UserAccountStatusTO, UserAccount> createEntity(final UserAccountTO userAccountTO) {
 		final String email = userAccountTO.email().toLowerCase(Locale.ENGLISH);
 		final UserAccount found = repository.findByEmail(email);
 		if (found != null) {

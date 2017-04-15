@@ -13,10 +13,10 @@ import java.net.URL;
 
 /**
  * Service utility class used in this package.
- * 
+ *
  * @author Thomas Bocek
  */
-public class ServiceUtils {
+class ServiceUtils {
 
     private final static String USER_AGENT = "Mozilla/5.0";
 

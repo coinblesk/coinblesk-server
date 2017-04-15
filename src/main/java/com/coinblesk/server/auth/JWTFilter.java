@@ -22,13 +22,13 @@ import io.jsonwebtoken.ExpiredJwtException;
  * Filters incoming requests and installs a Spring Security principal if a
  * header corresponding to a valid user is found.
  */
-public class JWTFilter extends GenericFilterBean {
+class JWTFilter extends GenericFilterBean {
 
 	private final Logger log = LoggerFactory.getLogger(JWTFilter.class);
 
 	private TokenProvider tokenProvider;
 
-	public JWTFilter(TokenProvider tokenProvider) {
+	JWTFilter(TokenProvider tokenProvider) {
 		this.tokenProvider = tokenProvider;
 	}
 

@@ -14,7 +14,7 @@ public class CoinbleskTestParams extends AbstractBitcoinNetParams {
 	public static final int TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED = 6;
 	public static final int TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 4;
 
-	public CoinbleskTestParams() {
+	private CoinbleskTestParams() {
 		super();
 		id = ID_UNITTESTNET;
 		packetMagic = 0x0b110907;

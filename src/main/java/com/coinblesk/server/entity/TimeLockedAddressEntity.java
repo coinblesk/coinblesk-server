@@ -63,7 +63,7 @@ public class TimeLockedAddressEntity {
 		return TimeLockedAddress.fromRedeemScript(this.redeemScript);
 	}
 
-	public long getId() {
+	private long getId() {
 		return id;
 	}
 
@@ -121,7 +121,7 @@ public class TimeLockedAddressEntity {
 		return this;
 	}
 
-	public String toString(NetworkParameters params) {
+	private String toString(NetworkParameters params) {
 		StringBuilder sb = new StringBuilder();
 		sb.append(getClass().getSimpleName());
 		sb.append("[Id=").append(id);
@@ -168,7 +168,7 @@ public class TimeLockedAddressEntity {
 	 * Sorts addresses by {@link TimeLockedAddressEntity#timeCreated} in
 	 * ascending order.
 	 */
-	public static class TimeCreatedComparator implements Comparator<TimeLockedAddressEntity> {
+	private static class TimeCreatedComparator implements Comparator<TimeLockedAddressEntity> {
 		@Override
 		public int compare(TimeLockedAddressEntity lhs, TimeLockedAddressEntity rhs) {
 			return Long.compare(lhs.getTimeCreated(), rhs.getTimeCreated());
