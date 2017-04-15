@@ -50,8 +50,12 @@ public class ForexController {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ForexController.class);
 
+	private final ForexService forexExchangeRateService;
+
 	@Autowired
-	private ForexService forexExchangeRateService;
+	public ForexController(ForexService forexExchangeRateService) {
+		this.forexExchangeRateService = forexExchangeRateService;
+	}
 
 	@RequestMapping(value = "/exchangeRate/{symbol}", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
