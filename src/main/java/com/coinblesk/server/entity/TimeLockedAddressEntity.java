@@ -50,7 +50,7 @@ public class TimeLockedAddressEntity {
 	@Column(name = "TIME_CREATED", nullable = false, updatable = false)
 	private long timeCreated;
 
-	@Column(name = "ADDRESS_HASH", nullable = false, unique = true, updatable = false, length = 255)
+	@Column(name = "ADDRESS_HASH", nullable = false, unique = true, updatable = false)
 	private byte[] addressHash;
 
 	@Column(name = "REDEEM_SCRIPT", nullable = false, updatable = false, length = 4096)

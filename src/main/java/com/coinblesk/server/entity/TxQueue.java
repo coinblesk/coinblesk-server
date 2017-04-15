@@ -32,7 +32,7 @@ public class TxQueue implements Serializable {
 	private static final long serialVersionUID = -7496348013847426945L;
 
 	@Id
-	@Column(name = "TX_HASH", updatable = false, length = 255)
+	@Column(name = "TX_HASH", updatable = false)
 	private byte[] txHash;
 
 	@Lob

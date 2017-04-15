@@ -28,7 +28,7 @@ public class TxQueueService {
 	@Autowired
 	private TxQueueRepository repository;
 
-	@Transactional(readOnly = false)
+	@Transactional()
 	public void addTx(Transaction tx) {
 		TxQueue entity = new TxQueue()
 				.tx(tx.unsafeBitcoinSerialize())
@@ -47,7 +47,7 @@ public class TxQueueService {
 		return retVal;
 	}
 
-	@Transactional(readOnly = false)
+	@Transactional()
 	public void removeTx(Transaction tx) {
 		repository.delete(tx.getHash().getBytes());
 	}

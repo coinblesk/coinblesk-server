@@ -86,12 +86,12 @@ public class UserAccountService {
 	}
 
 	// TODO: only used for testing. remove if possible
-	@Transactional(readOnly = false)
+	@Transactional()
 	public void save(UserAccount userAccount) {
 		repository.save(userAccount);
 	}
 
-	@Transactional(readOnly = false)
+	@Transactional()
 	public Pair<UserAccountStatusTO, UserAccount> create(final UserAccountTO userAccountTO) {
 		final String email = userAccountTO.email();
 		if (email == null) {
@@ -109,7 +109,7 @@ public class UserAccountService {
 	}
 
 	// call this for testing only directy!!
-	@Transactional(readOnly = false)
+	@Transactional()
 	private Pair<UserAccountStatusTO, UserAccount> createEntity(final UserAccountTO userAccountTO) {
 		final String email = userAccountTO.email().toLowerCase(Locale.ENGLISH);
 		final UserAccount found = repository.findByEmail(email);
@@ -134,7 +134,7 @@ public class UserAccountService {
 		return new Pair<>(new UserAccountStatusTO().setSuccess(), userAccount);
 	}
 
-	@Transactional(readOnly = false)
+	@Transactional()
 	public UserAccountStatusTO activate(String email, String token) {
 		final UserAccount found = repository.findByEmail(email);
 		if (found == null) {
@@ -156,7 +156,7 @@ public class UserAccountService {
 		return new UserAccountStatusTO().setSuccess();
 	}
 
-	@Transactional(readOnly = false)
+	@Transactional()
 	public UserAccountStatusTO delete(String email) {
 
 		final UserAccount found = repository.findByEmail(email);
@@ -182,7 +182,7 @@ public class UserAccountService {
 		return userAccountTO;
 	}
 
-	@Transactional(readOnly = false)
+	@Transactional()
 	public UserAccountTO transferP2SH(ECKey clientKey, String email) {
 		final NetworkParameters params = appConfig.getNetworkParameters();
 		final UserAccount userAccount = repository.findByEmail(email);
@@ -234,7 +234,7 @@ public class UserAccountService {
 		return userAccount.getEmailToken();
 	}
 
-	@Transactional(readOnly = false)
+	@Transactional()
 	public UserAccountStatusTO changePassword(String email, String password) {
 		final UserAccount found = repository.findByEmail(email);
 		if (found == null) {
@@ -245,7 +245,7 @@ public class UserAccountService {
 		return new UserAccountStatusTO().setSuccess();
 	}
 
-	@Transactional(readOnly = false)
+	@Transactional()
 	public UserAccountStatusTO activateForgot(String email, String forgetToken) {
 		final UserAccount found = repository.findByEmail(email);
 		if (found == null) {
@@ -269,7 +269,7 @@ public class UserAccountService {
 		return new UserAccountStatusTO().setSuccess();
 	}
 
-	@Transactional(readOnly = false)
+	@Transactional()
 	public Pair<UserAccountStatusTO, UserAccountTO> forgot(String email) {
 		final UserAccount found = repository.findByEmail(email);
 		if (found == null) {

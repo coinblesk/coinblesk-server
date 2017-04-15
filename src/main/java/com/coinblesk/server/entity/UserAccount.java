@@ -51,7 +51,7 @@ public class UserAccount implements Serializable {
 	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name = "CREATION_DATE", nullable = false)
 	private Date creationDate;
-	@Column(name = "USERNAME", nullable = true)
+	@Column(name = "USERNAME")
 	private String username;
 	@Column(name = "EMAIL", unique = true, nullable = false)
 	private String email;
@@ -59,13 +59,13 @@ public class UserAccount implements Serializable {
 	private String password;
 	@Column(name = "DELETED", nullable = false)
 	private boolean deleted;
-	@Column(name = "BALANCE", nullable = true, precision = 25, scale = 8)
+	@Column(name = "BALANCE", precision = 25, scale = 8)
 	private BigDecimal balance;
-	@Column(name = "EMAIL_TOKEN", nullable = true)
+	@Column(name = "EMAIL_TOKEN")
 	private String emailToken;
-	@Column(name = "FORGOT_PASSWORD", nullable = true)
+	@Column(name = "FORGOT_PASSWORD")
 	private String forgotPassword;
-	@Column(name = "FORGOT_EMAIL_TOKEN", nullable = true)
+	@Column(name = "FORGOT_EMAIL_TOKEN")
 	private String forgotEmailToken;
 
 	@Enumerated(EnumType.STRING)
