@@ -77,14 +77,11 @@ public class WalletService {
 
 	private final static Logger LOG = LoggerFactory.getLogger(WalletService.class);
 
-	@Autowired
-	private AppConfig appConfig;
+	private final AppConfig appConfig;
 
-	@Autowired
-	private AccountService accountService;
+	private final AccountService accountService;
 
-	@Autowired
-	private TxQueueService txQueueService;
+	private final TxQueueService txQueueService;
 
 	private Wallet wallet;
 
@@ -93,6 +90,13 @@ public class WalletService {
 	private PeerGroup peerGroup;
 
 	private BlockStore blockStore;
+
+	@Autowired
+	public WalletService(AppConfig appConfig, AccountService accountService, TxQueueService txQueueService) {
+		this.appConfig = appConfig;
+		this.accountService = accountService;
+		this.txQueueService = txQueueService;
+	}
 
 	@PostConstruct
 	public void init() throws IOException, UnreadableWalletException, BlockStoreException, InterruptedException {
