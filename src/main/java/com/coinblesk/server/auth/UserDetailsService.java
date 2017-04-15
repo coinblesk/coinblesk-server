@@ -25,8 +25,12 @@ public class UserDetailsService implements org.springframework.security.core.use
 
 	private final Logger log = LoggerFactory.getLogger(UserDetailsService.class);
 
+	private final UserAccountRepository userAccountRepository;
+
 	@Autowired
-	private UserAccountRepository userAccountRepository;
+	public UserDetailsService(UserAccountRepository userAccountRepository) {
+		this.userAccountRepository = userAccountRepository;
+	}
 
 	@Override
 	@Transactional
