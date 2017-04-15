@@ -52,7 +52,7 @@ import java.util.UUID;
 @Service
 public class UserAccountService {
 
-	// as senn in:
+	// as seen in:
 	// http://www.mkyong.com/regular-expressions/how-to-validate-email-address-with-regular-expression/
 	public static final String EMAIL_PATTERN = "^[_A-Za-z0-9-+]+(\\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*"
 		+ "(\\.[A-Za-z]{2,})$";
