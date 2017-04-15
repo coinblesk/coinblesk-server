@@ -16,11 +16,8 @@
 package com.coinblesk.server.controller;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.json.v1.BalanceTO;
-import com.coinblesk.json.v1.Type;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dto.*;
-import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.exceptions.InvalidLockTimeException;
 import com.coinblesk.server.exceptions.InvalidSignatureException;
 import com.coinblesk.server.exceptions.MissingFieldException;
@@ -29,8 +26,6 @@ import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.server.utils.DTOUtils;
-import com.coinblesk.server.utils.ToUtils;
-import com.coinblesk.util.SerializeUtils;
 import org.bitcoinj.core.ECKey;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -151,27 +146,34 @@ public class PaymentController {
 			consumes = "application/json; charset=UTF-8",
 			produces = "application/json; charset=UTF-8")
 	@ResponseBody
-	public BalanceTO virtualBalance(@RequestBody BalanceTO input) {
-		if(input.publicKey() == null || input.publicKey().length == 0) {
-			return new BalanceTO().type(Type.KEYS_NOT_FOUND);
+	public ResponseEntity virtualBalance(@RequestBody @Valid SignedDTO request) {
+
+		// Get the embedded payload and check signature
+		final VirtualBalanceRequestDTO virtualBalanceRequestDTO;
+		try {
+			virtualBalanceRequestDTO = DTOUtils.parseAndValidate(request, VirtualBalanceRequestDTO.class);
+			ECKey signingKey = DTOUtils.getECKeyFromHexPublicKey(virtualBalanceRequestDTO.getPublicKey());
+			DTOUtils.validateSignature(request.getPayload(), request.getSignature(), signingKey);
+		} catch (MissingFieldException|InvalidSignatureException e) {
+			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
+		} catch (Throwable e) {
+			return new ResponseEntity<>(new ErrorDTO("Bad request"), BAD_REQUEST);
 		}
 
-		// Check if message is signed correctly
-		final BalanceTO error = ToUtils.checkInput(input);
-		if (error != null) {
-			return error;
+		final ECKey sender = DTOUtils.getECKeyFromHexPublicKey(virtualBalanceRequestDTO.getPublicKey());
+		final AccountService.GetVirtualBalanceResponse response;
+		try {
+			response = accountService.getVirtualBalanceByClientPublicKey(sender.getPubKey());
+		} catch (UserNotFoundException e) {
+			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
 		}
-
-		// Fetch actual balance
-		final long balance = accountService.getVirtualBalanceByClientPublicKey(input.publicKey());
 
 		// Construct response
-		BalanceTO balanceDTO = new BalanceTO().balance(balance);
+		VirtualBalanceResponseDTO innerResponse = new VirtualBalanceResponseDTO(response.getBalance());
+		SignedDTO responseDTO = DTOUtils.serializeAndSign(innerResponse, response.getServerPrivateKey());
 
-		// Sign it
-		Account account = accountService.getByClientPublicKey(input.publicKey());
-		ECKey existingServerKey = ECKey.fromPrivateAndPrecalculatedPublic(account.serverPrivateKey(), account.serverPublicKey());
-		return SerializeUtils.signJSON(balanceDTO, existingServerKey);
+		return new ResponseEntity<>(responseDTO, OK);
+
 	}
 
 }

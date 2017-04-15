@@ -600,7 +600,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1000L, fundingTx.getOutput(0), tla);
 		sendAndExpect2xxSuccess(dto);
-		assertThat(accountService.getVirtualBalanceByClientPublicKey(receiverKey.getPubKey()), is(1000L));
+		assertThat(accountService.getVirtualBalanceByClientPublicKey(receiverKey.getPubKey()).getBalance(), is(1000L));
 	}
 
 	@Test

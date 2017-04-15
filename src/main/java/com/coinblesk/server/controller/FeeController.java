@@ -44,8 +44,12 @@ public class FeeController {
 
 	private static final Logger LOG = LoggerFactory.getLogger(FeeController.class);
 
+	private final FeeService feeService;
+
 	@Autowired
-	private FeeService feeService;
+	public FeeController(FeeService feeService) {
+		this.feeService = feeService;
+	}
 
 	@RequestMapping(value = "/fee", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody

@@ -25,6 +25,7 @@ import java.util.stream.StreamSupport;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.exceptions.InvalidLockTimeException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
+import com.coinblesk.server.utils.DTOUtils;
 import lombok.Data;
 import lombok.NonNull;
 import org.bitcoinj.core.ECKey;
@@ -107,7 +108,6 @@ public class AccountService {
 	@Data public static class CreateTimeLockedAddressResponse {
 		@NonNull final private TimeLockedAddress timeLockedAddress;
 		@NonNull final private ECKey serverPrivateKey;
-
 	}
 
 	@Transactional
@@ -157,12 +157,23 @@ public class AccountService {
 		return new CreateTimeLockedAddressResponse(address, serverPrivateKey);
 	}
 
+	@Data public static class GetVirtualBalanceResponse {
+		@NonNull final private long balance;
+		@NonNull final private ECKey serverPrivateKey;
+	}
 	@Transactional(readOnly = true)
-	public long getVirtualBalanceByClientPublicKey(@NonNull byte[] publicKey) {
+	public GetVirtualBalanceResponse getVirtualBalanceByClientPublicKey(@NonNull byte[] publicKey)
+		throws UserNotFoundException {
+
 		if (publicKey.length == 0) {
 			throw new IllegalArgumentException("publicKey must not be null");
 		}
-		return accountRepository.findByClientPublicKey(publicKey).virtualBalance();
+		Account account = accountRepository.findByClientPublicKey(publicKey);
+		if (account == null)
+			throw new UserNotFoundException(DTOUtils.toHex(publicKey));
+
+		return new GetVirtualBalanceResponse(account.virtualBalance(),
+			ECKey.fromPrivateAndPrecalculatedPublic(account.serverPrivateKey(), account.serverPublicKey()));
 	}
 
 	public TimeLockedAddress getTimeLockedAddressByAddressHash(@NonNull byte[] addressHash) {

@@ -88,8 +88,12 @@ public class FeeService {
 
 	final static public class FeeTask {
 
+		private final FeeService feeService;
+
 		@Autowired
-		private FeeService feeService;
+		public FeeTask(FeeService feeService) {
+			this.feeService = feeService;
+		}
 
 		// call every 5 minutes
 		@Scheduled(fixedRate = CACHING_FEE_MILLIS / 3)

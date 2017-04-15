@@ -40,20 +40,24 @@ import com.coinblesk.server.auth.TokenProvider;
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-	@Autowired
-	private Http401UnauthorizedEntryPoint http401UnauthorizedEntryPoint;
+	private final Http401UnauthorizedEntryPoint http401UnauthorizedEntryPoint;
 
-	@Autowired
-	private TokenProvider tokenProvider;
+	private final TokenProvider tokenProvider;
 
-	@Autowired
-	private UserDetailsService userDetailsService;
+	private final UserDetailsService userDetailsService;
 
-	@Autowired
-	private PasswordEncoder passwordEncoder;
+	private final PasswordEncoder passwordEncoder;
 
 	final private static String[] REQUIRE_USER_ROLE = { "/user/auth/**", "/v?/user/auth/**"};
 	final private static String[] REQUIRE_ADMIN_ROLE = { "/admin/**", "/v?/admin/**" };
+
+	@Autowired
+	public SecurityConfig(Http401UnauthorizedEntryPoint http401UnauthorizedEntryPoint, TokenProvider tokenProvider, UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
+		this.http401UnauthorizedEntryPoint = http401UnauthorizedEntryPoint;
+		this.tokenProvider = tokenProvider;
+		this.userDetailsService = userDetailsService;
+		this.passwordEncoder = passwordEncoder;
+	}
 
 	@Autowired
 	public void configureGlobal(AuthenticationManagerBuilder auth) {
