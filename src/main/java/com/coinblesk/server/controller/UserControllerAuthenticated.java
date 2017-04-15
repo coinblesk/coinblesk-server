@@ -146,7 +146,7 @@ public class UserControllerAuthenticated {
 	public UserAccountStatusTO changePassword(@RequestBody UserAccountTO to, HttpServletRequest request,
 			HttpServletResponse response) {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-		LOG.debug("Change password account for {}", auth.getName());
+		LOG.debug("Change password account for {}", to.email());
 		if (auth != null) {
 			UserAccountStatusTO status = userAccountService.changePassword(auth.getName(), to.password());
 			return status;
