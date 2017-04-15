@@ -25,8 +25,12 @@ import com.coinblesk.server.entity.TxQueue;
 @Service
 public class TxQueueService {
 
+	private final TxQueueRepository repository;
+
 	@Autowired
-	private TxQueueRepository repository;
+	public TxQueueService(TxQueueRepository repository) {
+		this.repository = repository;
+	}
 
 	@Transactional()
 	public void addTx(Transaction tx) {
