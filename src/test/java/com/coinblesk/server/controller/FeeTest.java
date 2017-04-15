@@ -63,15 +63,17 @@ public class FeeTest extends CoinbleskTest {
 			.perform(get("/v1/fee").secure(true))
 			.andExpect(status().isOk())
 			.andReturn();
-		FeeTO fee = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
+		FeeTO fee1 = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
 			FeeTO.class);
 		res = mockMvc
 			.perform(get("/v1/fee").secure(true))
 			.andExpect(status().isOk())
 			.andReturn();
-		fee = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
+		FeeTO fee2 = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
 			FeeTO.class);
-		System.out.println("fee is: " + fee.fee() + "/" + fee.message());
-		Assert.assertNotNull(fee);
+		System.out.println("fee is: " + fee1.fee() + "/" + fee1.message());
+		System.out.println("fee is: " + fee2.fee() + "/" + fee2.message());
+		Assert.assertNotNull(fee1);
+		Assert.assertNotNull(fee2);
 	}
 }
