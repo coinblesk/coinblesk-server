@@ -46,8 +46,12 @@ public class VersionController {
 
 	private final static Logger LOG = LoggerFactory.getLogger(VersionController.class);
 
+	private final AppConfig appConfig;
+
 	@Autowired
-	private AppConfig appConfig;
+	public VersionController(AppConfig appConfig) {
+		this.appConfig = appConfig;
+	}
 
 	@RequestMapping(
 			value = "",
