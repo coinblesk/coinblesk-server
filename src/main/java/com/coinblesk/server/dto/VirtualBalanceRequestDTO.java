@@ -4,6 +4,8 @@ import lombok.Data;
 
 import javax.validation.constraints.NotNull;
 
-public @Data class VirtualBalanceRequestDTO {
-	@NotNull private final String publicKey;
+@Data
+public class VirtualBalanceRequestDTO {
+	@NotNull
+	private final String publicKey;
 }

@@ -15,13 +15,11 @@
  */
 package com.coinblesk.server.controller;
 
-import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
-import static org.springframework.web.bind.annotation.RequestMethod.POST;
-
-import java.time.Duration;
-import java.time.Instant;
-
-
+import com.coinblesk.bitcoin.BitcoinNet;
+import com.coinblesk.json.v1.Type;
+import com.coinblesk.json.v1.VersionTO;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.utils.ApiVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,18 +28,18 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.coinblesk.bitcoin.BitcoinNet;
-import com.coinblesk.json.v1.Type;
-import com.coinblesk.json.v1.VersionTO;
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.utils.ApiVersion;
+import java.time.Duration;
+import java.time.Instant;
+
+import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
+import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
 /**
  * @author Andreas Albrecht
  */
 @RestController
 @RequestMapping(value = "/version")
-@ApiVersion({ "v1" })
+@ApiVersion({"v1"})
 public class VersionController {
 
 	private final static Logger LOG = LoggerFactory.getLogger(VersionController.class);
@@ -53,11 +51,8 @@ public class VersionController {
 		this.appConfig = appConfig;
 	}
 
-	@RequestMapping(
-			value = "",
-			method = POST,
-			consumes = APPLICATION_JSON_UTF8_VALUE,
-			produces = APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE, produces =
+		APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public VersionTO version(@RequestBody VersionTO input) {
 		final String tag = "{version}";
@@ -73,8 +68,8 @@ public class VersionController {
 			}
 
 			final boolean isSupported = isVersionSupported(clientVersion) && isNetworkSupported(clientNetwork);
-			LOG.debug("{} - serverNetwork={}, clientVersion={}, clientNetwork={}, isSupported={}",
-					tag, serverNetwork, clientVersion, clientNetwork, isSupported);
+			LOG.debug("{} - serverNetwork={}, clientVersion={}, clientNetwork={}, isSupported={}", tag, serverNetwork,
+				clientVersion, clientNetwork, isSupported);
 
 			return new VersionTO().bitcoinNet(serverNetwork).setSupported(isSupported).setSuccess();
 		} catch (Exception e) {

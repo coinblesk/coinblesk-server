@@ -16,13 +16,11 @@
 
 package com.coinblesk.server.entity;
 
+import javax.persistence.*;
 import java.io.Serializable;
 import java.util.Date;
 
-import javax.persistence.*;
-
 /**
- *
  * @author Alessandro De Carli
  * @author Thomas Bocek
  */

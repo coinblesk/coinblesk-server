@@ -15,35 +15,15 @@
  */
 package com.coinblesk.server.service;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Executor;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-
+import com.coinblesk.bitcoin.AddressCoinSelector;
+import com.coinblesk.bitcoin.BitcoinNet;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import org.apache.commons.lang3.ArrayUtils;
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.BlockChain;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.PeerGroup;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionBroadcast;
-import org.bitcoinj.core.TransactionInput;
-import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscovery;
@@ -60,16 +40,18 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.coinblesk.bitcoin.AddressCoinSelector;
-import com.coinblesk.bitcoin.BitcoinNet;
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.entity.Account;
-import com.coinblesk.server.entity.TimeLockedAddressEntity;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
- *
  * @author Thomas Bocek
  */
 @Service
@@ -149,7 +131,7 @@ public class WalletService {
 		}
 
 		PeerDiscovery discovery = null;
-		String[] ownFullnodes = new String[] { appConfig.getFirstSeedNode() };
+		String[] ownFullnodes = new String[]{appConfig.getFirstSeedNode()};
 		switch (appConfig.getBitcoinNet()) {
 			case MAINNET:
 				// For mainnet we use the default seed list but with out own fullnode added as the first node
@@ -230,9 +212,9 @@ public class WalletService {
 		// to avoid memory exhaustion. After threshold is reached, the
 		// CallerRunsPolicy() forces blocking behavior.
 		ContextPropagatingThreadFactory factory = new ContextPropagatingThreadFactory("listenerFactory");
-		Executor listenerExecutor = new ThreadPoolExecutor(Runtime.getRuntime().availableProcessors(),
-				Runtime.getRuntime().availableProcessors(), 0L, TimeUnit.MILLISECONDS,
-				new LinkedBlockingQueue<Runnable>(10000), factory, new ThreadPoolExecutor.CallerRunsPolicy());
+		Executor listenerExecutor = new ThreadPoolExecutor(Runtime.getRuntime().availableProcessors(), Runtime
+			.getRuntime().availableProcessors(), 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(10000),
+			factory, new ThreadPoolExecutor.CallerRunsPolicy());
 
 		wallet.addTransactionConfidenceEventListener(listenerExecutor, (wallet, tx) -> {
 			if (tx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf()) {
@@ -257,17 +239,14 @@ public class WalletService {
 	}
 
 	public Coin microPaymentPot() {
-		final Set<Address> serverPotAddresses =accountService.allAccounts().stream()
-			.map(account -> ECKey.fromPublicOnly(account.serverPublicKey()).toAddress(appConfig.getNetworkParameters()))
-			.collect(Collectors.toSet());
+		final Set<Address> serverPotAddresses = accountService.allAccounts().stream().map(account -> ECKey
+			.fromPublicOnly(account.serverPublicKey()).toAddress(appConfig.getNetworkParameters())).collect(Collectors
+			.toSet());
 
-		return wallet.calculateAllSpendCandidates().stream()
-			.filter(output -> {
-				Address address =output.getAddressFromP2PKHScript(appConfig.getNetworkParameters());
-				return serverPotAddresses.contains(address);
-			})
-			.map(TransactionOutput::getValue)
-			.reduce(Coin.ZERO, Coin::add);
+		return wallet.calculateAllSpendCandidates().stream().filter(output -> {
+			Address address = output.getAddressFromP2PKHScript(appConfig.getNetworkParameters());
+			return serverPotAddresses.contains(address);
+		}).map(TransactionOutput::getValue).reduce(Coin.ZERO, Coin::add);
 	}
 
 

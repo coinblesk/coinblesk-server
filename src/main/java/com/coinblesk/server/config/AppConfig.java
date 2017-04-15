@@ -15,21 +15,20 @@
  */
 package com.coinblesk.server.config;
 
-import java.math.BigInteger;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.TimeZone;
-
+import com.coinblesk.bitcoin.BitcoinNet;
+import com.coinblesk.server.utils.CoinUtils;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
-
-import com.coinblesk.bitcoin.BitcoinNet;
-import com.coinblesk.server.utils.CoinUtils;
 import org.springframework.retry.annotation.EnableRetry;
+
+import java.math.BigInteger;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.TimeZone;
 
 @Configuration
 @EnableRetry
@@ -38,57 +37,45 @@ public class AppConfig {
 	private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(AppConfig.class);
 
 	private final static Set<String> SUPPORTED_CLIENT_VERSIONS;
+
 	static {
 		SUPPORTED_CLIENT_VERSIONS = new HashSet<>();
 		SUPPORTED_CLIENT_VERSIONS.add("2.3"); // TO versioning release
 	}
 
-	@Value("${coinblesk.url}")
-	private String url;
-
-	@Value("${coinblesk.config.dir}")
-	private FileSystemResource configDir;
-
-	@Value("${coinblesk.minimumLockTimeSeconds}")
-	private long minimumLockTimeSeconds;
-
-	@Value("${coinblesk.maximumLockTimeDays}")
-	private long maximumLockTimeDays;
-
-	@Value("${coinblesk.maximumChannelAmountUSD}")
-	private long maximumChannelAmountUSD;
-
-	@Value("${coinblesk.channelClosingThresholdUSD}")
-	private long channelClosingThresholdUSD;
-
-	@Value("${bitcoin.net}")
-	private String bitcoinNet;
-
-	@Value("${bitcoin.firstSeedNode}")
-	private String firstSeedNode;
-
-	@Value("${bitcoin.minconf}")
-	private int minConf;
-
-	@Value("${security.jwt.secret}")
-	private String jwtSecret;
-
-	@Value("${security.jwt.validityInSeconds}")
-	private Long jwtValidityInSeconds;
-
-	@Value("${security.jwt.adminValidityInSeconds}")
-	private Long jwtAdminValidityInSeconds;
-
-	// this private key is just use for unit tests
-	@Value("${bitcoin.potprivkey}")
-	private BigInteger potPrivateKeyAddress;
-
-	@Value("${bitcoin.potCreationTime}")
-	private Long potCreationTime;
-
 	static {
 		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 	}
+
+	@Value("${coinblesk.url}")
+	private String url;
+	@Value("${coinblesk.config.dir}")
+	private FileSystemResource configDir;
+	@Value("${coinblesk.minimumLockTimeSeconds}")
+	private long minimumLockTimeSeconds;
+	@Value("${coinblesk.maximumLockTimeDays}")
+	private long maximumLockTimeDays;
+	@Value("${coinblesk.maximumChannelAmountUSD}")
+	private long maximumChannelAmountUSD;
+	@Value("${coinblesk.channelClosingThresholdUSD}")
+	private long channelClosingThresholdUSD;
+	@Value("${bitcoin.net}")
+	private String bitcoinNet;
+	@Value("${bitcoin.firstSeedNode}")
+	private String firstSeedNode;
+	@Value("${bitcoin.minconf}")
+	private int minConf;
+	@Value("${security.jwt.secret}")
+	private String jwtSecret;
+	@Value("${security.jwt.validityInSeconds}")
+	private Long jwtValidityInSeconds;
+	@Value("${security.jwt.adminValidityInSeconds}")
+	private Long jwtAdminValidityInSeconds;
+	// this private key is just use for unit tests
+	@Value("${bitcoin.potprivkey}")
+	private BigInteger potPrivateKeyAddress;
+	@Value("${bitcoin.potCreationTime}")
+	private Long potCreationTime;
 
 	public FileSystemResource getConfigDir() {
 		return configDir;

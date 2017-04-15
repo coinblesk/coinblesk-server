@@ -15,15 +15,19 @@
  */
 package com.coinblesk.server.service;
 
-import java.math.BigDecimal;
-import java.security.SecureRandom;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
-
 import com.coinblesk.bitcoin.TimeLockedAddress;
+import com.coinblesk.json.v1.Type;
+import com.coinblesk.json.v1.UserAccountStatusTO;
+import com.coinblesk.json.v1.UserAccountTO;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.config.UserRole;
 import com.coinblesk.server.dao.TimeLockedAddressRepository;
+import com.coinblesk.server.dao.UserAccountRepository;
+import com.coinblesk.server.entity.UserAccount;
+import com.coinblesk.util.BitcoinUtils;
+import com.coinblesk.util.CoinbleskException;
+import com.coinblesk.util.InsufficientFunds;
+import com.coinblesk.util.Pair;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
@@ -35,32 +39,24 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.coinblesk.json.v1.Type;
-import com.coinblesk.json.v1.UserAccountStatusTO;
-import com.coinblesk.json.v1.UserAccountTO;
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.config.UserRole;
-import com.coinblesk.server.dao.UserAccountRepository;
-import com.coinblesk.server.entity.UserAccount;
-import com.coinblesk.util.BitcoinUtils;
-import com.coinblesk.util.CoinbleskException;
-import com.coinblesk.util.InsufficientFunds;
-import com.coinblesk.util.Pair;
+import java.math.BigDecimal;
+import java.security.SecureRandom;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
 
 /**
- *
  * @author draft
  */
 @Service
 public class UserAccountService {
 
-	private final static SecureRandom random = new SecureRandom();
-
 	// as senn in:
 	// http://www.mkyong.com/regular-expressions/how-to-validate-email-address-with-regular-expression/
-	public static final String EMAIL_PATTERN = "^[_A-Za-z0-9-+]+(\\.[_A-Za-z0-9-]+)*@"
-			+ "[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$";
-
+	public static final String EMAIL_PATTERN = "^[_A-Za-z0-9-+]+(\\.[_A-Za-z0-9-]+)*@" + "[A-Za-z0-9-]+(\\" + "" + "" +
+		".[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$";
+	private final static SecureRandom random = new SecureRandom();
 	private final static Logger LOG = LoggerFactory.getLogger(UserAccountService.class);
 
 	private final UserAccountRepository repository;
@@ -78,9 +74,9 @@ public class UserAccountService {
 	private final AccountService accountService;
 
 	@Autowired
-	public UserAccountService(UserAccountRepository repository, TimeLockedAddressRepository addressRepository, PasswordEncoder passwordEncoder,
-							  MailService mailService, AppConfig appConfig, WalletService walletService,
-							  AccountService accountService) {
+	public UserAccountService(UserAccountRepository repository, TimeLockedAddressRepository addressRepository,
+							  PasswordEncoder passwordEncoder, MailService mailService, AppConfig appConfig,
+							  WalletService walletService, AccountService accountService) {
 		this.repository = repository;
 		this.addressRepository = addressRepository;
 		this.passwordEncoder = passwordEncoder;
@@ -88,6 +84,20 @@ public class UserAccountService {
 		this.appConfig = appConfig;
 		this.walletService = walletService;
 		this.accountService = accountService;
+	}
+
+	private static String createPassword() {
+		// put here all characters that are allowed in password
+		final char[] ALLOWED_CHARACTERS = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789".toCharArray();
+		final int PASSWORD_LENGTH = 8;
+
+		final StringBuffer password = new StringBuffer();
+
+		final int len = ALLOWED_CHARACTERS.length;
+		for (int i = 0; i < PASSWORD_LENGTH; i++) {
+			password.append(ALLOWED_CHARACTERS[random.nextInt(len)]);
+		}
+		return password.toString();
 	}
 
 	@Transactional(readOnly = true)
@@ -120,7 +130,7 @@ public class UserAccountService {
 		if (found != null) {
 			if (found.getEmailToken() != null) {
 				return new Pair<>(new UserAccountStatusTO().type(Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_NOT_ACTIVATED),
-						found);
+					found);
 			}
 			return new Pair<>(new UserAccountStatusTO().type(Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_ACTIVATED), found);
 		}
@@ -132,8 +142,8 @@ public class UserAccountService {
 		userAccount.setDeleted(false);
 		userAccount.setEmailToken(UUID.randomUUID().toString());
 		userAccount.setUserRole(UserRole.USER);
-		userAccount.setBalance(BigDecimal.valueOf(userAccountTO.balance())
-				.divide(BigDecimal.valueOf(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI)));
+		userAccount.setBalance(BigDecimal.valueOf(userAccountTO.balance()).divide(BigDecimal.valueOf(BitcoinUtils
+			.ONE_BITCOIN_IN_SATOSHI)));
 		repository.save(userAccount);
 		return new Pair<>(new UserAccountStatusTO().setSuccess(), userAccount);
 	}
@@ -178,9 +188,8 @@ public class UserAccountService {
 		if (userAccount == null) {
 			return null;
 		}
-		long satoshi = userAccount.getBalance()
-				.multiply(new BigDecimal(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI))
-				.longValue();
+		long satoshi = userAccount.getBalance().multiply(new BigDecimal(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI))
+			.longValue();
 		final UserAccountTO userAccountTO = new UserAccountTO();
 		userAccountTO.email(userAccount.getEmail()).balance(satoshi);
 		return userAccountTO;
@@ -194,19 +203,17 @@ public class UserAccountService {
 			return new UserAccountTO().type(Type.NO_ACCOUNT);
 		}
 		final ECKey pot = appConfig.getPotPrivateKeyAddress();
-		long satoshi = userAccount.getBalance()
-				.multiply(new BigDecimal(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI))
-				.longValue();
+		long satoshi = userAccount.getBalance().multiply(new BigDecimal(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI))
+			.longValue();
 
 		List<TransactionOutput> outputs = walletService.potTransactionOutput(params);
 
 		Transaction tx;
 		try {
-			TimeLockedAddress latestTLA =
-				addressRepository.findTopByAccount_clientPublicKeyOrderByLockTimeDesc(clientKey.getPubKey())
-				.toTimeLockedAddress();
-			tx = BitcoinUtils.createTx(params, outputs, pot.toAddress(params),
-					latestTLA.getAddress(params), satoshi, false);
+			TimeLockedAddress latestTLA = addressRepository.findTopByAccount_clientPublicKeyOrderByLockTimeDesc
+				(clientKey.getPubKey()).toTimeLockedAddress();
+			tx = BitcoinUtils.createTx(params, outputs, pot.toAddress(params), latestTLA.getAddress(params), satoshi,
+				false);
 
 			tx = BitcoinUtils.sign(params, tx, pot);
 			BitcoinUtils.verifyTxFull(tx);
@@ -215,9 +222,8 @@ public class UserAccountService {
 			LOG.debug("About to broadcast tx");
 			walletService.broadcast(tx);
 			LOG.debug("Broadcast done");
-			long satoshiNew = userAccount.getBalance()
-					.multiply(new BigDecimal(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI))
-					.longValue();
+			long satoshiNew = userAccount.getBalance().multiply(new BigDecimal(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI))
+				.longValue();
 
 			final UserAccountTO userAccountTO = new UserAccountTO();
 			userAccountTO.email(userAccount.getEmail()).balance(satoshiNew);
@@ -281,19 +287,5 @@ public class UserAccountService {
 		to.password(password);
 		to.message(token);
 		return new Pair<UserAccountStatusTO, UserAccountTO>(new UserAccountStatusTO().setSuccess(), to);
-	}
-
-	private static String createPassword() {
-		// put here all characters that are allowed in password
-		final char[] ALLOWED_CHARACTERS = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789".toCharArray();
-		final int PASSWORD_LENGTH = 8;
-
-		final StringBuffer password = new StringBuffer();
-
-		final int len = ALLOWED_CHARACTERS.length;
-		for (int i = 0; i < PASSWORD_LENGTH; i++) {
-			password.append(ALLOWED_CHARACTERS[random.nextInt(len)]);
-		}
-		return password.toString();
 	}
 }

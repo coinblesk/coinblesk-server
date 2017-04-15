@@ -4,7 +4,8 @@ import lombok.Data;
 
 import java.util.Date;
 
-public @Data class TimeLockedAddressDTO {
+@Data
+public class TimeLockedAddressDTO {
 	private final String bitcoinAddress;
 	private final String adddressUrl;
 	private final Date createdAt;

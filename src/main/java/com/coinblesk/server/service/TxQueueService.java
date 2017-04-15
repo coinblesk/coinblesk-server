@@ -5,21 +5,19 @@
  */
 package com.coinblesk.server.service;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-
+import com.coinblesk.server.dao.TxQueueRepository;
+import com.coinblesk.server.entity.TxQueue;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.coinblesk.server.dao.TxQueueRepository;
-import com.coinblesk.server.entity.TxQueue;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 /**
- *
  * @author Thomas Bocek
  */
 @Service
@@ -34,10 +32,8 @@ public class TxQueueService {
 
 	@Transactional()
 	public void addTx(Transaction tx) {
-		TxQueue entity = new TxQueue()
-				.tx(tx.unsafeBitcoinSerialize())
-				.txHash(tx.getHash().getBytes())
-				.creationDate(new Date());
+		TxQueue entity = new TxQueue().tx(tx.unsafeBitcoinSerialize()).txHash(tx.getHash().getBytes()).creationDate
+			(new Date());
 		repository.save(entity);
 	}
 

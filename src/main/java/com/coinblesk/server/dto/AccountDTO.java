@@ -5,7 +5,8 @@ import lombok.Data;
 import java.util.Date;
 import java.util.List;
 
-public @Data class AccountDTO {
+@Data
+public class AccountDTO {
 	private final String publicKeyClient;
 	private final String publicKeyServer;
 	private final String privateKeyServer;

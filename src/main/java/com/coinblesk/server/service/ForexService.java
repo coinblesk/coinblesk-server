@@ -15,34 +15,26 @@
  */
 package com.coinblesk.server.service;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-
 import com.coinblesk.server.utils.DTOUtils;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
+import java.math.BigDecimal;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
- *
  * Service that provides bitcoin and forex exchange rates. This class also
  * caches exchange rates.
  *
  * @author rvoellmy
  * @author Thomas Bocek
- *
  */
 @Service
 final public class ForexService {
@@ -54,22 +46,15 @@ final public class ForexService {
 
 
 	private final static String PLACEHOLDER = "{{PLACEHOLDER}}";
-	private final static String YAHOO_API = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.xchange%20where%20pair%20in%20("
-			+ PLACEHOLDER
-			+ ")&format=json&env=store://datatables.org/alltableswithkeys";
+	private final static String YAHOO_API = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo" +
+		"" + ".finance.xchange%20where%20pair%20in%20(" + PLACEHOLDER + ")&format=json&env=store://datatables" + "" +
+		".org/alltableswithkeys";
 
-	private final Cache<String, BigDecimal> exchangeRatesCache = CacheBuilder
-			.newBuilder()
-			.expireAfterWrite(
-				CACHING_TIME_RATE_MILLIS,
-				TimeUnit.MILLISECONDS)
-			.build();
+	private final Cache<String, BigDecimal> exchangeRatesCache = CacheBuilder.newBuilder().expireAfterWrite
+		(CACHING_TIME_RATE_MILLIS, TimeUnit.MILLISECONDS).build();
 
-	private final Cache<String, Boolean> exchangeRatesSymbolCache = CacheBuilder.newBuilder()
-			.expireAfterWrite(
-				CACHING_TIME_SYMBOL_MILLIS,
-				TimeUnit.MILLISECONDS)
-			.build();
+	private final Cache<String, Boolean> exchangeRatesSymbolCache = CacheBuilder.newBuilder().expireAfterWrite
+		(CACHING_TIME_SYMBOL_MILLIS, TimeUnit.MILLISECONDS).build();
 
 	/**
 	 * Returns the exchange rate of 1 USD against the specified currency (by
@@ -122,7 +107,6 @@ final public class ForexService {
 
 		return exchangeRates;
 	}
-
 
 
 	/*-

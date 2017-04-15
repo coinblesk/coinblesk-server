@@ -39,13 +39,8 @@ public final class RESTUtils {
 	}
 
 	private static <T> T postRequest(MockMvc mockMvc, String requestJSON, Class<T> responseClass) throws Exception {
-		final MvcResult res = mockMvc
-			.perform(
-				post(com.coinblesk.server.controller.VersionControllerTest.URL_VERSION)
-					.secure(true)
-					.contentType(MediaType.APPLICATION_JSON)
-					.content(requestJSON))
-			.andExpect(status().isOk())
+		final MvcResult res = mockMvc.perform(post(com.coinblesk.server.controller.VersionControllerTest.URL_VERSION)
+			.secure(true).contentType(MediaType.APPLICATION_JSON).content(requestJSON)).andExpect(status().isOk())
 			.andReturn();
 		final String responseJson = res.getResponse().getContentAsString();
 		return SerializeUtils.GSON.fromJson(responseJson, responseClass);

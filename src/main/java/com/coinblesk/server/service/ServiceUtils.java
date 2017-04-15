@@ -18,32 +18,32 @@ import java.net.URL;
  */
 class ServiceUtils {
 
-    private final static String USER_AGENT = "Mozilla/5.0";
+	private final static String USER_AGENT = "Mozilla/5.0";
 
-    /**
-     * Executes JSON HTTP Request and returns result.
-     *
-     * @param url
-     * @return response of defined by url request
-     * @throws IOException
-     */
-    public static StringBuffer doHttpRequest(String url) throws IOException {
-        final URL requestURL = new URL(url);
-        final HttpURLConnection con = (HttpURLConnection) requestURL.openConnection();
+	/**
+	 * Executes JSON HTTP Request and returns result.
+	 *
+	 * @param url
+	 * @return response of defined by url request
+	 * @throws IOException
+	 */
+	public static StringBuffer doHttpRequest(String url) throws IOException {
+		final URL requestURL = new URL(url);
+		final HttpURLConnection con = (HttpURLConnection) requestURL.openConnection();
 
-        // optional default is GET
-        con.setRequestMethod("GET");
+		// optional default is GET
+		con.setRequestMethod("GET");
 
-        // add request header
-        con.setRequestProperty("User-Agent", USER_AGENT);
+		// add request header
+		con.setRequestProperty("User-Agent", USER_AGENT);
 
-        final StringBuffer response = new StringBuffer();
-        try (final BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
-            String inputLine;
-            while ((inputLine = in.readLine()) != null) {
-                response.append(inputLine);
-            }
-        }
-        return response;
-    }
+		final StringBuffer response = new StringBuffer();
+		try (final BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
+			String inputLine;
+			while ((inputLine = in.readLine()) != null) {
+				response.append(inputLine);
+			}
+		}
+		return response;
+	}
 }

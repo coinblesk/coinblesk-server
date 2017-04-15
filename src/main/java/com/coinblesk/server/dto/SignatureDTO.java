@@ -4,7 +4,10 @@ import lombok.Data;
 
 import javax.validation.constraints.NotNull;
 
-public @Data class SignatureDTO {
-	@NotNull private final String sigR;
-	@NotNull private final String sigS;
+@Data
+public class SignatureDTO {
+	@NotNull
+	private final String sigR;
+	@NotNull
+	private final String sigS;
 }

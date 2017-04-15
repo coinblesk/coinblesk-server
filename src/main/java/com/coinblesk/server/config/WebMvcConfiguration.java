@@ -15,11 +15,8 @@
  */
 package com.coinblesk.server.config;
 
-import static java.util.Arrays.asList;
-
-import java.util.Arrays;
-import java.util.List;
-
+import com.coinblesk.server.utils.ApiVersionRequestMappingHandlerMapping;
+import com.coinblesk.util.SerializeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,8 +31,10 @@ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
-import com.coinblesk.server.utils.ApiVersionRequestMappingHandlerMapping;
-import com.coinblesk.util.SerializeUtils;
+import java.util.Arrays;
+import java.util.List;
+
+import static java.util.Arrays.asList;
 
 @Configuration
 @EnableWebMvc

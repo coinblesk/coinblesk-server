@@ -16,30 +16,18 @@
 
 package com.coinblesk.server.entity;
 
+import com.coinblesk.server.config.UserRole;
+
+import javax.persistence.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Index;
-import javax.persistence.Table;
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
-
-import com.coinblesk.server.config.UserRole;
-
 /**
- *
  * @author Thomas Bocek
  */
 @Entity(name = "USER_ACCOUNT")
-@Table(indexes = { @Index(name = "USERNAME_INDEX", columnList = "USERNAME") })
+@Table(indexes = {@Index(name = "USERNAME_INDEX", columnList = "USERNAME")})
 public class UserAccount implements Serializable {
 
 	private static final long serialVersionUID = 1L;
@@ -172,23 +160,10 @@ public class UserAccount implements Serializable {
 
 	@Override
 	public String toString() {
-		StringBuilder sb = new StringBuilder()
-				.append("id: ")
-				.append(getId())
-				.append(", username: ")
-				.append(getUsername())
-				.append(", email: ")
-				.append(getEmail())
-				.append(", isDeleted: ")
-				.append(isDeleted())
-				.append(", creationDate: ")
-				.append(getCreationDate())
-				.append(", balance: ")
-				.append(getBalance())
-				.append(", emailToken: ")
-				.append(getEmailToken())
-				.append(", userRoles: ")
-				.append(getUserRole());
+		StringBuilder sb = new StringBuilder().append("id: ").append(getId()).append(", username: ").append
+			(getUsername()).append(", email: ").append(getEmail()).append(", isDeleted: ").append(isDeleted()).append
+			(", creationDate: ").append(getCreationDate()).append(", balance: ").append(getBalance()).append(", " +
+			"emailToken: ").append(getEmailToken()).append(", userRoles: ").append(getUserRole());
 		return sb.toString();
 	}
 }

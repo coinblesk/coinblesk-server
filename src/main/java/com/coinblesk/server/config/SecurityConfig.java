@@ -15,8 +15,9 @@
  */
 package com.coinblesk.server.config;
 
-import static org.springframework.http.HttpMethod.OPTIONS;
-
+import com.coinblesk.server.auth.Http401UnauthorizedEntryPoint;
+import com.coinblesk.server.auth.JWTConfigurer;
+import com.coinblesk.server.auth.TokenProvider;
 import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -27,12 +28,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import com.coinblesk.server.auth.Http401UnauthorizedEntryPoint;
-import com.coinblesk.server.auth.JWTConfigurer;
-import com.coinblesk.server.auth.TokenProvider;
+import static org.springframework.http.HttpMethod.OPTIONS;
 
 /**
- *
  * @author Thomas Bocek
  * @author Andreas Albrecht
  * @author Sebastian Stephan
@@ -40,19 +38,16 @@ import com.coinblesk.server.auth.TokenProvider;
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
+	final private static String[] REQUIRE_USER_ROLE = {"/user/auth/**", "/v?/user/auth/**"};
+	final private static String[] REQUIRE_ADMIN_ROLE = {"/admin/**", "/v?/admin/**"};
 	private final Http401UnauthorizedEntryPoint http401UnauthorizedEntryPoint;
-
 	private final TokenProvider tokenProvider;
-
 	private final UserDetailsService userDetailsService;
-
 	private final PasswordEncoder passwordEncoder;
 
-	final private static String[] REQUIRE_USER_ROLE = { "/user/auth/**", "/v?/user/auth/**"};
-	final private static String[] REQUIRE_ADMIN_ROLE = { "/admin/**", "/v?/admin/**" };
-
 	@Autowired
-	public SecurityConfig(Http401UnauthorizedEntryPoint http401UnauthorizedEntryPoint, TokenProvider tokenProvider, UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
+	public SecurityConfig(Http401UnauthorizedEntryPoint http401UnauthorizedEntryPoint, TokenProvider tokenProvider,
+						  UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
 		this.http401UnauthorizedEntryPoint = http401UnauthorizedEntryPoint;
 		this.tokenProvider = tokenProvider;
 		this.userDetailsService = userDetailsService;
@@ -70,30 +65,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
 	@Override
 	protected void configure(HttpSecurity http) throws Exception {
-		http
-			.cors()
-		.and()
-			.exceptionHandling()
-			.authenticationEntryPoint(http401UnauthorizedEntryPoint)
-		.and()
-			.csrf()
-			.disable()
-			.headers()
-			.frameOptions()
-			.sameOrigin() // To allow h2 console
-		.and()
-			.sessionManagement()
-			.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-		.and() // allow CORS's OPTIONS preflight
-			.authorizeRequests()
-			.antMatchers(OPTIONS, "/**").permitAll()
-		.and()
-			.authorizeRequests()
+		http.cors().and().exceptionHandling().authenticationEntryPoint(http401UnauthorizedEntryPoint).and().csrf()
+			.disable().headers().frameOptions().sameOrigin() // To allow h2 console
+			.and().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and() // allow CORS's
+			// OPTIONS preflight
+			.authorizeRequests().antMatchers(OPTIONS, "/**").permitAll().and().authorizeRequests()
 			// .antMatchers("/").permitAll()
-			.antMatchers(REQUIRE_USER_ROLE).hasAnyAuthority(UserRole.USER.getAuthority(), UserRole.ADMIN.getAuthority())
-			.antMatchers(REQUIRE_ADMIN_ROLE).hasAuthority(UserRole.ADMIN.getAuthority())
-		.and()
-			.apply(securityConfigurerAdapter());
+			.antMatchers(REQUIRE_USER_ROLE).hasAnyAuthority(UserRole.USER.getAuthority(), UserRole.ADMIN.getAuthority
+			()).antMatchers(REQUIRE_ADMIN_ROLE).hasAuthority(UserRole.ADMIN.getAuthority()).and().apply
+			(securityConfigurerAdapter());
 	}
 
 	private JWTConfigurer securityConfigurerAdapter() {

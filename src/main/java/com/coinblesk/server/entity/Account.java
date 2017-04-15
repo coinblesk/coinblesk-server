@@ -15,19 +15,16 @@
  */
 package com.coinblesk.server.entity;
 
+import javax.persistence.*;
 import java.io.Serializable;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
 
-import javax.persistence.*;
-
 /**
- *
  * @author Thomas Bocek
  */
 @Entity(name = "ACCOUNT")
-@Table(indexes = { @Index(name = "ACCOUNT_CLIENT_PUBLIC_KEY", columnList = "CLIENT_PUBLIC_KEY") })
+@Table(indexes = {@Index(name = "ACCOUNT_CLIENT_PUBLIC_KEY", columnList = "CLIENT_PUBLIC_KEY")})
 public class Account implements Serializable {
 
 	private static final long serialVersionUID = -7496348013847426913L;
@@ -138,18 +135,14 @@ public class Account implements Serializable {
 		if (o == null || getClass() != o.getClass()) return false;
 		Account account = (Account) o;
 
-		return Arrays.equals(clientPublicKey,  account.clientPublicKey) &&
-				Arrays.equals(serverPublicKey,  account.serverPublicKey) &&
-				Arrays.equals(serverPrivateKey, account.serverPrivateKey);
+		return Arrays.equals(clientPublicKey, account.clientPublicKey) && Arrays.equals(serverPublicKey, account
+			.serverPublicKey) && Arrays.equals(serverPrivateKey, account.serverPrivateKey);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(
-				Arrays.hashCode(clientPublicKey),
-				Arrays.hashCode(serverPublicKey),
-				Arrays.hashCode(serverPrivateKey)
-		);
+		return Objects.hash(Arrays.hashCode(clientPublicKey), Arrays.hashCode(serverPublicKey), Arrays.hashCode
+			(serverPrivateKey));
 	}
 
 }

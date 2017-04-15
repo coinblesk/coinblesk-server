@@ -38,15 +38,13 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
 /**
- *
  * @author Alessandro Di Carli
  * @author Thomas Bocek
  * @author Andreas Albrecht
- *
  */
 @RestController
 @RequestMapping(value = "/payment")
-@ApiVersion({ "v1", "" })
+@ApiVersion({"v1", ""})
 public class PaymentController {
 
 	private final AppConfig appConfig;
@@ -62,10 +60,8 @@ public class PaymentController {
 		this.accountService = accountService;
 	}
 
-	@RequestMapping(value = "/createTimeLockedAddress",
-			method = POST,
-			consumes = APPLICATION_JSON_UTF8_VALUE,
-			produces = APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/createTimeLockedAddress", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE,
+		produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	@CrossOrigin
 	public ResponseEntity createTimeLockedAddress(@RequestBody @Valid SignedDTO request) {
@@ -76,7 +72,7 @@ public class PaymentController {
 			createAddressRequestDTO = DTOUtils.parseAndValidate(request, CreateAddressRequestDTO.class);
 			ECKey signingKey = DTOUtils.getECKeyFromHexPublicKey(createAddressRequestDTO.getPublicKey());
 			DTOUtils.validateSignature(request.getPayload(), request.getSignature(), signingKey);
-		} catch (MissingFieldException|InvalidSignatureException e) {
+		} catch (MissingFieldException | InvalidSignatureException e) {
 			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
 		} catch (Throwable e) {
 			return new ResponseEntity<>(new ErrorDTO("Bad request"), BAD_REQUEST);
@@ -89,7 +85,7 @@ public class PaymentController {
 		AccountService.CreateTimeLockedAddressResponse response;
 		try {
 			response = accountService.createTimeLockedAddress(clientPublicKey, lockTime);
-		} catch (UserNotFoundException|InvalidLockTimeException e) {
+		} catch (UserNotFoundException | InvalidLockTimeException e) {
 			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
 		} catch (Throwable e) {
 			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), INTERNAL_SERVER_ERROR);
@@ -105,11 +101,8 @@ public class PaymentController {
 		walletService.addWatching(address.getAddress(appConfig.getNetworkParameters()));
 
 		// Create response
-		CreateAddressResponseDTO innerResponse = new CreateAddressResponseDTO(
-				DTOUtils.toHex(address.getClientPubKey()),
-				DTOUtils.toHex(address.getServerPubKey()),
-				address.getLockTime()
-				);
+		CreateAddressResponseDTO innerResponse = new CreateAddressResponseDTO(DTOUtils.toHex(address.getClientPubKey()
+		), DTOUtils.toHex(address.getServerPubKey()), address.getLockTime());
 		SignedDTO responseDTO = DTOUtils.serializeAndSign(innerResponse, serverPrivateKeyForSigning);
 
 		return new ResponseEntity<>(responseDTO, OK);
@@ -119,10 +112,8 @@ public class PaymentController {
 	 * Input is the KeyExchangeRequestDTO with the client public key. The server will create for
 	 * this client public key its own server keypair and return the server public key
 	 */
-	@RequestMapping(value = "/key-exchange",
-			method = POST,
-			consumes = APPLICATION_JSON_UTF8_VALUE,
-			produces = APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/key-exchange", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE, produces =
+		APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	@CrossOrigin
 	public ResponseEntity keyExchange(@RequestBody @Valid KeyExchangeRequestDTO request) {
@@ -142,9 +133,8 @@ public class PaymentController {
 		}
 	}
 
-	@RequestMapping(value = {"/virtualbalance"}, method = POST,
-			consumes = "application/json; charset=UTF-8",
-			produces = "application/json; charset=UTF-8")
+	@RequestMapping(value = {"/virtualbalance"}, method = POST, consumes = "application/json; charset=UTF-8", produces
+		= "application/json; charset=UTF-8")
 	@ResponseBody
 	public ResponseEntity virtualBalance(@RequestBody @Valid SignedDTO request) {
 
@@ -154,7 +144,7 @@ public class PaymentController {
 			virtualBalanceRequestDTO = DTOUtils.parseAndValidate(request, VirtualBalanceRequestDTO.class);
 			ECKey signingKey = DTOUtils.getECKeyFromHexPublicKey(virtualBalanceRequestDTO.getPublicKey());
 			DTOUtils.validateSignature(request.getPayload(), request.getSignature(), signingKey);
-		} catch (MissingFieldException|InvalidSignatureException e) {
+		} catch (MissingFieldException | InvalidSignatureException e) {
 			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
 		} catch (Throwable e) {
 			return new ResponseEntity<>(new ErrorDTO("Bad request"), BAD_REQUEST);

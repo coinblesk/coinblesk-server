@@ -15,13 +15,9 @@
  */
 package com.coinblesk.server.controller;
 
-import static com.coinblesk.json.v1.Type.SERVER_ERROR;
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
-import static org.springframework.http.HttpStatus.OK;
-import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
-import static org.springframework.web.bind.annotation.RequestMethod.GET;
-
-
+import com.coinblesk.json.v1.FeeTO;
+import com.coinblesk.server.service.FeeService;
+import com.coinblesk.server.utils.ApiVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,16 +26,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.coinblesk.json.v1.FeeTO;
-import com.coinblesk.server.service.FeeService;
-import com.coinblesk.server.utils.ApiVersion;
+import static com.coinblesk.json.v1.Type.SERVER_ERROR;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.OK;
+import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
+import static org.springframework.web.bind.annotation.RequestMethod.GET;
 
 /**
  * Controller for serving Tx fee requests.
- *
  */
 @RestController
-@ApiVersion({ "v1" })
+@ApiVersion({"v1"})
 public class FeeController {
 
 	private static final Logger LOG = LoggerFactory.getLogger(FeeController.class);

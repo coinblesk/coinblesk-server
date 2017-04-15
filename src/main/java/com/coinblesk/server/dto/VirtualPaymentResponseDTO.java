@@ -2,7 +2,8 @@ package com.coinblesk.server.dto;
 
 import lombok.Data;
 
-public @Data class VirtualPaymentResponseDTO  {
+@Data
+public class VirtualPaymentResponseDTO {
 	private final long amountTransfered;
 
 	private final String publicKeySender;

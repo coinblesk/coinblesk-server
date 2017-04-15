@@ -67,16 +67,13 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 	@Test
 	public void microPayment_failsOnEmpty() throws Exception {
-		mockMvc.perform(post(URL_VIRTUAL_PAYMENT))
-			.andExpect(status().is4xxClientError());
+		mockMvc.perform(post(URL_VIRTUAL_PAYMENT)).andExpect(status().is4xxClientError());
 	}
 
 	@Test
 	public void microPayment_failsOnEmptyPayload() throws Exception {
-		mockMvc.perform(post(URL_VIRTUAL_PAYMENT)
-			.contentType(APPLICATION_JSON)
-			.content("{}"))
-			.andExpect(status().is4xxClientError());
+		mockMvc.perform(post(URL_VIRTUAL_PAYMENT).contentType(APPLICATION_JSON).content("{}")).andExpect(status()
+			.is4xxClientError());
 	}
 
 	@Test
@@ -84,9 +81,9 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		ECKey fromPublicKey = new ECKey();
 		ECKey signingKey = new ECKey();
 		Transaction microPaymentTransaction = new Transaction(params());
-		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
-			DTOUtils.toHex(microPaymentTransaction.bitcoinSerialize()), fromPublicKey.getPublicKeyAsHex(),
-			new ECKey().getPublicKeyAsHex(), 100L, 0L);
+		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(DTOUtils.toHex
+			(microPaymentTransaction.bitcoinSerialize()), fromPublicKey.getPublicKeyAsHex(), new ECKey()
+			.getPublicKeyAsHex(), 100L, 0L);
 		SignedDTO dto = DTOUtils.serializeAndSign(microPaymentRequestDTO, signingKey);
 		sendAndExpect4xxError(dto, "Signature is not valid");
 	}
@@ -94,8 +91,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnNoTransaction() throws Exception {
 		ECKey clientKey = new ECKey();
-		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
-			"", new ECKey().getPublicKeyAsHex(), new ECKey().getPublicKeyAsHex(), 10L, 0L);
+		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO("", new ECKey().getPublicKeyAsHex()
+			, new ECKey().getPublicKeyAsHex(), 10L, 0L);
 		SignedDTO dto = DTOUtils.serializeAndSign(microPaymentRequestDTO, clientKey);
 		sendAndExpect4xxError(dto, "");
 	}
@@ -140,8 +137,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		// Create a tla but without registering it in any way with the server
 		TimeLockedAddress tla = new TimeLockedAddress(clientKey.getPubKey(), serverKey.getPubKey(), validLockTime);
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			tla.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), tla.getAddress(params()));
 		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
@@ -160,8 +156,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(clientKey, validLockTime)
 			.getTimeLockedAddress();
 		walletService.addWatching(inputAddress.getAddress(params()));
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			inputAddress.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), inputAddress.getAddress
+			(params()));
 		mineTransaction(fundingTx);
 
 		// Spend the funding tx
@@ -189,8 +185,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 			.getTimeLockedAddress();
 		walletService.addWatching(inputAddress.getAddress(params()));
 
-		Transaction fundingTx1 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			inputAddress.getAddress(params()));
+		Transaction fundingTx1 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), inputAddress.getAddress
+			(params()));
 		walletService.getWallet().maybeCommitTx(fundingTx1);
 
 		Transaction microPaymentTransaction = new Transaction(params());
@@ -210,8 +206,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		accountService.createAcount(clientKey);
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(clientKey, lockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			inputAddress.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), inputAddress.getAddress
+			(params()));
 		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
@@ -236,10 +232,10 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 			.getTimeLockedAddress();
 
 		// Fund both addresses
-		Transaction fundingTx1 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			addressClient1.getAddress(params()));
-		Transaction fundingTx2 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			addressClient2.getAddress(params()));
+		Transaction fundingTx1 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), addressClient1.getAddress
+			(params()));
+		Transaction fundingTx2 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), addressClient2.getAddress
+			(params()));
 		watchAndMineTransactions(fundingTx1, fundingTx2);
 
 		// Use them as inputs
@@ -259,8 +255,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		accountService.createAcount(clientKey);
 		TimeLockedAddress addressClient = accountService.createTimeLockedAddress(clientKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			addressClient.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), addressClient.getAddress
+			(params()));
 		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
@@ -280,8 +276,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		accountService.createAcount(senderKey);
 		TimeLockedAddress timeLockedAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			timeLockedAddress.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), timeLockedAddress.getAddress
+			(params()));
 		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
@@ -301,8 +297,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		ECKey serverPublicKey = accountService.createAcount(senderKey);
 		TimeLockedAddress timeLockedAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			timeLockedAddress.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), timeLockedAddress.getAddress
+			(params()));
 		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
@@ -322,8 +318,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		ECKey serverPublicKey = accountService.createAcount(senderKey);
 		TimeLockedAddress timeLockedAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			timeLockedAddress.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), timeLockedAddress.getAddress
+			(params()));
 		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
@@ -345,8 +341,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress timeLockedAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			timeLockedAddress.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), timeLockedAddress.getAddress
+			(params()));
 		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
@@ -370,10 +366,10 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		TimeLockedAddress changeAddress = accountService.createTimeLockedAddress(senderKey,
-			Instant.now().plus(Duration.ofHours(20)).getEpochSecond()).getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			inputAddress.getAddress(params()));
+		TimeLockedAddress changeAddress = accountService.createTimeLockedAddress(senderKey, Instant.now().plus
+			(Duration.ofHours(20)).getEpochSecond()).getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), inputAddress.getAddress
+			(params()));
 		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
@@ -398,8 +394,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			inputAddress.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), inputAddress.getAddress
+			(params()));
 		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
@@ -424,8 +420,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			inputAddress.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), inputAddress.getAddress
+			(params()));
 		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
@@ -447,8 +443,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			inputAddress.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), inputAddress.getAddress
+			(params()));
 		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params());
@@ -459,10 +455,10 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 1000L, 0L);
 		sendAndExpect4xxError(dto, "Invalid nonce");
 
-		accountRepository.save(accountRepository.findByClientPublicKey(senderKey.getPubKey())
-			.nonce(Instant.now().getEpochSecond()));
-		dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction,
-			Instant.now().minus(Duration.ofMinutes(10)).getEpochSecond());
+		accountRepository.save(accountRepository.findByClientPublicKey(senderKey.getPubKey()).nonce(Instant.now()
+			.getEpochSecond()));
+		dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, Instant.now().minus
+			(Duration.ofMinutes(10)).getEpochSecond());
 		sendAndExpect4xxError(dto, "Invalid nonce");
 	}
 
@@ -474,8 +470,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		accountService.createAcount(receiverKey);
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			inputAddress.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), inputAddress.getAddress
+			(params()));
 		watchAndMineTransactions(fundingTx);
 
 		// Try to send more than the inputs are worth
@@ -495,8 +491,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			inputAddress.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), inputAddress.getAddress
+			(params()));
 		watchAndMineTransactions(fundingTx);
 
 		// Try to send 42 satoshis, but actally give only 41
@@ -506,32 +502,32 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		sendAndExpect4xxError(dto, "Invalid amount. 42 requested but 41 given");
 
 		// Previous transaction has 100 to server
-		Transaction prevChannelTX = createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey,
-			inputAddress, 100L);
-		accountRepository.save(accountRepository.findByClientPublicKey(senderKey.getPubKey())
-			.channelTransaction(prevChannelTX.bitcoinSerialize()));
+		Transaction prevChannelTX = createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey, inputAddress,
+			100L);
+		accountRepository.save(accountRepository.findByClientPublicKey(senderKey.getPubKey()).channelTransaction
+			(prevChannelTX.bitcoinSerialize()));
 
 		// Try to send 200 satoshis, but actally give only 100 (200 - previous 100)
-		microPaymentTransaction = createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey,
-			inputAddress, 200L);
+		microPaymentTransaction = createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey, inputAddress,
+			200L);
 		dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 200L);
 		sendAndExpect4xxError(dto, "Invalid amount. 200 requested but 100 given");
 
 		// Try to send 50 satoshis, but actually give 100 to server.
-		microPaymentTransaction = createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey,
-			inputAddress, 200L);
+		microPaymentTransaction = createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey, inputAddress,
+			200L);
 		dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 50L);
 		sendAndExpect4xxError(dto, "Invalid amount. 50 requested but 100 given");
 
 		// Try to send negative amount
-		microPaymentTransaction = createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey,
-			inputAddress, 50L);
+		microPaymentTransaction = createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey, inputAddress,
+			50L);
 		dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, -50L);
 		sendAndExpect4xxError(dto, "Can't send zero or negative amont");
 
 		// Try to send zero amount
-		microPaymentTransaction = createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey,
-			inputAddress, 400L);
+		microPaymentTransaction = createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey, inputAddress,
+			400L);
 		dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 0L);
 		sendAndExpect4xxError(dto, "Can't send zero or negative amont");
 	}
@@ -544,8 +540,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		accountService.createAcount(receiverKey);
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			inputAddress.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), inputAddress.getAddress
+			(params()));
 		watchAndMineTransactions(fundingTx);
 		long amountTryingToSend = Coin.MILLICOIN.multiply(800).getValue();
 		Transaction microPaymentTransaction = createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey,
@@ -565,8 +561,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			inputAddress.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), inputAddress.getAddress
+			(params()));
 		watchAndMineTransactions(fundingTx);
 
 		long estimatedSize = calculateChannelTxSize(fundingTx.getOutput(0), senderKey, serverPublicKey, inputAddress);
@@ -575,8 +571,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		final Coin changeAmount = fundingTx.getOutput(0).getValue().minus(amountToServer).minus(fee);
 		Transaction microPaymentTransaction = createChannelTx(fundingTx.getOutput(0), senderKey, serverPublicKey,
 			inputAddress, amountToServer.getValue(), changeAmount.getValue());
-		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction,
-			amountToServer.getValue());
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, amountToServer
+			.getValue());
 		sendAndExpect4xxError(dto, "Insufficient transaction fee");
 	}
 
@@ -589,8 +585,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			tla.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), tla.getAddress(params()));
 		walletService.addWatching(tla.getAddress(params()));
 		mineTransaction(fundingTx);
 
@@ -608,8 +603,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			tla.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), tla.getAddress(params()));
 		walletService.addWatching(tla.getAddress(params()));
 		mineTransaction(fundingTx);
 
@@ -627,16 +621,15 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			tla.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), tla.getAddress(params()));
 		walletService.addWatching(tla.getAddress(params()));
 		mineTransaction(fundingTx);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1000L, fundingTx.getOutput(0), tla);
 		sendAndExpect2xxSuccess(dto);
 
-		Transaction openChannelTx = new Transaction(params(),
-			accountService.getByClientPublicKey(senderKey.getPubKey()).getChannelTransaction());
+		Transaction openChannelTx = new Transaction(params(), accountService.getByClientPublicKey(senderKey.getPubKey
+			()).getChannelTransaction());
 		openChannelTx.verify();
 		walletService.getWallet().maybeCommitTx(openChannelTx);
 	}
@@ -650,8 +643,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			tla.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), tla.getAddress(params()));
 		walletService.addWatching(tla.getAddress(params()));
 		mineTransaction(fundingTx);
 
@@ -664,8 +656,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		sendAndExpect4xxError(dto, "Invalid nonce");
 
 		// Increasing nonce fails because now the signature is wrong
-		MicroPaymentRequestDTO orig = DTOUtils.fromJSON(DTOUtils.fromBase64(dto.getPayload()),
-			MicroPaymentRequestDTO.class);
+		MicroPaymentRequestDTO orig = DTOUtils.fromJSON(DTOUtils.fromBase64(dto.getPayload()), MicroPaymentRequestDTO
+			.class);
 		MicroPaymentRequestDTO modifiedRequest = new MicroPaymentRequestDTO(orig.getTx(), orig.getFromPublicKey(),
 			orig.getToPublicKey(), orig.getAmount(), Instant.now().plus(Duration.ofMinutes(1L)).getEpochSecond());
 		sendAndExpect4xxError(new SignedDTO(DTOUtils.toBase64(DTOUtils.toJSON(modifiedRequest)), dto.getSignature()),
@@ -678,10 +670,10 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		ECKey otherOwnedAccount = new ECKey();
 		accountService.createAcount(otherOwnedAccount);
 		MicroPaymentRequestDTO modifiedRequest2 = new MicroPaymentRequestDTO(orig.getTx(), otherOwnedAccount
-			.getPublicKeyAsHex(),
-			orig.getToPublicKey(), orig.getAmount(), Instant.now().plus(Duration.ofMinutes(1L)).getEpochSecond());
-		sendAndExpect4xxError(DTOUtils.serializeAndSign(modifiedRequest2, otherOwnedAccount),
-			"Request was not signed by owner of inputs");
+			.getPublicKeyAsHex(), orig.getToPublicKey(), orig.getAmount(), Instant.now().plus(Duration.ofMinutes(1L))
+			.getEpochSecond());
+		sendAndExpect4xxError(DTOUtils.serializeAndSign(modifiedRequest2, otherOwnedAccount), "Request was not signed " +
+			"" + "" + "by owner of inputs");
 
 		// Amount stayed the same during all failed attacks
 		assertThat(accountService.getByClientPublicKey(receiverKey.getPubKey()).virtualBalance(), is(1337L));
@@ -699,8 +691,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(),
-			tla.getAddress(params()));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), tla.getAddress(params()));
 		walletService.addWatching(tla.getAddress(params()));
 		walletService.getWallet().importKey(ECKey.fromPrivate(accountRepository.findByClientPublicKey(senderKey
 			.getPubKey()).serverPrivateKey()));
@@ -709,33 +700,33 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1337L, fundingTx.getOutput(0), tla);
 		sendAndExpect2xxSuccess(dto);
 
-		Transaction openChannelTx = new Transaction(params(),
-			accountService.getByClientPublicKey(senderKey.getPubKey()).getChannelTransaction());
+		Transaction openChannelTx = new Transaction(params(), accountService.getByClientPublicKey(senderKey.getPubKey
+			()).getChannelTransaction());
 		mineTransaction(openChannelTx);
 
 		assertThat(walletService.microPaymentPot(), is(Coin.valueOf((1337))));
 	}
 
-	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Long amount,
-												   TransactionOutput usedOutput, TimeLockedAddress address) {
+	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Long amount, TransactionOutput usedOutput,
+												   TimeLockedAddress address) {
 		ECKey serverPublicKey = ECKey.fromPublicOnly(address.getServerPubKey());
 		long estimatedSize = calculateChannelTxSize(usedOutput, from, serverPublicKey, address);
 		final Coin amountToServer = Coin.valueOf(amount);
 		final Coin fee = Coin.valueOf(estimatedSize * VALID_FEE);
 		final Coin changeAmount = usedOutput.getValue().minus(amountToServer).minus(fee);
-		Transaction microPaymentTransaction = createChannelTx(usedOutput, from, serverPublicKey,
-			address, amountToServer.getValue(), changeAmount.getValue());
+		Transaction microPaymentTransaction = createChannelTx(usedOutput, from, serverPublicKey, address,
+			amountToServer.getValue(), changeAmount.getValue());
 		return createMicroPaymentRequestDTO(from, to, microPaymentTransaction, amount);
 	}
 
-	private Transaction createChannelTx(TransactionOutput input, ECKey senderKey, ECKey serverPK,
-										TimeLockedAddress changeAddress, long amountToServer) {
-		return createChannelTx(input, senderKey, serverPK, changeAddress, amountToServer,
-			input.getValue().getValue() - amountToServer);
+	private Transaction createChannelTx(TransactionOutput input, ECKey senderKey, ECKey serverPK, TimeLockedAddress
+		changeAddress, long amountToServer) {
+		return createChannelTx(input, senderKey, serverPK, changeAddress, amountToServer, input.getValue().getValue()
+			- amountToServer);
 	}
 
-	private Transaction createChannelTx(TransactionOutput input, ECKey senderKey, ECKey serverPK,
-										TimeLockedAddress change, long amountToServer, long amountToChange) {
+	private Transaction createChannelTx(TransactionOutput input, ECKey senderKey, ECKey serverPK, TimeLockedAddress
+		change, long amountToServer, long amountToChange) {
 		Transaction channelTransaction = new Transaction(params());
 		channelTransaction.addInput(input);
 		channelTransaction.addOutput(P2PKOutput(channelTransaction, serverPK, amountToServer));
@@ -756,12 +747,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 			// Server sig is fake, but we're only interested in the resulting size of the script sig
 			TransactionSignature serverSig = tx.calculateSignature(i, new ECKey(), change.createRedeemScript(),
 				SigHash.ALL, false);
-			Script finalSig = new ScriptBuilder()
-				.data(clientSig.encodeToBitcoin())
-				.data(serverSig.encodeToBitcoin())
-				.smallNum(1)
-				.data(change.createRedeemScript().getProgram())
-				.build();
+			Script finalSig = new ScriptBuilder().data(clientSig.encodeToBitcoin()).data(serverSig.encodeToBitcoin())
+				.smallNum(1).data(change.createRedeemScript().getProgram()).build();
 			tx.getInput(i).setScriptSig(finalSig);
 		}
 		return tx.bitcoinSerialize().length;
@@ -784,25 +771,21 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	}
 
 	private SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx, Long amount, Long nonce) {
-		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(
-			DTOUtils.toHex(tx.bitcoinSerialize()), from.getPublicKeyAsHex(), to.getPublicKeyAsHex(), amount, nonce);
+		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(DTOUtils.toHex(tx.bitcoinSerialize
+			()), from.getPublicKeyAsHex(), to.getPublicKeyAsHex(), amount, nonce);
 		return DTOUtils.serializeAndSign(microPaymentRequestDTO, from);
 	}
 
 	private void sendAndExpect4xxError(SignedDTO dto, String expectedErrorMessage) throws Exception {
-		MvcResult result = mockMvc.perform(post(URL_MICRO_PAYMENT)
-			.contentType(APPLICATION_JSON)
-			.content(DTOUtils.toJSON(dto)))
-			.andExpect(status().is4xxClientError()).andReturn();
+		MvcResult result = mockMvc.perform(post(URL_MICRO_PAYMENT).contentType(APPLICATION_JSON).content(DTOUtils
+			.toJSON(dto))).andExpect(status().is4xxClientError()).andReturn();
 		String errorMessage = DTOUtils.fromJSON(result.getResponse().getContentAsString(), ErrorDTO.class).getError();
 		assertThat(errorMessage, containsString(expectedErrorMessage));
 	}
 
 	private void sendAndExpect2xxSuccess(SignedDTO dto) throws Exception {
-		mockMvc.perform(post(URL_MICRO_PAYMENT)
-			.contentType(APPLICATION_JSON)
-			.content(DTOUtils.toJSON(dto)))
-			.andExpect(status().is2xxSuccessful());
+		mockMvc.perform(post(URL_MICRO_PAYMENT).contentType(APPLICATION_JSON).content(DTOUtils.toJSON(dto))).andExpect
+			(status().is2xxSuccessful());
 	}
 
 	private TransactionOutput anyP2PKOutput(Transaction forTransaction) {
@@ -834,13 +817,12 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 	private void watchAllOutputs(Transaction tx) {
 		tx.getOutputs().forEach(output -> {
-				if (output.getScriptPubKey().isSentToAddress())
-					walletService.addWatching(output.getAddressFromP2PKHScript(params()));
+			if (output.getScriptPubKey().isSentToAddress())
+				walletService.addWatching(output.getAddressFromP2PKHScript(params()));
 
-				if (output.getScriptPubKey().isPayToScriptHash())
-					walletService.addWatching(output.getAddressFromP2SH(params()));
-			}
-		);
+			if (output.getScriptPubKey().isPayToScriptHash())
+				walletService.addWatching(output.getAddressFromP2SH(params()));
+		});
 	}
 
 	private void mineTransaction(Transaction tx) throws PrunedException {
@@ -852,17 +834,17 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 	// Creates a transaction that spends the given output. Uses the TimeLockedAddress and the keys to create a valid
 	// scriptSig
-	private Transaction createSpendingTransactionForOutput(TransactionOutput output, TimeLockedAddress usedTLA,
-														   ECKey clientKey, ECKey serverKey) {
+	private Transaction createSpendingTransactionForOutput(TransactionOutput output, TimeLockedAddress usedTLA, ECKey
+		clientKey, ECKey serverKey) {
 		Transaction tx = new Transaction(params());
 		tx.addInput(output);
-		TransactionOutput someOutput =
-			new TransactionOutput(params(), tx, Coin.SATOSHI, new ECKey().toAddress(params()));
+		TransactionOutput someOutput = new TransactionOutput(params(), tx, Coin.SATOSHI, new ECKey().toAddress(params
+			()));
 		tx.addOutput(someOutput);
-		TransactionSignature serverSig = tx.calculateSignature(0, clientKey, usedTLA.createRedeemScript(),
-			SigHash.ALL, false);
-		TransactionSignature clientSig = tx.calculateSignature(0, serverKey, usedTLA.createRedeemScript(),
-			SigHash.ALL, false);
+		TransactionSignature serverSig = tx.calculateSignature(0, clientKey, usedTLA.createRedeemScript(), SigHash
+			.ALL, false);
+		TransactionSignature clientSig = tx.calculateSignature(0, serverKey, usedTLA.createRedeemScript(), SigHash
+			.ALL, false);
 		Script scriptSig = usedTLA.createScriptSigBeforeLockTime(clientSig, serverSig);
 		tx.getInput(0).setScriptSig(scriptSig);
 		return tx;
@@ -870,8 +852,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 	@Test
 	public void virtualPayment_failsOnEmpty() throws Exception {
-		mockMvc.perform(post(URL_VIRTUAL_PAYMENT))
-			.andExpect(status().is4xxClientError());
+		mockMvc.perform(post(URL_VIRTUAL_PAYMENT)).andExpect(status().is4xxClientError());
 	}
 
 }

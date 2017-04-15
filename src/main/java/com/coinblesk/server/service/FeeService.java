@@ -17,14 +17,16 @@ package com.coinblesk.server.service;
  *
  * @author Thomas Bocek
  */
+
 import com.coinblesk.server.utils.DTOUtils;
 import com.coinblesk.util.Pair;
-import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
 
 @Service
 public class FeeService {
@@ -40,10 +42,8 @@ public class FeeService {
 	private final static int DEFAULT_FEE = 150;
 
 	private final static String URL = "https://bitcoinfees.21.co/api/v1/fees/recommended";
-
-	private Pair<Long, Integer> cachedFee;
-
 	private final Object lock = new Object();
+	private Pair<Long, Integer> cachedFee;
 
 	public int fee() throws IOException {
 		synchronized (lock) {
@@ -57,8 +57,8 @@ public class FeeService {
 
 	private int askFee() {
 		try {
-		final StringBuffer response = ServiceUtils.doHttpRequest(URL);
-		final FeeService.Root root = DTOUtils.fromJSON(response.toString(), FeeService.Root.class);
+			final StringBuffer response = ServiceUtils.doHttpRequest(URL);
+			final FeeService.Root root = DTOUtils.fromJSON(response.toString(), FeeService.Root.class);
 			return Integer.parseInt(root.fastestFee);
 		} catch (Exception e) {
 			LOG.error("could not get fee", e);
@@ -73,7 +73,7 @@ public class FeeService {
 	}
 
 	/*-
-     * minimized JSON representation. Query result looks like:
+	 * minimized JSON representation. Query result looks like:
      * {
      *   "fastestFee":220,
      *   "halfHourFee":220,

@@ -15,15 +15,9 @@
  */
 package com.coinblesk.server.controller;
 
-import static com.coinblesk.json.v1.Type.SERVER_ERROR;
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
-import static org.springframework.http.HttpStatus.OK;
-import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
-import static org.springframework.web.bind.annotation.RequestMethod.GET;
-
-import java.math.BigDecimal;
-import java.util.regex.Pattern;
-
+import com.coinblesk.json.v1.ExchangeRateTO;
+import com.coinblesk.server.service.ForexService;
+import com.coinblesk.server.utils.ApiVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,19 +27,23 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.coinblesk.json.v1.ExchangeRateTO;
-import com.coinblesk.server.service.ForexService;
-import com.coinblesk.server.utils.ApiVersion;
+import java.math.BigDecimal;
+import java.util.regex.Pattern;
+
+import static com.coinblesk.json.v1.Type.SERVER_ERROR;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.OK;
+import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
+import static org.springframework.web.bind.annotation.RequestMethod.GET;
 
 /**
  * Controller for client http requests regarding Transactions between two
  * UserAccounts.
- *
  */
 @RestController
 // "/wallet" is for v1 only and should not be used anymore
-@RequestMapping({ "/wallet", "/forex" })
-@ApiVersion({ "v1", "" })
+@RequestMapping({"/wallet", "/forex"})
+@ApiVersion({"v1", ""})
 public class ForexController {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ForexController.class);
@@ -68,14 +66,11 @@ public class ForexController {
 	 *
 	 * @return CustomResponseObject with exchangeRate BTC/CHF as a String
 	 */
-	@RequestMapping(
-			value = "/rate/{from}-{to}",
-			method = GET,
-			produces = APPLICATION_JSON_UTF8_VALUE)
-	@ApiVersion({ "v2" })
+	@RequestMapping(value = "/rate/{from}-{to}", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@ApiVersion({"v2"})
 	@ResponseBody
-	public ResponseEntity<ExchangeRateTO> forexExchangeRate(@PathVariable(value = "from") String from,
-			@PathVariable(value = "to") String to) {
+	public ResponseEntity<ExchangeRateTO> forexExchangeRate(@PathVariable(value = "from") String from, @PathVariable
+		(value = "to") String to) {
 
 		LOG.debug("{exchange-rate} - Received exchange rate request for currency {}/{}", from, to);
 		ExchangeRateTO output = new ExchangeRateTO();

@@ -5,16 +5,17 @@ import com.coinblesk.server.exceptions.*;
 import com.coinblesk.server.service.MicropaymentService;
 import com.coinblesk.server.utils.DTOUtils;
 import com.coinblesk.util.InsufficientFunds;
-import org.bitcoinj.core.*;
+import org.bitcoinj.core.ECKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
-
-
 import java.time.Instant;
 
 import static org.springframework.http.HttpStatus.*;
@@ -35,11 +36,9 @@ public class MicroPaymentController {
 		this.micropaymentService = micropaymentService;
 	}
 
-	@RequestMapping(value = "/micropayment", method = POST,
-		consumes = APPLICATION_JSON_UTF8_VALUE,
-		produces = APPLICATION_JSON_UTF8_VALUE)
-	public ResponseEntity micropayment(@RequestBody @Valid SignedDTO request)
-	{
+	@RequestMapping(value = "/micropayment", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE, produces =
+		APPLICATION_JSON_UTF8_VALUE)
+	public ResponseEntity micropayment(@RequestBody @Valid SignedDTO request) {
 		try {
 			// Get the embedded request
 			final MicroPaymentRequestDTO requestDTO;
@@ -70,18 +69,16 @@ public class MicroPaymentController {
 	}
 
 
-	@RequestMapping(value = "/virtualpayment", method = POST,
-			consumes = APPLICATION_JSON_UTF8_VALUE,
-			produces = APPLICATION_JSON_UTF8_VALUE)
-	public ResponseEntity virtualpayment(@RequestBody @Valid SignedDTO request)
-	{
+	@RequestMapping(value = "/virtualpayment", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE, produces =
+		APPLICATION_JSON_UTF8_VALUE)
+	public ResponseEntity virtualpayment(@RequestBody @Valid SignedDTO request) {
 		// Get the embedded payload and check signature
 		final VirtualPaymentRequestDTO requestDTO;
 		try {
 			requestDTO = DTOUtils.parseAndValidate(request, VirtualPaymentRequestDTO.class);
 			ECKey signingKey = DTOUtils.getECKeyFromHexPublicKey(requestDTO.getFromPublicKey());
 			DTOUtils.validateSignature(request.getPayload(), request.getSignature(), signingKey);
-		} catch (MissingFieldException|InvalidSignatureException e) {
+		} catch (MissingFieldException | InvalidSignatureException e) {
 			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
 		} catch (Throwable e) {
 			return new ResponseEntity<>(new ErrorDTO("Bad request"), BAD_REQUEST);
@@ -98,22 +95,19 @@ public class MicroPaymentController {
 		// Do payment in service
 		MicropaymentService.VirtualPaymentResult result;
 		try {
-			result = micropaymentService.virtualPayment(keySender, keyReceiver, requestDTO.getAmount(), requestDTO.getNonce());
-		} catch (InvalidNonceException|InvalidAmountException|InsufficientFunds|UserNotFoundException|InvalidRequestException e) {
+			result = micropaymentService.virtualPayment(keySender, keyReceiver, requestDTO.getAmount(), requestDTO
+				.getNonce());
+		} catch (InvalidNonceException | InvalidAmountException | InsufficientFunds | UserNotFoundException |
+			InvalidRequestException e) {
 			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
 		} catch (Throwable e) {
 			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), SERVICE_UNAVAILABLE);
 		}
 
 		// Construct response payload
-		VirtualPaymentResponseDTO virtualPaymentResponseDTO = new VirtualPaymentResponseDTO(
-				requestDTO.getAmount(),
-				keySender.getPublicKeyAsHex(),
-				result.getNewBalanceSender(),
-				keyReceiver.getPublicKeyAsHex(),
-				result.getNewBalanceReceiver(),
-				Instant.now().toEpochMilli()
-				);
+		VirtualPaymentResponseDTO virtualPaymentResponseDTO = new VirtualPaymentResponseDTO(requestDTO.getAmount(),
+			keySender.getPublicKeyAsHex(), result.getNewBalanceSender(), keyReceiver.getPublicKeyAsHex(), result
+			.getNewBalanceReceiver(), Instant.now().toEpochMilli());
 		final String responseAsJson = DTOUtils.toJSON(virtualPaymentResponseDTO);
 		final String responseAsBase64 = DTOUtils.toBase64(responseAsJson);
 

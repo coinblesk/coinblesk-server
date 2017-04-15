@@ -1,10 +1,9 @@
 package com.coinblesk.server.dao;
 
-import java.util.Optional;
-
+import com.coinblesk.server.entity.UserAccount;
 import org.springframework.data.repository.CrudRepository;
 
-import com.coinblesk.server.entity.UserAccount;
+import java.util.Optional;
 
 public interface UserAccountRepository extends CrudRepository<UserAccount, Long> {
 

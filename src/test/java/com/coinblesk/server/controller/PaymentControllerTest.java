@@ -64,19 +64,15 @@ public class PaymentControllerTest extends CoinbleskTest {
 
 
 	public void testKeyExchange_NoContent() throws Exception {
-		mockMvc
-			.perform(post(URL_KEY_EXCHANGE))
-			.andExpect(status().is4xxClientError());
+		mockMvc.perform(post(URL_KEY_EXCHANGE)).andExpect(status().is4xxClientError());
 	}
 
 	@Test
 
 
 	public void testKeyExchange_EmptyRequest() throws Exception {
-		mockMvc.perform(post(URL_KEY_EXCHANGE)
-			.contentType(APPLICATION_JSON)
-			.content("{}"))
-			.andExpect(status().is4xxClientError());
+		mockMvc.perform(post(URL_KEY_EXCHANGE).contentType(APPLICATION_JSON).content("{}")).andExpect(status()
+			.is4xxClientError());
 	}
 
 	@Test
@@ -84,10 +80,8 @@ public class PaymentControllerTest extends CoinbleskTest {
 
 	public void testKeyExchange_NoPubKey() throws Exception {
 		KeyExchangeRequestDTO requestDTO = new KeyExchangeRequestDTO("");
-		mockMvc.perform(post(URL_KEY_EXCHANGE)
-			.contentType(APPLICATION_JSON)
-			.content(SerializeUtils.GSON.toJson(requestDTO)))
-			.andExpect(status().is4xxClientError());
+		mockMvc.perform(post(URL_KEY_EXCHANGE).contentType(APPLICATION_JSON).content(SerializeUtils.GSON.toJson
+			(requestDTO))).andExpect(status().is4xxClientError());
 	}
 
 	@Test
@@ -96,10 +90,8 @@ public class PaymentControllerTest extends CoinbleskTest {
 	public void testKeyExchange_InvalidPubKey() throws Exception {
 		String invalidPubKey = "f66b37dc2de5276a080bce77f9a6b0753f963e300c9a1f4557815ed49dc80fffb1";
 		KeyExchangeRequestDTO requestDTO = new KeyExchangeRequestDTO(invalidPubKey);
-		mockMvc.perform(post(URL_KEY_EXCHANGE)
-			.contentType(APPLICATION_JSON)
-			.content(SerializeUtils.GSON.toJson(requestDTO)))
-			.andExpect(status().is4xxClientError());
+		mockMvc.perform(post(URL_KEY_EXCHANGE).contentType(APPLICATION_JSON).content(SerializeUtils.GSON.toJson
+			(requestDTO))).andExpect(status().is4xxClientError());
 	}
 
 	@Test
@@ -108,11 +100,9 @@ public class PaymentControllerTest extends CoinbleskTest {
 	public void testKeyExchange() throws Exception {
 		ECKey clientKey = new ECKey();
 		KeyExchangeRequestDTO requestDTO = new KeyExchangeRequestDTO(clientKey.getPublicKeyAsHex());
-		String response = mockMvc.perform(post(URL_KEY_EXCHANGE)
-			.contentType(APPLICATION_JSON)
-			.content(SerializeUtils.GSON.toJson(requestDTO)))
-			.andExpect(status().is2xxSuccessful())
-			.andReturn().getResponse().getContentAsString();
+		String response = mockMvc.perform(post(URL_KEY_EXCHANGE).contentType(APPLICATION_JSON).content(SerializeUtils
+			.GSON.toJson(requestDTO))).andExpect(status().is2xxSuccessful()).andReturn().getResponse()
+			.getContentAsString();
 		KeyExchangeResponseDTO responseDTO = SerializeUtils.GSON.fromJson(response, KeyExchangeResponseDTO.class);
 		String serverPublicKey = responseDTO.getServerPublicKey();
 		assertNotNull(serverPublicKey);
@@ -128,22 +118,18 @@ public class PaymentControllerTest extends CoinbleskTest {
 
 		// Test idempotence, requesting twice, succeeds with same result.
 		KeyExchangeRequestDTO requestDTO1 = new KeyExchangeRequestDTO(clientKey.getPublicKeyAsHex());
-		String response1 = mockMvc.perform(post(URL_KEY_EXCHANGE)
-			.contentType(APPLICATION_JSON)
-			.content(SerializeUtils.GSON.toJson(requestDTO1)))
-			.andExpect(status().is2xxSuccessful())
-			.andReturn().getResponse().getContentAsString();
+		String response1 = mockMvc.perform(post(URL_KEY_EXCHANGE).contentType(APPLICATION_JSON).content(SerializeUtils
+			.GSON.toJson(requestDTO1))).andExpect(status().is2xxSuccessful()).andReturn().getResponse()
+			.getContentAsString();
 		KeyExchangeResponseDTO responseDTO1 = SerializeUtils.GSON.fromJson(response1, KeyExchangeResponseDTO.class);
 		String serverPublicKey1 = responseDTO1.getServerPublicKey();
 		assertNotNull(serverPublicKey1);
 		ECKey serverKey1 = DTOUtils.getECKeyFromHexPublicKey(serverPublicKey1);
 
 		KeyExchangeRequestDTO requestDTO2 = new KeyExchangeRequestDTO(clientKey.getPublicKeyAsHex());
-		String response2 = mockMvc.perform(post(URL_KEY_EXCHANGE)
-			.contentType(APPLICATION_JSON)
-			.content(SerializeUtils.GSON.toJson(requestDTO2)))
-			.andExpect(status().is2xxSuccessful())
-			.andReturn().getResponse().getContentAsString();
+		String response2 = mockMvc.perform(post(URL_KEY_EXCHANGE).contentType(APPLICATION_JSON).content(SerializeUtils
+			.GSON.toJson(requestDTO2))).andExpect(status().is2xxSuccessful()).andReturn().getResponse()
+			.getContentAsString();
 		KeyExchangeResponseDTO responseDTO2 = SerializeUtils.GSON.fromJson(response2, KeyExchangeResponseDTO.class);
 		String serverPublicKey2 = responseDTO2.getServerPublicKey();
 		assertNotNull(serverPublicKey2);
@@ -156,19 +142,15 @@ public class PaymentControllerTest extends CoinbleskTest {
 
 
 	public void testCreateTimeLockedAddress_NoContent() throws Exception {
-		mockMvc
-			.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS))
-			.andExpect(status().is4xxClientError());
+		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)).andExpect(status().is4xxClientError());
 	}
 
 	@Test
 
 
 	public void testCreateTimeLockedAddress_EmptyRequest() throws Exception {
-		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)
-			.contentType(APPLICATION_JSON)
-			.content("{}"))
-			.andExpect(status().is4xxClientError());
+		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).contentType(APPLICATION_JSON).content("{}")).andExpect
+			(status().is4xxClientError());
 	}
 
 	@Test
@@ -181,10 +163,8 @@ public class PaymentControllerTest extends CoinbleskTest {
 		CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO("", validLocktime());
 		SignedDTO requestDTO = DTOUtils.serializeAndSign(innerDTO, clientKey);
 
-		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)
-			.contentType(APPLICATION_JSON)
-			.content(DTOUtils.toJSON(requestDTO)))
-			.andExpect(status().is4xxClientError());
+		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).contentType(APPLICATION_JSON).content(DTOUtils.toJSON
+			(requestDTO))).andExpect(status().is4xxClientError());
 	}
 
 	@Test
@@ -198,10 +178,8 @@ public class PaymentControllerTest extends CoinbleskTest {
 		String payload = DTOUtils.toBase64(innerDTO);
 		SignedDTO requestDTO = new SignedDTO(payload, null);
 
-		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)
-			.contentType(APPLICATION_JSON)
-			.content(DTOUtils.toJSON(requestDTO)))
-			.andExpect(status().is4xxClientError());
+		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).contentType(APPLICATION_JSON).content(DTOUtils.toJSON
+			(requestDTO))).andExpect(status().is4xxClientError());
 	}
 
 	@Test
@@ -215,10 +193,8 @@ public class PaymentControllerTest extends CoinbleskTest {
 		CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO(clientKey.getPublicKeyAsHex(), validLocktime());
 		SignedDTO requestDTO = DTOUtils.serializeAndSign(innerDTO, wrongKey);
 
-		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)
-			.contentType(APPLICATION_JSON)
-			.content(DTOUtils.toJSON(requestDTO)))
-			.andExpect(status().is4xxClientError());
+		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).contentType(APPLICATION_JSON).content(DTOUtils.toJSON
+			(requestDTO))).andExpect(status().is4xxClientError());
 	}
 
 	@Test
@@ -230,10 +206,8 @@ public class PaymentControllerTest extends CoinbleskTest {
 		CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO(clientKey.getPublicKeyAsHex(), validLocktime());
 		SignedDTO requestDTO = DTOUtils.serializeAndSign(innerDTO, clientKey);
 
-		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)
-			.contentType(APPLICATION_JSON)
-			.content(DTOUtils.toJSON(requestDTO)))
-			.andExpect(status().is4xxClientError());
+		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).contentType(APPLICATION_JSON).content(DTOUtils.toJSON
+			(requestDTO))).andExpect(status().is4xxClientError());
 	}
 
 	@Test
@@ -246,10 +220,8 @@ public class PaymentControllerTest extends CoinbleskTest {
 		CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO(clientKey.getPublicKeyAsHex(), 0L);
 		SignedDTO requestDTO = DTOUtils.serializeAndSign(innerDTO, clientKey);
 
-		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)
-			.contentType(APPLICATION_JSON)
-			.content(DTOUtils.toJSON(requestDTO)))
-			.andExpect(status().is4xxClientError());
+		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).contentType(APPLICATION_JSON).content(DTOUtils.toJSON
+			(requestDTO))).andExpect(status().is4xxClientError());
 	}
 
 
@@ -264,11 +236,9 @@ public class PaymentControllerTest extends CoinbleskTest {
 		CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO(clientKey.getPublicKeyAsHex(), lockTime);
 		SignedDTO requestDTO = DTOUtils.serializeAndSign(innerDTO, clientKey);
 
-		String responseString = mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)
-			.contentType(APPLICATION_JSON)
-			.content(DTOUtils.toJSON(requestDTO)))
-			.andExpect(status().isOk())
-			.andReturn().getResponse().getContentAsString();
+		String responseString = mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).contentType(APPLICATION_JSON)
+			.content(DTOUtils.toJSON(requestDTO))).andExpect(status().isOk()).andReturn().getResponse()
+			.getContentAsString();
 
 		SignedDTO responseDTO = DTOUtils.fromJSON(responseString, SignedDTO.class);
 		DTOUtils.validateSignature(responseDTO.getPayload(), responseDTO.getSignature(), serverKey);
@@ -290,11 +260,9 @@ public class PaymentControllerTest extends CoinbleskTest {
 			requestedLockTime);
 		SignedDTO requestDTO = DTOUtils.serializeAndSign(innerDTO, clientKey);
 
-		String responseString = mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)
-			.contentType(APPLICATION_JSON)
-			.content(DTOUtils.toJSON(requestDTO)))
-			.andExpect(status().isOk())
-			.andReturn().getResponse().getContentAsString();
+		String responseString = mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).contentType(APPLICATION_JSON)
+			.content(DTOUtils.toJSON(requestDTO))).andExpect(status().isOk()).andReturn().getResponse()
+			.getContentAsString();
 
 		SignedDTO responseDTO = DTOUtils.fromJSON(responseString, SignedDTO.class);
 		DTOUtils.validateSignature(responseDTO.getPayload(), responseDTO.getSignature(), serverKey);

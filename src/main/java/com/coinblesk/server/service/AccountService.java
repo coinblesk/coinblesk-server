@@ -16,13 +16,12 @@
 
 package com.coinblesk.server.service;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-
+import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.dao.AccountRepository;
+import com.coinblesk.server.dao.TimeLockedAddressRepository;
+import com.coinblesk.server.entity.Account;
+import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.exceptions.InvalidLockTimeException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
 import com.coinblesk.server.utils.DTOUtils;
@@ -34,14 +33,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.server.dao.AccountRepository;
-import com.coinblesk.server.dao.TimeLockedAddressRepository;
-import com.coinblesk.server.entity.Account;
-import com.coinblesk.server.entity.TimeLockedAddressEntity;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
- *
  * @author Thomas Bocek
  * @author Andreas Albrecht
  * @author Sebastian Stephan
@@ -56,7 +54,8 @@ public class AccountService {
 	private final AppConfig appConfig;
 
 	@Autowired
-	public AccountService(@NonNull AccountRepository accountRepository, @NonNull TimeLockedAddressRepository timeLockedAddressRepository, AppConfig appConfig) {
+	public AccountService(@NonNull AccountRepository accountRepository, @NonNull TimeLockedAddressRepository
+		timeLockedAddressRepository, AppConfig appConfig) {
 		this.accountRepository = accountRepository;
 		this.timeLockedAddressRepository = timeLockedAddressRepository;
 		this.appConfig = appConfig;
@@ -70,29 +69,27 @@ public class AccountService {
 	/**
 	 * Creates a new account for a given client public key.
 	 * Returns the public key of the server for the newly created or already existing account.
-	 *
+	 * <p>
 	 * Idempodent: Calling this function with a public key that already exists will not make any changes.
 	 *
 	 * @param clientPublicKey The client public key for which an account should be generated
 	 * @return The server ECKey pair associated with that account.
 	 */
 	@Transactional
-	public ECKey createAcount( @NonNull ECKey clientPublicKey ) {
+	public ECKey createAcount(@NonNull ECKey clientPublicKey) {
 
 		// Check if client has already account
 		final Account existingAccount = accountRepository.findByClientPublicKey(clientPublicKey.getPubKey());
 		if (existingAccount != null) {
-			return ECKey.fromPrivateAndPrecalculatedPublic(existingAccount.serverPrivateKey(),
-				existingAccount.serverPublicKey());
+			return ECKey.fromPrivateAndPrecalculatedPublic(existingAccount.serverPrivateKey(), existingAccount
+				.serverPublicKey());
 		}
 
 		// Not in database => Create new account with new server key pair
 		ECKey serverKeyPair = new ECKey();
-		final Account clientKey = new Account()
-				.clientPublicKey(clientPublicKey.getPubKey())
-				.serverPrivateKey(serverKeyPair.getPrivKeyBytes())
-				.serverPublicKey(serverKeyPair.getPubKey())
-				.timeCreated(Instant.now().getEpochSecond());
+		final Account clientKey = new Account().clientPublicKey(clientPublicKey.getPubKey()).serverPrivateKey
+			(serverKeyPair.getPrivKeyBytes()).serverPublicKey(serverKeyPair.getPubKey()).timeCreated(Instant.now()
+			.getEpochSecond());
 
 		final Account newAccount = accountRepository.save(clientKey);
 
@@ -101,90 +98,87 @@ public class AccountService {
 
 	@Transactional(readOnly = true)
 	public List<Account> allAccounts() {
-		return StreamSupport.stream(accountRepository.findAll().spliterator(), false)
-				.collect(Collectors.toList());
+		return StreamSupport.stream(accountRepository.findAll().spliterator(), false).collect(Collectors.toList());
 	}
 
 	@Transactional(readOnly = true)
 	public List<TimeLockedAddressEntity> allAddresses() {
-		return StreamSupport.stream(timeLockedAddressRepository.findAll().spliterator(), false)
-			.collect(Collectors.toList());
-	}
-
-	@Data public static class CreateTimeLockedAddressResponse {
-		@NonNull final private TimeLockedAddress timeLockedAddress;
-		@NonNull final private ECKey serverPrivateKey;
+		return StreamSupport.stream(timeLockedAddressRepository.findAll().spliterator(), false).collect(Collectors
+			.toList());
 	}
 
 	@Transactional
 	public CreateTimeLockedAddressResponse createTimeLockedAddress(@NonNull ECKey clientPublicKey, long lockTime)
-			throws UserNotFoundException, InvalidLockTimeException {
+		throws UserNotFoundException, InvalidLockTimeException {
 
 		// Lock time must be valid
 		final long minLockTime = Instant.now().getEpochSecond() + appConfig.getMinimumLockTimeSeconds();
-		final long maxLockTime = Instant.now().plus(Duration.ofDays(appConfig.getMaximumLockTimeDays())).getEpochSecond();
+		final long maxLockTime = Instant.now().plus(Duration.ofDays(appConfig.getMaximumLockTimeDays()))
+			.getEpochSecond();
 		if (lockTime < minLockTime || lockTime > maxLockTime) {
 			throw new InvalidLockTimeException();
 		}
 
 		// Get client for which a new address should be created
 		Account client = accountRepository.findByClientPublicKey(clientPublicKey.getPubKey());
-		if (client == null)
-			throw new UserNotFoundException(clientPublicKey.getPublicKeyAsHex());
+		if (client == null) throw new UserNotFoundException(clientPublicKey.getPublicKeyAsHex());
 
 		// Create address
-		final TimeLockedAddress address = new TimeLockedAddress(
-				client.clientPublicKey(),
-				client.serverPublicKey(),
-				lockTime);
+		final TimeLockedAddress address = new TimeLockedAddress(client.clientPublicKey(), client.serverPublicKey(),
+			lockTime);
 
 		// Check if address is already in database, if so nothing to do
-		TimeLockedAddressEntity existingAddress =
-				timeLockedAddressRepository.findByAddressHash(address.getAddressHash());
+		TimeLockedAddressEntity existingAddress = timeLockedAddressRepository.findByAddressHash(address.getAddressHash
+			());
 
-		ECKey serverPrivateKey = ECKey.fromPrivateAndPrecalculatedPublic(
-				client.serverPrivateKey(),
-				client.serverPublicKey());
+		ECKey serverPrivateKey = ECKey.fromPrivateAndPrecalculatedPublic(client.serverPrivateKey(), client
+			.serverPublicKey());
 
 		if (existingAddress != null) {
-			return new CreateTimeLockedAddressResponse( address, serverPrivateKey );
+			return new CreateTimeLockedAddressResponse(address, serverPrivateKey);
 		}
 
 		// Create the new address entity and save
 		TimeLockedAddressEntity addressEntity = new TimeLockedAddressEntity();
-		addressEntity
-				.setLockTime(address.getLockTime())
-				.setAddressHash(address.getAddressHash())
-				.setRedeemScript(address.createRedeemScript().getProgram())
-				.setTimeCreated(Utils.currentTimeSeconds())
-				.setAccount(client);
+		addressEntity.setLockTime(address.getLockTime()).setAddressHash(address.getAddressHash()).setRedeemScript
+			(address.createRedeemScript().getProgram()).setTimeCreated(Utils.currentTimeSeconds()).setAccount(client);
 		timeLockedAddressRepository.save(addressEntity);
 
 		return new CreateTimeLockedAddressResponse(address, serverPrivateKey);
 	}
 
-	@Data public static class GetVirtualBalanceResponse {
-		final private long balance;
-		@NonNull final private ECKey serverPrivateKey;
-	}
 	@Transactional(readOnly = true)
-	public GetVirtualBalanceResponse getVirtualBalanceByClientPublicKey(@NonNull byte[] publicKey)
-		throws UserNotFoundException {
+	public GetVirtualBalanceResponse getVirtualBalanceByClientPublicKey(@NonNull byte[] publicKey) throws
+		UserNotFoundException {
 
 		if (publicKey.length == 0) {
 			throw new IllegalArgumentException("publicKey must not be null");
 		}
 		Account account = accountRepository.findByClientPublicKey(publicKey);
-		if (account == null)
-			throw new UserNotFoundException(DTOUtils.toHex(publicKey));
+		if (account == null) throw new UserNotFoundException(DTOUtils.toHex(publicKey));
 
-		return new GetVirtualBalanceResponse(account.virtualBalance(),
-			ECKey.fromPrivateAndPrecalculatedPublic(account.serverPrivateKey(), account.serverPublicKey()));
+		return new GetVirtualBalanceResponse(account.virtualBalance(), ECKey.fromPrivateAndPrecalculatedPublic(account
+			.serverPrivateKey(), account.serverPublicKey()));
 	}
 
 	public TimeLockedAddress getTimeLockedAddressByAddressHash(@NonNull byte[] addressHash) {
 		TimeLockedAddressEntity entity = timeLockedAddressRepository.findByAddressHash(addressHash);
 		return entity == null ? null : TimeLockedAddress.fromRedeemScript(entity.getRedeemScript());
+	}
+
+	@Data
+	public static class CreateTimeLockedAddressResponse {
+		@NonNull
+		final private TimeLockedAddress timeLockedAddress;
+		@NonNull
+		final private ECKey serverPrivateKey;
+	}
+
+	@Data
+	public static class GetVirtualBalanceResponse {
+		final private long balance;
+		@NonNull
+		final private ECKey serverPrivateKey;
 	}
 
 }

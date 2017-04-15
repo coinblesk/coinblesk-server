@@ -2,6 +2,7 @@ package com.coinblesk.server.dto;
 
 import lombok.Data;
 
-public @Data class ErrorDTO {
+@Data
+public class ErrorDTO {
 	private final String error;
 }

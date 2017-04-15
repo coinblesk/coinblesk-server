@@ -87,11 +87,8 @@ public class AuthTest extends CoinbleskTest {
 	@Test
 	public void createFailsWithNoEmail() throws Exception {
 		UserAccountTO userAccountTO = new UserAccountTO();
-		MvcResult res = mockMvc
-			.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
-				.content(SerializeUtils.GSON.toJson(userAccountTO)))
-			.andExpect(status().isOk())
-			.andReturn();
+		MvcResult res = mockMvc.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON).content
+			(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
 		UserAccountStatusTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
 			UserAccountStatusTO.class);
 		Assert.assertEquals(Type.NO_EMAIL.nr(), status.type().nr());
@@ -101,11 +98,8 @@ public class AuthTest extends CoinbleskTest {
 	public void createFailsWithNoPassword() throws Exception {
 		UserAccountTO userAccountTO = new UserAccountTO();
 		userAccountTO.email("test@test.test");
-		MvcResult res = mockMvc
-			.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
-				.content(SerializeUtils.GSON.toJson(userAccountTO)))
-			.andExpect(status().isOk())
-			.andReturn();
+		MvcResult res = mockMvc.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON).content
+			(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
 		UserAccountStatusTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
 			UserAccountStatusTO.class);
 		Assert.assertEquals(Type.PASSWORD_TOO_SHORT.nr(), status.type().nr());
@@ -127,8 +121,8 @@ public class AuthTest extends CoinbleskTest {
 	public void createSendsEmailToUser() throws Exception {
 		UserAccountStatusTO status = createUser("test@test.test", "12345678");
 		Assert.assertTrue(status.isSuccess());
-		Mockito.verify(mailService, Mockito.times(1)).sendUserMail(Mockito.matches("test@test.test"),
-			Mockito.contains("Activation"), Mockito.contains("click here to activate"));
+		Mockito.verify(mailService, Mockito.times(1)).sendUserMail(Mockito.matches("test@test.test"), Mockito.contains
+			("Activation"), Mockito.contains("click here to activate"));
 	}
 
 	@Test
@@ -139,8 +133,8 @@ public class AuthTest extends CoinbleskTest {
 		UserAccountStatusTO status2 = createUser("test@test.test", "12345678");
 		Assert.assertEquals(Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_NOT_ACTIVATED, status2.type());
 
-		Mockito.verify(mailService, Mockito.times(2)).sendUserMail(Mockito.matches("test@test.test"),
-			Mockito.contains("Activation"), Mockito.contains("click here to activate"));
+		Mockito.verify(mailService, Mockito.times(2)).sendUserMail(Mockito.matches("test@test.test"), Mockito.contains
+			("Activation"), Mockito.contains("click here to activate"));
 	}
 
 	@Test
@@ -148,8 +142,8 @@ public class AuthTest extends CoinbleskTest {
 		createUser("test@test.test", "12345678");
 
 		mockMvc.perform(get("/v1/user/verify/test@test.test/wroohoong")).andExpect(status().is5xxServerError());
-		Mockito.verify(mailService, Mockito.times(1)).sendAdminMail(Mockito.anyString(),
-			Mockito.contains("Someone tried a link with an invalid token"));
+		Mockito.verify(mailService, Mockito.times(1)).sendAdminMail(Mockito.anyString(), Mockito.contains("Someone " +
+			"tried a link with an invalid token"));
 	}
 
 	@Test
@@ -176,12 +170,9 @@ public class AuthTest extends CoinbleskTest {
 		activateUser(mail);
 
 		// Correct login returns a token
-		String authorizationToken = loginUser(mail, password)
-			.andExpect(status().isOk())
-			.andExpect(header().string("Authorization", Matchers.not(Matchers.isEmptyOrNullString())))
-			.andReturn()
-			.getResponse()
-			.getHeader("Authorization");
+		String authorizationToken = loginUser(mail, password).andExpect(status().isOk()).andExpect(header().string
+			("Authorization", Matchers.not(Matchers.isEmptyOrNullString()))).andReturn().getResponse().getHeader
+			("Authorization");
 
 		// Token is valid
 		Assert.assertTrue(StringUtils.hasText(authorizationToken));
@@ -208,18 +199,12 @@ public class AuthTest extends CoinbleskTest {
 		createUser(mail, password);
 		activateUser(mail);
 
-		String jwt = Jwts
-			.builder()
-			.setSubject(mail)
-			.claim("auth", "ROLE_USER")
-			.signWith(SignatureAlgorithm.HS256, appConfig.getJwtSecret().getBytes())
-			.setExpiration(Date.from(Instant.now().plus(Duration.ofHours(1))))
+		String jwt = Jwts.builder().setSubject(mail).claim("auth", "ROLE_USER").signWith(SignatureAlgorithm.HS256,
+			appConfig.getJwtSecret().getBytes()).setExpiration(Date.from(Instant.now().plus(Duration.ofHours(1))))
 			.compact();
 
-		MvcResult res = mockMvc
-			.perform(get("/v1/user/auth/get").header("Authorization", "Bearer " + jwt))
-			.andExpect(status().isOk())
-			.andReturn();
+		MvcResult res = mockMvc.perform(get("/v1/user/auth/get").header("Authorization", "Bearer " + jwt)).andExpect
+			(status().isOk()).andReturn();
 		UserAccountTO userAccountTO = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
 			UserAccountTO.class);
 		Assert.assertEquals(mail, userAccountTO.email());
@@ -229,13 +214,9 @@ public class AuthTest extends CoinbleskTest {
 		UserAccountTO userAccountTO = new UserAccountTO();
 		userAccountTO.email(username);
 		userAccountTO.password(password);
-		MvcResult res = mockMvc
-			.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON)
-				.content(SerializeUtils.GSON.toJson(userAccountTO)))
-			.andExpect(status().isOk())
-			.andReturn();
-		return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
-			UserAccountStatusTO.class);
+		MvcResult res = mockMvc.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON).content
+			(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
+		return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
 	}
 
 	private void activateUser(String username) {
@@ -245,10 +226,7 @@ public class AuthTest extends CoinbleskTest {
 	}
 
 	private ResultActions loginUser(String username, String password) throws Exception {
-		return mockMvc.perform(post("/user/login").contentType(MediaType.APPLICATION_JSON)
-			.content("{" +
-				"\"username\":\"" + username + "\"," +
-				"\"password\":\"" + password + "\"" +
-				"}"));
+		return mockMvc.perform(post("/user/login").contentType(MediaType.APPLICATION_JSON).content("{" +
+			"\"username\":\"" + username + "\"," + "\"password\":\"" + password + "\"" + "}"));
 	}
 }

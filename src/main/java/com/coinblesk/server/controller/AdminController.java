@@ -15,19 +15,14 @@
  */
 package com.coinblesk.server.controller;
 
-import static org.springframework.web.bind.annotation.RequestMethod.GET;
-
-import java.time.Instant;
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dto.AccountDTO;
 import com.coinblesk.server.dto.TimeLockedAddressDTO;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.service.AccountService;
+import com.coinblesk.server.service.WalletService;
+import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
@@ -41,11 +36,16 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import com.coinblesk.server.service.WalletService;
-import com.coinblesk.util.Pair;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import static org.springframework.web.bind.annotation.RequestMethod.GET;
 
 /**
- *
  * @author Thomas Bocek
  * @author Andreas Albrecht
  * @author Sebastian Stephan
@@ -104,39 +104,24 @@ public class AdminController {
 		// Pre-calculate balances for each address
 		Map<Address, Coin> balances = walletService.getBalanceByAddresses();
 
-		return accountService.allAddresses().stream()
-			.collect(Collectors.groupingBy(TimeLockedAddressEntity::getAccount))
-			.entrySet().stream()
-			.map(accountListEntry -> {
-				Account account = accountListEntry.getKey();
-				List<TimeLockedAddressDTO> addresses = accountListEntry.getValue().stream()
-					.map(tla -> {
-									Instant createdAt = Instant.ofEpochSecond(tla.getTimeCreated());
-									Instant lockedUntil = Instant.ofEpochSecond(tla.getLockTime());
-									Coin balance = balances.get(tla.toAddress(params));
-									return new TimeLockedAddressDTO(
-											tla.toAddress(params).toString(),
-											"http://" + (params.getClass().equals(TestNet3Params.class) ? "tbtc." : "")
-													+ "blockr.io/address/info/" + tla.toAddress(params),
-											Date.from(createdAt),
-											Date.from(lockedUntil),
-											lockedUntil.isAfter(Instant.now()),
-											balance.longValue()
-									);
-								}
-						).collect(Collectors.toList());
+		return accountService.allAddresses().stream().collect(Collectors.groupingBy
+			(TimeLockedAddressEntity::getAccount)).entrySet().stream().map(accountListEntry -> {
+			Account account = accountListEntry.getKey();
+			List<TimeLockedAddressDTO> addresses = accountListEntry.getValue().stream().map(tla -> {
+				Instant createdAt = Instant.ofEpochSecond(tla.getTimeCreated());
+				Instant lockedUntil = Instant.ofEpochSecond(tla.getLockTime());
+				Coin balance = balances.get(tla.toAddress(params));
+				return new TimeLockedAddressDTO(tla.toAddress(params).toString(), "http://" + (params.getClass()
+					.equals(TestNet3Params.class) ? "tbtc." : "") + "blockr.io/address/info/" + tla.toAddress(params),
+					Date.from(createdAt), Date.from(lockedUntil), lockedUntil.isAfter(Instant.now()), balance
+					.longValue());
+			}).collect(Collectors.toList());
 
-				long satoshiBalance = addresses.stream().mapToLong(TimeLockedAddressDTO::getBalance).sum();
-				return new AccountDTO(
-					SerializeUtils.bytesToHex(account.clientPublicKey()),
-					SerializeUtils.bytesToHex(account.serverPublicKey()),
-					SerializeUtils.bytesToHex(account.serverPrivateKey()),
-					Date.from(Instant.ofEpochSecond(account.timeCreated())),
-					account.virtualBalance(),
-					satoshiBalance,
-					account.virtualBalance() + satoshiBalance,
-					addresses);
-			})
-			.collect(Collectors.toList());
+			long satoshiBalance = addresses.stream().mapToLong(TimeLockedAddressDTO::getBalance).sum();
+			return new AccountDTO(SerializeUtils.bytesToHex(account.clientPublicKey()), SerializeUtils.bytesToHex
+				(account.serverPublicKey()), SerializeUtils.bytesToHex(account.serverPrivateKey()), Date.from(Instant
+				.ofEpochSecond(account.timeCreated())), account.virtualBalance(), satoshiBalance, account
+				.virtualBalance() + satoshiBalance, addresses);
+		}).collect(Collectors.toList());
 	}
 }

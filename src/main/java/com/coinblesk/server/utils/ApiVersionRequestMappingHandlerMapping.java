@@ -15,18 +15,12 @@
  */
 package com.coinblesk.server.utils;
 
-import java.lang.reflect.Method;
-
 import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.web.servlet.mvc.condition.ConsumesRequestCondition;
-import org.springframework.web.servlet.mvc.condition.HeadersRequestCondition;
-import org.springframework.web.servlet.mvc.condition.ParamsRequestCondition;
-import org.springframework.web.servlet.mvc.condition.PatternsRequestCondition;
-import org.springframework.web.servlet.mvc.condition.ProducesRequestCondition;
-import org.springframework.web.servlet.mvc.condition.RequestCondition;
-import org.springframework.web.servlet.mvc.condition.RequestMethodsRequestCondition;
+import org.springframework.web.servlet.mvc.condition.*;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+
+import java.lang.reflect.Method;
 
 /**
  * as in
@@ -65,14 +59,10 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
 	private RequestMappingInfo createApiVersionInfo(ApiVersion annotation, RequestCondition<?> customCondition) {
 		String[] values = annotation.value();
 
-		return new RequestMappingInfo(
-				new PatternsRequestCondition(values, getUrlPathHelper(), getPathMatcher(), useSuffixPatternMatch(), useTrailingSlashMatch(), getFileExtensions()),
-				new RequestMethodsRequestCondition(),
-				new ParamsRequestCondition(),
-				new HeadersRequestCondition(),
-				new ConsumesRequestCondition(),
-				new ProducesRequestCondition(),
-				customCondition);
+		return new RequestMappingInfo(new PatternsRequestCondition(values, getUrlPathHelper(), getPathMatcher(),
+			useSuffixPatternMatch(), useTrailingSlashMatch(), getFileExtensions()), new RequestMethodsRequestCondition
+			(), new ParamsRequestCondition(), new HeadersRequestCondition(), new ConsumesRequestCondition(), new
+			ProducesRequestCondition(), customCondition);
 	}
 
 }

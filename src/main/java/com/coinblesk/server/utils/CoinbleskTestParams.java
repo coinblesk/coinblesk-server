@@ -1,6 +1,6 @@
 package com.coinblesk.server.utils;
 
-import org.bitcoinj.core.*;
+import org.bitcoinj.core.Block;
 import org.bitcoinj.params.AbstractBitcoinNetParams;
 
 import java.math.BigInteger;
@@ -13,6 +13,7 @@ public class CoinbleskTestParams extends AbstractBitcoinNetParams {
 	public static final int UNITNET_MAJORITY_WINDOW = 8;
 	public static final int TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED = 6;
 	public static final int TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 4;
+	private static CoinbleskTestParams instance;
 
 	private CoinbleskTestParams() {
 		super();
@@ -20,7 +21,7 @@ public class CoinbleskTestParams extends AbstractBitcoinNetParams {
 		packetMagic = 0x0b110907;
 		addressHeader = 111;
 		p2shHeader = 196;
-		acceptableAddressCodes = new int[] { addressHeader, p2shHeader };
+		acceptableAddressCodes = new int[]{addressHeader, p2shHeader};
 		maxTarget = new BigInteger("00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16);
 		genesisBlock.setTime(System.currentTimeMillis() / 1000);
 		genesisBlock.setDifficultyTarget(Block.EASIEST_DIFFICULTY_TARGET);
@@ -41,7 +42,6 @@ public class CoinbleskTestParams extends AbstractBitcoinNetParams {
 		majorityWindow = 7;
 	}
 
-	private static CoinbleskTestParams instance;
 	public static synchronized CoinbleskTestParams get() {
 		if (instance == null) {
 			instance = new CoinbleskTestParams();

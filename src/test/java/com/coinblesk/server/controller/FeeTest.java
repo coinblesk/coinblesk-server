@@ -46,30 +46,18 @@ public class FeeTest extends CoinbleskTest {
 
 	@Test
 	public void testFee() throws Exception {
-		MvcResult res = mockMvc
-			.perform(get("/v1/fee").secure(true))
-			.andExpect(status().isOk())
-			.andReturn();
-		FeeTO fee = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
-			FeeTO.class);
+		MvcResult res = mockMvc.perform(get("/v1/fee").secure(true)).andExpect(status().isOk()).andReturn();
+		FeeTO fee = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), FeeTO.class);
 		System.out.println("fee is: " + fee.fee() + "/" + fee.message());
 		Assert.assertNotNull(fee);
 	}
 
 	@Test
 	public void testFeeTwice() throws Exception {
-		MvcResult res = mockMvc
-			.perform(get("/v1/fee").secure(true))
-			.andExpect(status().isOk())
-			.andReturn();
-		FeeTO fee1 = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
-			FeeTO.class);
-		res = mockMvc
-			.perform(get("/v1/fee").secure(true))
-			.andExpect(status().isOk())
-			.andReturn();
-		FeeTO fee2 = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
-			FeeTO.class);
+		MvcResult res = mockMvc.perform(get("/v1/fee").secure(true)).andExpect(status().isOk()).andReturn();
+		FeeTO fee1 = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), FeeTO.class);
+		res = mockMvc.perform(get("/v1/fee").secure(true)).andExpect(status().isOk()).andReturn();
+		FeeTO fee2 = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), FeeTO.class);
 		System.out.println("fee is: " + fee1.fee() + "/" + fee1.message());
 		System.out.println("fee is: " + fee2.fee() + "/" + fee2.message());
 		Assert.assertNotNull(fee1);

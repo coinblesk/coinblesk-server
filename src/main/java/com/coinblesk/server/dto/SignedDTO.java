@@ -5,7 +5,8 @@ import lombok.Data;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
-public @Data class SignedDTO {
+@Data
+public class SignedDTO {
 	// Payload contains Base64URL encoded json
 	@NotNull
 	private final String payload;

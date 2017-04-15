@@ -15,14 +15,13 @@
  */
 package com.coinblesk.server.controller;
 
-import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
-import static org.springframework.web.bind.annotation.RequestMethod.GET;
-import static org.springframework.web.bind.annotation.RequestMethod.PATCH;
-import static org.springframework.web.bind.annotation.RequestMethod.POST;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
+import com.coinblesk.json.v1.BaseTO;
+import com.coinblesk.json.v1.Type;
+import com.coinblesk.json.v1.UserAccountStatusTO;
+import com.coinblesk.json.v1.UserAccountTO;
+import com.coinblesk.server.service.MailService;
+import com.coinblesk.server.service.UserAccountService;
+import com.coinblesk.server.utils.ApiVersion;
 import org.bitcoinj.core.ECKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,21 +33,18 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.coinblesk.json.v1.BaseTO;
-import com.coinblesk.json.v1.Type;
-import com.coinblesk.json.v1.UserAccountStatusTO;
-import com.coinblesk.json.v1.UserAccountTO;
-import com.coinblesk.server.service.MailService;
-import com.coinblesk.server.service.UserAccountService;
-import com.coinblesk.server.utils.ApiVersion;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
+import static org.springframework.web.bind.annotation.RequestMethod.*;
 
 /**
- *
  * @author Thomas Bocek
  */
 @RestController
 @RequestMapping(value = "/user/auth")
-@ApiVersion({ "v1" })
+@ApiVersion({"v1"})
 public class UserControllerAuthenticated {
 
 	private final static Logger LOG = LoggerFactory.getLogger(UserControllerAuthenticated.class);
@@ -63,10 +59,7 @@ public class UserControllerAuthenticated {
 		this.mailService = mailService;
 	}
 
-	@RequestMapping(
-			value = "/delete",
-			method = PATCH,
-			produces = APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/delete", method = PATCH, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public UserAccountStatusTO deleteAccount() {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -74,12 +67,10 @@ public class UserControllerAuthenticated {
 		try {
 			UserAccountStatusTO status = userAccountService.delete(auth.getName());
 			if (!status.isSuccess()) {
-				LOG.error("Someone tried a delete account with an invalid username: {}/{}", auth, status.type().name());
-				mailService.sendAdminMail("Wrong Delete Account?",
-						"Someone tried a delete account with an invalid username: "
-								+ auth
-								+ "/"
-								+ status.type().name());
+				LOG.error("Someone tried a delete account with an invalid username: {}/{}", auth, status.type().name
+					());
+				mailService.sendAdminMail("Wrong Delete Account?", "Someone tried a delete account with an invalid " +
+					"username: " + auth + "/" + status.type().name());
 			}
 			LOG.debug("Delete account success for {}", auth.getName());
 			return status;
@@ -90,10 +81,7 @@ public class UserControllerAuthenticated {
 		}
 	}
 
-	@RequestMapping(
-			value = "/get",
-			method = GET,
-			produces = APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/get", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public UserAccountTO getAccount() {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -103,8 +91,8 @@ public class UserControllerAuthenticated {
 			UserAccountTO userAccount = userAccountService.get(auth.getName());
 			if (userAccount == null) {
 				LOG.error("Someone tried to access an account with an invalid username: {}", auth);
-				mailService.sendAdminMail("Wrong Account?",
-						"Someone tried to access an account with an invalid username: " + auth);
+				mailService.sendAdminMail("Wrong Account?", "Someone tried to access an account with an invalid " +
+					"username: " + auth);
 				return null;
 			}
 			LOG.debug("Get account success for {}", auth.getName());
@@ -115,10 +103,7 @@ public class UserControllerAuthenticated {
 		}
 	}
 
-	@RequestMapping(
-			value = "/transfer-p2sh",
-			method = POST,
-			produces = APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/transfer-p2sh", method = POST, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public UserAccountTO transferToP2SH(@RequestBody BaseTO request) {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -138,13 +123,10 @@ public class UserControllerAuthenticated {
 		}
 	}
 
-	@RequestMapping(
-			value = "/change-password",
-			method = POST,
-			produces = APPLICATION_JSON_UTF8_VALUE,
-			consumes = APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/change-password", method = POST, produces = APPLICATION_JSON_UTF8_VALUE, consumes =
+		APPLICATION_JSON_UTF8_VALUE)
 	public UserAccountStatusTO changePassword(@RequestBody UserAccountTO to, HttpServletRequest request,
-			HttpServletResponse response) {
+											  HttpServletResponse response) {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		LOG.debug("Change password account for {}", to.email());
 		if (auth != null) {

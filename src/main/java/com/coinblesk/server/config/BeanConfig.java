@@ -29,8 +29,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 
-import com.coinblesk.server.service.ForexService;
-
 @Configuration
 @ComponentScan("com.coinblesk.server")
 @EnableScheduling

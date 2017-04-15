@@ -15,18 +15,6 @@
  */
 package com.coinblesk.server.entity;
 
-import java.util.Comparator;
-
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Index;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
-
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -34,8 +22,11 @@ import org.bitcoinj.core.Address;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Utils;
 
+import javax.persistence.*;
+import java.util.Comparator;
+
 @Entity(name = "TIME_LOCKED_ADDRESS")
-@Table(indexes = { @Index(name = "ADDRESS_HASH_INDEX", columnList = "ADDRESS_HASH", unique = true) })
+@Table(indexes = {@Index(name = "ADDRESS_HASH_INDEX", columnList = "ADDRESS_HASH", unique = true)})
 public class TimeLockedAddressEntity {
 
 	@Id
@@ -153,10 +144,8 @@ public class TimeLockedAddressEntity {
 		}
 
 		final TimeLockedAddressEntity other = (TimeLockedAddressEntity) object;
-		return new EqualsBuilder().append(id, other.getId())
-			.append(addressHash, other.getAddressHash())
-			.append(redeemScript, other.getRedeemScript())
-			.isEquals();
+		return new EqualsBuilder().append(id, other.getId()).append(addressHash, other.getAddressHash()).append
+			(redeemScript, other.getRedeemScript()).isEquals();
 	}
 
 	@Override

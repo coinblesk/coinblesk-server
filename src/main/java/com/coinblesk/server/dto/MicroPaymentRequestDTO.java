@@ -2,7 +2,8 @@ package com.coinblesk.server.dto;
 
 import lombok.Data;
 
-public @Data class MicroPaymentRequestDTO {
+@Data
+public class MicroPaymentRequestDTO {
 	private final String tx;
 	private final String fromPublicKey;
 	private final String toPublicKey;

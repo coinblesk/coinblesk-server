@@ -65,14 +65,8 @@ public class UserAccountServiceTest extends CoinbleskTest {
 		}
 
 		UserAccount userAccount = new UserAccount();
-		userAccount
-			.setBalance(BigDecimal.ONE)
-			.setCreationDate(new Date(1))
-			.setDeleted(false)
-			.setEmail("test@test.test")
-			.setEmailToken(null)
-			.setPassword(passwordEncoder.encode("test"))
-			.setUsername("blib");
+		userAccount.setBalance(BigDecimal.ONE).setCreationDate(new Date(1)).setDeleted(false).setEmail("test@test" +
+			"" + ".test").setEmailToken(null).setPassword(passwordEncoder.encode("test")).setUsername("blib");
 		userAccountRepository.save(userAccount);
 
 		accountService.createAcount(ecKeyClient);
@@ -93,8 +87,8 @@ public class UserAccountServiceTest extends CoinbleskTest {
 
 	@Test
 	public void testTransferSuccess() throws BlockStoreException, VerificationException, PrunedException {
-		Block block = FakeTxBuilder.makeSolvedTestBlock(walletService.blockChain().getBlockStore(),
-			cfg.getPotPrivateKeyAddress().toAddress(cfg.getNetworkParameters()));
+		Block block = FakeTxBuilder.makeSolvedTestBlock(walletService.blockChain().getBlockStore(), cfg
+			.getPotPrivateKeyAddress().toAddress(cfg.getNetworkParameters()));
 		walletService.blockChain().add(block);
 		UserAccountTO result = userAccountService.transferP2SH(ecKeyClient, "test@test.test");
 		Assert.assertTrue(result.isSuccess());

@@ -26,7 +26,7 @@ import java.math.BigInteger;
 public class DTOUtils {
 	private static final Gson gson = new GsonBuilder().create();
 
-	public static <T> T parseAndValidate(SignedDTO signedDTO , Class<T> typeOfPayload) {
+	public static <T> T parseAndValidate(SignedDTO signedDTO, Class<T> typeOfPayload) {
 		final String payloadBase64String = signedDTO.getPayload();
 		String jsonPayload = fromBase64(payloadBase64String);
 		T parsedObject = gson.fromJson(jsonPayload, typeOfPayload);
@@ -57,12 +57,11 @@ public class DTOUtils {
 	 */
 	private static <T> void validateNonNullFields(T obj, Class<T> objClass) {
 		Field[] fields = objClass.getDeclaredFields();
-		for(Field field : fields) {
+		for (Field field : fields) {
 			if (field.isAnnotationPresent(NotNull.class)) {
 				try {
 					field.setAccessible(true);
-					if (field.get(obj) == null)
-						throw new MissingFieldException(field.getName());
+					if (field.get(obj) == null) throw new MissingFieldException(field.getName());
 				} catch (IllegalAccessException e) {
 					throw new MissingFieldException(field.getName());
 				}
@@ -117,8 +116,7 @@ public class DTOUtils {
 	 * @param signatureDTO The signature that should be validated.
 	 * @param publicKey The EC2Key containing the public key, which is used to check validity of the signature.
 	 */
-	public static void validateSignature(String payload, SignatureDTO signatureDTO, ECKey publicKey)
-	{
+	public static void validateSignature(String payload, SignatureDTO signatureDTO, ECKey publicKey) {
 		final BigInteger sigR = new BigInteger(signatureDTO.getSigR());
 		final BigInteger sigS = new BigInteger(signatureDTO.getSigS());
 		final ECKey.ECDSASignature signature = new ECKey.ECDSASignature(sigR, sigS);
@@ -136,8 +134,7 @@ public class DTOUtils {
 	 * @param key The key used to sign the payload
 	 * @return {@link SignatureDTO} with the Base64Url encoded json of the object and the ECDSA signature
 	 */
-	public static SignatureDTO sign(String payload, ECKey key)
-	{
+	public static SignatureDTO sign(String payload, ECKey key) {
 		ECKey.ECDSASignature signature = key.sign(Sha256Hash.of(payload.getBytes()));
 		return new SignatureDTO(signature.r.toString(), signature.s.toString());
 	}

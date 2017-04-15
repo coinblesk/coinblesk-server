@@ -18,15 +18,12 @@ package com.coinblesk.server.config;
 import org.springframework.security.core.GrantedAuthority;
 
 /**
- *
  * @author Andreas Albrecht
  * @author Thomas Bocek
- *
  */
 public enum UserRole implements GrantedAuthority {
 	// Note: no "ROLE_" prefix.
-	USER,
-	ADMIN;
+	USER, ADMIN;
 
 	private static final long serialVersionUID = 13449904136869644L;
 

@@ -1,12 +1,7 @@
 package com.coinblesk.server.auth;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
-
-import javax.transaction.Transactional;
-
+import com.coinblesk.server.dao.UserAccountRepository;
+import com.coinblesk.server.entity.UserAccount;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,8 +12,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
-import com.coinblesk.server.dao.UserAccountRepository;
-import com.coinblesk.server.entity.UserAccount;
+import javax.transaction.Transactional;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 
 @Component
 public class UserDetailsService implements org.springframework.security.core.userdetails.UserDetailsService {
@@ -51,14 +49,13 @@ public class UserDetailsService implements org.springframework.security.core.use
 			}
 
 			// Populate authority list
-			List<GrantedAuthority> grantedAuthorities = Collections.singletonList(
-					new SimpleGrantedAuthority(user.getUserRole().getAuthority()));
+			List<GrantedAuthority> grantedAuthorities = Collections.singletonList(new SimpleGrantedAuthority(user
+				.getUserRole().getAuthority()));
 
-			return new org.springframework.security.core.userdetails.User(lowercaseLogin,
-					user.getPassword(),
-					grantedAuthorities);
-			}).orElseThrow(() -> new UsernameNotFoundException("User " + lowercaseLogin + " was not found in the " +
-					"database"));
+			return new org.springframework.security.core.userdetails.User(lowercaseLogin, user.getPassword(),
+				grantedAuthorities);
+		}).orElseThrow(() -> new UsernameNotFoundException("User " + lowercaseLogin + " was not found in the " +
+			"database"));
 	}
 
 }

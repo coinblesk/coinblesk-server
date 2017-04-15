@@ -4,7 +4,9 @@ import lombok.Data;
 
 import javax.validation.constraints.NotNull;
 
-public @Data class CreateAddressRequestDTO {
-	@NotNull private final String publicKey;
+@Data
+public class CreateAddressRequestDTO {
+	@NotNull
+	private final String publicKey;
 	private final long lockTime;
 }
