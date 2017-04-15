@@ -47,7 +47,7 @@ final public class ForexService {
 
 	private final static String PLACEHOLDER = "{{PLACEHOLDER}}";
 	private final static String YAHOO_API = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo" +
-		"" + ".finance.xchange%20where%20pair%20in%20(" + PLACEHOLDER + ")&format=json&env=store://datatables" + "" +
+		".finance.xchange%20where%20pair%20in%20(" + PLACEHOLDER + ")&format=json&env=store://datatables" +
 		".org/alltableswithkeys";
 
 	private final Cache<String, BigDecimal> exchangeRatesCache = CacheBuilder.newBuilder().expireAfterWrite

@@ -672,8 +672,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		MicroPaymentRequestDTO modifiedRequest2 = new MicroPaymentRequestDTO(orig.getTx(), otherOwnedAccount
 			.getPublicKeyAsHex(), orig.getToPublicKey(), orig.getAmount(), Instant.now().plus(Duration.ofMinutes(1L))
 			.getEpochSecond());
-		sendAndExpect4xxError(DTOUtils.serializeAndSign(modifiedRequest2, otherOwnedAccount), "Request was not signed " +
-			"" + "" + "by owner of inputs");
+		sendAndExpect4xxError(DTOUtils.serializeAndSign(modifiedRequest2, otherOwnedAccount), "Request was not " +
+			"signed by owner of inputs");
 
 		// Amount stayed the same during all failed attacks
 		assertThat(accountService.getByClientPublicKey(receiverKey.getPubKey()).virtualBalance(), is(1337L));

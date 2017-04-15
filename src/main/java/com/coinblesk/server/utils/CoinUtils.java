@@ -40,7 +40,7 @@ public class CoinUtils {
 			case MAINNET:
 				return MainNetParams.get();
 			default:
-				throw new RuntimeException("Please set the server property bitcoin.net to " + "" + "" + "" +
+				throw new RuntimeException("Please set the server property bitcoin.net to " +
 					"(unittest|regtest|testnet|main)");
 		}
 	}

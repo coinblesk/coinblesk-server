@@ -149,8 +149,8 @@ public class UserController {
 			UserAccountStatusTO status = userAccountService.activate(email, token);
 			if (!status.isSuccess()) {
 				LOG.error("Someone tried a link with an invalid token: {}/{}/{}", email, token, status.type().name());
-				mailService.sendAdminMail("Wrong Link?", "Someone tried a link with an invalid token: " + email + " / " +
-					"" + "" + "" + token + "/" + status.type().name());
+				mailService.sendAdminMail("Wrong Link?", "Someone tried a link with an invalid token: " + email +
+					" / " + token + "/" + status.type().name());
 				throw new BadRequestException("Wrong Link");
 			}
 			LOG.debug("Activate account success for {}", email);

@@ -61,7 +61,8 @@ public class DTOUtils {
 			if (field.isAnnotationPresent(NotNull.class)) {
 				try {
 					field.setAccessible(true);
-					if (field.get(obj) == null) throw new MissingFieldException(field.getName());
+					if (field.get(obj) == null)
+						throw new MissingFieldException(field.getName());
 				} catch (IllegalAccessException e) {
 					throw new MissingFieldException(field.getName());
 				}

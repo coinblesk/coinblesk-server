@@ -121,7 +121,8 @@ public class AccountService {
 
 		// Get client for which a new address should be created
 		Account client = accountRepository.findByClientPublicKey(clientPublicKey.getPubKey());
-		if (client == null) throw new UserNotFoundException(clientPublicKey.getPublicKeyAsHex());
+		if (client == null)
+			throw new UserNotFoundException(clientPublicKey.getPublicKeyAsHex());
 
 		// Create address
 		final TimeLockedAddress address = new TimeLockedAddress(client.clientPublicKey(), client.serverPublicKey(),
@@ -155,7 +156,8 @@ public class AccountService {
 			throw new IllegalArgumentException("publicKey must not be null");
 		}
 		Account account = accountRepository.findByClientPublicKey(publicKey);
-		if (account == null) throw new UserNotFoundException(DTOUtils.toHex(publicKey));
+		if (account == null)
+			throw new UserNotFoundException(DTOUtils.toHex(publicKey));
 
 		return new GetVirtualBalanceResponse(account.virtualBalance(), ECKey.fromPrivateAndPrecalculatedPublic(account
 			.serverPrivateKey(), account.serverPublicKey()));
