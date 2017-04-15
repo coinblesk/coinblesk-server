@@ -53,11 +53,15 @@ public class UserControllerAuthenticated {
 
 	private final static Logger LOG = LoggerFactory.getLogger(UserControllerAuthenticated.class);
 
-	@Autowired
-	private UserAccountService userAccountService;
+	private final UserAccountService userAccountService;
+
+	private final MailService mailService;
 
 	@Autowired
-	private MailService mailService;
+	public UserControllerAuthenticated(UserAccountService userAccountService, MailService mailService) {
+		this.userAccountService = userAccountService;
+		this.mailService = mailService;
+	}
 
 	@RequestMapping(
 			value = "/delete",
