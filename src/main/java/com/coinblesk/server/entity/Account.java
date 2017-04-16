@@ -54,6 +54,9 @@ public class Account implements Serializable {
 	@Column(name = "CHANNEL_TRANSACTION", length = 65536)
 	private byte[] channelTransaction;
 
+	@Column(name = "BROADCAST_BEFORE", nullable = false)
+	private long broadcastBefore = 0L;
+
 	@Column(name = "LOCKED", nullable = false)
 	private boolean locked;
 
@@ -117,6 +120,15 @@ public class Account implements Serializable {
 
 	public Account channelTransaction(byte[] channelTransaction) {
 		this.channelTransaction = channelTransaction;
+		return this;
+	}
+
+	public long getBroadcastBefore() {
+		return broadcastBefore;
+	}
+
+	public Account broadcastBefore(long broadcastBefore) {
+		this.broadcastBefore = broadcastBefore;
 		return this;
 	}
 
