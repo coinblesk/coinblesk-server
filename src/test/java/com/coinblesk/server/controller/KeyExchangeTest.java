@@ -46,8 +46,6 @@ public class KeyExchangeTest extends CoinbleskTest {
 	}
 
 	@Test
-
-
 	public void noPayloadFails() throws Exception {
 		mockMvc.perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON)).andExpect(status()
 			.isBadRequest());
@@ -57,8 +55,6 @@ public class KeyExchangeTest extends CoinbleskTest {
 	}
 
 	@Test
-
-
 	public void emptyPublicKeyFails() throws Exception {
 		mockMvc.
 			perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON).content("{\"publicKey\": " +
@@ -67,8 +63,6 @@ public class KeyExchangeTest extends CoinbleskTest {
 
 
 	@Test
-
-
 	public void invalidPublicKeyFails() throws Exception {
 		String bogusKey = "02a485c51c0cef798620ea81054100000BOGUSKEY000001a046d50ca3ca0ad148f";
 		mockMvc.perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON).content(SerializeUtils
@@ -76,8 +70,6 @@ public class KeyExchangeTest extends CoinbleskTest {
 	}
 
 	@Test
-
-
 	public void resultIs200OK() throws Exception {
 		ECKey goodKey = new ECKey();
 		mockMvc.perform(post("/payment/key-exchange").contentType(MediaType.APPLICATION_JSON).content(SerializeUtils

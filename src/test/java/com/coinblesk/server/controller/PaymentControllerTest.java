@@ -61,23 +61,17 @@ public class PaymentControllerTest extends CoinbleskTest {
 	}
 
 	@Test
-
-
 	public void testKeyExchange_NoContent() throws Exception {
 		mockMvc.perform(post(URL_KEY_EXCHANGE)).andExpect(status().is4xxClientError());
 	}
 
 	@Test
-
-
 	public void testKeyExchange_EmptyRequest() throws Exception {
 		mockMvc.perform(post(URL_KEY_EXCHANGE).contentType(APPLICATION_JSON).content("{}")).andExpect(status()
 			.is4xxClientError());
 	}
 
 	@Test
-
-
 	public void testKeyExchange_NoPubKey() throws Exception {
 		KeyExchangeRequestDTO requestDTO = new KeyExchangeRequestDTO("");
 		mockMvc.perform(post(URL_KEY_EXCHANGE).contentType(APPLICATION_JSON).content(SerializeUtils.GSON.toJson
@@ -85,8 +79,6 @@ public class PaymentControllerTest extends CoinbleskTest {
 	}
 
 	@Test
-
-
 	public void testKeyExchange_InvalidPubKey() throws Exception {
 		String invalidPubKey = "f66b37dc2de5276a080bce77f9a6b0753f963e300c9a1f4557815ed49dc80fffb1";
 		KeyExchangeRequestDTO requestDTO = new KeyExchangeRequestDTO(invalidPubKey);
@@ -95,8 +87,6 @@ public class PaymentControllerTest extends CoinbleskTest {
 	}
 
 	@Test
-
-
 	public void testKeyExchange() throws Exception {
 		ECKey clientKey = new ECKey();
 		KeyExchangeRequestDTO requestDTO = new KeyExchangeRequestDTO(clientKey.getPublicKeyAsHex());
@@ -111,8 +101,6 @@ public class PaymentControllerTest extends CoinbleskTest {
 	}
 
 	@Test
-
-
 	public void testKeyExchange_ExistingPubKey() throws Exception {
 		ECKey clientKey = new ECKey();
 
@@ -139,23 +127,17 @@ public class PaymentControllerTest extends CoinbleskTest {
 	}
 
 	@Test
-
-
 	public void testCreateTimeLockedAddress_NoContent() throws Exception {
 		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS)).andExpect(status().is4xxClientError());
 	}
 
 	@Test
-
-
 	public void testCreateTimeLockedAddress_EmptyRequest() throws Exception {
 		mockMvc.perform(post(URL_CREATE_TIME_LOCKED_ADDRESS).contentType(APPLICATION_JSON).content("{}")).andExpect
 			(status().is4xxClientError());
 	}
 
 	@Test
-
-
 	public void testCreateTimeLockedAddress_NoPublicKey() throws Exception {
 		ECKey clientKey = new ECKey();
 		accountService.createAcount(clientKey);
@@ -168,8 +150,6 @@ public class PaymentControllerTest extends CoinbleskTest {
 	}
 
 	@Test
-
-
 	public void testCreateTimeLockedAddress_NoSignature() throws Exception {
 		ECKey clientKey = new ECKey();
 		accountService.createAcount(clientKey);
@@ -183,8 +163,6 @@ public class PaymentControllerTest extends CoinbleskTest {
 	}
 
 	@Test
-
-
 	public void testCreateTimeLockedAddress_WrongSignature() throws Exception {
 		ECKey clientKey = new ECKey();
 		ECKey wrongKey = new ECKey();
@@ -198,8 +176,6 @@ public class PaymentControllerTest extends CoinbleskTest {
 	}
 
 	@Test
-
-
 	public void testCreateTimeLockedAddress_NewAddress_ClientUnknown() throws Exception {
 		ECKey clientKey = new ECKey();
 
@@ -211,8 +187,6 @@ public class PaymentControllerTest extends CoinbleskTest {
 	}
 
 	@Test
-
-
 	public void testCreateTimeLockedAddress_NoLockTime() throws Exception {
 		ECKey clientKey = new ECKey();
 		accountService.createAcount(clientKey);
@@ -226,8 +200,6 @@ public class PaymentControllerTest extends CoinbleskTest {
 
 
 	@Test
-
-
 	public void testCreateTimeLockedAddress_ValidSignature() throws Exception {
 		ECKey clientKey = new ECKey();
 		ECKey serverKey = accountService.createAcount(clientKey);
@@ -246,8 +218,6 @@ public class PaymentControllerTest extends CoinbleskTest {
 	}
 
 	@Test
-
-
 	public void testCreateTimeLockedAddress_NewAddress_ClientKnown() throws Exception {
 		ECKey clientKey = new ECKey();
 		ECKey serverKey = accountService.createAcount(clientKey);
