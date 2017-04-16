@@ -64,6 +64,19 @@ public class MicropaymentService {
 		this.forexService = forexService;
 	}
 
+	/**
+	 * Result of a successful virtual payment.
+	 * Contains the new balances and both private keys of the server.
+	 * These can be used to sign the resulting information.
+	 */
+	@Data
+	public class VirtualPaymentResult {
+		private final long newBalanceSender;
+		private final byte[] serverPrivateKeyForSender;
+		private final long newBalanceReceiver;
+		private final byte[] serverPrivateKeyForReceiver;
+	}
+
 	@Transactional(isolation = Isolation.SERIALIZABLE)
 	@Retryable(TransientDataAccessException.class)
 	public VirtualPaymentResult virtualPayment(@NonNull ECKey keySender, @NonNull ECKey keyReceiver, long amount, long
@@ -114,6 +127,15 @@ public class MicropaymentService {
 		// Return the new balances and the keys for sender and receiver that can be used for signing
 		return new VirtualPaymentResult(sender.virtualBalance(), sender.serverPrivateKey(), receiver.virtualBalance(),
 			receiver.serverPrivateKey());
+	}
+
+	public static class MicropaymentResult {
+		public boolean closed;
+
+		public MicropaymentResult closed(boolean closed) {
+			this.closed = closed;
+			return this;
+		}
 	}
 
 	@Transactional(isolation = Isolation.SERIALIZABLE)
@@ -339,26 +361,4 @@ public class MicropaymentService {
 		return outputsForServer.get(0);
 	}
 
-	public static class MicropaymentResult {
-		public boolean closed;
-
-		public MicropaymentResult closed(boolean closed) {
-			this.closed = closed;
-			return this;
-		}
-	}
-
-	/**
-	 * Result of a successful virtual payment.
-	 * Contains the new balances and both private keys of the server.
-	 * These can be used to sign the resulting information.
-	 */
-	@Data
-	public class VirtualPaymentResult {
-		private final long newBalanceSender;
-		private final byte[] serverPrivateKeyForSender;
-
-		private final long newBalanceReceiver;
-		private final byte[] serverPrivateKeyForReceiver;
-	}
 }
