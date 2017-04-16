@@ -53,8 +53,12 @@ public class MicroPaymentController {
 			MicropaymentService.MicroPaymentResult result = micropaymentService.microPayment(senderPublicKey,
 				receiverPublicKey, requestDTO.getTx(), requestDTO.getAmount(), requestDTO.getNonce());
 
-			return new ResponseEntity<>("New balance receiver: " + result.newBalanceReceiver +
-				" Broadcast Transaction: " + result.broadcastedTx.getHashAsString(), OK);
+			if (result.broadcastedTx == null) {
+				return new ResponseEntity<>("New balance receiver: " + result.newBalanceReceiver, OK);
+			} else {
+				return new ResponseEntity<>("New balance receiver: " + result.newBalanceReceiver +
+					" Broadcast Transaction: " + result.broadcastedTx.getHashAsString(), OK);
+			}
 
 		} catch (CoinbleskInternalError e) {
 			LOG.error("Error during micropayment: " + e.getMessage(), e);
