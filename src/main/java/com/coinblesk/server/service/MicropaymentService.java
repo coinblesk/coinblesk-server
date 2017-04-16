@@ -29,6 +29,8 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 @Service
@@ -129,17 +131,14 @@ public class MicropaymentService {
 			receiver.serverPrivateKey());
 	}
 
-	public static class MicropaymentResult {
-		public boolean closed;
-
-		public MicropaymentResult closed(boolean closed) {
-			this.closed = closed;
-			return this;
-		}
+	// Represents a successful micro payment
+	public static class MicroPaymentResult {
+		public long newBalanceReceiver;
+		public Transaction broadcastedTx; // Non-null if the channel was closed
 	}
 
 	@Transactional(isolation = Isolation.SERIALIZABLE)
-	public MicropaymentResult microPayment(ECKey senderPublicKey, ECKey receiverPublicKey, String txInHex, Long
+	public MicroPaymentResult microPayment(ECKey senderPublicKey, ECKey receiverPublicKey, String txInHex, Long
 		amount, Long nonce) throws Exception {
 
 		// Parse the transaction
@@ -337,15 +336,54 @@ public class MicropaymentService {
 				.length) + " satoshi per byte. Needed: " + neededSatoshiPerByte);
 		}
 
-		// Execute micro payments
-		accountSender.nonce(nonce).channelTransaction(tx.bitcoinSerialize());
-		accountReceiver.virtualBalance(amount);
+		// Execute micro payment
+		accountSender
+			.nonce(nonce)
+			.channelTransaction(tx.bitcoinSerialize());
+		final long newAmountReceiver = accountReceiver.virtualBalance() + actualAmountSent.getValue();
+		accountReceiver
+			.virtualBalance(newAmountReceiver);
 
-		// Close if needed
-		// TODO: broadcast
-		accountSender.locked(mustClose);
+		// If we need to close, do so and send out transaction
+		Transaction sendOutTransaction = null;
+		if (mustClose) {
+			 // Can block up to 10 seconds. Throws when not successful.
+			sendOutTransaction = closeMicroPaymentChannel(senderPublicKey);
+		}
 
-		return new MicropaymentResult().closed(false);
+		MicroPaymentResult res = new MicroPaymentResult();
+		res.newBalanceReceiver = newAmountReceiver;
+		res.broadcastedTx = sendOutTransaction;
+
+		return new MicroPaymentResult();
+	}
+
+	@Transactional
+	public Transaction closeMicroPaymentChannel(ECKey forAccount) throws UserNotFoundException, InterruptedException,
+		ExecutionException, TimeoutException {
+		Account account = accountRepository.findByClientPublicKey(forAccount.getPubKey());
+		if (account == null)
+			throw new UserNotFoundException(forAccount.getPublicKeyAsHex());
+
+		if (account.getChannelTransaction() == null) {
+			LOG.warn("Trying to close non-existing channel for user " + forAccount.getPublicKeyAsHex());
+			throw new RuntimeException("No open channel");
+		}
+
+		account
+		 	.locked(true)
+			.broadcastBefore(Instant.now().getEpochSecond());
+
+		Transaction tx = new Transaction(appConfig.getNetworkParameters(), account.getChannelTransaction());
+
+		// TODO: append to local file
+		try {
+			return walletService.broadCastAndWait(tx);
+		} catch (Exception e) {
+			LOG.error("Error trying to close channel. Tx: {}", DTOUtils.toHex(tx.bitcoinSerialize()));
+			// TODO: send out email to admin in case of failure
+			throw(e);
+		}
 	}
 
 	private TransactionOutput getOutputForServer(Transaction micropaymentTransaction, ECKey serverPubKey) {

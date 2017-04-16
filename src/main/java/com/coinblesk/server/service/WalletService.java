@@ -45,10 +45,7 @@ import javax.annotation.PreDestroy;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.Executor;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 /**
@@ -323,7 +320,12 @@ public class WalletService {
 
 			}
 		});
+	}
 
+	public Transaction broadCastAndWait(final Transaction transaction) throws InterruptedException, ExecutionException,
+		TimeoutException {
+		final TransactionBroadcast broadcast = peerGroup.broadcastTransaction(transaction);
+		return broadcast.future().get(10, TimeUnit.SECONDS);
 	}
 
 	private void pendingTransactions() {

@@ -50,14 +50,11 @@ public class MicroPaymentController {
 			DTOUtils.validateSignature(request.getPayload(), request.getSignature(), senderPublicKey);
 
 			// Call the service and map failures to error messages
-			MicropaymentService.MicropaymentResult result = micropaymentService.microPayment(senderPublicKey,
+			MicropaymentService.MicroPaymentResult result = micropaymentService.microPayment(senderPublicKey,
 				receiverPublicKey, requestDTO.getTx(), requestDTO.getAmount(), requestDTO.getNonce());
 
-			if (result.closed) {
-				return new ResponseEntity<>("OK, channel closed", OK);
-			} else {
-				return new ResponseEntity<>("OK, channel still open", OK);
-			}
+			return new ResponseEntity<>("New balance receiver: " + result.newBalanceReceiver +
+				" Broadcast Transaction: " + result.broadcastedTx.getHashAsString(), OK);
 
 		} catch (CoinbleskInternalError e) {
 			LOG.error("Error during micropayment: " + e.getMessage(), e);
