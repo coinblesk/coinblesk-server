@@ -30,6 +30,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
@@ -378,7 +379,7 @@ public class MicropaymentService {
 
 		// TODO: append to local file
 		try {
-			return walletService.broadCastAndWait(tx);
+			return walletService.broadCastAsync(tx).get(10, TimeUnit.SECONDS);
 		} catch (Exception e) {
 			LOG.error("Error trying to close channel. Tx: {}", DTOUtils.toHex(tx.bitcoinSerialize()));
 			// TODO: send out email to admin in case of failure

@@ -22,6 +22,8 @@ import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.commons.lang3.ArrayUtils;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
@@ -30,6 +32,7 @@ import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
+import org.bitcoinj.store.MemoryBlockStore;
 import org.bitcoinj.store.SPVBlockStore;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.bitcoinj.wallet.UnreadableWalletException;
@@ -44,6 +47,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.io.File;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -82,38 +86,36 @@ public class WalletService {
 		final NetworkParameters params = appConfig.getNetworkParameters();
 
 		// Create config directory if necessary
-		final File directory = appConfig.getConfigDir().getFile();
-		if (!directory.exists()) {
-			if (!directory.mkdirs()) {
-				throw new IOException("Could not create directory " + directory.getAbsolutePath());
+		BitcoinNet bitcoinNet = appConfig.getBitcoinNet();
+		if (bitcoinNet.equals(BitcoinNet.MAINNET) || bitcoinNet.equals(BitcoinNet.TESTNET)) {
+			final File directory = appConfig.getConfigDir().getFile();
+			if (!directory.exists()) {
+				if (!directory.mkdirs()) {
+					throw new IOException("Could not create directory " + directory.getAbsolutePath());
+				}
 			}
-		}
-		// Init chain and wallet files
-		final File chainFile = new File(directory, "coinblesk2-" + appConfig.getBitcoinNet() + ".spvchain");
-		final File walletFile = new File(directory, "coinblesk2-" + appConfig.getBitcoinNet() + ".wallet");
+			// Init chain and wallet files
+			final File chainFile = new File(directory, "coinblesk2-" + appConfig.getBitcoinNet() + ".spvchain");
+			final File walletFile = new File(directory, "coinblesk2-" + appConfig.getBitcoinNet() + ".wallet");
 
-		// Delete chain and wallet file when using UNITTEST network
-		if (appConfig.getBitcoinNet() == BitcoinNet.UNITTEST) {
-			chainFile.delete();
-			walletFile.delete();
-			LOG.info("Deleted file {} and {}", chainFile.getName(), walletFile.getName());
-		}
-
-		if (walletFile.exists()) {
-			wallet = Wallet.loadFromFile(walletFile);
-			if (!chainFile.exists()) {
-				wallet.reset();
+			if (walletFile.exists()) {
+				wallet = Wallet.loadFromFile(walletFile);
+				if (!chainFile.exists()) {
+					wallet.reset();
+				}
+			} else {
+				wallet = new Wallet(params);
 			}
+			wallet.autosaveToFile(walletFile, 5, TimeUnit.SECONDS, null);
+			blockStore = new SPVBlockStore(params, chainFile);
 		} else {
-			// TODO: add keychaingroup for restoring wallet
 			wallet = new Wallet(params);
+			blockStore = new MemoryBlockStore(params);
 		}
-		wallet.autosaveToFile(walletFile, 5, TimeUnit.SECONDS, null);
 
 		walletWatchKeysCLTV(params);
 		walletWatchKeysPot(params);
 
-		blockStore = new SPVBlockStore(params, chainFile);
 		blockChain = new BlockChain(params, blockStore);
 		peerGroup = new PeerGroup(params, blockChain);
 
@@ -122,26 +124,20 @@ public class WalletService {
 
 		// If we're in unittest net we don't need any peer discovery or chain download logic
 		// and we are done here.
-		if (appConfig.getBitcoinNet() == BitcoinNet.UNITTEST) {
+		if (bitcoinNet.equals(BitcoinNet.UNITTEST)) {
 			LOG.info("wallet init done.");
 			return;
 		}
 
-		PeerDiscovery discovery = null;
-		String[] ownFullnodes = new String[]{appConfig.getFirstSeedNode()};
-		switch (appConfig.getBitcoinNet()) {
-			case MAINNET:
-				// For mainnet we use the default seed list but with out own fullnode added as the first node
-				discovery = new DnsDiscovery(ArrayUtils.addAll(ownFullnodes, params.getDnsSeeds()), params);
-				break;
-			case TESTNET:
-				// For testnet we don't bother with other fullnodes and keep things simple by only connecting to
-				// our own fullnode(s).
-				discovery = new DnsDiscovery(ownFullnodes, params);
-				peerGroup.setMaxConnections(ownFullnodes.length);
-				break;
+		// For mainnet & testnet we use the default seed list but with out own fullnode added as the first node
+		if (bitcoinNet.equals(BitcoinNet.MAINNET) || bitcoinNet.equals(BitcoinNet.TESTNET)) {
+			String[] ownFullnodes = new String[]{appConfig.getFirstSeedNode()};
+			PeerDiscovery discovery = new DnsDiscovery(ArrayUtils.addAll(ownFullnodes, params.getDnsSeeds()), params);
+			peerGroup.addPeerDiscovery(discovery);
+		} else {
+			peerGroup.setMaxConnections(1);
 		}
-		peerGroup.addPeerDiscovery(discovery);
+
 		peerGroup.start();
 
 		// Download block chain (blocking)
@@ -149,28 +145,22 @@ public class WalletService {
 			@Override
 			protected void doneDownload() {
 				LOG.info("downloading done");
-
-				// TODO (Re)broadcast all pending micro payment transactions
-
 				// Be notified when the confidence of relevant transactions
 				// change (number of confirmations). Needed for reopening channels.
 				addConficenceChangedHandler();
 			}
-
 			@Override
 			protected void progress(double pct, int blocksSoFar, Date date) {
 				LOG.info("downloading: {}%", (int) pct);
 			}
-
 		};
 
-		if (appConfig.getBitcoinNet() != BitcoinNet.UNITTEST) {
-			peerGroup.startBlockChainDownload(downloadListener);
-			downloadListener.await();
-		}
+		peerGroup.startBlockChainDownload(downloadListener);
+		downloadListener.await();
 
 		// Broadcast pending transactions
 		pendingTransactions();
+		// TODO (Re)broadcast all pending micro payment transactions aswell
 
 		LOG.info("wallet init done.");
 	}
@@ -187,7 +177,7 @@ public class WalletService {
 	private void walletWatchKeysPot(final NetworkParameters params) {
 		ECKey potAddress = appConfig.getPotPrivateKeyAddress();
 		wallet.addWatchedAddress(potAddress.toAddress(params), appConfig.getPotCreationTime());
-		LOG.info("walletWatchKeysPot: {}", potAddress.toAddress(params));
+		LOG.info("walletWatchKeysPot: {}, createdAt: {}", potAddress.toAddress(params), Instant.ofEpochSecond(appConfig.getPotCreationTime()));
 	}
 
 	/***
@@ -322,10 +312,16 @@ public class WalletService {
 		});
 	}
 
-	public Transaction broadCastAndWait(final Transaction transaction) throws InterruptedException, ExecutionException,
-		TimeoutException {
-		final TransactionBroadcast broadcast = peerGroup.broadcastTransaction(transaction);
-		return broadcast.future().get(10, TimeUnit.SECONDS);
+	public ListenableFuture<Transaction> broadCastAsync(final Transaction transaction) {
+		// Fake transaction for when testing.
+		// peerGroup.broadcastTransaction would otherwise fail, as it waits for at least 1 connection which will
+		if (appConfig.getBitcoinNet().equals(BitcoinNet.UNITTEST)) {
+			SettableFuture<Transaction> future = SettableFuture.create();
+			future.set(transaction);
+			return TransactionBroadcast.createMockBroadcast(transaction, future).future();
+		} else {
+			return peerGroup.broadcastTransaction(transaction).future();
+		}
 	}
 
 	private void pendingTransactions() {
@@ -373,7 +369,7 @@ public class WalletService {
 
 	/***
 	 * List all unspent outputs tracked by the wallet.
-	 * Used by AdminController.
+	 * Used by AdminController and integration test.
 	 *
 	 * @return List of {@link org.bitcoinj.core.TransactionOutput} of all unspent outputs tracked by bitcoinj.
 	 */
