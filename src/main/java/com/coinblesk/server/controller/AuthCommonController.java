@@ -51,15 +51,15 @@ import com.coinblesk.server.utils.ApiVersion;
 @RequestMapping("/auth/common")
 @ApiVersion({ "" })
 @Secured({ ROLE_USER, ROLE_ADMIN })
-public class AuthController {
+public class AuthCommonController {
 
-	private final static Logger LOG = LoggerFactory.getLogger(AuthController.class);
+	private final static Logger LOG = LoggerFactory.getLogger(AuthCommonController.class);
 
 	private final UserAccountService userAccountService;
 	private final MailService mailService;
 
 	@Autowired
-	public AuthController(UserAccountService userAccountService, MailService mailService) {
+	public AuthCommonController(UserAccountService userAccountService, MailService mailService) {
 		this.userAccountService = userAccountService;
 		this.mailService = mailService;
 	}

@@ -64,11 +64,11 @@ import com.coinblesk.util.Pair;
  * @author Thomas Bocek
  */
 @RestController
-@RequestMapping(value = "/user")
+@RequestMapping(value = "/user-account")
 @ApiVersion({"v1", ""})
-public class UserController {
+public class UserAccountController {
 
-	private final static Logger LOG = LoggerFactory.getLogger(UserController.class);
+	private final static Logger LOG = LoggerFactory.getLogger(UserAccountController.class);
 
 	private final UserAccountService userAccountService;
 	private final MailService mailService;
@@ -78,7 +78,7 @@ public class UserController {
 	private final AuthenticationManager authenticationManager;
 
 	@Autowired
-	public UserController(UserAccountService userAccountService, MailService mailService, MessageSource messageSource,
+	public UserAccountController(UserAccountService userAccountService, MailService mailService, MessageSource messageSource,
 						  AppConfig cfg, TokenProvider tokenProvider, AuthenticationManager authenticationManager) {
 		this.userAccountService = userAccountService;
 		this.mailService = mailService;
@@ -88,8 +88,8 @@ public class UserController {
 		this.authenticationManager = authenticationManager;
 	}
 
-	@RequestMapping(value = "/login", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE, produces =
-		APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/login", method = POST,
+			consumes = APPLICATION_JSON_UTF8_VALUE, produces = APPLICATION_JSON_UTF8_VALUE)
 	public ResponseEntity<?> login(@Valid @RequestBody LoginDTO loginDTO, HttpServletResponse response) {
 
 		UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(loginDTO
@@ -110,8 +110,8 @@ public class UserController {
 	}
 
 	// CRUD for the user
-	@RequestMapping(value = "/create", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE, produces =
-		APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/create", method = POST,
+			consumes = APPLICATION_JSON_UTF8_VALUE, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public UserAccountStatusTO createAccount(Locale locale, @RequestBody UserAccountTO userAccount) {
 		LOG.debug("Create account for {}", userAccount.email());
@@ -124,7 +124,7 @@ public class UserController {
 
 				try {
 					LOG.debug("send email to {}", pair.element1().getEmail());
-					final String path = "v1/user/verify/" + URLEncoder.encode(pair.element1().getEmail(), "UTF-8") +
+					final String path = "v1/user-account/verify/" + URLEncoder.encode(pair.element1().getEmail(), "UTF-8") +
 						"/" + pair.element1().getEmailToken();
 					final String url = cfg.getUrl() + path;
 					mailService.sendUserMail(pair.element1().getEmail(), messageSource.getMessage("activation.email" +
@@ -177,7 +177,7 @@ public class UserController {
 					LOG.debug("send forgot email to {}", email);
 					String forgotToken = pair.element1().message();
 					String password = pair.element1().password();
-					final String path = "v1/user/forgot-verify/" + URLEncoder.encode(email, "UTF-8") + "/" +
+					final String path = "v1/user-account/forgot-verify/" + URLEncoder.encode(email, "UTF-8") + "/" +
 						forgotToken;
 					final String url = cfg.getUrl() + path;
 					mailService.sendUserMail(email, messageSource.getMessage("forgot.email.title", null, locale),

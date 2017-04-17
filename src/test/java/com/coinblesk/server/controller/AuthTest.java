@@ -89,7 +89,7 @@ public class AuthTest extends CoinbleskTest {
 	@Test
 	public void createFailsWithNoEmail() throws Exception {
 		UserAccountTO userAccountTO = new UserAccountTO();
-		MvcResult res = mockMvc.perform(post("/user/create").contentType(MediaType.APPLICATION_JSON).content
+		MvcResult res = mockMvc.perform(post("/user-account/create").contentType(MediaType.APPLICATION_JSON).content
 			(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
 		UserAccountStatusTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
 			UserAccountStatusTO.class);
@@ -100,7 +100,7 @@ public class AuthTest extends CoinbleskTest {
 	public void createFailsWithNoPassword() throws Exception {
 		UserAccountTO userAccountTO = new UserAccountTO();
 		userAccountTO.email("test@test.test");
-		MvcResult res = mockMvc.perform(post("/user/create").contentType(MediaType.APPLICATION_JSON).content
+		MvcResult res = mockMvc.perform(post("/user-account/create").contentType(MediaType.APPLICATION_JSON).content
 			(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
 		UserAccountStatusTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
 			UserAccountStatusTO.class);
@@ -143,7 +143,7 @@ public class AuthTest extends CoinbleskTest {
 	public void activatingWithWrongTokenSendsAdminEmail() throws Exception {
 		createUser("test@test.test", "12345678");
 
-		mockMvc.perform(get("/user/verify/test@test.test/wroohoong")).andExpect(status().is5xxServerError());
+		mockMvc.perform(get("/user-account/verify/test@test.test/wroohoong")).andExpect(status().is5xxServerError());
 		Mockito.verify(mailService, Mockito.times(1)).sendAdminMail(Mockito.anyString(), Mockito.contains("Someone " +
 			"tried a link with an invalid token"));
 	}
@@ -153,7 +153,7 @@ public class AuthTest extends CoinbleskTest {
 		createUser("test@test.test", "12345678");
 		String token = userAccountService.getByEmail("test@test.test").getEmailToken();
 		Assert.assertNotNull(token);
-		mockMvc.perform(get("/user/verify/test@test.test/" + token)).andExpect(status().isOk());
+		mockMvc.perform(get("/user-account/verify/test@test.test/" + token)).andExpect(status().isOk());
 	}
 
 	@Test
@@ -216,7 +216,7 @@ public class AuthTest extends CoinbleskTest {
 		UserAccountTO userAccountTO = new UserAccountTO();
 		userAccountTO.email(username);
 		userAccountTO.password(password);
-		MvcResult res = mockMvc.perform(post("/user/create").contentType(MediaType.APPLICATION_JSON).content
+		MvcResult res = mockMvc.perform(post("/user-account/create").contentType(MediaType.APPLICATION_JSON).content
 			(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
 		return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
 	}
@@ -228,7 +228,7 @@ public class AuthTest extends CoinbleskTest {
 	}
 
 	private ResultActions loginUser(String username, String password) throws Exception {
-		return mockMvc.perform(post("/user/login").contentType(MediaType.APPLICATION_JSON).content("{" +
+		return mockMvc.perform(post("/user-account/login").contentType(MediaType.APPLICATION_JSON).content("{" +
 			"\"username\":\"" + username + "\"," + "\"password\":\"" + password + "\"" + "}"));
 	}
 }
