@@ -12,9 +12,9 @@
 			"description": "",
 			"item": [
 				{
-					"name": "/admin/utxo",
+					"name": "/auth/admin/utxo",
 					"request": {
-						"url": "{{url}}/admin/utxo",
+						"url": "{{url}}/auth/admin/utxo",
 						"method": "GET",
 						"header": [
 							{
@@ -32,9 +32,9 @@
 					"response": []
 				},
 				{
-					"name": "/admin/balance",
+					"name": "/auth/admin/balance",
 					"request": {
-						"url": "{{url}}/admin/balance",
+						"url": "{{url}}/auth/admin/balance",
 						"method": "GET",
 						"header": [
 							{
@@ -52,9 +52,9 @@
 					"response": []
 				},
 				{
-					"name": "/admin/addresses",
+					"name": "/auth/admin/addresses",
 					"request": {
-						"url": "{{url}}/admin/addresses",
+						"url": "{{url}}/auth/admin/addresses",
 						"method": "GET",
 						"header": [
 							{
@@ -72,9 +72,9 @@
 					"response": []
 				},
 				{
-					"name": "/admin/keys",
+					"name": "/auth/admin/keys",
 					"request": {
-						"url": "{{url}}/admin/keys",
+						"url": "{{url}}/auth/admin/keys",
 						"method": "GET",
 						"header": [
 							{
@@ -240,9 +240,9 @@
 			"description": "",
 			"item": [
 				{
-					"name": "/v1/user/auth/get",
+					"name": "/auth/common/user-account",
 					"request": {
-						"url": "{{url}}/v1/user/auth/get",
+						"url": "{{url}}/auth/common/user-account",
 						"method": "GET",
 						"header": [
 							{
@@ -266,7 +266,7 @@
 			"description": "",
 			"item": [
 				{
-					"name": "/user/create",
+					"name": "/user-account/create",
 					"event": [
 						{
 							"listen": "prerequest",
@@ -297,7 +297,7 @@
 						}
 					],
 					"request": {
-						"url": "{{url}}/user/create",
+						"url": "{{url}}/user-account/create",
 						"method": "POST",
 						"header": [
 							{
@@ -315,9 +315,9 @@
 					"response": []
 				},
 				{
-					"name": "/v1/user/verify/{{email}}/{{token}}",
+					"name": "/v1/user-account/verify/{{email}}/{{token}}",
 					"request": {
-						"url": "{{url}}{/v1/user/verify/{{email}}/{{token}}",
+						"url": "{{url}}{/v1/user-account/verify/{{email}}/{{token}}",
 						"method": "GET",
 						"header": [],
 						"body": {
@@ -329,9 +329,9 @@
 					"response": []
 				},
 				{
-					"name": "/v1/user/forgot/{{email}}",
+					"name": "/v1/user-account/forgot/{{email}}",
 					"request": {
-						"url": "{{url}}/v1/user/forgot/{{email}}",
+						"url": "{{url}}/v1/user-account/forgot/{{email}}",
 						"method": "GET",
 						"header": [],
 						"body": {
@@ -343,9 +343,9 @@
 					"response": []
 				},
 				{
-					"name": "/v1/user/forgot-verify/{{email}}/{{token}}",
+					"name": "/v1/user-account/forgot-verify/{{email}}/{{token}}",
 					"request": {
-						"url": "{{url}}/v1/user/forgot-verify/{{email}}/{{token}}",
+						"url": "{{url}}/v1/user-account/forgot-verify/{{email}}/{{token}}",
 						"method": "GET",
 						"header": [],
 						"body": {
@@ -357,7 +357,7 @@
 					"response": []
 				},
 				{
-					"name": "/user/login",
+					"name": "/user-account/login",
 					"event": [
 						{
 							"listen": "test",
@@ -371,7 +371,7 @@
 						}
 					],
 					"request": {
-						"url": "{{url}}/user/login",
+						"url": "{{url}}/user-account/login",
 						"method": "POST",
 						"header": [
 							{
