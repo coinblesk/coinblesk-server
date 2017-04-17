@@ -15,20 +15,16 @@
  */
 package com.coinblesk.server.controller;
 
-import com.coinblesk.json.v1.Type;
-import com.coinblesk.json.v1.UserAccountStatusTO;
-import com.coinblesk.json.v1.UserAccountTO;
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.dao.UserAccountRepository;
-import com.coinblesk.server.entity.UserAccount;
-import com.coinblesk.server.service.MailService;
-import com.coinblesk.server.service.UserAccountService;
-import com.coinblesk.server.utilTest.CoinbleskTest;
-import com.coinblesk.util.SerializeUtils;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
+
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Before;
@@ -45,15 +41,21 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Date;
+import com.coinblesk.json.v1.Type;
+import com.coinblesk.json.v1.UserAccountStatusTO;
+import com.coinblesk.json.v1.UserAccountTO;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.dao.UserAccountRepository;
+import com.coinblesk.server.entity.UserAccount;
+import com.coinblesk.server.service.MailService;
+import com.coinblesk.server.service.UserAccountService;
+import com.coinblesk.server.utilTest.CoinbleskTest;
+import com.coinblesk.util.SerializeUtils;
 
-import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 
 /**
  * @author Thomas Bocek
@@ -81,13 +83,13 @@ public class AuthTest extends CoinbleskTest {
 
 	@Test
 	public void createFailsWithNoContent() throws Exception {
-		mockMvc.perform(get("/v1/user/auth/get")).andExpect(status().is4xxClientError());
+		mockMvc.perform(get("/auth/common/user-account")).andExpect(status().is4xxClientError());
 	}
 
 	@Test
 	public void createFailsWithNoEmail() throws Exception {
 		UserAccountTO userAccountTO = new UserAccountTO();
-		MvcResult res = mockMvc.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON).content
+		MvcResult res = mockMvc.perform(post("/user/create").contentType(MediaType.APPLICATION_JSON).content
 			(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
 		UserAccountStatusTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
 			UserAccountStatusTO.class);
@@ -98,7 +100,7 @@ public class AuthTest extends CoinbleskTest {
 	public void createFailsWithNoPassword() throws Exception {
 		UserAccountTO userAccountTO = new UserAccountTO();
 		userAccountTO.email("test@test.test");
-		MvcResult res = mockMvc.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON).content
+		MvcResult res = mockMvc.perform(post("/user/create").contentType(MediaType.APPLICATION_JSON).content
 			(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
 		UserAccountStatusTO status = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
 			UserAccountStatusTO.class);
@@ -141,7 +143,7 @@ public class AuthTest extends CoinbleskTest {
 	public void activatingWithWrongTokenSendsAdminEmail() throws Exception {
 		createUser("test@test.test", "12345678");
 
-		mockMvc.perform(get("/v1/user/verify/test@test.test/wroohoong")).andExpect(status().is5xxServerError());
+		mockMvc.perform(get("/user/verify/test@test.test/wroohoong")).andExpect(status().is5xxServerError());
 		Mockito.verify(mailService, Mockito.times(1)).sendAdminMail(Mockito.anyString(), Mockito.contains("Someone " +
 			"tried a link with an invalid token"));
 	}
@@ -151,7 +153,7 @@ public class AuthTest extends CoinbleskTest {
 		createUser("test@test.test", "12345678");
 		String token = userAccountService.getByEmail("test@test.test").getEmailToken();
 		Assert.assertNotNull(token);
-		mockMvc.perform(get("/v1/user/verify/test@test.test/" + token)).andExpect(status().isOk());
+		mockMvc.perform(get("/user/verify/test@test.test/" + token)).andExpect(status().isOk());
 	}
 
 	@Test
@@ -189,7 +191,7 @@ public class AuthTest extends CoinbleskTest {
 
 	@Test
 	public void getProfileFailsWithoutJWT() throws Exception {
-		mockMvc.perform(get("/v1/user/auth/get")).andExpect(status().is4xxClientError());
+		mockMvc.perform(get("/auth/common/user-account")).andExpect(status().is4xxClientError());
 	}
 
 	@Test
@@ -203,7 +205,7 @@ public class AuthTest extends CoinbleskTest {
 			appConfig.getJwtSecret().getBytes()).setExpiration(Date.from(Instant.now().plus(Duration.ofHours(1))))
 			.compact();
 
-		MvcResult res = mockMvc.perform(get("/v1/user/auth/get").header("Authorization", "Bearer " + jwt)).andExpect
+		MvcResult res = mockMvc.perform(get("/auth/common/user-account").header("Authorization", "Bearer " + jwt)).andExpect
 			(status().isOk()).andReturn();
 		UserAccountTO userAccountTO = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(),
 			UserAccountTO.class);
@@ -214,7 +216,7 @@ public class AuthTest extends CoinbleskTest {
 		UserAccountTO userAccountTO = new UserAccountTO();
 		userAccountTO.email(username);
 		userAccountTO.password(password);
-		MvcResult res = mockMvc.perform(post("/v1/user/create").contentType(MediaType.APPLICATION_JSON).content
+		MvcResult res = mockMvc.perform(post("/user/create").contentType(MediaType.APPLICATION_JSON).content
 			(SerializeUtils.GSON.toJson(userAccountTO))).andExpect(status().isOk()).andReturn();
 		return SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), UserAccountStatusTO.class);
 	}
