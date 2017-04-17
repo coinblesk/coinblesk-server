@@ -27,6 +27,9 @@ public enum UserRole implements GrantedAuthority {
 
 	private static final long serialVersionUID = 13449904136869644L;
 
+	public static final String ROLE_USER = "ROLE_USER";
+	public static final String ROLE_ADMIN = "ROLE_ADMIN";
+
 	@Override
 	public String getAuthority() {
 		// Spring convention: authority starts with "ROLE_".

@@ -15,26 +15,8 @@
  */
 package com.coinblesk.server.controller;
 
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.dto.AccountDTO;
-import com.coinblesk.server.dto.TimeLockedAddressDTO;
-import com.coinblesk.server.entity.Account;
-import com.coinblesk.server.entity.TimeLockedAddressEntity;
-import com.coinblesk.server.service.AccountService;
-import com.coinblesk.server.service.WalletService;
-import com.coinblesk.util.Pair;
-import com.coinblesk.util.SerializeUtils;
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.params.TestNet3Params;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
+import static com.coinblesk.server.config.UserRole.ROLE_ADMIN;
+import static org.springframework.web.bind.annotation.RequestMethod.GET;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -43,7 +25,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.springframework.web.bind.annotation.RequestMethod.GET;
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.params.TestNet3Params;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.annotation.Secured;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.dto.AccountDTO;
+import com.coinblesk.server.dto.TimeLockedAddressDTO;
+import com.coinblesk.server.entity.Account;
+import com.coinblesk.server.entity.TimeLockedAddressEntity;
+import com.coinblesk.server.service.AccountService;
+import com.coinblesk.server.service.WalletService;
+import com.coinblesk.server.utils.ApiVersion;
+import com.coinblesk.util.Pair;
+import com.coinblesk.util.SerializeUtils;
 
 /**
  * @author Thomas Bocek
@@ -52,19 +56,18 @@ import static org.springframework.web.bind.annotation.RequestMethod.GET;
  */
 
 @Controller
-@RequestMapping(value = "/admin")
-public class AdminController {
+@RequestMapping(value = "/auth/admin")
+@ApiVersion({ "" })
+@Secured(ROLE_ADMIN)
+public class AuthAdminController {
 
-	private static Logger LOG = LoggerFactory.getLogger(AdminController.class);
+	private static Logger LOG = LoggerFactory.getLogger(AuthAdminController.class);
 
 	private final AppConfig appConfig;
-
 	private final WalletService walletService;
-
 	private final AccountService accountService;
-
 	@Autowired
-	public AdminController(AppConfig appConfig, WalletService walletService, AccountService accountService) {
+	public AuthAdminController(AppConfig appConfig, WalletService walletService, AccountService accountService) {
 		this.appConfig = appConfig;
 		this.walletService = walletService;
 		this.accountService = accountService;
