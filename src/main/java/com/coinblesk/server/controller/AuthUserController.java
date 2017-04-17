@@ -47,7 +47,6 @@ import com.coinblesk.server.utils.ApiVersion;
 public class AuthUserController {
 
 	private final static Logger LOG = LoggerFactory.getLogger(AuthUserController.class);
-
 	private final UserAccountService userAccountService;
 
 	@Autowired

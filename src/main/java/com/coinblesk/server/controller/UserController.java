@@ -71,15 +71,10 @@ public class UserController {
 	private final static Logger LOG = LoggerFactory.getLogger(UserController.class);
 
 	private final UserAccountService userAccountService;
-
 	private final MailService mailService;
-
 	private final MessageSource messageSource;
-
 	private final AppConfig cfg;
-
 	private final TokenProvider tokenProvider;
-
 	private final AuthenticationManager authenticationManager;
 
 	@Autowired

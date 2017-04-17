@@ -15,9 +15,33 @@
  */
 package com.coinblesk.server.controller;
 
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import static org.springframework.http.HttpStatus.OK;
+import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
+import static org.springframework.web.bind.annotation.RequestMethod.POST;
+
+import javax.validation.Valid;
+
+import org.bitcoinj.core.ECKey;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.dto.*;
+import com.coinblesk.server.dto.CreateAddressRequestDTO;
+import com.coinblesk.server.dto.CreateAddressResponseDTO;
+import com.coinblesk.server.dto.ErrorDTO;
+import com.coinblesk.server.dto.KeyExchangeRequestDTO;
+import com.coinblesk.server.dto.KeyExchangeResponseDTO;
+import com.coinblesk.server.dto.SignedDTO;
+import com.coinblesk.server.dto.VirtualBalanceRequestDTO;
+import com.coinblesk.server.dto.VirtualBalanceResponseDTO;
 import com.coinblesk.server.exceptions.InvalidLockTimeException;
 import com.coinblesk.server.exceptions.InvalidSignatureException;
 import com.coinblesk.server.exceptions.MissingFieldException;
@@ -26,16 +50,6 @@ import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.server.utils.DTOUtils;
-import org.bitcoinj.core.ECKey;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import javax.validation.Valid;
-
-import static org.springframework.http.HttpStatus.*;
-import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
-import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
 /**
  * @author Alessandro Di Carli
@@ -50,7 +64,6 @@ public class PaymentController {
 	private final AppConfig appConfig;
 
 	private final WalletService walletService;
-
 	private final AccountService accountService;
 
 	@Autowired

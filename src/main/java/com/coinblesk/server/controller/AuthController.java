@@ -57,6 +57,7 @@ public class AuthController {
 
 	private final UserAccountService userAccountService;
 	private final MailService mailService;
+
 	@Autowired
 	public AuthController(UserAccountService userAccountService, MailService mailService) {
 		this.userAccountService = userAccountService;

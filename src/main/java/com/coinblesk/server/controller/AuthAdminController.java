@@ -66,6 +66,7 @@ public class AuthAdminController {
 	private final AppConfig appConfig;
 	private final WalletService walletService;
 	private final AccountService accountService;
+
 	@Autowired
 	public AuthAdminController(AppConfig appConfig, WalletService walletService, AccountService accountService) {
 		this.appConfig = appConfig;
