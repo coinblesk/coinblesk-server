@@ -73,9 +73,9 @@ public class AuthCommonController {
 		try {
 			UserAccountTO userAccount = userAccountService.get(auth.getName());
 			if (userAccount == null) {
-				LOG.error("Someone tried to access a user account with an invalid username: {}", auth);
+				LOG.error("Someone tried to access a user account with an invalid email address: {}", auth);
 				mailService.sendAdminMail("Wrong Account?",
-						"Someone tried to access a user account with an invalid username: " + auth);
+						"Someone tried to access a user account with an invalid email address: " + auth);
 				return null;
 			}
 			LOG.debug("GET user account success for {}", auth.getName());
@@ -95,9 +95,9 @@ public class AuthCommonController {
 		try {
 			UserAccountStatusTO status = userAccountService.delete(auth.getName());
 			if (!status.isSuccess()) {
-				LOG.error("Someone tried a delete account with an invalid username: {}/{}", auth, status.type().name());
+				LOG.error("Someone tried a delete account with an invalid email address: {}/{}", auth, status.type().name());
 				mailService.sendAdminMail("Wrong Delete Account?", "Someone tried a delete account with an invalid "
-						+ "username: "
+						+ "email address: "
 						+ auth
 						+ "/"
 						+ status.type().name());

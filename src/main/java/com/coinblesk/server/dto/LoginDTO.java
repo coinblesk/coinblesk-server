@@ -1,20 +1,20 @@
 package com.coinblesk.server.dto;
 
-import lombok.Data;
-
 import javax.validation.constraints.NotNull;
+
+import lombok.Data;
 
 @Data
 public class LoginDTO {
 
 	@NotNull
-	private String username;
+	private String email;
 
 	@NotNull
 	private String password;
 
 	@Override
 	public String toString() {
-		return "LoginDTO{" + "password='*****'" + ", username='" + username + "'}";
+		return "LoginDTO{" + "password='*****'" + ", email='" + email + "'}";
 	}
 }

@@ -5,15 +5,18 @@
  */
 package com.coinblesk.server.service;
 
-import com.coinblesk.json.v1.UserAccountTO;
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.dao.UserAccountRepository;
-import com.coinblesk.server.entity.UserAccount;
-import com.coinblesk.server.exceptions.InvalidLockTimeException;
-import com.coinblesk.server.exceptions.UserNotFoundException;
-import com.coinblesk.server.utilTest.CoinbleskTest;
-import com.coinblesk.server.utilTest.FakeTxBuilder;
-import org.bitcoinj.core.*;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
+import java.util.List;
+
+import org.bitcoinj.core.Block;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.PrunedException;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.params.UnitTestParams;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.wallet.UnreadableWalletException;
@@ -26,34 +29,45 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Date;
-import java.util.List;
+import com.coinblesk.json.v1.UserAccountTO;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.dao.UserAccountRepository;
+import com.coinblesk.server.entity.UserAccount;
+import com.coinblesk.server.exceptions.InvalidLockTimeException;
+import com.coinblesk.server.exceptions.UserNotFoundException;
+import com.coinblesk.server.utilTest.CoinbleskTest;
+import com.coinblesk.server.utilTest.FakeTxBuilder;
 
 /**
  * @author Thomas Bocek
  */
 public class UserAccountServiceTest extends CoinbleskTest {
 	final private ECKey ecKeyClient = new ECKey();
+
 	@MockBean
 	private MailService mailService;
+
 	@Autowired
 	private UserAccountService userAccountService;
+
 	@Autowired
 	private UserAccountRepository userAccountRepository;
+
 	@Autowired
 	private PasswordEncoder passwordEncoder;
+
 	@Autowired
 	private TxQueueService txQueueService;
+
 	@Autowired
 	private AccountService accountService;
+
 	@Autowired
 	private WalletService walletService;
+
 	@Autowired
-	private AppConfig cfg;
+	private AppConfig appConfig;
+
 	private int counter = 0;
 
 	@Before
@@ -66,7 +80,7 @@ public class UserAccountServiceTest extends CoinbleskTest {
 
 		UserAccount userAccount = new UserAccount();
 		userAccount.setBalance(BigDecimal.ONE).setCreationDate(new Date(1)).setDeleted(false).setEmail("test@test" +
-			"" + ".test").setEmailToken(null).setPassword(passwordEncoder.encode("test")).setUsername("blib");
+			"" + ".test").setEmailToken(null).setPassword(passwordEncoder.encode("test"));
 		userAccountRepository.save(userAccount);
 
 		accountService.createAcount(ecKeyClient);
@@ -87,8 +101,8 @@ public class UserAccountServiceTest extends CoinbleskTest {
 
 	@Test
 	public void testTransferSuccess() throws BlockStoreException, VerificationException, PrunedException {
-		Block block = FakeTxBuilder.makeSolvedTestBlock(walletService.blockChain().getBlockStore(), cfg
-			.getPotPrivateKeyAddress().toAddress(cfg.getNetworkParameters()));
+		Block block = FakeTxBuilder.makeSolvedTestBlock(walletService.blockChain().getBlockStore(), appConfig
+			.getPotPrivateKeyAddress().toAddress(appConfig.getNetworkParameters()));
 		walletService.blockChain().add(block);
 		UserAccountTO result = userAccountService.transferP2SH(ecKeyClient, "test@test.test");
 		Assert.assertTrue(result.isSuccess());

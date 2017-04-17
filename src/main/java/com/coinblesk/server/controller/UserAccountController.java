@@ -93,7 +93,7 @@ public class UserAccountController {
 	public ResponseEntity<?> login(@Valid @RequestBody LoginDTO loginDTO, HttpServletResponse response) {
 
 		UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(loginDTO
-			.getUsername().toLowerCase(Locale.ENGLISH), loginDTO.getPassword());
+			.getEmail().toLowerCase(Locale.ENGLISH), loginDTO.getPassword());
 
 		try {
 			Authentication authentication = this.authenticationManager.authenticate(authenticationToken);
