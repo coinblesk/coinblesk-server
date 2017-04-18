@@ -15,7 +15,10 @@
  */
 package com.coinblesk.server.controller;
 
+import static com.coinblesk.server.auth.JWTConfigurer.AUTHORIZATION_HEADER;
+import static java.util.Locale.ENGLISH;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
+import static org.springframework.http.ResponseEntity.ok;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
@@ -31,7 +34,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -44,13 +46,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.coinblesk.server.auth.JWTConfigurer;
 import com.coinblesk.server.auth.TokenProvider;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dto.LoginDTO;
 import com.coinblesk.server.dto.UserAccountCreateDTO;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.exceptions.BusinessException;
+import com.coinblesk.server.exceptions.CoinbleskAuthenticationException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
 import com.coinblesk.server.service.MailService;
 import com.coinblesk.server.service.UserAccountService;
@@ -86,23 +88,22 @@ public class UserAccountController {
 	}
 
 	@RequestMapping(value = "/login", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE, produces = APPLICATION_JSON_UTF8_VALUE)
-	public ResponseEntity<?> login(@Valid @RequestBody LoginDTO loginDTO, HttpServletResponse response) {
+	public ResponseEntity<?> login(@Valid @RequestBody LoginDTO loginDTO, HttpServletResponse response) throws BusinessException {
 
 		UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-				loginDTO.getEmail().toLowerCase(Locale.ENGLISH), loginDTO.getPassword());
+				loginDTO.getEmail().toLowerCase(ENGLISH), loginDTO.getPassword());
 
 		try {
 			Authentication authentication = this.authenticationManager.authenticate(authenticationToken);
 			SecurityContextHolder.getContext().setAuthentication(authentication);
 
 			String jwt = tokenProvider.createToken(authentication);
-			response.addHeader(JWTConfigurer.AUTHORIZATION_HEADER, "Bearer " + jwt);
+			response.addHeader(AUTHORIZATION_HEADER, "Bearer " + jwt);
 
-			return ResponseEntity.ok(Collections.singletonMap("token", jwt));
+			return ok(Collections.singletonMap("token", jwt));
+
 		} catch (AuthenticationException exception) {
-			return new ResponseEntity<>(
-					Collections.singletonMap("AuthenticationException", exception.getLocalizedMessage()),
-					HttpStatus.UNAUTHORIZED);
+			throw new CoinbleskAuthenticationException();
 		}
 	}
 
