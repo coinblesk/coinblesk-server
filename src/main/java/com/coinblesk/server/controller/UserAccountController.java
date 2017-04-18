@@ -16,6 +16,13 @@
 package com.coinblesk.server.controller;
 
 import static com.coinblesk.server.auth.JWTConfigurer.AUTHORIZATION_HEADER;
+import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_COULD_NOT_BE_ACTIVATED_WRONG_LINK;
+import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_COULD_NOT_CREATE_USER;
+import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_COULD_NOT_HANDLE_FORGET_REQUEST;
+import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_COULD_NOT_SEND_FORGET_EMAIL;
+import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_COULD_NOT_VERIFY_FORGOT_WRONG_LINK;
+import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_CREATE_TOKEN_COULD_NOT_BE_SENT;
+import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_LOGIN_FAILED;
 import static java.util.Locale.ENGLISH;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
@@ -53,6 +60,7 @@ import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskAuthenticationException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
+import com.coinblesk.server.service.EventService;
 import com.coinblesk.server.service.MailService;
 import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.server.utils.ApiVersion;
@@ -73,17 +81,19 @@ public class UserAccountController {
 	private final AppConfig cfg;
 	private final TokenProvider tokenProvider;
 	private final AuthenticationManager authenticationManager;
+	private final EventService eventService;
 
 	@Autowired
 	public UserAccountController(UserAccountService userAccountService, MailService mailService,
 			MessageSource messageSource, AppConfig cfg, TokenProvider tokenProvider,
-			AuthenticationManager authenticationManager) {
+			AuthenticationManager authenticationManager, EventService eventService) {
 		this.userAccountService = userAccountService;
 		this.mailService = mailService;
 		this.messageSource = messageSource;
 		this.cfg = cfg;
 		this.tokenProvider = tokenProvider;
 		this.authenticationManager = authenticationManager;
+		this.eventService = eventService;
 	}
 
 	@RequestMapping(value = "/login", method = PUT, consumes = APPLICATION_JSON_UTF8_VALUE, produces = APPLICATION_JSON_UTF8_VALUE)
@@ -107,7 +117,7 @@ public class UserAccountController {
 			return token;
 
 		} catch (AuthenticationException exception) {
-			// TODO add event
+			eventService.warn(USER_ACCOUNT_LOGIN_FAILED, "Failed login with e-mail '" + loginDTO.getEmail()+ "'");
 			throw new CoinbleskAuthenticationException();
 		}
 	}
@@ -119,7 +129,15 @@ public class UserAccountController {
 
 		UserAccount userAccount;
 		if (!userAccountService.userExists(createDTO.getEmail())) {
-			userAccount = userAccountService.create(createDTO);
+
+			try {
+				userAccount = userAccountService.create(createDTO);
+			} catch(BusinessException exception) {
+				LOG.warn("An exception occured during the creation of a user", exception);
+				eventService.warn(USER_ACCOUNT_COULD_NOT_CREATE_USER, "An exception occured during the creation of the account: " + exception.getClass().getSimpleName());
+				throw exception;
+			}
+
 		} else {
 			userAccount = userAccountService.getByEmail(createDTO.getEmail());
 		}
@@ -139,7 +157,7 @@ public class UserAccountController {
 
 			} catch (Exception e) {
 				LOG.error("Mail send error", e);
-				mailService.sendAdminMail("Coinblesk Error", "Unexpected Error: " + e);
+				eventService.error(USER_ACCOUNT_CREATE_TOKEN_COULD_NOT_BE_SENT, "Token of '"+createDTO.getEmail() + "' could not be sent.");
 				throw new CoinbleskInternalError("An error happend while sending an e-mail.");
 			}
 		}
@@ -151,10 +169,12 @@ public class UserAccountController {
 
 		try {
 			userAccountService.activate(createVerifyDTO);
+
 		} catch (BusinessException exception) {
-			LOG.error("Someone tried a link with an invalid token: {}/{} - {}", createVerifyDTO.getEmail(), createVerifyDTO.getToken(),
+			LOG.warn("Someone tried a link with an invalid token: {}/{} - {}", createVerifyDTO.getEmail(), createVerifyDTO.getToken(),
 					exception.getClass().getSimpleName());
-			mailService.sendAdminMail("Wrong Link?", "Someone tried a link with an invalid token: "
+
+			eventService.warn(USER_ACCOUNT_COULD_NOT_BE_ACTIVATED_WRONG_LINK, "Someone tried a link with an invalid token: "
 					+ createVerifyDTO.getEmail()
 					+ " / "
 					+ createVerifyDTO.getToken()
@@ -170,7 +190,13 @@ public class UserAccountController {
 	public void forgot(Locale locale, @Valid @RequestBody UserAccountForgotDTO forgotDTO) throws BusinessException {
 
 		LOG.debug("Forgot password for {}", forgotDTO.getEmail());
-		userAccountService.forgot(forgotDTO.getEmail());
+		try {
+			userAccountService.forgot(forgotDTO.getEmail());
+		} catch (BusinessException exception) {
+			LOG.warn("Could not handle forgot request", exception);
+			eventService.warn(USER_ACCOUNT_COULD_NOT_HANDLE_FORGET_REQUEST, "An exception occured during the forgot request - "+exception.getClass().getSimpleName());
+			throw exception;
+		}
 
 		LOG.debug("Send forgot email to {}", forgotDTO.getEmail());
 		UserAccount userAccount = userAccountService.getByEmail(forgotDTO.getEmail());
@@ -188,7 +214,7 @@ public class UserAccountController {
 					messageSource.getMessage("forgot.email.text", new String[] { url }, locale));
 
 		} catch (Exception e) {
-			mailService.sendAdminMail("Coinblesk Error", "Unexpected Error: " + e);
+			eventService.error(USER_ACCOUNT_COULD_NOT_SEND_FORGET_EMAIL, "The forgot email could not be sent to '" + forgotDTO.getEmail() + "'.");
 			LOG.error("Mail send error", e);
 			throw new CoinbleskInternalError("An error happend while sending an e-mail.");
 		}
@@ -203,7 +229,7 @@ public class UserAccountController {
 		} catch(BusinessException exception) {
 			LOG.error("Someone tried a link with an invalid forget token: {}/{} - {}", forgotVerifyDTO.getEmail(), forgotVerifyDTO.getToken(),
 					exception.getClass().getSimpleName());
-			mailService.sendAdminMail("Wrong Link?", "Someone tried a link with an invalid forget token: "
+			eventService.warn(USER_ACCOUNT_COULD_NOT_VERIFY_FORGOT_WRONG_LINK, "Someone tried a link with an invalid token: "
 					+ forgotVerifyDTO.getEmail()
 					+ " / "
 					+ forgotVerifyDTO.getToken()
