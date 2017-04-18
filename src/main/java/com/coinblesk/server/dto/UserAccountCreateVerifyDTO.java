@@ -5,9 +5,12 @@ import javax.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class ChangePasswordDTO {
+public class UserAccountCreateVerifyDTO {
 
 	@NotNull
-	private String newPassword;
+	private String email;
+
+	@NotNull
+	private String token;
 
 }

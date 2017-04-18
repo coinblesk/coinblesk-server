@@ -42,7 +42,9 @@ import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dao.TimeLockedAddressRepository;
 import com.coinblesk.server.dao.UserAccountRepository;
 import com.coinblesk.server.dto.UserAccountCreateDTO;
+import com.coinblesk.server.dto.UserAccountCreateVerifyDTO;
 import com.coinblesk.server.dto.UserAccountDTO;
+import com.coinblesk.server.dto.UserAccountForgotVerifyDTO;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.EmailAlreadyRegisteredException;
@@ -129,15 +131,15 @@ public class UserAccountService {
 	}
 
 	@Transactional
-	public void activate(String email, String token) throws BusinessException {
-		UserAccount userAccount = getByEmail(email);
+	public void activate(UserAccountCreateVerifyDTO createVerifyDTO) throws BusinessException {
+		UserAccount userAccount = getByEmail(createVerifyDTO.getEmail());
 		if (userAccount == null) {
 			throw new UserAccountNotFoundException();
 		}
 		// if email token == null, it is okay
 		if (userAccount.getEmailToken() != null) {
 
-			if (!userAccount.getEmailToken().equals(token)) {
+			if (!userAccount.getEmailToken().equals(createVerifyDTO.getToken())) {
 				throw new InvalidEmailTokenException();
 			}
 			userAccount.setEmailToken(null);
@@ -237,19 +239,19 @@ public class UserAccountService {
 	}
 
 	@Transactional
-	public void activateForgot(String email, String forgetToken, String newPassword) throws BusinessException {
-		UserAccount userAccount = getByEmail(email);
+	public void activateForgot(UserAccountForgotVerifyDTO forgotVerifyDTO) throws BusinessException {
+		UserAccount userAccount = getByEmail(forgotVerifyDTO.getEmail());
 		if (userAccount == null) {
 			throw new UserAccountNotFoundException();
 		}
-		if (userAccount.getForgotEmailToken() == null || !userAccount.getForgotEmailToken().equals(forgetToken)) {
+		if (userAccount.getForgotEmailToken() == null || !userAccount.getForgotEmailToken().equals(forgotVerifyDTO.getToken())) {
 			throw new InvalidEmailTokenException();
 		}
-		if (newPassword.length() < MINIMAL_PASSWORD_LENGTH) {
+		if (forgotVerifyDTO.getNewPassword().length() < MINIMAL_PASSWORD_LENGTH) {
 			throw new PasswordTooShortException();
 		}
 
 		userAccount.setForgotEmailToken(null);
-		userAccount.setPassword(passwordEncoder.encode(newPassword));
+		userAccount.setPassword(passwordEncoder.encode(forgotVerifyDTO.getNewPassword()));
 	}
 }

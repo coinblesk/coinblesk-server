@@ -34,7 +34,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.coinblesk.server.dto.ChangePasswordDTO;
+import com.coinblesk.server.dto.UserAccountChangePasswordDTO;
 import com.coinblesk.server.dto.UserAccountDTO;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
@@ -84,7 +84,7 @@ public class AuthCommonController {
 		return userAccount;
 	}
 
-	@RequestMapping(value = "/user-account", method = DELETE, produces = APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/user-account", method = DELETE)
 	public void deleteAccount() throws BusinessException {
 
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -105,8 +105,8 @@ public class AuthCommonController {
 		LOG.debug("Delete account success for {}", auth.getName());
 	}
 
-	@RequestMapping(value = "/user-account/change-password", method = POST, produces = APPLICATION_JSON_UTF8_VALUE, consumes = APPLICATION_JSON_UTF8_VALUE)
-	public void changePassword(@Valid @RequestBody ChangePasswordDTO changePasswordDTO) throws BusinessException {
+	@RequestMapping(value = "/user-account/change-password", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE)
+	public void changePassword(@Valid @RequestBody UserAccountChangePasswordDTO changePasswordDTO) throws BusinessException {
 
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 

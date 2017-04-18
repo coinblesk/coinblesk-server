@@ -37,10 +37,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.coinblesk.server.auth.TokenProvider;
@@ -48,6 +46,9 @@ import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dto.LoginDTO;
 import com.coinblesk.server.dto.TokenDTO;
 import com.coinblesk.server.dto.UserAccountCreateDTO;
+import com.coinblesk.server.dto.UserAccountCreateVerifyDTO;
+import com.coinblesk.server.dto.UserAccountForgotDTO;
+import com.coinblesk.server.dto.UserAccountForgotVerifyDTO;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskAuthenticationException;
@@ -87,6 +88,7 @@ public class UserAccountController {
 
 	@RequestMapping(value = "/login", method = PUT, consumes = APPLICATION_JSON_UTF8_VALUE, produces = APPLICATION_JSON_UTF8_VALUE)
 	public TokenDTO login(@Valid @RequestBody LoginDTO loginDTO, HttpServletResponse response) throws BusinessException {
+		LOG.debug("Login trial of user {}", loginDTO.getEmail());
 
 		UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
 				loginDTO.getEmail().toLowerCase(ENGLISH), loginDTO.getPassword());
@@ -96,6 +98,8 @@ public class UserAccountController {
 			SecurityContextHolder.getContext().setAuthentication(authentication);
 			String jwt = tokenProvider.createToken(authentication);
 
+			LOG.debug("Successful login of user {}", loginDTO.getEmail());
+
 			TokenDTO token = new TokenDTO();
 			token.setToken(jwt);
 
@@ -103,21 +107,21 @@ public class UserAccountController {
 			return token;
 
 		} catch (AuthenticationException exception) {
+			// TODO add event
 			throw new CoinbleskAuthenticationException();
 		}
 	}
 
 	@RequestMapping(value = "/create", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE)
-	public void createAccount(Locale locale, @Valid @RequestBody UserAccountCreateDTO userAccountCreateDTO)
-			throws BusinessException {
-		LOG.debug("Create account for {}", userAccountCreateDTO.getEmail());
+	public void createAccount(Locale locale, @Valid @RequestBody UserAccountCreateDTO createDTO) throws BusinessException {
+		LOG.debug("Create account for {}", createDTO.getEmail());
 		// TODO: reactived if deleted flag is set
 
 		UserAccount userAccount;
-		if (!userAccountService.userExists(userAccountCreateDTO.getEmail())) {
-			userAccount = userAccountService.create(userAccountCreateDTO);
+		if (!userAccountService.userExists(createDTO.getEmail())) {
+			userAccount = userAccountService.create(createDTO);
 		} else {
-			userAccount = userAccountService.getByEmail(userAccountCreateDTO.getEmail());
+			userAccount = userAccountService.getByEmail(createDTO.getEmail());
 		}
 
 		if (userAccount.getEmailToken() != null) {
@@ -141,50 +145,46 @@ public class UserAccountController {
 		}
 	}
 
-	// http://stackoverflow.com/questions/16332092/spring-mvc-pathvariable-with-dot-is-getting-truncated
-	@RequestMapping(value = "/create-verify/{email:.+}/{token}", method = PUT)
-	public void verifyEmail(@PathVariable(value = "email") String email, @PathVariable(value = "token") String token)
-			throws BusinessException {
-
-		LOG.debug("Activate account for {}", email);
+	@RequestMapping(value = "/create-verify", method = PUT, consumes = APPLICATION_JSON_UTF8_VALUE)
+	public void verifyEmail(@Valid @RequestBody UserAccountCreateVerifyDTO createVerifyDTO) throws BusinessException {
+		LOG.debug("Activate account for {}", createVerifyDTO.getEmail());
 
 		try {
-			userAccountService.activate(email, token);
+			userAccountService.activate(createVerifyDTO);
 		} catch (BusinessException exception) {
-			LOG.error("Someone tried a link with an invalid token: {}/{} - {}", email, token,
+			LOG.error("Someone tried a link with an invalid token: {}/{} - {}", createVerifyDTO.getEmail(), createVerifyDTO.getToken(),
 					exception.getClass().getSimpleName());
 			mailService.sendAdminMail("Wrong Link?", "Someone tried a link with an invalid token: "
-					+ email
+					+ createVerifyDTO.getEmail()
 					+ " / "
-					+ token
+					+ createVerifyDTO.getToken()
 					+ " - "
 					+ exception.getClass().getSimpleName());
 			throw exception;
 		}
 
-		LOG.debug("Activate account success for {}", email);
+		LOG.debug("Activate account success for {}", createVerifyDTO.getEmail());
 	}
 
-	// http://stackoverflow.com/questions/16332092/spring-mvc-pathvariable-with-dot-is-getting-truncated
-	@RequestMapping(value = "/forgot/{email:.+}", method = POST)
-	public void forgot(Locale locale, @PathVariable(value = "email") String email) throws BusinessException {
+	@RequestMapping(value = "/forgot", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE)
+	public void forgot(Locale locale, @Valid @RequestBody UserAccountForgotDTO forgotDTO) throws BusinessException {
 
-		LOG.debug("Forgot password for {}", email);
-		userAccountService.forgot(email);
+		LOG.debug("Forgot password for {}", forgotDTO.getEmail());
+		userAccountService.forgot(forgotDTO.getEmail());
 
-		LOG.debug("Send forgot email to {}", email);
-		UserAccount userAccount = userAccountService.getByEmail(email);
+		LOG.debug("Send forgot email to {}", forgotDTO.getEmail());
+		UserAccount userAccount = userAccountService.getByEmail(forgotDTO.getEmail());
 		String forgotToken = userAccount.getForgotEmailToken();
 		String url;
 		try {
-			String path = "user-account/forgot-verify/" + URLEncoder.encode(email, "UTF-8") + "/" + forgotToken;
+			String path = "user-account/forgot-verify/" + URLEncoder.encode(forgotDTO.getEmail(), "UTF-8") + "/" + forgotToken;
 			url = cfg.getUrl() + path;
 		} catch (UnsupportedEncodingException exception) {
 			throw new CoinbleskInternalError("An internal error occured.");
 		}
 
 		try {
-			mailService.sendUserMail(email, messageSource.getMessage("forgot.email.title", null, locale),
+			mailService.sendUserMail(forgotDTO.getEmail(), messageSource.getMessage("forgot.email.title", null, locale),
 					messageSource.getMessage("forgot.email.text", new String[] { url }, locale));
 
 		} catch (Exception e) {
@@ -194,29 +194,24 @@ public class UserAccountController {
 		}
 	}
 
-	// http://stackoverflow.com/questions/16332092/spring-mvc-pathvariable-with-dot-is-getting-truncated
-	@RequestMapping(value = "/forgot-verify/{email:.+}/{forgot-token}/{new-password}", method = PUT)
-	@ResponseBody
-	public void forgotVerifyEmail(@PathVariable(value = "email") String email,
-			@PathVariable(value = "forgot-token") String forgetToken,
-			@PathVariable(value = "new-password") String newPassword) throws BusinessException {
-
-		LOG.debug("Verify password forget for account {}", email);
+	@RequestMapping(value = "/forgot-verify", method = PUT)
+	public void forgotVerifyEmail(@Valid @RequestBody UserAccountForgotVerifyDTO forgotVerifyDTO) throws BusinessException {
+		LOG.debug("Verify password forget for account {}", forgotVerifyDTO.getEmail());
 
 		try {
-			userAccountService.activateForgot(email, forgetToken, newPassword);
+			userAccountService.activateForgot(forgotVerifyDTO);
 		} catch(BusinessException exception) {
-			LOG.error("Someone tried a link with an invalid forget token: {}/{} - {}", email, forgetToken,
+			LOG.error("Someone tried a link with an invalid forget token: {}/{} - {}", forgotVerifyDTO.getEmail(), forgotVerifyDTO.getToken(),
 					exception.getClass().getSimpleName());
 			mailService.sendAdminMail("Wrong Link?", "Someone tried a link with an invalid forget token: "
-					+ email
+					+ forgotVerifyDTO.getEmail()
 					+ " / "
-					+ forgetToken
+					+ forgotVerifyDTO.getToken()
 					+ " - "
 					+ exception.getClass().getSimpleName());
 			throw exception;
 		}
 
-		LOG.debug("Activate forgot password success for {}", email);
+		LOG.debug("Activate forgot password success for {}", forgotVerifyDTO.getEmail());
 	}
 }
