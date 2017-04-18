@@ -18,13 +18,11 @@ package com.coinblesk.server.controller;
 import static com.coinblesk.server.auth.JWTConfigurer.AUTHORIZATION_HEADER;
 import static java.util.Locale.ENGLISH;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
-import static org.springframework.http.ResponseEntity.ok;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 import static org.springframework.web.bind.annotation.RequestMethod.PUT;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.util.Collections;
 import java.util.Locale;
 
 import javax.servlet.http.HttpServletResponse;
@@ -34,7 +32,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -49,6 +46,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.coinblesk.server.auth.TokenProvider;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dto.LoginDTO;
+import com.coinblesk.server.dto.TokenDTO;
 import com.coinblesk.server.dto.UserAccountCreateDTO;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.exceptions.BusinessException;
@@ -88,7 +86,7 @@ public class UserAccountController {
 	}
 
 	@RequestMapping(value = "/login", method = PUT, consumes = APPLICATION_JSON_UTF8_VALUE, produces = APPLICATION_JSON_UTF8_VALUE)
-	public ResponseEntity<?> login(@Valid @RequestBody LoginDTO loginDTO, HttpServletResponse response) throws BusinessException {
+	public TokenDTO login(@Valid @RequestBody LoginDTO loginDTO, HttpServletResponse response) throws BusinessException {
 
 		UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
 				loginDTO.getEmail().toLowerCase(ENGLISH), loginDTO.getPassword());
@@ -96,11 +94,13 @@ public class UserAccountController {
 		try {
 			Authentication authentication = this.authenticationManager.authenticate(authenticationToken);
 			SecurityContextHolder.getContext().setAuthentication(authentication);
-
 			String jwt = tokenProvider.createToken(authentication);
-			response.addHeader(AUTHORIZATION_HEADER, "Bearer " + jwt);
 
-			return ok(Collections.singletonMap("token", jwt));
+			TokenDTO token = new TokenDTO();
+			token.setToken(jwt);
+
+			response.addHeader(AUTHORIZATION_HEADER, "Bearer " + jwt);
+			return token;
 
 		} catch (AuthenticationException exception) {
 			throw new CoinbleskAuthenticationException();
