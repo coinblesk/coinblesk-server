@@ -145,7 +145,7 @@ public class UserAccountController {
 		}
 	}
 
-	@RequestMapping(value = "/create-verify", method = PUT, consumes = APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/create-verify", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE)
 	public void verifyEmail(@Valid @RequestBody UserAccountCreateVerifyDTO createVerifyDTO) throws BusinessException {
 		LOG.debug("Activate account for {}", createVerifyDTO.getEmail());
 
@@ -194,7 +194,7 @@ public class UserAccountController {
 		}
 	}
 
-	@RequestMapping(value = "/forgot-verify", method = PUT)
+	@RequestMapping(value = "/forgot-verify", method = POST)
 	public void forgotVerifyEmail(@Valid @RequestBody UserAccountForgotVerifyDTO forgotVerifyDTO) throws BusinessException {
 		LOG.debug("Verify password forget for account {}", forgotVerifyDTO.getEmail());
 

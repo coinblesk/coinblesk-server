@@ -136,14 +136,14 @@ public class UserAccountService {
 		if (userAccount == null) {
 			throw new UserAccountNotFoundException();
 		}
-		// if email token == null, it is okay
-		if (userAccount.getEmailToken() != null) {
-
-			if (!userAccount.getEmailToken().equals(createVerifyDTO.getToken())) {
-				throw new InvalidEmailTokenException();
-			}
-			userAccount.setEmailToken(null);
+		if (userAccount.getEmailToken() == null) {
+			throw new InvalidEmailTokenException();
 		}
+		if (!userAccount.getEmailToken().equals(createVerifyDTO.getToken())) {
+			throw new InvalidEmailTokenException();
+		}
+
+		userAccount.setEmailToken(null);
 	}
 
 	@Transactional
