@@ -21,7 +21,6 @@ import static java.util.Locale.ENGLISH;
 import static java.util.UUID.randomUUID;
 
 import java.math.BigDecimal;
-import java.security.SecureRandom;
 import java.util.Date;
 import java.util.List;
 
@@ -38,7 +37,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.json.v1.Type;
-import com.coinblesk.json.v1.UserAccountStatusTO;
 import com.coinblesk.json.v1.UserAccountTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dao.TimeLockedAddressRepository;
@@ -63,14 +61,11 @@ import com.coinblesk.util.InsufficientFunds;
 @Service
 public class UserAccountService {
 
-	// as seen in:
-	// http://www.mkyong.com/regular-expressions/how-to-validate-email-address-with-regular-expression/
-	public static final String EMAIL_PATTERN = "^[_A-Za-z0-9-+]+(\\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*"
-			+ "(\\.[A-Za-z]{2,})$";
-	public static final int MINIMAL_PASSWORD_LENGTH = 6;
-
-	private final static SecureRandom random = new SecureRandom();
 	private final static Logger LOG = LoggerFactory.getLogger(UserAccountService.class);
+
+	// as seen in: http://www.mkyong.com/regular-expressions/how-to-validate-email-address-with-regular-expression/
+	public static final String EMAIL_PATTERN = "^[_A-Za-z0-9-+]+(\\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$";
+	public static final int MINIMAL_PASSWORD_LENGTH = 6;
 
 	private final UserAccountRepository repository;
 	private final TimeLockedAddressRepository addressRepository;
@@ -150,22 +145,21 @@ public class UserAccountService {
 	}
 
 	@Transactional
-	public UserAccountStatusTO delete(String email) {
+	public void delete(String email) throws BusinessException {
 
-		final UserAccount found = repository.findByEmail(email);
-		if (found == null) {
-			// no such email address - notok
-			return new UserAccountStatusTO().type(Type.NO_EMAIL);
+		UserAccount userAccount = repository.findByEmail(email);
+		if (userAccount == null) {
+			throw new UserAccountNotFoundException();
 		}
-		found.setDeleted(true);
-		return new UserAccountStatusTO().setSuccess();
+
+		userAccount.setDeleted(true);
 	}
 
 	@Transactional(readOnly = true)
-	public UserAccountDTO getDTO(String email) {
+	public UserAccountDTO getDTO(String email) throws BusinessException {
 		UserAccount userAccount = repository.findByEmail(email);
 		if (userAccount == null) {
-			return null;
+			throw new UserAccountNotFoundException();
 		}
 		long satoshi = userAccount.getBalance().multiply(new BigDecimal(ONE_BITCOIN_IN_SATOSHI)).longValue();
 

@@ -15,7 +15,6 @@
  */
 package com.coinblesk.server.controller;
 
-import static com.coinblesk.json.v1.Type.SERVER_ERROR;
 import static com.coinblesk.server.config.UserRole.ROLE_ADMIN;
 import static com.coinblesk.server.config.UserRole.ROLE_USER;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
@@ -33,10 +32,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.coinblesk.json.v1.UserAccountStatusTO;
 import com.coinblesk.server.dto.ChangePasswordDTO;
 import com.coinblesk.server.dto.UserAccountDTO;
 import com.coinblesk.server.exceptions.BusinessException;
@@ -66,50 +63,46 @@ public class AuthCommonController {
 	}
 
 	@RequestMapping(value = "/user-account", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
-	@ResponseBody
-	public UserAccountDTO getUserAccount() {
+	public UserAccountDTO getUserAccount() throws BusinessException {
+
+		UserAccountDTO userAccount;
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		LOG.debug("Get user account for {}", auth.getName());
 
 		try {
-			UserAccountDTO userAccount = userAccountService.getDTO(auth.getName());
-			if (userAccount == null) {
-				LOG.error("Someone tried to access a user account with an invalid email address: {}", auth);
-				mailService.sendAdminMail("Wrong Account?",
-						"Someone tried to access a user account with an invalid email address: " + auth);
-				return null;
-			}
-			LOG.debug("GET user account success for {}", auth.getName());
-			return userAccount;
+			userAccount = userAccountService.getDTO(auth.getName());
 
-		} catch (Exception e) {
-			LOG.error("User create error", e);
-			throw new CoinbleskInternalError("An internal error occurred."+e.getMessage());
+		} catch(BusinessException exception) {
+			LOG.error("Someone tried to access a user account with an invalid email address: {}", auth);
+			mailService.sendAdminMail("Wrong Account?",
+					"Someone tried to access a user account with an invalid email address: " + auth);
+
+			throw exception;
 		}
+
+		LOG.debug("GET user account success for {}", auth.getName());
+		return userAccount;
 	}
 
 	@RequestMapping(value = "/user-account", method = DELETE, produces = APPLICATION_JSON_UTF8_VALUE)
-	@ResponseBody
-	public UserAccountStatusTO deleteAccount() {
+	public void deleteAccount() throws BusinessException {
+
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		LOG.debug("Delete account for {}", auth.getName());
-		try {
-			UserAccountStatusTO status = userAccountService.delete(auth.getName());
-			if (!status.isSuccess()) {
-				LOG.error("Someone tried a delete account with an invalid email address: {}/{}", auth, status.type().name());
-				mailService.sendAdminMail("Wrong Delete Account?", "Someone tried a delete account with an invalid "
-						+ "email address: "
-						+ auth
-						+ "/"
-						+ status.type().name());
-			}
-			LOG.debug("Delete account success for {}", auth.getName());
-			return status;
 
-		} catch (Exception e) {
-			LOG.error("User create error", e);
-			return new UserAccountStatusTO().type(SERVER_ERROR).message(e.getMessage());
+		try {
+			userAccountService.delete(auth.getName());
+
+		} catch(BusinessException exception) {
+			LOG.error("Someone tried a delete account with an invalid email address: {} - {}", auth, exception.getClass().getSimpleName());
+			mailService.sendAdminMail("Wrong Delete Account?", "Someone tried a delete account with an invalid "
+					+ "email address: "
+					+ auth
+					+ "/"
+					+ exception.getClass().getSimpleName());
+			throw exception;
 		}
+		LOG.debug("Delete account success for {}", auth.getName());
 	}
 
 	@RequestMapping(value = "/user-account/change-password", method = POST, produces = APPLICATION_JSON_UTF8_VALUE, consumes = APPLICATION_JSON_UTF8_VALUE)
@@ -120,6 +113,7 @@ public class AuthCommonController {
 		if (auth != null && auth.getName() != null) {
 			LOG.debug("Change password account for {}", auth.getName());
 			userAccountService.changePassword(auth.getName(), changePasswordDTO.getNewPassword());
+			LOG.debug("Change password account success for {}", auth.getName());
 
 		} else {
 			LOG.error("User is not logged in while trying to change the password");
