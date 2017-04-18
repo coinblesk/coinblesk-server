@@ -19,8 +19,8 @@ import static com.coinblesk.server.auth.JWTConfigurer.AUTHORIZATION_HEADER;
 import static java.util.Locale.ENGLISH;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.http.ResponseEntity.ok;
-import static org.springframework.web.bind.annotation.RequestMethod.GET;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
+import static org.springframework.web.bind.annotation.RequestMethod.PUT;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -87,7 +87,7 @@ public class UserAccountController {
 		this.authenticationManager = authenticationManager;
 	}
 
-	@RequestMapping(value = "/login", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE, produces = APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/login", method = PUT, consumes = APPLICATION_JSON_UTF8_VALUE, produces = APPLICATION_JSON_UTF8_VALUE)
 	public ResponseEntity<?> login(@Valid @RequestBody LoginDTO loginDTO, HttpServletResponse response) throws BusinessException {
 
 		UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
@@ -123,7 +123,7 @@ public class UserAccountController {
 		if (userAccount.getEmailToken() != null) {
 			try {
 				LOG.debug("send email to {}", userAccount.getEmail());
-				String path = "user-account/verify/"
+				String path = "user-account/create-verify/"
 						+ URLEncoder.encode(userAccount.getEmail(), "UTF-8")
 						+ "/"
 						+ userAccount.getEmailToken();
@@ -142,7 +142,7 @@ public class UserAccountController {
 	}
 
 	// http://stackoverflow.com/questions/16332092/spring-mvc-pathvariable-with-dot-is-getting-truncated
-	@RequestMapping(value = "/verify/{email:.+}/{token}", method = GET)
+	@RequestMapping(value = "/create-verify/{email:.+}/{token}", method = PUT)
 	public void verifyEmail(@PathVariable(value = "email") String email, @PathVariable(value = "token") String token)
 			throws BusinessException {
 
@@ -166,7 +166,7 @@ public class UserAccountController {
 	}
 
 	// http://stackoverflow.com/questions/16332092/spring-mvc-pathvariable-with-dot-is-getting-truncated
-	@RequestMapping(value = "/forgot/{email:.+}", method = GET)
+	@RequestMapping(value = "/forgot/{email:.+}", method = POST)
 	public void forgot(Locale locale, @PathVariable(value = "email") String email) throws BusinessException {
 
 		LOG.debug("Forgot password for {}", email);
@@ -195,7 +195,7 @@ public class UserAccountController {
 	}
 
 	// http://stackoverflow.com/questions/16332092/spring-mvc-pathvariable-with-dot-is-getting-truncated
-	@RequestMapping(value = "/forgot-verify/{email:.+}/{forgot-token}/{new-password}", method = GET)
+	@RequestMapping(value = "/forgot-verify/{email:.+}/{forgot-token}/{new-password}", method = PUT)
 	@ResponseBody
 	public void forgotVerifyEmail(@PathVariable(value = "email") String email,
 			@PathVariable(value = "forgot-token") String forgetToken,
