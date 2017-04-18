@@ -15,17 +15,15 @@
  */
 package com.coinblesk.server.controller;
 
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
-import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.Locale;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 
@@ -44,28 +42,26 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.coinblesk.json.v1.Type;
-import com.coinblesk.json.v1.UserAccountStatusTO;
-import com.coinblesk.json.v1.UserAccountTO;
 import com.coinblesk.server.auth.JWTConfigurer;
 import com.coinblesk.server.auth.TokenProvider;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dto.LoginDTO;
+import com.coinblesk.server.dto.UserAccountCreateDTO;
 import com.coinblesk.server.entity.UserAccount;
+import com.coinblesk.server.exceptions.BusinessException;
+import com.coinblesk.server.exceptions.CoinbleskInternalError;
 import com.coinblesk.server.service.MailService;
 import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.server.utils.ApiVersion;
-import com.coinblesk.util.Pair;
 
 /**
  * @author Thomas Bocek
  */
 @RestController
 @RequestMapping(value = "/user-account")
-@ApiVersion({"v1", ""})
+@ApiVersion({ "v1", "" })
 public class UserAccountController {
 
 	private final static Logger LOG = LoggerFactory.getLogger(UserAccountController.class);
@@ -78,8 +74,9 @@ public class UserAccountController {
 	private final AuthenticationManager authenticationManager;
 
 	@Autowired
-	public UserAccountController(UserAccountService userAccountService, MailService mailService, MessageSource messageSource,
-						  AppConfig cfg, TokenProvider tokenProvider, AuthenticationManager authenticationManager) {
+	public UserAccountController(UserAccountService userAccountService, MailService mailService,
+			MessageSource messageSource, AppConfig cfg, TokenProvider tokenProvider,
+			AuthenticationManager authenticationManager) {
 		this.userAccountService = userAccountService;
 		this.mailService = mailService;
 		this.messageSource = messageSource;
@@ -88,12 +85,11 @@ public class UserAccountController {
 		this.authenticationManager = authenticationManager;
 	}
 
-	@RequestMapping(value = "/login", method = POST,
-			consumes = APPLICATION_JSON_UTF8_VALUE, produces = APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/login", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE, produces = APPLICATION_JSON_UTF8_VALUE)
 	public ResponseEntity<?> login(@Valid @RequestBody LoginDTO loginDTO, HttpServletResponse response) {
 
-		UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(loginDTO
-			.getEmail().toLowerCase(Locale.ENGLISH), loginDTO.getPassword());
+		UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+				loginDTO.getEmail().toLowerCase(Locale.ENGLISH), loginDTO.getPassword());
 
 		try {
 			Authentication authentication = this.authenticationManager.authenticate(authenticationToken);
@@ -104,134 +100,122 @@ public class UserAccountController {
 
 			return ResponseEntity.ok(Collections.singletonMap("token", jwt));
 		} catch (AuthenticationException exception) {
-			return new ResponseEntity<>(Collections.singletonMap("AuthenticationException", exception
-				.getLocalizedMessage()), HttpStatus.UNAUTHORIZED);
+			return new ResponseEntity<>(
+					Collections.singletonMap("AuthenticationException", exception.getLocalizedMessage()),
+					HttpStatus.UNAUTHORIZED);
 		}
 	}
 
-	// CRUD for the user
-	@RequestMapping(value = "/create", method = POST,
-			consumes = APPLICATION_JSON_UTF8_VALUE, produces = APPLICATION_JSON_UTF8_VALUE)
-	@ResponseBody
-	public UserAccountStatusTO createAccount(Locale locale, @RequestBody UserAccountTO userAccount) {
-		LOG.debug("Create account for {}", userAccount.email());
-		try {
-			// TODO: reactived if deleted flag is set
-			Pair<UserAccountStatusTO, UserAccount> pair = userAccountService.create(userAccount);
-			if ((pair.element0().isSuccess() || pair.element0().type() == Type
-				.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_NOT_ACTIVATED) && pair.element1() != null && pair.element1()
-				.getEmailToken() != null) {
+	@RequestMapping(value = "/create", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE)
+	public void createAccount(Locale locale, @Valid @RequestBody UserAccountCreateDTO userAccountCreateDTO)
+			throws BusinessException {
+		LOG.debug("Create account for {}", userAccountCreateDTO.getEmail());
+		// TODO: reactived if deleted flag is set
 
-				try {
-					LOG.debug("send email to {}", pair.element1().getEmail());
-					final String path = "v1/user-account/verify/" + URLEncoder.encode(pair.element1().getEmail(), "UTF-8") +
-						"/" + pair.element1().getEmailToken();
-					final String url = cfg.getUrl() + path;
-					mailService.sendUserMail(pair.element1().getEmail(), messageSource.getMessage("activation.email" +
-						".title", null, locale), messageSource.getMessage("activation.email.text", new String[]{url},
-						locale));
-				} catch (Exception e) {
-					LOG.error("Mail send error", e);
-					mailService.sendAdminMail("Coinblesk Error", "Unexpected Error: " + e);
-				}
-			}
-			return pair.element0();
-		} catch (Exception e) {
-			LOG.error("User create error", e);
-			return new UserAccountStatusTO().type(Type.SERVER_ERROR).message(e.getMessage());
+		UserAccount userAccount;
+		if (!userAccountService.userExists(userAccountCreateDTO.getEmail())) {
+			userAccount = userAccountService.create(userAccountCreateDTO);
+		} else {
+			userAccount = userAccountService.getByEmail(userAccountCreateDTO.getEmail());
 		}
-	}
 
-	@RequestMapping(value = "/verify/{email}/{token}", method = GET)
-	@ResponseBody
-	public String verifyEmail(@PathVariable(value = "email") String email, @PathVariable(value = "token") String
-		token, HttpServletRequest request) {
-		LOG.debug("Activate account for {}", email);
-		try {
-			UserAccountStatusTO status = userAccountService.activate(email, token);
-			if (!status.isSuccess()) {
-				LOG.error("Someone tried a link with an invalid token: {}/{}/{}", email, token, status.type().name());
-				mailService.sendAdminMail("Wrong Link?", "Someone tried a link with an invalid token: " + email +
-					" / " + token + "/" + status.type().name());
-				throw new BadRequestException("Wrong Link");
+		if (userAccount.getEmailToken() != null) {
+			try {
+				LOG.debug("send email to {}", userAccount.getEmail());
+				String path = "user-account/verify/"
+						+ URLEncoder.encode(userAccount.getEmail(), "UTF-8")
+						+ "/"
+						+ userAccount.getEmailToken();
+				String url = cfg.getUrl() + path;
+
+				mailService.sendUserMail(userAccount.getEmail(),
+						messageSource.getMessage("activation.email" + ".title", null, locale),
+						messageSource.getMessage("activation.email.text", new String[] { url }, locale));
+
+			} catch (Exception e) {
+				LOG.error("Mail send error", e);
+				mailService.sendAdminMail("Coinblesk Error", "Unexpected Error: " + e);
+				throw new CoinbleskInternalError("An error happend while sending an e-mail.");
 			}
-			LOG.debug("Activate account success for {}", email);
-			// TODO: text/layout
-			return "Activate account success";
-		} catch (Exception e) {
-			LOG.error("User create error", e);
-			throw new InternalServerErrorException(e);
 		}
 	}
 
 	// http://stackoverflow.com/questions/16332092/spring-mvc-pathvariable-with-dot-is-getting-truncated
-	@RequestMapping(value = "/forgot/{email:.+}", method = GET)
-	@ResponseBody
-	public UserAccountStatusTO forgot(Locale locale, @PathVariable(value = "email") String email, HttpServletRequest
-		request) {
-		LOG.debug("Forgot password for {}", email);
-		try {
-			Pair<UserAccountStatusTO, UserAccountTO> pair = userAccountService.forgot(email);
-			if (pair.element0().isSuccess()) {
-				try {
-					LOG.debug("send forgot email to {}", email);
-					String forgotToken = pair.element1().message();
-					String password = pair.element1().password();
-					final String path = "v1/user-account/forgot-verify/" + URLEncoder.encode(email, "UTF-8") + "/" +
-						forgotToken;
-					final String url = cfg.getUrl() + path;
-					mailService.sendUserMail(email, messageSource.getMessage("forgot.email.title", null, locale),
-						messageSource.getMessage("forgot.email.text", new String[]{url, password}, locale));
-				} catch (Exception e) {
-					LOG.error("Mail send error", e);
-					mailService.sendAdminMail("Coinblesk Error", "Unexpected Error: " + e);
-				}
-			}
-			return pair.element0();
-		} catch (Exception e) {
-			LOG.error("Forget password error", e);
-			return new UserAccountStatusTO().type(Type.SERVER_ERROR).message(e.getMessage());
-		}
-	}
+	@RequestMapping(value = "/verify/{email:.+}/{token}", method = GET)
+	public void verifyEmail(@PathVariable(value = "email") String email, @PathVariable(value = "token") String token)
+			throws BusinessException {
 
-	@RequestMapping(value = "/forgot-verify/{email}/{forgot-token}", method = GET)
-	@ResponseBody
-	public String forgotVerifyEmail(@PathVariable(value = "email") String email, @PathVariable(value = "forgot-token")
-		String forgetToken, HttpServletRequest request) {
 		LOG.debug("Activate account for {}", email);
+
 		try {
-			UserAccountStatusTO status = userAccountService.activateForgot(email, forgetToken);
-			if (!status.isSuccess()) {
-				LOG.error("Someone tried a link with an invalid forget token: {}/{}/{}", email, forgetToken, status
-					.type().name());
-				mailService.sendAdminMail("Wrong Link?", "Someone tried a link with an invalid forget token: " + email
-					+ " / " + forgetToken + "/" + status.type().name());
-				throw new BadRequestException("Wrong Link");
-			}
-			LOG.debug("Activate forgot password success for {}", email);
-			// TODO: text/layout
-			return "Password reset verify success";
+			userAccountService.activate(email, token);
+		} catch (BusinessException exception) {
+			LOG.error("Someone tried a link with an invalid token: {}/{} - {}", email, token,
+					exception.getClass().getSimpleName());
+			mailService.sendAdminMail("Wrong Link?", "Someone tried a link with an invalid token: "
+					+ email
+					+ " / "
+					+ token
+					+ " - "
+					+ exception.getClass().getSimpleName());
+			throw exception;
+		}
+
+		LOG.debug("Activate account success for {}", email);
+	}
+
+	// http://stackoverflow.com/questions/16332092/spring-mvc-pathvariable-with-dot-is-getting-truncated
+	@RequestMapping(value = "/forgot/{email:.+}", method = GET)
+	public void forgot(Locale locale, @PathVariable(value = "email") String email) throws BusinessException {
+
+		LOG.debug("Forgot password for {}", email);
+		userAccountService.forgot(email);
+
+		LOG.debug("Send forgot email to {}", email);
+		UserAccount userAccount = userAccountService.getByEmail(email);
+		String forgotToken = userAccount.getForgotEmailToken();
+		String url;
+		try {
+			String path = "user-account/forgot-verify/" + URLEncoder.encode(email, "UTF-8") + "/" + forgotToken;
+			url = cfg.getUrl() + path;
+		} catch (UnsupportedEncodingException exception) {
+			throw new CoinbleskInternalError("An internal error occured.");
+		}
+
+		try {
+			mailService.sendUserMail(email, messageSource.getMessage("forgot.email.title", null, locale),
+					messageSource.getMessage("forgot.email.text", new String[] { url }, locale));
+
 		} catch (Exception e) {
-			LOG.error("Password reset verify error", e);
-			throw new InternalServerErrorException(e);
+			mailService.sendAdminMail("Coinblesk Error", "Unexpected Error: " + e);
+			LOG.error("Mail send error", e);
+			throw new CoinbleskInternalError("An error happend while sending an e-mail.");
 		}
 	}
 
-	@SuppressWarnings("serial")
-	@ResponseStatus(value = BAD_REQUEST)
-	public class BadRequestException extends RuntimeException {
+	// http://stackoverflow.com/questions/16332092/spring-mvc-pathvariable-with-dot-is-getting-truncated
+	@RequestMapping(value = "/forgot-verify/{email:.+}/{forgot-token}/{new-password}", method = GET)
+	@ResponseBody
+	public void forgotVerifyEmail(@PathVariable(value = "email") String email,
+			@PathVariable(value = "forgot-token") String forgetToken,
+			@PathVariable(value = "new-password") String newPassword) throws BusinessException {
 
-		public BadRequestException(String reason) {
-			super(reason);
+		LOG.debug("Verify password forget for account {}", email);
+
+		try {
+			userAccountService.activateForgot(email, forgetToken, newPassword);
+		} catch(BusinessException exception) {
+			LOG.error("Someone tried a link with an invalid forget token: {}/{} - {}", email, forgetToken,
+					exception.getClass().getSimpleName());
+			mailService.sendAdminMail("Wrong Link?", "Someone tried a link with an invalid forget token: "
+					+ email
+					+ " / "
+					+ forgetToken
+					+ " - "
+					+ exception.getClass().getSimpleName());
+			throw exception;
 		}
-	}
 
-	@SuppressWarnings("serial")
-	@ResponseStatus(value = INTERNAL_SERVER_ERROR)
-	public class InternalServerErrorException extends RuntimeException {
-
-		public InternalServerErrorException(Throwable t) {
-			super(t);
-		}
+		LOG.debug("Activate forgot password success for {}", email);
 	}
 }

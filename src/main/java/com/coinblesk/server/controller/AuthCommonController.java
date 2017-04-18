@@ -15,7 +15,6 @@
  */
 package com.coinblesk.server.controller;
 
-import static com.coinblesk.json.v1.Type.ACCOUNT_ERROR;
 import static com.coinblesk.json.v1.Type.SERVER_ERROR;
 import static com.coinblesk.server.config.UserRole.ROLE_ADMIN;
 import static com.coinblesk.server.config.UserRole.ROLE_USER;
@@ -24,8 +23,7 @@ import static org.springframework.web.bind.annotation.RequestMethod.DELETE;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +37,10 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.coinblesk.json.v1.UserAccountStatusTO;
-import com.coinblesk.json.v1.UserAccountTO;
+import com.coinblesk.server.dto.ChangePasswordDTO;
+import com.coinblesk.server.dto.UserAccountDTO;
+import com.coinblesk.server.exceptions.BusinessException;
+import com.coinblesk.server.exceptions.CoinbleskInternalError;
 import com.coinblesk.server.service.MailService;
 import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.server.utils.ApiVersion;
@@ -66,12 +67,12 @@ public class AuthCommonController {
 
 	@RequestMapping(value = "/user-account", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
-	public UserAccountTO getUserAccount() {
+	public UserAccountDTO getUserAccount() {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		LOG.debug("Get user account for {}", auth.getName());
 
 		try {
-			UserAccountTO userAccount = userAccountService.get(auth.getName());
+			UserAccountDTO userAccount = userAccountService.getDTO(auth.getName());
 			if (userAccount == null) {
 				LOG.error("Someone tried to access a user account with an invalid email address: {}", auth);
 				mailService.sendAdminMail("Wrong Account?",
@@ -83,7 +84,7 @@ public class AuthCommonController {
 
 		} catch (Exception e) {
 			LOG.error("User create error", e);
-			return new UserAccountTO().type(SERVER_ERROR).message(e.getMessage());
+			throw new CoinbleskInternalError("An internal error occurred."+e.getMessage());
 		}
 	}
 
@@ -111,16 +112,18 @@ public class AuthCommonController {
 		}
 	}
 
-	@RequestMapping(value = "/user-account/password", method = POST, produces = APPLICATION_JSON_UTF8_VALUE, consumes = APPLICATION_JSON_UTF8_VALUE)
-	public UserAccountStatusTO changePassword(@RequestBody UserAccountTO to, HttpServletRequest request,
-			HttpServletResponse response) {
+	@RequestMapping(value = "/user-account/change-password", method = POST, produces = APPLICATION_JSON_UTF8_VALUE, consumes = APPLICATION_JSON_UTF8_VALUE)
+	public void changePassword(@Valid @RequestBody ChangePasswordDTO changePasswordDTO) throws BusinessException {
+
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-		LOG.debug("Change password account for {}", to.email());
-		if (auth != null) {
-			UserAccountStatusTO status = userAccountService.changePassword(auth.getName(), to.password());
-			return status;
+
+		if (auth != null && auth.getName() != null) {
+			LOG.debug("Change password account for {}", auth.getName());
+			userAccountService.changePassword(auth.getName(), changePasswordDTO.getNewPassword());
+
 		} else {
-			return new UserAccountStatusTO().type(ACCOUNT_ERROR);
+			LOG.error("User is not logged in while trying to change the password");
+			throw new CoinbleskInternalError("Account not found while changing the password.");
 		}
 
 	}

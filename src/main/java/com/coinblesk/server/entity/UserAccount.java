@@ -67,9 +67,6 @@ public class UserAccount implements Serializable {
 	@Column(name = "EMAIL_TOKEN")
 	private String emailToken;
 
-	@Column(name = "FORGOT_PASSWORD")
-	private String forgotPassword;
-
 	@Column(name = "FORGOT_EMAIL_TOKEN")
 	private String forgotEmailToken;
 
@@ -136,15 +133,6 @@ public class UserAccount implements Serializable {
 
 	public UserAccount setEmailToken(String emailToken) {
 		this.emailToken = emailToken;
-		return this;
-	}
-
-	public String getForgotPassword() {
-		return forgotPassword;
-	}
-
-	public UserAccount setForgotPassword(String forgotPassword) {
-		this.forgotPassword = forgotPassword;
 		return this;
 	}
 
