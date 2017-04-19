@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.bitcoinj.core.Address;
@@ -140,7 +139,7 @@ public class AuthAdminController {
 
 	@RequestMapping(value = "/events", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
-	public Set<Event> getEvents(@RequestParam("urgence") EventUrgence urgence) {
+	public List<Event> getEvents(@RequestParam("urgence") EventUrgence urgence) {
 		return eventService.getEventsWithUrgenceOrHigher(urgence);
 	}
 }

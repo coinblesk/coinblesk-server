@@ -8,10 +8,12 @@ import static com.coinblesk.server.enumerator.EventUrgence.FATAL;
 import static com.coinblesk.server.enumerator.EventUrgence.INFO;
 import static com.coinblesk.server.enumerator.EventUrgence.WARN;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -71,8 +73,8 @@ public class EventService {
 		this.addEvent(FATAL, type, description);
 	}
 
-	public Set<Event> getEventsWithUrgenceOrHigher(EventUrgence urgence) {
-		Set<Event> events = new HashSet<>();
+	public List<Event> getEventsWithUrgenceOrHigher(EventUrgence urgence) {
+		List<Event> events = new ArrayList<>();
 		if(FATAL.equals(urgence) || ERROR.equals(urgence) || WARN.equals(urgence) || INFO.equals(urgence) || DEBUG.equals(urgence)) {
 			events.addAll(eventRepository.getEventsWithUrgence(FATAL));
 		}
