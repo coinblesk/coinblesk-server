@@ -71,6 +71,26 @@ public class EventService {
 		this.addEvent(FATAL, type, description);
 	}
 
+	public Set<Event> getEventsWithUrgenceOrHigher(EventUrgence urgence) {
+		Set<Event> events = new HashSet<>();
+		if(FATAL.equals(urgence) || ERROR.equals(urgence) || WARN.equals(urgence) || INFO.equals(urgence) || DEBUG.equals(urgence)) {
+			events.addAll(eventRepository.getEventsWithUrgence(FATAL));
+		}
+		if(ERROR.equals(urgence) || WARN.equals(urgence) || INFO.equals(urgence) || DEBUG.equals(urgence)) {
+			events.addAll(eventRepository.getEventsWithUrgence(ERROR));
+		}
+		if(WARN.equals(urgence) || INFO.equals(urgence) || DEBUG.equals(urgence)) {
+			events.addAll(eventRepository.getEventsWithUrgence(WARN));
+		}
+		if(INFO.equals(urgence) || DEBUG.equals(urgence)) {
+			events.addAll(eventRepository.getEventsWithUrgence(INFO));
+		}
+		if(DEBUG.equals(urgence)) {
+			events.addAll(eventRepository.getEventsWithUrgence(DEBUG));
+		}
+		return events;
+	}
+
 	@Transactional
 	@Scheduled(cron = "0 0 3 * * *") // every day at 3am
 	public void scheduledRemovalOfOldEntries() {

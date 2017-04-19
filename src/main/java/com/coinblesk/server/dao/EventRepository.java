@@ -9,6 +9,7 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 
 import com.coinblesk.server.entity.Event;
+import com.coinblesk.server.enumerator.EventUrgence;
 
 public interface EventRepository extends CrudRepository<Event, Long> {
 
@@ -21,5 +22,8 @@ public interface EventRepository extends CrudRepository<Event, Long> {
 
 	@Query("SELECT e FROM EVENT e WHERE e.date BETWEEN (:start) AND (:end)")
 	public Set<Event> getEventsBetween(@Param("start") Date beginningDate, @Param("end") Date endDate);
+
+	@Query("SELECT e FROM EVENT e WHERE e.urgence = (:urgence)")
+	public Set<Event> getEventsWithUrgence(@Param("urgence") EventUrgence urgence);
 
 }

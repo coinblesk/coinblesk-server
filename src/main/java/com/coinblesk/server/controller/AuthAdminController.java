@@ -16,6 +16,7 @@
 package com.coinblesk.server.controller;
 
 import static com.coinblesk.server.config.UserRole.ROLE_ADMIN;
+import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 
 import java.time.Instant;
@@ -23,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.bitcoinj.core.Address;
@@ -36,14 +38,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dto.AccountDTO;
 import com.coinblesk.server.dto.TimeLockedAddressDTO;
 import com.coinblesk.server.entity.Account;
+import com.coinblesk.server.entity.Event;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
+import com.coinblesk.server.enumerator.EventUrgence;
 import com.coinblesk.server.service.AccountService;
+import com.coinblesk.server.service.EventService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.util.Pair;
@@ -66,12 +72,15 @@ public class AuthAdminController {
 	private final AppConfig appConfig;
 	private final WalletService walletService;
 	private final AccountService accountService;
+	private final EventService eventService;
 
 	@Autowired
-	public AuthAdminController(AppConfig appConfig, WalletService walletService, AccountService accountService) {
+	public AuthAdminController(AppConfig appConfig, WalletService walletService, AccountService accountService,
+			EventService eventService) {
 		this.appConfig = appConfig;
 		this.walletService = walletService;
 		this.accountService = accountService;
+		this.eventService = eventService;
 	}
 
 	@RequestMapping(value = "/balance", method = GET)
@@ -127,5 +136,11 @@ public class AuthAdminController {
 				.ofEpochSecond(account.timeCreated())), account.virtualBalance(), satoshiBalance, account
 				.virtualBalance() + satoshiBalance, addresses);
 		}).collect(Collectors.toList());
+	}
+
+	@RequestMapping(value = "/events", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@ResponseBody
+	public Set<Event> getEvents(@RequestParam("urgence") EventUrgence urgence) {
+		return eventService.getEventsWithUrgenceOrHigher(urgence);
 	}
 }

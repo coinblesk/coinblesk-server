@@ -24,6 +24,7 @@ import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_COULD_NOT_V
 import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_CREATE_TOKEN_COULD_NOT_BE_SENT;
 import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_LOGIN_FAILED;
 import static java.util.Locale.ENGLISH;
+import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 import static org.springframework.web.bind.annotation.RequestMethod.PUT;
@@ -46,6 +47,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.coinblesk.server.auth.TokenProvider;
@@ -97,6 +100,7 @@ public class UserAccountController {
 	}
 
 	@RequestMapping(value = "/login", method = PUT, consumes = APPLICATION_JSON_UTF8_VALUE, produces = APPLICATION_JSON_UTF8_VALUE)
+	@ResponseBody
 	public TokenDTO login(@Valid @RequestBody LoginDTO loginDTO, HttpServletResponse response) throws BusinessException {
 		LOG.debug("Login trial of user {}", loginDTO.getEmail());
 
@@ -123,6 +127,7 @@ public class UserAccountController {
 	}
 
 	@RequestMapping(value = "/create", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE)
+	@ResponseStatus(code = CREATED)
 	public void createAccount(Locale locale, @Valid @RequestBody UserAccountCreateDTO createDTO) throws BusinessException {
 		LOG.debug("Create account for {}", createDTO.getEmail());
 		// TODO: reactived if deleted flag is set
