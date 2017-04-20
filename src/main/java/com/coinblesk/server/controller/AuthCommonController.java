@@ -17,6 +17,9 @@ package com.coinblesk.server.controller;
 
 import static com.coinblesk.server.config.UserRole.ROLE_ADMIN;
 import static com.coinblesk.server.config.UserRole.ROLE_USER;
+import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_COULD_NOT_BE_DELETED;
+import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_COULD_NOT_BE_PROVIDED;
+import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_PASSWORD_COULD_NOT_BE_CHANGED;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.web.bind.annotation.RequestMethod.DELETE;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
@@ -38,7 +41,7 @@ import com.coinblesk.server.dto.UserAccountChangePasswordDTO;
 import com.coinblesk.server.dto.UserAccountDTO;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
-import com.coinblesk.server.service.MailService;
+import com.coinblesk.server.service.EventService;
 import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.server.utils.ApiVersion;
 
@@ -54,12 +57,12 @@ public class AuthCommonController {
 	private final static Logger LOG = LoggerFactory.getLogger(AuthCommonController.class);
 
 	private final UserAccountService userAccountService;
-	private final MailService mailService;
+	private final EventService eventService;
 
 	@Autowired
-	public AuthCommonController(UserAccountService userAccountService, MailService mailService) {
+	public AuthCommonController(UserAccountService userAccountService, EventService eventService) {
 		this.userAccountService = userAccountService;
-		this.mailService = mailService;
+		this.eventService = eventService;
 	}
 
 	@RequestMapping(value = "/user-account", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
@@ -74,9 +77,7 @@ public class AuthCommonController {
 
 		} catch(BusinessException exception) {
 			LOG.error("Someone tried to access a user account with an invalid email address: {}", auth);
-			mailService.sendAdminMail("Wrong Account?",
-					"Someone tried to access a user account with an invalid email address: " + auth);
-
+			eventService.warn(USER_ACCOUNT_COULD_NOT_BE_PROVIDED, "Someone tried to access a user account with an invalid email address: " + auth + " / " + exception.getClass().getSimpleName());
 			throw exception;
 		}
 
@@ -95,11 +96,7 @@ public class AuthCommonController {
 
 		} catch(BusinessException exception) {
 			LOG.error("Someone tried a delete account with an invalid email address: {} - {}", auth, exception.getClass().getSimpleName());
-			mailService.sendAdminMail("Wrong Delete Account?", "Someone tried a delete account with an invalid "
-					+ "email address: "
-					+ auth
-					+ "/"
-					+ exception.getClass().getSimpleName());
+			eventService.warn(USER_ACCOUNT_COULD_NOT_BE_DELETED, "Someone tried a delete account with an invalid email address: " + auth + "/" + exception.getClass().getSimpleName());
 			throw exception;
 		}
 		LOG.debug("Delete account success for {}", auth.getName());
@@ -112,7 +109,11 @@ public class AuthCommonController {
 
 		if (auth != null && auth.getName() != null) {
 			LOG.debug("Change password account for {}", auth.getName());
-			userAccountService.changePassword(auth.getName(), changePasswordDTO.getNewPassword());
+			try {
+				userAccountService.changePassword(auth.getName(), changePasswordDTO.getNewPassword());
+			} catch(BusinessException exception) {
+				eventService.warn(USER_ACCOUNT_PASSWORD_COULD_NOT_BE_CHANGED, "Password of '" + auth.getName() + "' could not be changed, because: " + exception.getClass().getSimpleName());
+			}
 			LOG.debug("Change password account success for {}", auth.getName());
 
 		} else {

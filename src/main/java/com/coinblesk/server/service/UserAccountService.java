@@ -15,6 +15,7 @@
  */
 package com.coinblesk.server.service;
 
+import static com.coinblesk.json.v1.Type.ACCOUNT_ERROR;
 import static com.coinblesk.server.config.UserRole.USER;
 import static com.coinblesk.util.BitcoinUtils.ONE_BITCOIN_IN_SATOSHI;
 import static java.util.Locale.ENGLISH;
@@ -46,6 +47,7 @@ import com.coinblesk.server.dto.UserAccountCreateVerifyDTO;
 import com.coinblesk.server.dto.UserAccountDTO;
 import com.coinblesk.server.dto.UserAccountForgotVerifyDTO;
 import com.coinblesk.server.entity.UserAccount;
+import com.coinblesk.server.enumerator.EventType;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.EmailAlreadyRegisteredException;
 import com.coinblesk.server.exceptions.InvalidEmailProvidedException;
@@ -75,17 +77,19 @@ public class UserAccountService {
 	private final MailService mailService;
 	private final AppConfig appConfig;
 	private final WalletService walletService;
+	private final EventService eventService;
 
 	@Autowired
 	public UserAccountService(UserAccountRepository repository, TimeLockedAddressRepository addressRepository,
 			PasswordEncoder passwordEncoder, MailService mailService, AppConfig appConfig,
-			WalletService walletService) {
+			WalletService walletService, EventService eventService) {
 		this.repository = repository;
 		this.addressRepository = addressRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.mailService = mailService;
 		this.appConfig = appConfig;
 		this.walletService = walletService;
+		this.eventService = eventService;
 	}
 
 	@Transactional(readOnly = true)
@@ -200,7 +204,7 @@ public class UserAccountService {
 			LOG.debug("About to broadcast tx");
 			walletService.broadcast(tx);
 			LOG.debug("Broadcast done");
-			long satoshiNew = userAccount	.getBalance()
+			long satoshiNew = userAccount.getBalance()
 											.multiply(new BigDecimal(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI))
 											.longValue();
 
@@ -209,8 +213,8 @@ public class UserAccountService {
 			return userAccountTO;
 		} catch (CoinbleskException | InsufficientFunds e) {
 			LOG.error("Cannot create transaction", e);
-			mailService.sendAdminMail("transfer-p2sh error", "Cannot create transaction: " + e.getMessage());
-			return new UserAccountTO().type(Type.ACCOUNT_ERROR).message(e.getMessage());
+			eventService.error(EventType.USER_ACCOUNT_COULD_NOT_TRANSFER_P2SH, "Cannot create transaction: " + e.getMessage());
+			return new UserAccountTO().type(ACCOUNT_ERROR).message(e.getMessage());
 		}
 	}
 
