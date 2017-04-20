@@ -74,19 +74,16 @@ public class UserAccountService {
 	private final UserAccountRepository repository;
 	private final TimeLockedAddressRepository addressRepository;
 	private final PasswordEncoder passwordEncoder;
-	private final MailService mailService;
 	private final AppConfig appConfig;
 	private final WalletService walletService;
 	private final EventService eventService;
 
 	@Autowired
 	public UserAccountService(UserAccountRepository repository, TimeLockedAddressRepository addressRepository,
-			PasswordEncoder passwordEncoder, MailService mailService, AppConfig appConfig,
-			WalletService walletService, EventService eventService) {
+			PasswordEncoder passwordEncoder, AppConfig appConfig, WalletService walletService, EventService eventService) {
 		this.repository = repository;
 		this.addressRepository = addressRepository;
 		this.passwordEncoder = passwordEncoder;
-		this.mailService = mailService;
 		this.appConfig = appConfig;
 		this.walletService = walletService;
 		this.eventService = eventService;
