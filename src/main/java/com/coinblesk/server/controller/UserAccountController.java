@@ -150,7 +150,7 @@ public class UserAccountController {
 		if (userAccount.getEmailToken() != null) {
 			try {
 				LOG.debug("send email to {}", userAccount.getEmail());
-				String path = "user-account/create-verify/"
+				String path = "#/activation/"
 						+ URLEncoder.encode(userAccount.getEmail(), "UTF-8")
 						+ "/"
 						+ userAccount.getEmailToken();
