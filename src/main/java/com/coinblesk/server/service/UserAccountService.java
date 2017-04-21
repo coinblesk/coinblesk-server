@@ -22,6 +22,7 @@ import static java.util.Locale.ENGLISH;
 import static java.util.UUID.randomUUID;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -42,6 +43,7 @@ import com.coinblesk.json.v1.UserAccountTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dao.TimeLockedAddressRepository;
 import com.coinblesk.server.dao.UserAccountRepository;
+import com.coinblesk.server.dto.UserAccountAdminDTO;
 import com.coinblesk.server.dto.UserAccountCreateDTO;
 import com.coinblesk.server.dto.UserAccountCreateVerifyDTO;
 import com.coinblesk.server.dto.UserAccountDTO;
@@ -171,6 +173,22 @@ public class UserAccountService {
 		userAccountDTO.setBalance(satoshi);
 
 		return userAccountDTO;
+	}
+
+	@Transactional(readOnly = true)
+	public List<UserAccountAdminDTO> getAllDTO() {
+		List<UserAccount> userAccounts = repository.findAllByOrderByCreationDateAsc();
+		List<UserAccountAdminDTO> userAccountAdminDTOs = new ArrayList<>();
+		for(UserAccount userAccount : userAccounts) {
+			UserAccountAdminDTO userAccountAdminDTO = new UserAccountAdminDTO();
+			userAccountAdminDTO.setBalance(userAccount.getBalance().longValue());
+			userAccountAdminDTO.setEmail(userAccount.getEmail());
+			userAccountAdminDTO.setCreationDate(userAccount.getCreationDate());
+			userAccountAdminDTO.setUserRole(userAccount.getUserRole());
+			userAccountAdminDTO.setDeleted(userAccount.isDeleted());
+			userAccountAdminDTOs.add(userAccountAdminDTO);
+		}
+		return userAccountAdminDTOs;
 	}
 
 	@Transactional

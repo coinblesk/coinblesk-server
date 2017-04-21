@@ -118,7 +118,7 @@ public class UserAccount implements Serializable {
 		return this;
 	}
 
-	private Date getCreationDate() {
+	public Date getCreationDate() {
 		return creationDate;
 	}
 

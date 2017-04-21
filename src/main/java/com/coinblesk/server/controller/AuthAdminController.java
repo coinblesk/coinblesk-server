@@ -43,12 +43,14 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dto.AccountDTO;
 import com.coinblesk.server.dto.TimeLockedAddressDTO;
+import com.coinblesk.server.dto.UserAccountAdminDTO;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.Event;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.enumerator.EventUrgence;
 import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.EventService;
+import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.util.Pair;
@@ -70,14 +72,16 @@ public class AuthAdminController {
 
 	private final AppConfig appConfig;
 	private final WalletService walletService;
+	private final UserAccountService userAccountService;
 	private final AccountService accountService;
 	private final EventService eventService;
 
 	@Autowired
-	public AuthAdminController(AppConfig appConfig, WalletService walletService, AccountService accountService,
-			EventService eventService) {
+	public AuthAdminController(AppConfig appConfig, WalletService walletService, UserAccountService userAccountService,
+			AccountService accountService, EventService eventService) {
 		this.appConfig = appConfig;
 		this.walletService = walletService;
+		this.userAccountService = userAccountService;
 		this.accountService = accountService;
 		this.eventService = eventService;
 	}
@@ -106,6 +110,12 @@ public class AuthAdminController {
 			txOuts.add(new Pair<>(txOut.getOutPointFor().toString(), txOut.toString()));
 		}
 		return txOuts;
+	}
+
+	@RequestMapping(value = "/user-accounts", method = GET)
+	@ResponseBody
+	public List<UserAccountAdminDTO> getAllUserAccounts() {
+		return userAccountService.getAllDTO();
 	}
 
 	@RequestMapping(value = "/accounts", method = GET)
