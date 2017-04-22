@@ -17,7 +17,9 @@ package com.coinblesk.server.controller;
 
 import static com.coinblesk.server.config.UserRole.ROLE_ADMIN;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
+import static org.springframework.web.bind.annotation.RequestMethod.DELETE;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
+import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -36,6 +38,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -48,6 +51,7 @@ import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.Event;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.enumerator.EventUrgence;
+import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.EventService;
 import com.coinblesk.server.service.UserAccountService;
@@ -116,6 +120,19 @@ public class AuthAdminController {
 	@ResponseBody
 	public List<UserAccountAdminDTO> getAllUserAccounts() {
 		return userAccountService.getAllDTO();
+	}
+
+	// see http://stackoverflow.com/a/16333149/3233827
+	@RequestMapping(value = "/user-accounts/{email:.+}", method = DELETE)
+	@ResponseBody
+	public void deleteUser(@PathVariable("email") String email) throws BusinessException {
+		userAccountService.delete(email);
+	}
+	// see http://stackoverflow.com/a/16333149/3233827
+	@RequestMapping(value = "/user-accounts/{email:.+}/switch-role", method = POST)
+	@ResponseBody
+	public void switchUserRole(@PathVariable("email") String email) throws BusinessException {
+		userAccountService.switchRole(email);
 	}
 
 	@RequestMapping(value = "/accounts", method = GET)

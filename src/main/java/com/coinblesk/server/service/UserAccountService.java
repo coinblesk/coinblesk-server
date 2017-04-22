@@ -16,6 +16,7 @@
 package com.coinblesk.server.service;
 
 import static com.coinblesk.json.v1.Type.ACCOUNT_ERROR;
+import static com.coinblesk.server.config.UserRole.ADMIN;
 import static com.coinblesk.server.config.UserRole.USER;
 import static com.coinblesk.util.BitcoinUtils.ONE_BITCOIN_IN_SATOSHI;
 import static java.util.Locale.ENGLISH;
@@ -158,6 +159,21 @@ public class UserAccountService {
 		}
 
 		userAccount.setDeleted(true);
+	}
+
+	@Transactional
+	public void switchRole(String email) throws BusinessException {
+
+		UserAccount userAccount = repository.findByEmail(email);
+		if (userAccount == null) {
+			throw new UserAccountNotFoundException();
+		}
+
+		if(USER.equals(userAccount.getUserRole())) {
+			userAccount.setUserRole(ADMIN);
+		} else {
+			userAccount.setUserRole(USER);
+		}
 	}
 
 	@Transactional(readOnly = true)
