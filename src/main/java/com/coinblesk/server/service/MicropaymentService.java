@@ -196,11 +196,12 @@ public class MicropaymentService {
 		}
 
 		// 1.6 All time locked addresses used must still be locked for some time
+		final Instant minimumLockedUntil = Instant.now().plus(Duration.ofSeconds(appConfig.getMinimumLockTimeSeconds()));
 		final List<TimeLockedAddressEntity> usedAddresses = inputAccounts.values().iterator().next();
-		final boolean allInputsLocked = usedAddresses.stream().allMatch(tla -> Instant.ofEpochSecond(tla.getLockTime()
-		).isAfter(Instant.now().plus(MINIMUM_LOCKTIME_DURATION)));
+		final boolean allInputsLocked = usedAddresses.stream().allMatch(tla ->
+			Instant.ofEpochSecond(tla.getLockTime()).isAfter(minimumLockedUntil));
 		if (!allInputsLocked) {
-			throw new RuntimeException("Inputs must be locked for 24 hours");
+			throw new RuntimeException("Inputs must be locked at least until " + minimumLockedUntil);
 		}
 
 		// 1.7 Inputs must be correctly partially signed by sender

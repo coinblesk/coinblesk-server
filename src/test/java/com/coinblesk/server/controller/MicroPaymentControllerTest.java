@@ -200,8 +200,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnSoonLockedInputs() throws Exception {
 		final ECKey clientKey = new ECKey();
-		final long lockTime = Instant.now().plus(Duration.ofHours(20)).getEpochSecond();
-
+		final long lockTime = Instant.now().plus(Duration.ofSeconds(appConfig.getMinimumLockTimeSeconds()+1))
+			.getEpochSecond();
 		accountService.createAcount(clientKey);
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(clientKey, lockTime)
 			.getTimeLockedAddress();
@@ -214,7 +214,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		microPaymentTransaction.addOutput(anyP2PKOutput(microPaymentTransaction));
 
 		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction);
-		sendAndExpect4xxError(dto, "Inputs must be locked for 24 hours");
+		Thread.sleep(1500);
+		sendAndExpect4xxError(dto, "Inputs must be locked at least until");
 	}
 
 	@Test
