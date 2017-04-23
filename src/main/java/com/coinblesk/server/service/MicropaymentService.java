@@ -392,6 +392,7 @@ public class MicropaymentService {
 			.getEpochSecond();
 		accountRepository.findByBroadcastBeforeLessThanAndChannelTransactionNotNull(threshold).forEach(account -> {
 			try {
+				LOG.info("Closing channel " + DTOUtils.toHex(account.getChannelTransaction()));
 				closeMicroPaymentChannel(ECKey.fromPublicOnly(account.clientPublicKey()));
 			} catch (UserNotFoundException | TimeoutException | ExecutionException | InterruptedException e) {
 				e.printStackTrace();
