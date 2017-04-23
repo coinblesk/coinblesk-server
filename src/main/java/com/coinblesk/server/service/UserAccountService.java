@@ -162,6 +162,17 @@ public class UserAccountService {
 	}
 
 	@Transactional
+	public void undelete(String email) throws BusinessException {
+
+		UserAccount userAccount = repository.findByEmail(email);
+		if (userAccount == null) {
+			throw new UserAccountNotFoundException();
+		}
+
+		userAccount.setDeleted(false);
+	}
+
+	@Transactional
 	public void switchRole(String email) throws BusinessException {
 
 		UserAccount userAccount = repository.findByEmail(email);
@@ -192,19 +203,33 @@ public class UserAccountService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<UserAccountAdminDTO> getAllDTO() {
+	public UserAccountAdminDTO getAdminDTO(String email) throws BusinessException {
+		UserAccount userAccount = repository.findByEmail(email);
+		if (userAccount == null) {
+			throw new UserAccountNotFoundException();
+		}
+		return mapUserAccountToAdminDTO(userAccount);
+	}
+
+	@Transactional(readOnly = true)
+	public List<UserAccountAdminDTO> getAllAdminDTO() {
 		List<UserAccount> userAccounts = repository.findAllByOrderByCreationDateAsc();
 		List<UserAccountAdminDTO> userAccountAdminDTOs = new ArrayList<>();
 		for(UserAccount userAccount : userAccounts) {
-			UserAccountAdminDTO userAccountAdminDTO = new UserAccountAdminDTO();
-			userAccountAdminDTO.setBalance(userAccount.getBalance().longValue());
-			userAccountAdminDTO.setEmail(userAccount.getEmail());
-			userAccountAdminDTO.setCreationDate(userAccount.getCreationDate());
-			userAccountAdminDTO.setUserRole(userAccount.getUserRole());
-			userAccountAdminDTO.setDeleted(userAccount.isDeleted());
+			UserAccountAdminDTO userAccountAdminDTO = mapUserAccountToAdminDTO(userAccount);
 			userAccountAdminDTOs.add(userAccountAdminDTO);
 		}
 		return userAccountAdminDTOs;
+	}
+
+	private UserAccountAdminDTO mapUserAccountToAdminDTO(UserAccount userAccount) {
+		UserAccountAdminDTO userAccountAdminDTO = new UserAccountAdminDTO();
+		userAccountAdminDTO.setBalance(userAccount.getBalance().longValue());
+		userAccountAdminDTO.setEmail(userAccount.getEmail());
+		userAccountAdminDTO.setCreationDate(userAccount.getCreationDate());
+		userAccountAdminDTO.setUserRole(userAccount.getUserRole());
+		userAccountAdminDTO.setDeleted(userAccount.isDeleted());
+		return userAccountAdminDTO;
 	}
 
 	@Transactional

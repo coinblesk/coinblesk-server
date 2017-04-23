@@ -20,6 +20,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.web.bind.annotation.RequestMethod.DELETE;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
+import static org.springframework.web.bind.annotation.RequestMethod.PUT;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -119,15 +120,28 @@ public class AuthAdminController {
 	@RequestMapping(value = "/user-accounts", method = GET)
 	@ResponseBody
 	public List<UserAccountAdminDTO> getAllUserAccounts() {
-		return userAccountService.getAllDTO();
+		return userAccountService.getAllAdminDTO();
 	}
 
 	// see http://stackoverflow.com/a/16333149/3233827
-	@RequestMapping(value = "/user-accounts/{email:.+}", method = DELETE)
+	@RequestMapping(value = "/user-accounts/{email:.+}", method = GET)
+	@ResponseBody
+	public UserAccountAdminDTO getUserAccount(@PathVariable("email") String email) throws BusinessException {
+		return userAccountService.getAdminDTO(email);
+	}
+	// see http://stackoverflow.com/a/16333149/3233827
+	@RequestMapping(value = "/user-accounts/{email:.+}/delete", method = DELETE)
 	@ResponseBody
 	public void deleteUser(@PathVariable("email") String email) throws BusinessException {
 		userAccountService.delete(email);
 	}
+	// see http://stackoverflow.com/a/16333149/3233827
+	@RequestMapping(value = "/user-accounts/{email:.+}/undelete", method = PUT)
+	@ResponseBody
+	public void undeleteUser(@PathVariable("email") String email) throws BusinessException {
+		userAccountService.undelete(email);
+	}
+
 	// see http://stackoverflow.com/a/16333149/3233827
 	@RequestMapping(value = "/user-accounts/{email:.+}/switch-role", method = POST)
 	@ResponseBody
