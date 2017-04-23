@@ -63,6 +63,7 @@ import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskAuthenticationException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
+import com.coinblesk.server.exceptions.EmailAlreadyRegisteredException;
 import com.coinblesk.server.service.EventService;
 import com.coinblesk.server.service.MailService;
 import com.coinblesk.server.service.UserAccountService;
@@ -133,38 +134,35 @@ public class UserAccountController {
 		// TODO: reactived if deleted flag is set
 
 		UserAccount userAccount;
-		if (!userAccountService.userExists(createDTO.getEmail())) {
-
-			try {
-				userAccount = userAccountService.create(createDTO);
-			} catch(BusinessException exception) {
-				LOG.warn("An exception occured during the creation of a user", exception);
-				eventService.warn(USER_ACCOUNT_COULD_NOT_CREATE_USER, "An exception occured during the creation of the account: " + exception.getClass().getSimpleName());
-				throw exception;
-			}
-
-		} else {
-			userAccount = userAccountService.getByEmail(createDTO.getEmail());
+		if (userAccountService.userExists(createDTO.getEmail())) {
+			throw new EmailAlreadyRegisteredException();
 		}
 
-		if (userAccount.getEmailToken() != null) {
-			try {
-				LOG.debug("send email to {}", userAccount.getEmail());
-				String path = "#/activation/"
-						+ URLEncoder.encode(userAccount.getEmail(), "UTF-8")
-						+ "/"
-						+ userAccount.getEmailToken();
-				String url = cfg.getUrl() + path;
+		try {
+			userAccount = userAccountService.create(createDTO);
 
-				mailService.sendUserMail(userAccount.getEmail(),
-						messageSource.getMessage("activation.email" + ".title", null, locale),
-						messageSource.getMessage("activation.email.text", new String[] { url }, locale));
+		} catch(BusinessException exception) {
+			LOG.warn("An exception occured during the creation of a user", exception);
+			eventService.warn(USER_ACCOUNT_COULD_NOT_CREATE_USER, "An exception occured during the creation of the account: " + exception.getClass().getSimpleName());
+			throw exception;
+		}
 
-			} catch (Exception e) {
-				LOG.error("Mail send error", e);
-				eventService.error(USER_ACCOUNT_CREATE_TOKEN_COULD_NOT_BE_SENT, "Token of '"+createDTO.getEmail() + "' could not be sent.");
-				throw new CoinbleskInternalError("An error happend while sending an e-mail.");
-			}
+		try {
+			LOG.debug("send email to {}", userAccount.getEmail());
+			String path = "#/activation/"
+					+ URLEncoder.encode(userAccount.getEmail(), "UTF-8")
+					+ "/"
+					+ userAccount.getEmailToken();
+			String url = cfg.getUrl() + path;
+
+			mailService.sendUserMail(userAccount.getEmail(),
+					messageSource.getMessage("activation.email" + ".title", null, locale),
+					messageSource.getMessage("activation.email.text", new String[] { url }, locale));
+
+		} catch (Exception e) {
+			LOG.error("Mail send error", e);
+			eventService.error(USER_ACCOUNT_CREATE_TOKEN_COULD_NOT_BE_SENT, "Token of '"+createDTO.getEmail() + "' could not be sent.");
+			throw new CoinbleskInternalError("An error happend while sending an e-mail.");
 		}
 	}
 
