@@ -7,6 +7,7 @@ import com.coinblesk.server.dao.TimeLockedAddressRepository;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.exceptions.*;
+import com.coinblesk.server.utils.CoinUtils;
 import com.coinblesk.server.utils.DTOUtils;
 import com.coinblesk.util.InsufficientFunds;
 import lombok.Data;
@@ -66,6 +67,8 @@ public class MicropaymentService {
 		this.accountService = accountService;
 		this.feeService = feeService;
 		this.forexService = forexService;
+
+		unlockAccountsOnMinedChannelTransactions();
 	}
 
 	/**
@@ -373,6 +376,7 @@ public class MicropaymentService {
 		account
 		 	.locked(true)
 			.broadcastBefore(Instant.now().getEpochSecond());
+		accountRepository.save(account);
 
 		Transaction tx = new Transaction(appConfig.getNetworkParameters(), account.getChannelTransaction());
 
@@ -386,7 +390,15 @@ public class MicropaymentService {
 		}
 	}
 
-	@Scheduled(fixedDelay = 60000L) // 1 minute
+	@Transactional()
+	private void unlockAccount(ECKey accountPublicKey) {
+		Account account = accountRepository.findByClientPublicKey(accountPublicKey.getPubKey())
+			.channelTransaction(null)
+			.locked(false);
+		accountRepository.save(account);
+	}
+
+	@Scheduled(fixedDelay = 1000L) // 1 minute
 	public void checkForExpiringChannels() {
 		final long threshold = Instant.now().plus(Duration.ofSeconds(appConfig.getMinimumLockTimeSeconds()))
 			.getEpochSecond();
@@ -396,6 +408,36 @@ public class MicropaymentService {
 				closeMicroPaymentChannel(ECKey.fromPublicOnly(account.clientPublicKey()));
 			} catch (UserNotFoundException | TimeoutException | ExecutionException | InterruptedException e) {
 				e.printStackTrace();
+			}
+		});
+	}
+
+	/***
+	 * Add a listener for when a transaction we are watching's confidence
+	 * changed due to a new block.
+	 *
+	 * After the transaction is {bitcoin.minconf} blocks deep, we remove the tx
+	 * from the database, as it is considered safe.
+	 *
+	 * The method should only be called after complete download of the
+	 * blockchain, since the handler is called for every block and transaction
+	 * we are watching, which will result in high CPU and memory consumption and
+	 * might exceed the JVM memory limit. After download is complete, blocks
+	 * arrive only sporadically and this is not a problem.
+	 */
+	private void unlockAccountsOnMinedChannelTransactions() {
+		walletService.addConfidenceChangedListener((wallet, tx) -> {
+			if (tx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf()) {
+				// Check for mined micro payment transactions and unlock account if the pending transaction
+				// is seen in a block at least {bitcoin.minconf} deep.
+				accountService.getPendingAccounts().stream().filter(account -> {
+					Transaction pending = new Transaction(appConfig.getNetworkParameters(),
+						account.getChannelTransaction());
+					// Use of tracking hash to avoid malleability issues. TxID might have changed since broadcasting.
+					return CoinUtils.trackingHash(tx).equals(CoinUtils.trackingHash(pending));
+				}).findAny().ifPresent(account -> {
+					this.unlockAccount(ECKey.fromPublicOnly(account.clientPublicKey()));
+				});
 			}
 		});
 	}

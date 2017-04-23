@@ -107,6 +107,11 @@ public class AccountService {
 			.toList());
 	}
 
+	@Transactional(readOnly = true)
+	public List<Account> getPendingAccounts() {
+		return accountRepository.findByLockedIsTrue();
+	}
+
 	@Transactional
 	public CreateTimeLockedAddressResponse createTimeLockedAddress(@NonNull ECKey clientPublicKey, long lockTime)
 		throws UserNotFoundException, InvalidLockTimeException {

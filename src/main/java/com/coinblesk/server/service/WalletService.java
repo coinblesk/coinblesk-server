@@ -19,6 +19,7 @@ import com.coinblesk.bitcoin.AddressCoinSelector;
 import com.coinblesk.bitcoin.BitcoinNet;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
+import com.coinblesk.server.utils.CoinUtils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -27,6 +28,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import org.apache.commons.lang3.ArrayUtils;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
+import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.script.Script;
@@ -115,6 +117,7 @@ public class WalletService {
 
 		walletWatchKeysCLTV(params);
 		walletWatchKeysPot(params);
+		walletWatchMicropaymentPot(params);
 
 		blockChain = new BlockChain(params, blockStore);
 		peerGroup = new PeerGroup(params, blockChain);
@@ -145,9 +148,6 @@ public class WalletService {
 			@Override
 			protected void doneDownload() {
 				LOG.info("downloading done");
-				// Be notified when the confidence of relevant transactions
-				// change (number of confirmations). Needed for reopening channels.
-				addConficenceChangedHandler();
 			}
 			@Override
 			protected void progress(double pct, int blocksSoFar, Date date) {
@@ -160,7 +160,6 @@ public class WalletService {
 
 		// Broadcast pending transactions
 		pendingTransactions();
-		// TODO (Re)broadcast all pending micro payment transactions aswell
 
 		LOG.info("wallet init done.");
 	}
@@ -180,20 +179,20 @@ public class WalletService {
 		LOG.info("walletWatchKeysPot: {}, createdAt: {}", potAddress.toAddress(params), Instant.ofEpochSecond(appConfig.getPotCreationTime()));
 	}
 
-	/***
-	 * Add a listener for when a transaction we are watching's confidence
-	 * changed due to a new block.
-	 *
-	 * After the transaction is {bitcoin.minconf} blocks deep, we remove the tx
-	 * from the database, as it is considered safe.
-	 *
-	 * The method should only be called after complete download of the
-	 * blockchain, since the handler is called for every block and transaction
-	 * we are watching, which will result in high CPU and memory consumption and
-	 * might exceed the JVM memory limit. After download is complete, blocks
-	 * arrive only sporadically and this is not a problem.
+	private void walletWatchMicropaymentPot(final NetworkParameters params) {
+		accountService.allAccounts().forEach(account -> {
+				Address address = ECKey.fromPublicOnly(account.serverPublicKey()).toAddress(params);
+				LOG.info("Watch serverPotAddress: {}", address);
+				wallet.addWatchedAddress(address, account.timeCreated());
+			}
+		);
+	}
+
+	/**
+	 * Add a listener that gets executed when the confidence of a transaction changes.
+	 * @param listener
 	 */
-	private void addConficenceChangedHandler() {
+	public void addConfidenceChangedListener(TransactionConfidenceEventListener listener) {
 		// Use a custom thread pool to speed up the processing of transactions.
 		// Queue is blocking and limited to 10'000
 		// to avoid memory exhaustion. After threshold is reached, the
@@ -203,12 +202,7 @@ public class WalletService {
 			.getRuntime().availableProcessors(), 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(10000),
 			factory, new ThreadPoolExecutor.CallerRunsPolicy());
 
-		wallet.addTransactionConfidenceEventListener(listenerExecutor, (wallet, tx) -> {
-			if (tx.getConfidence().getDepthInBlocks() >= appConfig.getMinConf()) {
-				// TODO: Check for mined micro payment transactions and unlock account if pending
-				// micro payment transaction is enough blocks deep
-			}
-		});
+		wallet.addTransactionConfidenceEventListener(listenerExecutor, listener);
 	}
 
 	public List<TransactionOutput> potTransactionOutput(final NetworkParameters params) {

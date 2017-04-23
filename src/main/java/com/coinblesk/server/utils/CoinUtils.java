@@ -16,10 +16,14 @@
 package com.coinblesk.server.utils;
 
 import com.coinblesk.bitcoin.BitcoinNet;
-import org.bitcoinj.core.NetworkParameters;
+import com.google.common.primitives.Longs;
+import org.bitcoinj.core.*;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 
 /**
  * @author Thomas Bocek
@@ -43,5 +47,26 @@ public class CoinUtils {
 				throw new RuntimeException("Please set the server property bitcoin.net to " +
 					"(unittest|regtest|testnet|main)");
 		}
+	}
+
+	// https://bitcoin.stackexchange.com/questions/22059/how-can-i-track-transactions-in-a-way-that-is-not-affected-by-their-malleability
+	public static Sha256Hash trackingHash(Transaction tx) {
+		ByteArrayOutputStream out = new ByteArrayOutputStream( );
+		try {
+			out.write(Longs.toByteArray(tx.getVersion()));
+			for (TransactionInput input : tx.getInputs()) {
+				out.write(input.getOutpoint().getHash().getBytes());
+				out.write(Longs.toByteArray(input.getOutpoint().getIndex()));
+				out.write(Longs.toByteArray(input.getSequenceNumber()));
+			}
+			for (TransactionOutput output : tx.getOutputs()) {
+				out.write(Longs.toByteArray(output.getValue().longValue()));
+				out.write(output.getScriptBytes());
+			}
+			out.write(Longs.toByteArray(tx.getLockTime()));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return Sha256Hash.twiceOf(out.toByteArray());
 	}
 }
