@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.TransientDataAccessException;
 import org.springframework.retry.annotation.Retryable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -253,11 +254,6 @@ public class MicropaymentService {
 		if (changeOutputs.size() == 0) {
 			LOG.warn("Client provided no change in micropayment");
 		} else if (changeOutputs.size() == 1) {
-			final long lockTimeOfChange = latestTimeLockedAddress.getLockTime();
-			if (Instant.ofEpochSecond(lockTimeOfChange).isBefore(Instant.now().plus(MINIMUM_LOCKTIME_DURATION))) {
-				throw new RuntimeException("Change cannot be send to address that is locked for less than " + "24 " +
-					"hours");
-			}
 			final TransactionOutput changeOutput = changeOutputs.get(0);
 			if (!remainingOutputs.remove(changeOutput)) {
 				throw new CoinbleskInternalError("Could not remove change output from set");
@@ -388,6 +384,19 @@ public class MicropaymentService {
 			// TODO: send out email to admin in case of failure
 			throw(e);
 		}
+	}
+
+	@Scheduled(fixedDelay = 60000L) // 1 minute
+	public void checkForExpiringChannels() {
+		final long threshold = Instant.now().plus(Duration.ofSeconds(appConfig.getMinimumLockTimeSeconds()))
+			.getEpochSecond();
+		accountRepository.findByBroadcastBeforeLessThanAndChannelTransactionNotNull(threshold).forEach(account -> {
+			try {
+				closeMicroPaymentChannel(ECKey.fromPublicOnly(account.clientPublicKey()));
+			} catch (UserNotFoundException | TimeoutException | ExecutionException | InterruptedException e) {
+				e.printStackTrace();
+			}
+		});
 	}
 
 	private TransactionOutput getOutputForServer(Transaction micropaymentTransaction, ECKey serverPubKey) {
