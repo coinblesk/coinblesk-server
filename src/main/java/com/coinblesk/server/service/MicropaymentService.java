@@ -338,9 +338,11 @@ public class MicropaymentService {
 		}
 
 		// Execute micro payment
+		final long broadcastBefore = usedAddresses.stream().mapToLong(TimeLockedAddressEntity::getLockTime).min().getAsLong();
 		accountSender
 			.nonce(nonce)
-			.channelTransaction(tx.bitcoinSerialize());
+			.channelTransaction(tx.bitcoinSerialize())
+			.broadcastBefore(broadcastBefore);
 		final long newAmountReceiver = accountReceiver.virtualBalance() + actualAmountSent.getValue();
 		accountReceiver
 			.virtualBalance(newAmountReceiver);

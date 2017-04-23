@@ -706,6 +706,47 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		assertThat(walletService.microPaymentPot(), is(Coin.valueOf((1337))));
 	}
 
+	@Test
+	public void microPayment_setsCorrectBroadcastBefore() throws Exception {
+		final ECKey senderKey = new ECKey();
+		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
+
+		// Use of three different TLAs. Second one is earliest and should be used by server for broadcast
+		TimeLockedAddress tla1 = accountService.createTimeLockedAddress(senderKey, Instant.now().plus(Duration.ofDays(10)).getEpochSecond())
+			.getTimeLockedAddress();
+		TimeLockedAddress tla2 = accountService.createTimeLockedAddress(senderKey, Instant.now().plus(Duration.ofDays(9)).getEpochSecond())
+			.getTimeLockedAddress();
+		TimeLockedAddress tla3 = accountService.createTimeLockedAddress(senderKey, Instant.now().plus(Duration.ofDays(11)).getEpochSecond())
+			.getTimeLockedAddress();
+		Transaction fundingTx1 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla1.getAddress(params));
+		Transaction fundingTx2 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla2.getAddress(params));
+		Transaction fundingTx3 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla3.getAddress(params));
+		walletService.addWatching(tla1.getAddress(params));
+		walletService.addWatching(tla2.getAddress(params));
+		walletService.addWatching(tla3.getAddress(params));
+		mineTransaction(fundingTx1);
+		mineTransaction(fundingTx2);
+		mineTransaction(fundingTx3);
+
+		Transaction channelTx = new Transaction(params);
+		channelTx.addOutput(P2PKOutput(channelTx, serverKey, 1000L));
+		channelTx.addOutput(changeOutput(channelTx, tla3));
+		channelTx.addInput(fundingTx1.getOutput(0));
+		channelTx.addInput(fundingTx2.getOutput(0));
+		channelTx.addInput(fundingTx3.getOutput(0));
+		signInput(channelTx, 0, tla1.createRedeemScript(), senderKey);
+		signInput(channelTx, 1, tla2.createRedeemScript(), senderKey);
+		signInput(channelTx, 2, tla3.createRedeemScript(), senderKey);
+
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, channelTx, 1000L);
+		sendAndExpect2xxSuccess(dto);
+
+		long savedBroadcastBefore = accountRepository.findByClientPublicKey(senderKey.getPubKey()).getBroadcastBefore();
+		assertThat(savedBroadcastBefore, is(tla2.getLockTime()));
+	}
+
 	public static SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Long amount, TimeLockedAddress address,
 														 TransactionOutput... usedOutputs) {
 		ECKey serverPublicKey = ECKey.fromPublicOnly(address.getServerPubKey());
@@ -754,11 +795,14 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		return tx.bitcoinSerialize().length;
 	}
 
+	public static void signInput(Transaction tx, int index, Script redeemScript, ECKey signingKey) {
+		TransactionSignature sig = tx.calculateSignature(index, signingKey, redeemScript.getProgram(), SigHash.ALL, false);
+		tx.getInput(index).setScriptSig(new ScriptBuilder().data(sig.encodeToBitcoin()).build());
+	}
+
 	public static void signAllInputs(Transaction tx, Script redeemScript, ECKey signingKey) {
 		for (int i = 0; i < tx.getInputs().size(); i++) {
-			TransactionSignature sig = tx.calculateSignature(i, signingKey, redeemScript.getProgram(), SigHash.ALL,
-				false);
-			tx.getInput(i).setScriptSig(new ScriptBuilder().data(sig.encodeToBitcoin()).build());
+			signInput(tx, i, redeemScript, signingKey);
 		}
 	}
 
