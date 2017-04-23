@@ -315,6 +315,7 @@ public class WalletService {
 	public ListenableFuture<Transaction> broadCastAsync(final Transaction transaction) {
 		// Fake transaction for when testing.
 		// peerGroup.broadcastTransaction would otherwise fail, as it waits for at least 1 connection which will
+		// never happen.
 		if (appConfig.getBitcoinNet().equals(BitcoinNet.UNITTEST)) {
 			SettableFuture<Transaction> future = SettableFuture.create();
 			future.set(transaction);
