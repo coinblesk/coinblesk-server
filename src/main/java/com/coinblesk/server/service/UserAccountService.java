@@ -298,6 +298,9 @@ public class UserAccountService {
 		if (userAccount == null) {
 			throw new UserAccountNotFoundException();
 		}
+		if (userAccount.isDeleted()) {
+			throw new UserAccountDeletedException();
+		}
 
 		String token = randomUUID().toString();
 		userAccount.setForgotEmailToken(token);
@@ -311,6 +314,9 @@ public class UserAccountService {
 		}
 		if (userAccount.getForgotEmailToken() == null || !userAccount.getForgotEmailToken().equals(forgotVerifyDTO.getToken())) {
 			throw new InvalidEmailTokenException();
+		}
+		if (userAccount.isDeleted()) {
+			throw new UserAccountDeletedException();
 		}
 		if (forgotVerifyDTO.getNewPassword().length() < MINIMAL_PASSWORD_LENGTH) {
 			throw new PasswordTooShortException();
