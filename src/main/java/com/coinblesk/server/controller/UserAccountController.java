@@ -64,7 +64,6 @@ import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskAuthenticationException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
-import com.coinblesk.server.exceptions.EmailAlreadyRegisteredException;
 import com.coinblesk.server.exceptions.UserAccountDeletedException;
 import com.coinblesk.server.service.EventService;
 import com.coinblesk.server.service.MailService;
@@ -138,13 +137,8 @@ public class UserAccountController {
 	@ResponseStatus(code = CREATED)
 	public void createAccount(Locale locale, @Valid @RequestBody UserAccountCreateDTO createDTO) throws BusinessException {
 		LOG.debug("Create account for {}", createDTO.getEmail());
-		// TODO: reactived if deleted flag is set
 
 		UserAccount userAccount;
-		if (userAccountService.userExists(createDTO.getEmail())) {
-			throw new EmailAlreadyRegisteredException();
-		}
-
 		try {
 			userAccount = userAccountService.create(createDTO);
 

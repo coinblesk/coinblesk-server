@@ -57,6 +57,7 @@ import com.coinblesk.server.exceptions.InvalidEmailProvidedException;
 import com.coinblesk.server.exceptions.InvalidEmailTokenException;
 import com.coinblesk.server.exceptions.NoEmailProvidedException;
 import com.coinblesk.server.exceptions.PasswordTooShortException;
+import com.coinblesk.server.exceptions.UserAccountDeletedException;
 import com.coinblesk.server.exceptions.UserAccountNotFoundException;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.CoinbleskException;
@@ -117,7 +118,11 @@ public class UserAccountService {
 			throw new PasswordTooShortException();
 		}
 		if (userExists(email)) {
-			throw new EmailAlreadyRegisteredException();
+			if (getByEmail(email).isDeleted()) {
+				throw new UserAccountDeletedException();
+			} else {
+				throw new EmailAlreadyRegisteredException();
+			}
 		}
 
 		// convert DTO to Entity
