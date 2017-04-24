@@ -23,6 +23,7 @@ import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_COULD_NOT_S
 import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_COULD_NOT_VERIFY_FORGOT_WRONG_LINK;
 import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_CREATE_TOKEN_COULD_NOT_BE_SENT;
 import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_LOGIN_FAILED;
+import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_LOGIN_FAILED_WITH_DELETED_ACCOUNT;
 import static java.util.Locale.ENGLISH;
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
@@ -64,6 +65,7 @@ import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskAuthenticationException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
 import com.coinblesk.server.exceptions.EmailAlreadyRegisteredException;
+import com.coinblesk.server.exceptions.UserAccountDeletedException;
 import com.coinblesk.server.service.EventService;
 import com.coinblesk.server.service.MailService;
 import com.coinblesk.server.service.UserAccountService;
@@ -104,6 +106,11 @@ public class UserAccountController {
 	@ResponseBody
 	public TokenDTO login(@Valid @RequestBody LoginDTO loginDTO, HttpServletResponse response) throws BusinessException {
 		LOG.debug("Login trial of user {}", loginDTO.getEmail());
+
+		if (userAccountService.userExists(loginDTO.getEmail()) && userAccountService.getByEmail(loginDTO.getEmail()).isDeleted()) {
+			eventService.error(USER_ACCOUNT_LOGIN_FAILED_WITH_DELETED_ACCOUNT, "Failed login with e-mail '" + loginDTO.getEmail()+ "'");
+			throw new UserAccountDeletedException();
+		}
 
 		UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
 				loginDTO.getEmail().toLowerCase(ENGLISH), loginDTO.getPassword());
