@@ -58,6 +58,7 @@ import com.coinblesk.server.exceptions.InvalidEmailTokenException;
 import com.coinblesk.server.exceptions.NoEmailProvidedException;
 import com.coinblesk.server.exceptions.PasswordTooShortException;
 import com.coinblesk.server.exceptions.UserAccountDeletedException;
+import com.coinblesk.server.exceptions.UserAccountNotActivatedException;
 import com.coinblesk.server.exceptions.UserAccountNotFoundException;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.CoinbleskException;
@@ -147,6 +148,9 @@ public class UserAccountService {
 		}
 		if (userAccount.getEmailToken() == null) {
 			throw new InvalidEmailTokenException();
+		}
+		if (userAccount.isDeleted()) {
+			throw new UserAccountDeletedException();
 		}
 		if (!userAccount.getEmailToken().equals(createVerifyDTO.getToken())) {
 			throw new InvalidEmailTokenException();
@@ -285,6 +289,12 @@ public class UserAccountService {
 		if (userAccount == null) {
 			throw new UserAccountNotFoundException();
 		}
+		if (userAccount.getEmailToken() != null) {
+			throw new UserAccountNotActivatedException();
+		}
+		if (userAccount.isDeleted()) {
+			throw new UserAccountDeletedException();
+		}
 		if (password.length() < MINIMAL_PASSWORD_LENGTH) {
 			throw new PasswordTooShortException();
 		}
@@ -301,6 +311,9 @@ public class UserAccountService {
 		if (userAccount.isDeleted()) {
 			throw new UserAccountDeletedException();
 		}
+		if (userAccount.getEmailToken() != null) {
+			throw new UserAccountNotActivatedException();
+		}
 
 		String token = randomUUID().toString();
 		userAccount.setForgotEmailToken(token);
@@ -312,11 +325,14 @@ public class UserAccountService {
 		if (userAccount == null) {
 			throw new UserAccountNotFoundException();
 		}
-		if (userAccount.getForgotEmailToken() == null || !userAccount.getForgotEmailToken().equals(forgotVerifyDTO.getToken())) {
-			throw new InvalidEmailTokenException();
-		}
 		if (userAccount.isDeleted()) {
 			throw new UserAccountDeletedException();
+		}
+		if (userAccount.getEmailToken() != null) {
+			throw new UserAccountNotActivatedException();
+		}
+		if (userAccount.getForgotEmailToken() == null || !userAccount.getForgotEmailToken().equals(forgotVerifyDTO.getToken())) {
+			throw new InvalidEmailTokenException();
 		}
 		if (forgotVerifyDTO.getNewPassword().length() < MINIMAL_PASSWORD_LENGTH) {
 			throw new PasswordTooShortException();
