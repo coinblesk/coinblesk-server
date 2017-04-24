@@ -52,6 +52,8 @@ import com.coinblesk.server.dao.UserAccountRepository;
 import com.coinblesk.server.dto.LoginDTO;
 import com.coinblesk.server.dto.UserAccountCreateDTO;
 import com.coinblesk.server.dto.UserAccountCreateVerifyDTO;
+import com.coinblesk.server.dto.UserAccountForgotDTO;
+import com.coinblesk.server.dto.UserAccountForgotVerifyDTO;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.service.MailService;
 import com.coinblesk.server.service.UserAccountService;
@@ -164,7 +166,11 @@ public class AuthTest extends CoinbleskTest {
 	public void createFailsWithWrongEmail() throws Exception {
 		createUser("test@test@test@test", "test123").andExpect(status().is4xxClientError());
 	}
-
+	@Test
+	public void createFailsWhenEmailAddressIsAlreadyUsed() throws Exception {
+		createUser("test@test.test", "12345678").andExpect(status().is2xxSuccessful());
+		createUser("test@test.test", "123456789").andExpect(status().is4xxClientError());
+	}
 	@Test
 	public void createSendsEmailToUser() throws Exception {
 		String email = "test@test.test";
@@ -173,19 +179,10 @@ public class AuthTest extends CoinbleskTest {
 	}
 
 	@Test
-	public void createSendsActivationEmailAgainWhenRegisteringWithSameEmail() throws Exception {
-		createUser("test@test.test", "12345678").andExpect(status().is2xxSuccessful());
-		createUser("test@test.test", "12345678").andExpect(status().is2xxSuccessful());
-
-		Mockito.verify(mailService, Mockito.times(2)).sendUserMail(Mockito.matches("test@test.test"), Mockito.contains
-			("Activation"), Mockito.contains("click here to activate"));
-	}
-
-	@Test
 	public void activateWithCorrectTokenSucceeds() throws Exception {
 		String email = "test@test.test";
 		createUser(email, "12345678").andExpect(status().is2xxSuccessful());
-		String token = userAccountService.getByEmail("test@test.test").getEmailToken();
+		String token = userAccountService.getByEmail(email).getEmailToken();
 		Assert.assertNotNull(token);
 
 		UserAccountCreateVerifyDTO createVerifyDTO = new UserAccountCreateVerifyDTO();
@@ -198,7 +195,82 @@ public class AuthTest extends CoinbleskTest {
 					.content(GSON.toJson(createVerifyDTO)))
 			.andExpect(status().is2xxSuccessful());
 	}
+	@Test
+	public void activateFailsWhenUserIsDeleted() throws Exception {
+		String email = "test@test.test";
+		createUser(email, "12345678").andExpect(status().is2xxSuccessful());
+		String token = userAccountService.getByEmail(email).getEmailToken();
+		Assert.assertNotNull(token);
+		userAccountService.delete(email);
 
+		UserAccountCreateVerifyDTO createVerifyDTO = new UserAccountCreateVerifyDTO();
+		createVerifyDTO.setEmail(email);
+		createVerifyDTO.setToken(token);
+
+		mockMvc
+			.perform(post("/user-account/create-verify")
+					.contentType(APPLICATION_JSON_UTF8)
+					.content(GSON.toJson(createVerifyDTO)))
+			.andExpect(status().is4xxClientError());
+	}
+
+	@Test
+	public void forgotFailsWhenUserIsNotActivated() throws Exception {
+		String email = "test@test.test";
+		createUser(email, "12345678").andExpect(status().is2xxSuccessful());
+		forgotPassword(email).andExpect(status().is4xxClientError());
+	}
+	@Test
+	public void forgotFailsWhenUserIsDeleted() throws Exception {
+		String email = "test@test.test";
+		createUser(email, "12345678").andExpect(status().is2xxSuccessful());
+		activateUserHelper(email);
+		userAccountService.getByEmail(email).setDeleted(true);
+		forgotPassword(email).andExpect(status().is4xxClientError());
+	}
+	@Test
+	public void forgotVerify() throws Exception {
+		String email = "test@test.test";
+		createUser(email, "12345678").andExpect(status().is2xxSuccessful());
+		activateUserHelper(email);
+		forgotPassword(email).andExpect(status().is2xxSuccessful());
+
+		String token = userAccountService.getByEmail(email).getForgotEmailToken();
+		Assert.assertNotNull(token);
+
+		UserAccountForgotVerifyDTO forgotVerifyDTO = new UserAccountForgotVerifyDTO();
+		forgotVerifyDTO.setEmail(email);
+		forgotVerifyDTO.setNewPassword("87654321");
+		forgotVerifyDTO.setToken(token);
+
+		mockMvc.perform(post("/user-account/forgot-verify")
+				.contentType(APPLICATION_JSON_UTF8)
+				.content(GSON.toJson(forgotVerifyDTO)))
+		.andExpect(status().is2xxSuccessful());
+	}
+
+	@Test
+	public void forgotVerifyFailsWhenUserIsDeleted() throws Exception {
+		String email = "test@test.test";
+		createUser(email, "12345678").andExpect(status().is2xxSuccessful());
+		activateUserHelper(email);
+		forgotPassword(email).andExpect(status().is2xxSuccessful());
+
+		String token = userAccountService.getByEmail(email).getForgotEmailToken();
+		Assert.assertNotNull(token);
+
+		userAccountService.delete(email);
+
+		UserAccountForgotVerifyDTO forgotVerifyDTO = new UserAccountForgotVerifyDTO();
+		forgotVerifyDTO.setEmail(email);
+		forgotVerifyDTO.setNewPassword("87654321");
+		forgotVerifyDTO.setToken(token);
+
+		mockMvc.perform(post("/user-account/forgot-verify")
+				.contentType(APPLICATION_JSON_UTF8)
+				.content(GSON.toJson(forgotVerifyDTO)))
+		.andExpect(status().is4xxClientError());
+	}
 
 	@Test
 	public void getProfileFailsWithoutJWT() throws Exception {
@@ -262,5 +334,14 @@ public class AuthTest extends CoinbleskTest {
 				.perform(post("/user-account/create")
 						.contentType(APPLICATION_JSON_UTF8)
 						.content(GSON.toJson(userAccountCreateDTO)));
+	}
+
+	private ResultActions forgotPassword(String email) throws Exception {
+		UserAccountForgotDTO forgotDTO = new UserAccountForgotDTO();
+		forgotDTO.setEmail(email);
+
+		return mockMvc.perform(post("/user-account/forgot")
+			.contentType(APPLICATION_JSON_UTF8)
+			.content(GSON.toJson(forgotDTO)));
 	}
 }
