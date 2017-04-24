@@ -153,7 +153,7 @@ public class UserAccountController {
 			String path = "#/activation/"
 					+ URLEncoder.encode(userAccount.getEmail(), "UTF-8")
 					+ "/"
-					+ userAccount.getEmailToken();
+					+ userAccount.getActivationEmailToken();
 			String url = cfg.getUrl() + path;
 
 			mailService.sendUserMail(userAccount.getEmail(),

@@ -182,7 +182,7 @@ public class AuthTest extends CoinbleskTest {
 	public void activateWithCorrectTokenSucceeds() throws Exception {
 		String email = "test@test.test";
 		createUser(email, "12345678").andExpect(status().is2xxSuccessful());
-		String token = userAccountService.getByEmail(email).getEmailToken();
+		String token = userAccountService.getByEmail(email).getActivationEmailToken();
 		Assert.assertNotNull(token);
 
 		UserAccountCreateVerifyDTO createVerifyDTO = new UserAccountCreateVerifyDTO();
@@ -199,7 +199,7 @@ public class AuthTest extends CoinbleskTest {
 	public void activateFailsWhenUserIsDeleted() throws Exception {
 		String email = "test@test.test";
 		createUser(email, "12345678").andExpect(status().is2xxSuccessful());
-		String token = userAccountService.getByEmail(email).getEmailToken();
+		String token = userAccountService.getByEmail(email).getActivationEmailToken();
 		Assert.assertNotNull(token);
 		userAccountService.delete(email);
 
@@ -301,7 +301,7 @@ public class AuthTest extends CoinbleskTest {
 		userAccount.setCreationDate(new Date());
 		userAccount.setDeleted(false);
 		userAccount.setEmail(email);
-		userAccount.setEmailToken(null);
+		userAccount.setActivationEmailToken(null);
 		userAccount.setForgotEmailToken(null);
 		userAccount.setPassword(passwordEncoder.encode(password));
 		userAccount.setUserRole(USER);
@@ -310,7 +310,7 @@ public class AuthTest extends CoinbleskTest {
 
 	private void activateUserHelper(String email) {
 		UserAccount account = userAccountRepository.findByEmail(email);
-		account.setEmailToken(null);
+		account.setActivationEmailToken(null);
 		userAccountRepository.save(account);
 	}
 

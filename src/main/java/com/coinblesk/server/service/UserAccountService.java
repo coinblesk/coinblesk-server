@@ -132,7 +132,7 @@ public class UserAccountService {
 		userAccount.setPassword(passwordEncoder.encode(userAccountCreateDTO.getPassword()));
 		userAccount.setCreationDate(new Date());
 		userAccount.setDeleted(false);
-		userAccount.setEmailToken(randomUUID().toString());
+		userAccount.setActivationEmailToken(randomUUID().toString());
 		userAccount.setUserRole(USER);
 		userAccount.setBalance(BigDecimal.valueOf(0L).divide(BigDecimal.valueOf(ONE_BITCOIN_IN_SATOSHI)));
 		repository.save(userAccount);
@@ -146,17 +146,17 @@ public class UserAccountService {
 		if (userAccount == null) {
 			throw new UserAccountNotFoundException();
 		}
-		if (userAccount.getEmailToken() == null) {
+		if (userAccount.getActivationEmailToken() == null) {
 			throw new InvalidEmailTokenException();
 		}
 		if (userAccount.isDeleted()) {
 			throw new UserAccountDeletedException();
 		}
-		if (!userAccount.getEmailToken().equals(createVerifyDTO.getToken())) {
+		if (!userAccount.getActivationEmailToken().equals(createVerifyDTO.getToken())) {
 			throw new InvalidEmailTokenException();
 		}
 
-		userAccount.setEmailToken(null);
+		userAccount.setActivationEmailToken(null);
 	}
 
 	@Transactional
@@ -289,7 +289,7 @@ public class UserAccountService {
 		if (userAccount == null) {
 			throw new UserAccountNotFoundException();
 		}
-		if (userAccount.getEmailToken() != null) {
+		if (userAccount.getActivationEmailToken() != null) {
 			throw new UserAccountNotActivatedException();
 		}
 		if (userAccount.isDeleted()) {
@@ -311,7 +311,7 @@ public class UserAccountService {
 		if (userAccount.isDeleted()) {
 			throw new UserAccountDeletedException();
 		}
-		if (userAccount.getEmailToken() != null) {
+		if (userAccount.getActivationEmailToken() != null) {
 			throw new UserAccountNotActivatedException();
 		}
 
@@ -328,7 +328,7 @@ public class UserAccountService {
 		if (userAccount.isDeleted()) {
 			throw new UserAccountDeletedException();
 		}
-		if (userAccount.getEmailToken() != null) {
+		if (userAccount.getActivationEmailToken() != null) {
 			throw new UserAccountNotActivatedException();
 		}
 		if (userAccount.getForgotEmailToken() == null || !userAccount.getForgotEmailToken().equals(forgotVerifyDTO.getToken())) {

@@ -64,8 +64,8 @@ public class UserAccount implements Serializable {
 	@Column(name = "BALANCE", precision = 25, scale = 8)
 	private BigDecimal balance;
 
-	@Column(name = "EMAIL_TOKEN")
-	private String emailToken;
+	@Column(name = "ACTIVATION_EMAIL_TOKEN")
+	private String activationEmailToken;
 
 	@Column(name = "FORGOT_EMAIL_TOKEN")
 	private String forgotEmailToken;
@@ -127,12 +127,12 @@ public class UserAccount implements Serializable {
 		return this;
 	}
 
-	public String getEmailToken() {
-		return emailToken;
+	public String getActivationEmailToken() {
+		return activationEmailToken;
 	}
 
-	public UserAccount setEmailToken(String emailToken) {
-		this.emailToken = emailToken;
+	public UserAccount setActivationEmailToken(String emailToken) {
+		this.activationEmailToken = emailToken;
 		return this;
 	}
 
@@ -155,7 +155,7 @@ public class UserAccount implements Serializable {
 	}
 
 	public boolean isEmailVerified() {
-		return this.emailToken == null;
+		return this.activationEmailToken == null;
 	}
 
 	@Override
@@ -166,7 +166,7 @@ public class UserAccount implements Serializable {
 				.append(", isDeleted: ").append(isDeleted())
 				.append(", creationDate: ").append(getCreationDate())
 				.append(", balance: ").append(getBalance())
-				.append(", emailToken: ").append(getEmailToken())
+				.append(", emailToken: ").append(getActivationEmailToken())
 				.append(", userRoles: ").append(getUserRole());
 		return sb.toString();
 	}

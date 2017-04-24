@@ -80,7 +80,7 @@ public class UserAccountServiceTest extends CoinbleskTest {
 
 		UserAccount userAccount = new UserAccount();
 		userAccount.setBalance(BigDecimal.ONE).setCreationDate(new Date(1)).setDeleted(false).setEmail("test@test" +
-			"" + ".test").setEmailToken(null).setPassword(passwordEncoder.encode("test"));
+			"" + ".test").setActivationEmailToken(null).setPassword(passwordEncoder.encode("test"));
 		userAccountRepository.save(userAccount);
 
 		accountService.createAcount(ecKeyClient);
