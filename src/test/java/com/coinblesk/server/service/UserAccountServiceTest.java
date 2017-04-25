@@ -45,7 +45,7 @@ public class UserAccountServiceTest extends CoinbleskTest {
 	final private ECKey ecKeyClient = new ECKey();
 
 	@MockBean
-	private MailService mailService;
+	private EventService eventService;
 
 	@Autowired
 	private UserAccountService userAccountService;
@@ -95,7 +95,7 @@ public class UserAccountServiceTest extends CoinbleskTest {
 	@Test
 	public void testTransferFailed() {
 		UserAccountTO result = userAccountService.transferP2SH(ecKeyClient, "test@test.test");
-		Mockito.verify(mailService, Mockito.times(1)).sendAdminMail(Mockito.anyString(), Mockito.anyString());
+		Mockito.verify(eventService, Mockito.times(1)).error(Mockito.any(), Mockito.anyString());
 		Assert.assertFalse(result.isSuccess());
 	}
 
