@@ -23,7 +23,10 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
 @RestController
-@RequestMapping(value = "/payment")
+@RequestMapping(
+	value = "/payment",
+	consumes = APPLICATION_JSON_UTF8_VALUE,
+	produces = { APPLICATION_JSON_UTF8_VALUE, "application/vnd.coinblesk.v4+json"})
 @CrossOrigin
 public class MicroPaymentController {
 
@@ -36,8 +39,7 @@ public class MicroPaymentController {
 		this.micropaymentService = micropaymentService;
 	}
 
-	@RequestMapping(value = "/micropayment", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE, produces =
-		APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/micropayment", method = POST)
 	public ResponseEntity micropayment(@RequestBody @Valid SignedDTO request) {
 		try {
 			// Get the embedded request
@@ -70,8 +72,7 @@ public class MicroPaymentController {
 	}
 
 
-	@RequestMapping(value = "/virtualpayment", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE, produces =
-		APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/virtualpayment", method = POST)
 	public ResponseEntity virtualpayment(@RequestBody @Valid SignedDTO request) {
 		// Get the embedded payload and check signature
 		final VirtualPaymentRequestDTO requestDTO;

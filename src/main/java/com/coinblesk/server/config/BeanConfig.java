@@ -15,7 +15,6 @@
  */
 package com.coinblesk.server.config;
 
-import com.coinblesk.server.auth.DefaultVersionFilter;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -34,7 +33,7 @@ import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 @ComponentScan("com.coinblesk.server")
 @EnableScheduling
 public class BeanConfig {
-    
+
         private final AppConfig appConfig;
         public BeanConfig(AppConfig appConfig) {
             this.appConfig = appConfig;
@@ -67,9 +66,4 @@ public class BeanConfig {
 	public LocaleResolver localeResolver() {
 		return new AcceptHeaderLocaleResolver();
 	}
-        
-        @Bean
-        public DefaultVersionFilter defaultVersionFilter() {
-            return new DefaultVersionFilter(appConfig.getDefaultApiVersion());
-        }
 }
