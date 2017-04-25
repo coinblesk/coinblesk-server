@@ -51,6 +51,8 @@ public class AppConfig {
 	private String url;
 	@Value("${coinblesk.config.dir}")
 	private FileSystemResource configDir;
+	@Value("${coinblesk.defaultApiVersion}")
+	private String defaultApiVersion;
 	@Value("${coinblesk.minimumLockTimeSeconds}")
 	private long minimumLockTimeSeconds;
 	@Value("${coinblesk.maximumLockTimeDays}")
@@ -101,6 +103,10 @@ public class AppConfig {
 		ECKey ecKey = ECKey.fromPrivate(potPrivateKeyAddress);
 		LOG.info("Pot address is: {}", ecKey.toAddress(getNetworkParameters()));
 		return ecKey;
+	}
+
+	public String getDefaultApiVersion() {
+		return defaultApiVersion;
 	}
 
 	public String getUrl() {
