@@ -15,10 +15,18 @@
  */
 package com.coinblesk.server.entity;
 
-import javax.persistence.*;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Objects;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Index;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
 
 /**
  * @author Thomas Bocek
@@ -59,6 +67,9 @@ public class Account implements Serializable {
 
 	@Column(name = "LOCKED", nullable = false)
 	private boolean locked;
+
+	@OneToOne(mappedBy = "account")
+	private transient UserAccount userAccount;
 
 	public byte[] clientPublicKey() {
 		return clientPublicKey;

@@ -5,9 +5,9 @@ import javax.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class VirtualBalanceRequestDTO {
+public class TokenDTO {
 
 	@NotNull
-	private final String publicKey;
+	private String token;
 
 }

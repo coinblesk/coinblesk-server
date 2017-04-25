@@ -15,12 +15,12 @@
  */
 package com.coinblesk.server.config;
 
-import com.coinblesk.server.auth.Http401UnauthorizedEntryPoint;
-import com.coinblesk.server.auth.JWTConfigurer;
-import com.coinblesk.server.auth.TokenProvider;
+import static org.springframework.http.HttpMethod.OPTIONS;
+
 import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -28,7 +28,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import static org.springframework.http.HttpMethod.OPTIONS;
+import com.coinblesk.server.auth.Http401UnauthorizedEntryPoint;
+import com.coinblesk.server.auth.JWTConfigurer;
+import com.coinblesk.server.auth.TokenProvider;
 
 /**
  * @author Thomas Bocek
@@ -36,10 +38,9 @@ import static org.springframework.http.HttpMethod.OPTIONS;
  * @author Sebastian Stephan
  */
 @EnableWebSecurity
+@EnableGlobalMethodSecurity(securedEnabled = true)
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-	final private static String[] REQUIRE_USER_ROLE = {"/user/auth/**", "/v?/user/auth/**"};
-	final private static String[] REQUIRE_ADMIN_ROLE = {"/admin/**", "/v?/admin/**"};
 	private final Http401UnauthorizedEntryPoint http401UnauthorizedEntryPoint;
 	private final TokenProvider tokenProvider;
 	private final UserDetailsService userDetailsService;
@@ -65,15 +66,27 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
 	@Override
 	protected void configure(HttpSecurity http) throws Exception {
-		http.cors().and().exceptionHandling().authenticationEntryPoint(http401UnauthorizedEntryPoint).and().csrf()
-			.disable().headers().frameOptions().sameOrigin() // To allow h2 console
-			.and().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and() // allow CORS's
-			// OPTIONS preflight
-			.authorizeRequests().antMatchers(OPTIONS, "/**").permitAll().and().authorizeRequests()
-			// .antMatchers("/").permitAll()
-			.antMatchers(REQUIRE_USER_ROLE).hasAnyAuthority(UserRole.USER.getAuthority(), UserRole.ADMIN.getAuthority
-			()).antMatchers(REQUIRE_ADMIN_ROLE).hasAuthority(UserRole.ADMIN.getAuthority()).and().apply
-			(securityConfigurerAdapter());
+		http
+			.cors()
+		.and()
+			.exceptionHandling()
+			.authenticationEntryPoint(http401UnauthorizedEntryPoint)
+		.and()
+			.csrf()
+			.disable()
+			.headers()
+			.frameOptions()
+			.sameOrigin() // To allow h2 console
+		.and()
+			.sessionManagement()
+			.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+		.and() // allow CORS's OPTIONS preflight
+			.authorizeRequests()
+			.antMatchers(OPTIONS, "/**").permitAll()
+		.and()
+			.authorizeRequests()
+		.and()
+			.apply(securityConfigurerAdapter());
 	}
 
 	private JWTConfigurer securityConfigurerAdapter() {

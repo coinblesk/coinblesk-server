@@ -15,19 +15,18 @@
  */
 package com.coinblesk.server.service;
 
-import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.json.v1.Type;
-import com.coinblesk.json.v1.UserAccountStatusTO;
-import com.coinblesk.json.v1.UserAccountTO;
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.config.UserRole;
-import com.coinblesk.server.dao.TimeLockedAddressRepository;
-import com.coinblesk.server.dao.UserAccountRepository;
-import com.coinblesk.server.entity.UserAccount;
-import com.coinblesk.util.BitcoinUtils;
-import com.coinblesk.util.CoinbleskException;
-import com.coinblesk.util.InsufficientFunds;
-import com.coinblesk.util.Pair;
+import static com.coinblesk.json.v1.Type.ACCOUNT_ERROR;
+import static com.coinblesk.server.config.UserRole.ADMIN;
+import static com.coinblesk.server.config.UserRole.USER;
+import static com.coinblesk.util.BitcoinUtils.ONE_BITCOIN_IN_SATOSHI;
+import static java.util.Locale.ENGLISH;
+import static java.util.UUID.randomUUID;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
@@ -39,12 +38,31 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.security.SecureRandom;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
+import com.coinblesk.bitcoin.TimeLockedAddress;
+import com.coinblesk.json.v1.Type;
+import com.coinblesk.json.v1.UserAccountTO;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.dao.TimeLockedAddressRepository;
+import com.coinblesk.server.dao.UserAccountRepository;
+import com.coinblesk.server.dto.UserAccountAdminDTO;
+import com.coinblesk.server.dto.UserAccountCreateDTO;
+import com.coinblesk.server.dto.UserAccountCreateVerifyDTO;
+import com.coinblesk.server.dto.UserAccountDTO;
+import com.coinblesk.server.dto.UserAccountForgotVerifyDTO;
+import com.coinblesk.server.entity.UserAccount;
+import com.coinblesk.server.enumerator.EventType;
+import com.coinblesk.server.exceptions.BusinessException;
+import com.coinblesk.server.exceptions.EmailAlreadyRegisteredException;
+import com.coinblesk.server.exceptions.InvalidEmailProvidedException;
+import com.coinblesk.server.exceptions.InvalidEmailTokenException;
+import com.coinblesk.server.exceptions.NoEmailProvidedException;
+import com.coinblesk.server.exceptions.PasswordTooShortException;
+import com.coinblesk.server.exceptions.UserAccountDeletedException;
+import com.coinblesk.server.exceptions.UserAccountNotActivatedException;
+import com.coinblesk.server.exceptions.UserAccountNotFoundException;
+import com.coinblesk.util.BitcoinUtils;
+import com.coinblesk.util.CoinbleskException;
+import com.coinblesk.util.InsufficientFunds;
 
 /**
  * @author draft
@@ -52,150 +70,178 @@ import java.util.UUID;
 @Service
 public class UserAccountService {
 
-	// as seen in:
-	// http://www.mkyong.com/regular-expressions/how-to-validate-email-address-with-regular-expression/
-	public static final String EMAIL_PATTERN = "^[_A-Za-z0-9-+]+(\\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*"
-		+ "(\\.[A-Za-z]{2,})$";
-	private final static SecureRandom random = new SecureRandom();
 	private final static Logger LOG = LoggerFactory.getLogger(UserAccountService.class);
 
+	// as seen in: http://www.mkyong.com/regular-expressions/how-to-validate-email-address-with-regular-expression/
+	public static final String EMAIL_PATTERN = "^[_A-Za-z0-9-+]+(\\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$";
+	public static final int MINIMAL_PASSWORD_LENGTH = 6;
+
 	private final UserAccountRepository repository;
-
 	private final TimeLockedAddressRepository addressRepository;
-
 	private final PasswordEncoder passwordEncoder;
-
-	private final MailService mailService;
-
 	private final AppConfig appConfig;
-
 	private final WalletService walletService;
-
-	private final AccountService accountService;
+	private final EventService eventService;
 
 	@Autowired
 	public UserAccountService(UserAccountRepository repository, TimeLockedAddressRepository addressRepository,
-							  PasswordEncoder passwordEncoder, MailService mailService, AppConfig appConfig,
-							  WalletService walletService, AccountService accountService) {
+			PasswordEncoder passwordEncoder, AppConfig appConfig, WalletService walletService, EventService eventService) {
 		this.repository = repository;
 		this.addressRepository = addressRepository;
 		this.passwordEncoder = passwordEncoder;
-		this.mailService = mailService;
 		this.appConfig = appConfig;
 		this.walletService = walletService;
-		this.accountService = accountService;
-	}
-
-	private static String createPassword() {
-		// put here all characters that are allowed in password
-		final char[] ALLOWED_CHARACTERS = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789".toCharArray();
-		final int PASSWORD_LENGTH = 8;
-
-		final StringBuffer password = new StringBuffer();
-
-		final int len = ALLOWED_CHARACTERS.length;
-		for (int i = 0; i < PASSWORD_LENGTH; i++) {
-			password.append(ALLOWED_CHARACTERS[random.nextInt(len)]);
-		}
-		return password.toString();
+		this.eventService = eventService;
 	}
 
 	@Transactional(readOnly = true)
 	public UserAccount getByEmail(String email) {
-		return repository.findByEmail(email);
-	}
-
-	@Transactional()
-	public Pair<UserAccountStatusTO, UserAccount> create(final UserAccountTO userAccountTO) {
-		final String email = userAccountTO.email();
-		if (email == null) {
-			return new Pair<>(new UserAccountStatusTO().type(Type.NO_EMAIL), null);
-		}
-		if (!email.matches(EMAIL_PATTERN)) {
-			return new Pair<>(new UserAccountStatusTO().type(Type.INVALID_EMAIL), null);
-		}
-		if (userAccountTO.password() == null || userAccountTO.password().length() < 6) {
-			return new Pair<>(new UserAccountStatusTO().type(Type.PASSWORD_TOO_SHORT), null);
-		}
-
-		userAccountTO.balance(0);
-		return createEntity(userAccountTO);
-	}
-
-	// call this for testing only directy!!
-	@Transactional()
-	private Pair<UserAccountStatusTO, UserAccount> createEntity(final UserAccountTO userAccountTO) {
-		final String email = userAccountTO.email().toLowerCase(Locale.ENGLISH);
-		final UserAccount found = repository.findByEmail(email);
-		if (found != null) {
-			if (found.getEmailToken() != null) {
-				return new Pair<>(new UserAccountStatusTO().type(Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_NOT_ACTIVATED),
-					found);
-			}
-			return new Pair<>(new UserAccountStatusTO().type(Type.SUCCESS_BUT_EMAIL_ALREADY_EXISTS_ACTIVATED), found);
-		}
-		// convert TO to Entity
-		UserAccount userAccount = new UserAccount();
-		userAccount.setEmail(email);
-		userAccount.setPassword(passwordEncoder.encode(userAccountTO.password()));
-		userAccount.setCreationDate(new Date());
-		userAccount.setDeleted(false);
-		userAccount.setEmailToken(UUID.randomUUID().toString());
-		userAccount.setUserRole(UserRole.USER);
-		userAccount.setBalance(BigDecimal.valueOf(userAccountTO.balance()).divide(BigDecimal.valueOf(BitcoinUtils
-			.ONE_BITCOIN_IN_SATOSHI)));
-		repository.save(userAccount);
-		return new Pair<>(new UserAccountStatusTO().setSuccess(), userAccount);
-	}
-
-	@Transactional()
-	public UserAccountStatusTO activate(String email, String token) {
-		final UserAccount found = repository.findByEmail(email);
-		if (found == null) {
-			// no such email address - notok
-			return new UserAccountStatusTO().type(Type.NO_EMAIL);
-		}
-		if (found.getEmailToken() == null) {
-			// already acitaveted - ok
-			return new UserAccountStatusTO().setSuccess();
-		}
-
-		if (!found.getEmailToken().equals(token)) {
-			// wrong token - notok
-			return new UserAccountStatusTO().type(Type.INVALID_EMAIL_TOKEN);
-		}
-
-		// activate, enitiy is in attached state
-		found.setEmailToken(null);
-		return new UserAccountStatusTO().setSuccess();
-	}
-
-	@Transactional()
-	public UserAccountStatusTO delete(String email) {
-
-		final UserAccount found = repository.findByEmail(email);
-		if (found == null) {
-			// no such email address - notok
-			return new UserAccountStatusTO().type(Type.NO_EMAIL);
-		}
-		found.setDeleted(true);
-		return new UserAccountStatusTO().setSuccess();
+		return repository.findByEmail(email.toLowerCase(ENGLISH));
 	}
 
 	@Transactional(readOnly = true)
-	public UserAccountTO get(String email) {
-		final UserAccount userAccount = repository.findByEmail(email);
-		if (userAccount == null) {
-			return null;
-		}
-		long satoshi = userAccount.getBalance().multiply(new BigDecimal(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI))
-			.longValue();
-		final UserAccountTO userAccountTO = new UserAccountTO();
-		userAccountTO.email(userAccount.getEmail()).balance(satoshi);
-		return userAccountTO;
+	public boolean userExists(String email) {
+		UserAccount found = repository.findByEmail(email.toLowerCase(ENGLISH));
+		return found != null;
 	}
 
-	@Transactional()
+	@Transactional
+	public UserAccount create(UserAccountCreateDTO userAccountCreateDTO) throws BusinessException {
+		String email = userAccountCreateDTO.getEmail();
+
+		if (email == null) {
+			throw new NoEmailProvidedException();
+		}
+		if (!email.matches(EMAIL_PATTERN)) {
+			throw new InvalidEmailProvidedException();
+		}
+		if (userAccountCreateDTO.getPassword() == null || userAccountCreateDTO.getPassword().length() < MINIMAL_PASSWORD_LENGTH) {
+			throw new PasswordTooShortException();
+		}
+		if (userExists(email)) {
+			if (getByEmail(email).isDeleted()) {
+				throw new UserAccountDeletedException();
+			} else {
+				throw new EmailAlreadyRegisteredException();
+			}
+		}
+
+		// convert DTO to Entity
+		UserAccount userAccount = new UserAccount();
+		userAccount.setEmail(userAccountCreateDTO.getEmail().toLowerCase(ENGLISH));
+		userAccount.setPassword(passwordEncoder.encode(userAccountCreateDTO.getPassword()));
+		userAccount.setCreationDate(new Date());
+		userAccount.setDeleted(false);
+		userAccount.setActivationEmailToken(randomUUID().toString());
+		userAccount.setUserRole(USER);
+		userAccount.setBalance(BigDecimal.valueOf(0L).divide(BigDecimal.valueOf(ONE_BITCOIN_IN_SATOSHI)));
+		repository.save(userAccount);
+
+		return userAccount;
+	}
+
+	@Transactional
+	public void activate(UserAccountCreateVerifyDTO createVerifyDTO) throws BusinessException {
+		UserAccount userAccount = getByEmail(createVerifyDTO.getEmail());
+		if (userAccount == null) {
+			throw new UserAccountNotFoundException();
+		}
+		if (userAccount.getActivationEmailToken() == null) {
+			throw new InvalidEmailTokenException();
+		}
+		if (userAccount.isDeleted()) {
+			throw new UserAccountDeletedException();
+		}
+		if (!userAccount.getActivationEmailToken().equals(createVerifyDTO.getToken())) {
+			throw new InvalidEmailTokenException();
+		}
+
+		userAccount.setActivationEmailToken(null);
+	}
+
+	@Transactional
+	public void delete(String email) throws BusinessException {
+
+		UserAccount userAccount = repository.findByEmail(email);
+		if (userAccount == null) {
+			throw new UserAccountNotFoundException();
+		}
+
+		userAccount.setDeleted(true);
+	}
+
+	@Transactional
+	public void undelete(String email) throws BusinessException {
+
+		UserAccount userAccount = repository.findByEmail(email);
+		if (userAccount == null) {
+			throw new UserAccountNotFoundException();
+		}
+
+		userAccount.setDeleted(false);
+	}
+
+	@Transactional
+	public void switchRole(String email) throws BusinessException {
+
+		UserAccount userAccount = repository.findByEmail(email);
+		if (userAccount == null) {
+			throw new UserAccountNotFoundException();
+		}
+
+		if(USER.equals(userAccount.getUserRole())) {
+			userAccount.setUserRole(ADMIN);
+		} else {
+			userAccount.setUserRole(USER);
+		}
+	}
+
+	@Transactional(readOnly = true)
+	public UserAccountDTO getDTO(String email) throws BusinessException {
+		UserAccount userAccount = repository.findByEmail(email);
+		if (userAccount == null) {
+			throw new UserAccountNotFoundException();
+		}
+		long satoshi = userAccount.getBalance().multiply(new BigDecimal(ONE_BITCOIN_IN_SATOSHI)).longValue();
+
+		UserAccountDTO userAccountDTO = new UserAccountDTO();
+		userAccountDTO.setEmail(userAccount.getEmail());
+		userAccountDTO.setBalance(satoshi);
+
+		return userAccountDTO;
+	}
+
+	@Transactional(readOnly = true)
+	public UserAccountAdminDTO getAdminDTO(String email) throws BusinessException {
+		UserAccount userAccount = repository.findByEmail(email);
+		if (userAccount == null) {
+			throw new UserAccountNotFoundException();
+		}
+		return mapUserAccountToAdminDTO(userAccount);
+	}
+
+	@Transactional(readOnly = true)
+	public List<UserAccountAdminDTO> getAllAdminDTO() {
+		List<UserAccount> userAccounts = repository.findAllByOrderByCreationDateAsc();
+		List<UserAccountAdminDTO> userAccountAdminDTOs = new ArrayList<>();
+		for(UserAccount userAccount : userAccounts) {
+			UserAccountAdminDTO userAccountAdminDTO = mapUserAccountToAdminDTO(userAccount);
+			userAccountAdminDTOs.add(userAccountAdminDTO);
+		}
+		return userAccountAdminDTOs;
+	}
+
+	private UserAccountAdminDTO mapUserAccountToAdminDTO(UserAccount userAccount) {
+		UserAccountAdminDTO userAccountAdminDTO = new UserAccountAdminDTO();
+		userAccountAdminDTO.setBalance(userAccount.getBalance().longValue());
+		userAccountAdminDTO.setEmail(userAccount.getEmail());
+		userAccountAdminDTO.setCreationDate(userAccount.getCreationDate());
+		userAccountAdminDTO.setUserRole(userAccount.getUserRole());
+		userAccountAdminDTO.setDeleted(userAccount.isDeleted());
+		return userAccountAdminDTO;
+	}
+
+	@Transactional
 	public UserAccountTO transferP2SH(ECKey clientKey, String email) {
 		final NetworkParameters params = appConfig.getNetworkParameters();
 		final UserAccount userAccount = repository.findByEmail(email);
@@ -203,17 +249,18 @@ public class UserAccountService {
 			return new UserAccountTO().type(Type.NO_ACCOUNT);
 		}
 		final ECKey pot = appConfig.getPotPrivateKeyAddress();
-		long satoshi = userAccount.getBalance().multiply(new BigDecimal(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI))
-			.longValue();
+		long satoshi = userAccount	.getBalance()
+									.multiply(new BigDecimal(ONE_BITCOIN_IN_SATOSHI))
+									.longValue();
 
 		List<TransactionOutput> outputs = walletService.potTransactionOutput(params);
 
 		Transaction tx;
 		try {
-			TimeLockedAddress latestTLA = addressRepository.findTopByAccount_clientPublicKeyOrderByLockTimeDesc
-				(clientKey.getPubKey()).toTimeLockedAddress();
+			TimeLockedAddress latestTLA = addressRepository.findTopByAccount_clientPublicKeyOrderByLockTimeDesc(
+					clientKey.getPubKey()).toTimeLockedAddress();
 			tx = BitcoinUtils.createTx(params, outputs, pot.toAddress(params), latestTLA.getAddress(params), satoshi,
-				false);
+					false);
 
 			tx = BitcoinUtils.sign(params, tx, pot);
 			BitcoinUtils.verifyTxFull(tx);
@@ -222,70 +269,76 @@ public class UserAccountService {
 			LOG.debug("About to broadcast tx");
 			walletService.broadcast(tx);
 			LOG.debug("Broadcast done");
-			long satoshiNew = userAccount.getBalance().multiply(new BigDecimal(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI))
-				.longValue();
+			long satoshiNew = userAccount.getBalance()
+											.multiply(new BigDecimal(BitcoinUtils.ONE_BITCOIN_IN_SATOSHI))
+											.longValue();
 
 			final UserAccountTO userAccountTO = new UserAccountTO();
 			userAccountTO.email(userAccount.getEmail()).balance(satoshiNew);
 			return userAccountTO;
 		} catch (CoinbleskException | InsufficientFunds e) {
 			LOG.error("Cannot create transaction", e);
-			mailService.sendAdminMail("transfer-p2sh error", "Cannot create transaction: " + e.getMessage());
-			return new UserAccountTO().type(Type.ACCOUNT_ERROR).message(e.getMessage());
+			eventService.error(EventType.USER_ACCOUNT_COULD_NOT_TRANSFER_P2SH, "Cannot create transaction: " + e.getMessage());
+			return new UserAccountTO().type(ACCOUNT_ERROR).message(e.getMessage());
 		}
 	}
 
-	@Transactional()
-	public UserAccountStatusTO changePassword(String email, String password) {
-		final UserAccount found = repository.findByEmail(email);
-		if (found == null) {
-			// no such email address - notok
-			return new UserAccountStatusTO().type(Type.NO_EMAIL);
+	@Transactional
+	public void changePassword(String email, String password) throws BusinessException {
+		final UserAccount userAccount = repository.findByEmail(email);
+		if (userAccount == null) {
+			throw new UserAccountNotFoundException();
 		}
-		found.setPassword(passwordEncoder.encode(password));
-		return new UserAccountStatusTO().setSuccess();
+		if (userAccount.getActivationEmailToken() != null) {
+			throw new UserAccountNotActivatedException();
+		}
+		if (userAccount.isDeleted()) {
+			throw new UserAccountDeletedException();
+		}
+		if (password.length() < MINIMAL_PASSWORD_LENGTH) {
+			throw new PasswordTooShortException();
+		}
+
+		userAccount.setPassword(passwordEncoder.encode(password));
 	}
 
-	@Transactional()
-	public UserAccountStatusTO activateForgot(String email, String forgetToken) {
-		final UserAccount found = repository.findByEmail(email);
-		if (found == null) {
-			// no such email address - notok
-			return new UserAccountStatusTO().type(Type.NO_EMAIL);
+	@Transactional
+	public void forgot(String email) throws BusinessException {
+		UserAccount userAccount = getByEmail(email);
+		if (userAccount == null) {
+			throw new UserAccountNotFoundException();
 		}
-		if (found.getForgotEmailToken() == null) {
-			// wrong no password forget requested
-			return new UserAccountStatusTO().type(Type.INVALID_EMAIL_TOKEN);
+		if (userAccount.isDeleted()) {
+			throw new UserAccountDeletedException();
 		}
-
-		if (!found.getForgotEmailToken().equals(forgetToken)) {
-			// wrong token - notok
-			return new UserAccountStatusTO().type(Type.INVALID_EMAIL_TOKEN);
+		if (userAccount.getActivationEmailToken() != null) {
+			throw new UserAccountNotActivatedException();
 		}
 
-		// activate, change password
-		found.setForgotEmailToken(null);
-		found.setPassword(found.getForgotPassword());
-
-		return new UserAccountStatusTO().setSuccess();
+		String token = randomUUID().toString();
+		userAccount.setForgotEmailToken(token);
 	}
 
-	@Transactional()
-	public Pair<UserAccountStatusTO, UserAccountTO> forgot(String email) {
-		final UserAccount found = repository.findByEmail(email);
-		if (found == null) {
-			LOG.debug("no such email found in DB {}", email);
-			// no such email address - notok
-			return new Pair<UserAccountStatusTO, UserAccountTO>(new UserAccountStatusTO().type(Type.NO_EMAIL), null);
+	@Transactional
+	public void activateForgot(UserAccountForgotVerifyDTO forgotVerifyDTO) throws BusinessException {
+		UserAccount userAccount = getByEmail(forgotVerifyDTO.getEmail());
+		if (userAccount == null) {
+			throw new UserAccountNotFoundException();
 		}
-		String password = createPassword();
-		found.setForgotPassword(passwordEncoder.encode(password));
-		String token = UUID.randomUUID().toString();
-		found.setForgotEmailToken(token);
-		UserAccountTO to = new UserAccountTO();
-		to.email(found.getEmail());
-		to.password(password);
-		to.message(token);
-		return new Pair<UserAccountStatusTO, UserAccountTO>(new UserAccountStatusTO().setSuccess(), to);
+		if (userAccount.isDeleted()) {
+			throw new UserAccountDeletedException();
+		}
+		if (userAccount.getActivationEmailToken() != null) {
+			throw new UserAccountNotActivatedException();
+		}
+		if (userAccount.getForgotEmailToken() == null || !userAccount.getForgotEmailToken().equals(forgotVerifyDTO.getToken())) {
+			throw new InvalidEmailTokenException();
+		}
+		if (forgotVerifyDTO.getNewPassword().length() < MINIMAL_PASSWORD_LENGTH) {
+			throw new PasswordTooShortException();
+		}
+
+		userAccount.setForgotEmailToken(null);
+		userAccount.setPassword(passwordEncoder.encode(forgotVerifyDTO.getNewPassword()));
 	}
 }

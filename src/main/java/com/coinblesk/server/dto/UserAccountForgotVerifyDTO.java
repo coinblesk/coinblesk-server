@@ -3,16 +3,17 @@ package com.coinblesk.server.dto;
 import javax.validation.constraints.NotNull;
 
 import lombok.Data;
-import lombok.ToString;
 
 @Data
-@ToString(exclude = "password")
-public class LoginDTO {
+public class UserAccountForgotVerifyDTO {
 
 	@NotNull
 	private String email;
 
 	@NotNull
-	private String password;
+	private String token;
+
+	@NotNull
+	private String newPassword;
 
 }

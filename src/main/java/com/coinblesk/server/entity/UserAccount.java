@@ -16,18 +16,29 @@
 
 package com.coinblesk.server.entity;
 
-import com.coinblesk.server.config.UserRole;
+import static javax.persistence.EnumType.STRING;
+import static javax.persistence.TemporalType.TIMESTAMP;
 
-import javax.persistence.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Enumerated;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Temporal;
+
+import com.coinblesk.server.config.UserRole;
 
 /**
  * @author Thomas Bocek
  */
 @Entity(name = "USER_ACCOUNT")
-@Table(indexes = {@Index(name = "USERNAME_INDEX", columnList = "USERNAME")})
 public class UserAccount implements Serializable {
 
 	private static final long serialVersionUID = 1L;
@@ -36,29 +47,36 @@ public class UserAccount implements Serializable {
 	@GeneratedValue(strategy = GenerationType.AUTO)
 	@Column(name = "ID", nullable = false)
 	private long id;
-	@Temporal(TemporalType.TIMESTAMP)
+
+	@Temporal(TIMESTAMP)
 	@Column(name = "CREATION_DATE", nullable = false)
 	private Date creationDate;
-	@Column(name = "USERNAME")
-	private String username;
+
 	@Column(name = "EMAIL", unique = true, nullable = false)
 	private String email;
+
 	@Column(name = "PASSWORD", nullable = false)
 	private String password;
+
 	@Column(name = "DELETED", nullable = false)
 	private boolean deleted;
+
 	@Column(name = "BALANCE", precision = 25, scale = 8)
 	private BigDecimal balance;
-	@Column(name = "EMAIL_TOKEN")
-	private String emailToken;
-	@Column(name = "FORGOT_PASSWORD")
-	private String forgotPassword;
+
+	@Column(name = "ACTIVATION_EMAIL_TOKEN")
+	private String activationEmailToken;
+
 	@Column(name = "FORGOT_EMAIL_TOKEN")
 	private String forgotEmailToken;
 
-	@Enumerated(EnumType.STRING)
+	@Enumerated(STRING)
 	@Column(name = "USER_ROLE")
 	private UserRole userRole;
+
+	@OneToOne
+	@JoinColumn(unique = true)
+	private Account account;
 
 	public boolean isDeleted() {
 		return deleted;
@@ -71,15 +89,6 @@ public class UserAccount implements Serializable {
 
 	private long getId() {
 		return id;
-	}
-
-	private String getUsername() {
-		return username;
-	}
-
-	public UserAccount setUsername(String username) {
-		this.username = username;
-		return this;
 	}
 
 	public String getEmail() {
@@ -109,7 +118,7 @@ public class UserAccount implements Serializable {
 		return this;
 	}
 
-	private Date getCreationDate() {
+	public Date getCreationDate() {
 		return creationDate;
 	}
 
@@ -118,21 +127,12 @@ public class UserAccount implements Serializable {
 		return this;
 	}
 
-	public String getEmailToken() {
-		return emailToken;
+	public String getActivationEmailToken() {
+		return activationEmailToken;
 	}
 
-	public UserAccount setEmailToken(String emailToken) {
-		this.emailToken = emailToken;
-		return this;
-	}
-
-	public String getForgotPassword() {
-		return forgotPassword;
-	}
-
-	public UserAccount setForgotPassword(String forgotPassword) {
-		this.forgotPassword = forgotPassword;
+	public UserAccount setActivationEmailToken(String emailToken) {
+		this.activationEmailToken = emailToken;
 		return this;
 	}
 
@@ -155,15 +155,19 @@ public class UserAccount implements Serializable {
 	}
 
 	public boolean isEmailVerified() {
-		return this.emailToken == null;
+		return this.activationEmailToken == null;
 	}
 
 	@Override
 	public String toString() {
-		StringBuilder sb = new StringBuilder().append("id: ").append(getId()).append(", username: ").append
-			(getUsername()).append(", email: ").append(getEmail()).append(", isDeleted: ").append(isDeleted()).append
-			(", creationDate: ").append(getCreationDate()).append(", balance: ").append(getBalance()).append(", " +
-			"emailToken: ").append(getEmailToken()).append(", userRoles: ").append(getUserRole());
+		StringBuilder sb = new StringBuilder()
+				.append("id: ").append(getId())
+				.append(", email: ").append(getEmail())
+				.append(", isDeleted: ").append(isDeleted())
+				.append(", creationDate: ").append(getCreationDate())
+				.append(", balance: ").append(getBalance())
+				.append(", emailToken: ").append(getActivationEmailToken())
+				.append(", userRoles: ").append(getUserRole());
 		return sb.toString();
 	}
 }
