@@ -51,8 +51,8 @@ public class VersionController {
 		this.appConfig = appConfig;
 	}
 
-	@RequestMapping(value = "", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE, produces =
-		APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE, 
+                produces = APPLICATION_JSON_UTF8_VALUE, headers = "Accept=application/vnd.coinblesk.v3+json")
 	@ResponseBody
 	public VersionTO version(@RequestBody VersionTO input) {
 		final String tag = "{version}";
