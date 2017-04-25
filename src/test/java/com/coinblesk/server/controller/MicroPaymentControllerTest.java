@@ -897,6 +897,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	@Test
 	public void virtualPayment_failsOnEmpty() throws Exception {
 		mockMvc.perform(post(URL_VIRTUAL_PAYMENT)).andExpect(status().is4xxClientError());
+                //TODO: more of those
 	}
 
 }
