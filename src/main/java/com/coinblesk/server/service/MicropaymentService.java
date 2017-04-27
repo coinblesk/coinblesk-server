@@ -362,7 +362,7 @@ public class MicropaymentService {
 	}
 
 	@Transactional
-	public Transaction closeMicroPaymentChannel(ECKey forAccount) throws UserNotFoundException, InterruptedException,
+	private Transaction closeMicroPaymentChannel(ECKey forAccount) throws UserNotFoundException, InterruptedException,
 		ExecutionException, TimeoutException {
 		Account account = accountRepository.findByClientPublicKey(forAccount.getPubKey());
 		if (account == null)
