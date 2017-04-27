@@ -568,7 +568,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 			(params));
 		watchAndMineTransactions(fundingTx);
 
-		long estimatedSize = calculateChannelTxSize(inputAddress, senderKey, serverPublicKey, fundingTx.getOutput(0));
+		long estimatedSize = calculateChannelTxSize(params, inputAddress, senderKey, serverPublicKey, fundingTx.getOutput(0));
 		final Coin amountToServer = Coin.valueOf(1000L);
 		final Coin fee = Coin.valueOf(estimatedSize * LOW_FEE);
 		final Coin changeAmount = fundingTx.getOutput(0).getValue().minus(amountToServer).minus(fee);
@@ -593,7 +593,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		walletService.addWatching(tla.getAddress(params));
 		mineTransaction(fundingTx);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 12000000L, tla, fundingTx.getOutput(0));
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 12000000L, tla, params, fundingTx.getOutput(0));
 		sendAndExpect2xxSuccess(dto);
 		assertThat(accountService.getByClientPublicKey(senderKey.getPubKey()).isLocked(), is(true));
 	}
@@ -611,7 +611,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		walletService.addWatching(tla.getAddress(params));
 		mineTransaction(fundingTx);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1000L, tla, fundingTx.getOutput(0));
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1000L, tla, params, fundingTx.getOutput(0));
 		sendAndExpect2xxSuccess(dto);
 		assertThat(accountService.getVirtualBalanceByClientPublicKey(receiverKey.getPubKey()).getBalance(), is(1000L));
 	}
@@ -629,7 +629,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		walletService.addWatching(tla.getAddress(params));
 		mineTransaction(fundingTx);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1000L, tla, fundingTx.getOutput(0));
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1000L, tla, params, fundingTx.getOutput(0));
 		sendAndExpect2xxSuccess(dto);
 
 		Transaction openChannelTx = new Transaction(params, accountService.getByClientPublicKey(senderKey.getPubKey
@@ -651,7 +651,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		walletService.addWatching(tla.getAddress(params));
 		mineTransaction(fundingTx);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1337L, tla, fundingTx.getOutput(0));
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1337L, tla, params, fundingTx.getOutput(0));
 		sendAndExpect2xxSuccess(dto);
 
 		assertThat(accountService.getByClientPublicKey(receiverKey.getPubKey()).virtualBalance(), is(1337L));
@@ -701,7 +701,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 			.getPubKey()).serverPrivateKey()));
 		mineTransaction(fundingTx);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1337L, tla, fundingTx.getOutput(0));
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1337L, tla, params, fundingTx.getOutput(0));
 		sendAndExpect2xxSuccess(dto);
 
 		Transaction openChannelTx = new Transaction(params, accountService.getByClientPublicKey(senderKey.getPubKey
@@ -753,9 +753,9 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	}
 
 	public static SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Long amount, TimeLockedAddress address,
-														 TransactionOutput... usedOutputs) {
+														 NetworkParameters params, TransactionOutput... usedOutputs) {
 		ECKey serverPublicKey = ECKey.fromPublicOnly(address.getServerPubKey());
-		long estimatedSize = calculateChannelTxSize(address, from, serverPublicKey, usedOutputs);
+		long estimatedSize = calculateChannelTxSize(params, address, from, serverPublicKey, usedOutputs);
 		final Coin amountToServer = Coin.valueOf(amount);
 		final Coin fee = Coin.valueOf(estimatedSize * VALID_FEE);
 		Coin valueOfUTXOs = Arrays.stream(usedOutputs).map(TransactionOutput::getValue).reduce(Coin.ZERO, Coin::plus);
@@ -781,7 +781,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		return channelTransaction;
 	}
 
-	public static long calculateChannelTxSize(TimeLockedAddress change, ECKey senderKey, ECKey serverPK,
+	public static long calculateChannelTxSize(NetworkParameters params, TimeLockedAddress change, ECKey senderKey, ECKey serverPK,
 											  TransactionOutput... inputs) {
 		Transaction tx = new Transaction(params);
 		Arrays.asList(inputs).forEach(tx::addInput);
