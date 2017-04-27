@@ -30,13 +30,16 @@ public class MicropaymentServiceTest extends CoinbleskTest {
 	private AppConfig appConfig;
 
 	@Autowired
+	private WalletService walletService;
+
+	@Autowired
 	private AccountService accountService;
 
 	@Autowired
 	private AccountRepository accountRepository;
 
 	@Test
-	public void getTotalPendingChannelsSum() throws Exception {
+	public void getPendingChannelValue() throws Exception {
 		ECKey acc1 = new ECKey();
 		ECKey acc2 = new ECKey();
 		ECKey serverKey1 = accountService.createAcount(acc1); // Two accounts with open channels
@@ -62,7 +65,27 @@ public class MicropaymentServiceTest extends CoinbleskTest {
 			.broadcastBefore(address2.getLockTime());
 		accountRepository.save(Arrays.asList(account1, account2));
 
-		assertThat(micropaymentService.getTotalPendingChannelSum(), is(Coin.valueOf(999)));
+		assertThat(micropaymentService.getPendingChannelValue(), is(Coin.valueOf(999)));
+	}
+
+	@Test
+	public void getMicroPaymentPotValue() throws Exception {
+		ECKey serverKey1 = accountService.createAcount(new ECKey());
+		ECKey serverKey2 = accountService.createAcount(new ECKey());
+		walletService.addWatching(serverKey1.toAddress(params()));
+		walletService.addWatching(serverKey2.toAddress(params()));
+		Transaction tx1 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), serverKey1.toAddress(params()));
+		Transaction tx2 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), serverKey2.toAddress(params()));
+		mineTransaction(tx1);
+		mineTransaction(tx2);
+		assertThat(micropaymentService.getMicroPaymentPotValue(), is(Coin.valueOf(2, 0)));
+	}
+
+	private void mineTransaction(Transaction tx) throws PrunedException {
+		Block lastBlock = walletService.blockChain().getChainHead().getHeader();
+		Transaction spendTXClone = new Transaction(params(), tx.bitcoinSerialize());
+		Block newBlock = FakeTxBuilder.makeSolvedTestBlock(lastBlock, spendTXClone);
+		walletService.blockChain().add(newBlock);
 	}
 
 	private NetworkParameters params() {
