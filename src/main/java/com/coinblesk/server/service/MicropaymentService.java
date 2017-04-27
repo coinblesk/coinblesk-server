@@ -317,18 +317,13 @@ public class MicropaymentService {
 				" given");
 		}
 		final BigDecimal btc_usd = forexService.getExchangeRate("BTC", "USD");
-		final long amountInUSD = btc_usd.divide(new BigDecimal(100000000)).multiply(new BigDecimal(amount))
-			.longValue();
-		if (amountInUSD > appConfig.getMaximumChannelAmountUSD()) {
+		final long channelAmountInUSD = btc_usd.divide(new BigDecimal(100000000))
+			.multiply(new BigDecimal(outputForServer.getValue().getValue())).longValue();
+		if (channelAmountInUSD > appConfig.getMaximumChannelAmountUSD()) {
 			throw new RuntimeException("Maximum channel value reached");
 		}
 
-		// 4.4) Close if threshold reached
-		if (amountInUSD > appConfig.getChannelClosingThresholdUSD()) {
-			mustClose = true;
-		}
-
-		// 4.5) Check for enough fee
+		// 4.4) Check for enough fee
 		long neededSatoshiPerByte = feeService.fee();
 		final Coin neededFee = Coin.valueOf(tx.bitcoinSerialize().length * neededSatoshiPerByte);
 		Coin givenFee = spentOutputs.stream().map(TransactionOutput::getValue).reduce(Coin.ZERO, Coin::add).minus(tx

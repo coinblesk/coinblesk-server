@@ -2,10 +2,7 @@ package com.coinblesk.server.integration;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.dto.CreateAddressRequestDTO;
-import com.coinblesk.server.dto.CreateAddressResponseDTO;
-import com.coinblesk.server.dto.KeyExchangeRequestDTO;
-import com.coinblesk.server.dto.SignedDTO;
+import com.coinblesk.server.dto.*;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.ForexService;
@@ -27,6 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import javax.annotation.Signed;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
@@ -34,6 +32,7 @@ import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 
 import static com.coinblesk.server.controller.MicroPaymentControllerTest.URL_MICRO_PAYMENT;
+import static com.coinblesk.server.controller.MicroPaymentControllerTest.URL_VIRTUAL_PAYMENT;
 import static com.coinblesk.server.controller.MicroPaymentControllerTest.createMicroPaymentRequestDTO;
 import static com.coinblesk.server.controller.PaymentControllerTest.URL_CREATE_TIME_LOCKED_ADDRESS;
 import static com.coinblesk.server.controller.PaymentControllerTest.URL_KEY_EXCHANGE;
@@ -75,6 +74,7 @@ public class MicroPaymentTest {
 	private final ECKey KEY_MERCHANT = new ECKey();
 	private NetworkParameters params;
 	private Coin oneUSD;
+	private Coin oneCent;
 
 	private static MockMvc mockMvc;
 
@@ -106,7 +106,8 @@ public class MicroPaymentTest {
 	public void setUp() throws Exception {
 		mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();
 		params = appConfig.getNetworkParameters();
-		oneUSD = Coin.valueOf(forexService.getExchangeRate("USD", "BTC").multiply(BigDecimal.valueOf(100000000)).longValue());
+		oneUSD = Coin.valueOf(BigDecimal.valueOf(100000000).divide(forexService.getExchangeRate("BTC", "USD"), BigDecimal.ROUND_UP).longValue());
+		oneCent = oneUSD.div(100);
 	}
 
 	@Test
@@ -120,9 +121,8 @@ public class MicroPaymentTest {
 		TimeLockedAddress addressBob = createAddress(KEY_BOB, inAMonth());
 
 		// Bob loads ~100 USD to his account
-		blockUntilAddressChanged(() -> {
-			sendToAddress(addressBob.getAddress(params).toBase58(), oneUSD.times(100));
-		}, addressBob.getAddress(params));
+		blockUntilAddressChanged(() -> sendToAddress(addressBob.getAddress(params).toBase58(), oneUSD.times(100)),
+			addressBob.getAddress(params));
 
 		// Bob tries his first micro payment of 1 USD to Alice, which fails because the 100 USD transaction is not
 		// yet mined
@@ -132,23 +132,85 @@ public class MicroPaymentTest {
 			.andExpect(content().string(containsString("UTXO must be mined")));
 
 		// Wait for block to be mined
-		blockUntilAddressChanged(() -> {
-			generateBlock(1);
-		}, addressBob.getAddress(params));
+		blockUntilAddressChanged(() -> generateBlock(1), addressBob.getAddress(params));
 
 		// Now that it is mined it should work
-		mockMvc.perform(post(URL_MICRO_PAYMENT).contentType(APPLICATION_JSON).content(DTOUtils.toJSON(dto1)))
-			.andExpect(status().is2xxSuccessful());
+		sendAndExpectSuccess(URL_MICRO_PAYMENT, dto1);
 
 		/* Check that we have the following state:
-		+---------+-----------------+--------+-----------------------------+
-		| Account | Virtual Balance | Locked | PendingPaymentChannelAmount |
-		+---------+-----------------+--------+-----------------------------+
-		| Bob     | 0               | false  | 1 USD                       |
-		| Alice   | 1 USD           | false  | null                        |
-		+---------+-----------------+--------+-----------------------------+ */
+		+----------+-----------------+--------+-----------------------------+
+		| Account  | Virtual Balance | Locked | PendingPaymentChannelAmount |
+		+----------+-----------------+--------+-----------------------------+
+		| Bob      | 0               | false  | 1 USD                       |
+		| Alice    | 1 USD           | false  | null                        |
+		| Merchant | 0               | false  | null                        |
+		+----------+-----------------+--------+-----------------------------+
+		*/
 		assertAccountState(KEY_BOB, Coin.ZERO, false, oneUSD);
 		assertAccountState(KEY_ALICE, oneUSD, false, Coin.ZERO);
+		assertAccountState(KEY_MERCHANT, Coin.ZERO, false, Coin.ZERO);
+
+		// Alice uses the 1 USD virtual balance to pay the merchant 30 cents.
+		VirtualPaymentRequestDTO req1 = new VirtualPaymentRequestDTO(KEY_ALICE.getPublicKeyAsHex(),
+			KEY_MERCHANT.getPublicKeyAsHex(), oneCent.multiply(30).getValue(), now());
+		SignedDTO dto2 = DTOUtils.serializeAndSign(req1, KEY_ALICE);
+		sendAndExpectSuccess(URL_VIRTUAL_PAYMENT, dto2);
+
+		/*
+		+----------+-----------------+--------+-----------------------------+
+		| Account  | Virtual Balance | Locked | PendingPaymentChannelAmount |
+		+----------+-----------------+--------+-----------------------------+
+		| Bob      | 0               | false  | 1 USD                       |
+		| Alice    | 0.70 USD        | false  | null                        |
+		| Merchant | 0.30 USD        | false  | null                        |
+		+----------+-----------------+--------+-----------------------------+
+		 */
+		assertAccountState(KEY_BOB, Coin.ZERO, false, oneUSD);
+		assertAccountState(KEY_ALICE, oneCent.multiply(70), false, Coin.ZERO);
+		assertAccountState(KEY_MERCHANT, oneCent.multiply(30), false, Coin.ZERO);
+
+		// Alice creates an account and sends loads it with USD 30 and a block is mined
+		TimeLockedAddress addressAlice = createAddress(KEY_ALICE, inAMonth());
+		blockUntilAddressChanged(() -> sendToAddress(addressAlice.getAddress(params).toBase58(), oneUSD.times(30)),
+			addressAlice.getAddress(params));
+		blockUntilAddressChanged(() -> generateBlock(1), addressAlice.getAddress(params));
+
+		// Alice makes a micro payment of USD 8 to the merchant.
+		SignedDTO dto3 = createMicroPaymentRequestDTO(KEY_ALICE, KEY_MERCHANT, oneUSD.multiply(8).getValue(), addressAlice,
+			params, getUTXOsForAddress(addressAlice));
+		sendAndExpectSuccess(URL_MICRO_PAYMENT, dto3);
+
+		/*
+		+----------+-----------------+--------+-----------------------------+
+		| Account  | Virtual Balance | Locked | PendingPaymentChannelAmount |
+		+----------+-----------------+--------+-----------------------------+
+		| Bob      | 0               | false  | 1 USD                       |
+		| Alice    | 0.70 USD        | false  | USD 8                       |
+		| Merchant | 8.30 USD        | false  | null                        |
+		+----------+-----------------+--------+-----------------------------+ */
+		assertAccountState(KEY_BOB, Coin.ZERO, false, oneUSD);
+		assertAccountState(KEY_ALICE, oneCent.multiply(70), false, oneUSD.multiply(8));
+		assertAccountState(KEY_MERCHANT, oneCent.multiply(830), false, Coin.ZERO);
+
+		// Alice sends another 3 Dollar via micro payment to Bob. Since the threshold of 10 dollar is reached, the
+		// server closes the channel.
+		Thread.sleep(1001);
+		SignedDTO dto4 = createMicroPaymentRequestDTO(KEY_ALICE, KEY_BOB, oneUSD.multiply(3).getValue(), addressAlice,
+			params, oneUSD.multiply(8).getValue(), getUTXOsForAddress(addressAlice));
+		sendAndExpectSuccess(URL_MICRO_PAYMENT, dto4);
+
+		/*
+		+----------+-----------------+--------+-----------------------------+
+		| Account  | Virtual Balance | Locked | PendingPaymentChannelAmount |
+		+----------+-----------------+--------+-----------------------------+
+		| Bob      | 3.00 USD        | false  | 1 USD                       |
+		| Alice    | 0.70 USD        | true   | USD 11                      |
+		| Merchant | 8.30 USD        | false  | null                        |
+		+----------+-----------------+--------+-----------------------------+ */
+		assertAccountState(KEY_BOB, oneUSD.times(3), false, oneUSD);
+		assertAccountState(KEY_ALICE, oneCent.multiply(70), true, oneUSD.multiply(11));
+		assertAccountState(KEY_MERCHANT, oneCent.multiply(830), false, Coin.ZERO);
+
 	}
 
 	private void assertAccountState(ECKey forAccount, Coin virtualBalance, boolean locked, Coin pendingChannelValue) {
@@ -178,7 +240,7 @@ public class MicroPaymentTest {
 						Objects.equals(address, out.getAddressFromP2SH(params));
 				})
 				.findAny()
-				.ifPresent(transactionOutput -> { latchMined.countDown(); });
+				.ifPresent(transactionOutput -> latchMined.countDown());
 		};
 		walletService.getWallet().addTransactionConfidenceEventListener(listener2);
 		eventThatCausesChange.run();
@@ -194,6 +256,10 @@ public class MicroPaymentTest {
 
 	private static long inAMonth() {
 		return Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
+	}
+
+	private static long now() {
+		return Instant.now().getEpochSecond();
 	}
 
 	private TimeLockedAddress createAddress(ECKey forClient, long lockTime) throws Exception {
@@ -213,6 +279,11 @@ public class MicroPaymentTest {
 	private void createAccount(ECKey publicKey) throws Exception {
 		KeyExchangeRequestDTO dto = new KeyExchangeRequestDTO(publicKey.getPublicKeyAsHex());
 		mockMvc.perform(post(URL_KEY_EXCHANGE).contentType(APPLICATION_JSON).content(DTOUtils.toJSON(dto)))
+			.andExpect(status().is2xxSuccessful());
+	}
+
+	private void sendAndExpectSuccess(String url, SignedDTO dto) throws Exception {
+		mockMvc.perform(post(url).contentType(APPLICATION_JSON).content(DTOUtils.toJSON(dto)))
 			.andExpect(status().is2xxSuccessful());
 	}
 

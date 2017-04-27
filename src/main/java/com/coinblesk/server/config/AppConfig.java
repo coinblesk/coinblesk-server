@@ -59,8 +59,6 @@ public class AppConfig {
 	private long maximumLockTimeDays;
 	@Value("${coinblesk.maximumChannelAmountUSD}")
 	private long maximumChannelAmountUSD;
-	@Value("${coinblesk.channelClosingThresholdUSD}")
-	private long channelClosingThresholdUSD;
 	@Value("${bitcoin.net}")
 	private String bitcoinNet;
 	@Value("${bitcoin.firstSeedNode}")
@@ -145,7 +143,4 @@ public class AppConfig {
 		return maximumChannelAmountUSD;
 	}
 
-	public long getChannelClosingThresholdUSD() {
-		return channelClosingThresholdUSD;
-	}
 }

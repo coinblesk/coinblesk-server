@@ -7,6 +7,7 @@ import com.coinblesk.server.dto.ErrorDTO;
 import com.coinblesk.server.dto.MicroPaymentRequestDTO;
 import com.coinblesk.server.dto.SignedDTO;
 import com.coinblesk.server.service.AccountService;
+import com.coinblesk.server.service.ForexService;
 import com.coinblesk.server.service.MicropaymentService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.CoinbleskTest;
@@ -25,6 +26,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
@@ -44,6 +46,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	public static final String URL_VIRTUAL_PAYMENT = "/payment/virtualpayment";
 	private static final long VALID_FEE = 250L;
 	private static final long LOW_FEE = 50L;
+	private static Coin oneUSD;
+	private static Coin channelThreshold;
 	private static final long validLockTime = Instant.now().plus(Duration.ofDays(30)).getEpochSecond();
 	private static MockMvc mockMvc;
 	@Autowired
@@ -55,6 +59,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	@Autowired
 	private AccountService accountService;
 	@Autowired
+	private ForexService forexService;
+	@Autowired
 	private AccountRepository accountRepository;
 	@Autowired
 	private AppConfig appConfig;
@@ -62,9 +68,11 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	public static NetworkParameters params;
 
 	@Before
-	public void setUp() {
+	public void setUp() throws Exception {
 		mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();
 		params = appConfig.getNetworkParameters();
+		oneUSD = Coin.valueOf(BigDecimal.valueOf(100000000).divide(forexService.getExchangeRate("BTC", "USD"), BigDecimal.ROUND_UP).longValue());
+		channelThreshold = oneUSD.multiply(appConfig.getMaximumChannelAmountUSD());
 	}
 
 	@Test
@@ -360,7 +368,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	}
 
 	@Test
-	public void microPayment_closesChannelWhenChangeOutputIsSoonUnlocked() throws Exception {
+	public void microPayment_closesChannelWhenChangeOutputIsNotLongestLockedAddress() throws Exception {
 		final ECKey senderKey = new ECKey();
 		final ECKey receiverKey = new ECKey();
 
@@ -369,8 +377,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
-		TimeLockedAddress changeAddress = accountService.createTimeLockedAddress(senderKey, Instant.now().plus
-			(Duration.ofHours(20)).getEpochSecond()).getTimeLockedAddress();
+		TimeLockedAddress changeAddress = accountService.createTimeLockedAddress(senderKey,
+			Instant.ofEpochSecond(validLockTime).minus (Duration.ofHours(1)).getEpochSecond()).getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, inputAddress.getAddress
 			(params));
 		watchAndMineTransactions(fundingTx);
@@ -581,7 +589,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	}
 
 	@Test
-	public void microPayment_locksAccountWhenSendingOverThreshold() throws Exception {
+	public void microPayment_failsWhenSendingOverThreshold() throws Exception {
 		final ECKey senderKey = new ECKey();
 		accountService.createAcount(senderKey);
 		final ECKey receiverKey = new ECKey();
@@ -593,9 +601,20 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		walletService.addWatching(tla.getAddress(params));
 		mineTransaction(fundingTx);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 12000000L, tla, params, fundingTx.getOutput(0));
-		sendAndExpect2xxSuccess(dto);
-		assertThat(accountService.getByClientPublicKey(senderKey.getPubKey()).isLocked(), is(true));
+		// Directly sending more than threshold fails
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey,
+			channelThreshold.plus(oneUSD).getValue(), tla, params, fundingTx.getOutput(0));
+		sendAndExpect4xxError(dto, "Maximum channel value reached");
+
+		// Sending small amount that brings channel over limit fails
+		Coin value = channelThreshold.minus(oneUSD);
+		SignedDTO dto2 = createMicroPaymentRequestDTO(senderKey, receiverKey,
+			value.getValue(), tla, params, fundingTx.getOutput(0));
+		sendAndExpect2xxSuccess(dto2); // channel is now one dollar below full
+		Thread.sleep(1001);
+		SignedDTO dto3 = createMicroPaymentRequestDTO(senderKey, receiverKey, oneUSD.multiply(2).getValue(),
+			tla, params, value.getValue(), fundingTx.getOutput(0));
+		sendAndExpect4xxError(dto3, "Maximum channel value reached");
 	}
 
 	@Test
@@ -754,9 +773,14 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 	public static SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Long amount, TimeLockedAddress address,
 														 NetworkParameters params, TransactionOutput... usedOutputs) {
+		return createMicroPaymentRequestDTO(from, to, amount, address, params, 0L, usedOutputs);
+	}
+	public static SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Long amount, TimeLockedAddress address,
+														 NetworkParameters params, Long prevAmountInChannel,
+														 TransactionOutput... usedOutputs) {
 		ECKey serverPublicKey = ECKey.fromPublicOnly(address.getServerPubKey());
 		long estimatedSize = calculateChannelTxSize(params, address, from, serverPublicKey, usedOutputs);
-		final Coin amountToServer = Coin.valueOf(amount);
+		final Coin amountToServer = Coin.valueOf(amount).plus(Coin.valueOf(prevAmountInChannel));
 		final Coin fee = Coin.valueOf(estimatedSize * VALID_FEE);
 		Coin valueOfUTXOs = Arrays.stream(usedOutputs).map(TransactionOutput::getValue).reduce(Coin.ZERO, Coin::plus);
 		final Coin changeAmount = valueOfUTXOs.minus(amountToServer).minus(fee);
