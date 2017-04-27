@@ -16,8 +16,8 @@
 package com.coinblesk.server.controller;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
+import com.coinblesk.dto.*;
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.dto.*;
 import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utils.DTOUtils;

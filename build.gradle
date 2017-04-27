@@ -72,14 +72,14 @@ dependencies {
 
 	// Shared resources with android client
 	// (includes transfer-objects)
-	compile 'com.coinblesk:coinblesk-shared-resources:1.4.73'
+	compile 'com.coinblesk:coinblesk-shared-resources:1.4.74'
 
 	// JWT Authentication
 	compile 'io.jsonwebtoken:jjwt:0.6.0'
 
 	// Misc
 	compile 'org.apache.commons:commons-lang3:3.5'
-	compile 'org.projectlombok:lombok:1.16.16'
+	compileOnly 'org.projectlombok:lombok:1.16.16'
 
 	// Testing
 	testCompile 'org.springframework.boot:spring-boot-starter-test'

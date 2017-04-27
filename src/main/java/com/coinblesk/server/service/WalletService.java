@@ -19,7 +19,6 @@ import com.coinblesk.bitcoin.AddressCoinSelector;
 import com.coinblesk.bitcoin.BitcoinNet;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
-import com.coinblesk.server.utils.CoinUtils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -52,7 +51,6 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
 
 /**
  * @author Thomas Bocek

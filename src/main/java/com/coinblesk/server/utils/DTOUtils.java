@@ -1,7 +1,7 @@
 package com.coinblesk.server.utils;
 
-import com.coinblesk.server.dto.SignatureDTO;
-import com.coinblesk.server.dto.SignedDTO;
+import com.coinblesk.dto.SignatureDTO;
+import com.coinblesk.dto.SignedDTO;
 import com.coinblesk.server.exceptions.InvalidSignatureException;
 import com.coinblesk.server.exceptions.MissingFieldException;
 import com.google.common.io.BaseEncoding;

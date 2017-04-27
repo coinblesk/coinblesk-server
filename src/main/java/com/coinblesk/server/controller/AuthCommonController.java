@@ -37,8 +37,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.coinblesk.server.dto.UserAccountChangePasswordDTO;
-import com.coinblesk.server.dto.UserAccountDTO;
+import com.coinblesk.dto.UserAccountChangePasswordDTO;
+import com.coinblesk.dto.UserAccountDTO;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
 import com.coinblesk.server.service.EventService;

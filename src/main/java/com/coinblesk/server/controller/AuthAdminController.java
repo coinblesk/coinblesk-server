@@ -45,9 +45,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.dto.AccountDTO;
-import com.coinblesk.server.dto.TimeLockedAddressDTO;
-import com.coinblesk.server.dto.UserAccountAdminDTO;
+import com.coinblesk.dto.AccountDTO;
+import com.coinblesk.dto.TimeLockedAddressDTO;
+import com.coinblesk.dto.UserAccountAdminDTO;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.Event;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
