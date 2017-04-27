@@ -15,7 +15,6 @@
  */
 package com.coinblesk.server.config;
 
-import com.coinblesk.server.utils.ApiVersionRequestMappingHandlerMapping;
 import com.coinblesk.util.SerializeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -45,11 +44,6 @@ public class WebMvcConfiguration extends WebMvcConfigurerAdapter {
 	@Autowired
 	public WebMvcConfiguration(Environment environment) {
 		this.environment = environment;
-	}
-
-	@Bean
-	public RequestMappingHandlerMapping requestMappingHandlerMapping() {
-		return new ApiVersionRequestMappingHandlerMapping();
 	}
 
 	@Override

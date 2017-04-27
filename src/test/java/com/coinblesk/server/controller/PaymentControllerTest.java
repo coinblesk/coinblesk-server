@@ -45,8 +45,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 public class PaymentControllerTest extends CoinbleskTest {
 
-	private static final String URL_KEY_EXCHANGE = "/payment/key-exchange";
-	private static final String URL_CREATE_TIME_LOCKED_ADDRESS = "/payment/createTimeLockedAddress";
+	public static final String URL_KEY_EXCHANGE = "/payment/key-exchange";
+	public static final String URL_CREATE_TIME_LOCKED_ADDRESS = "/payment/createTimeLockedAddress";
 	private static MockMvc mockMvc;
 	@Autowired
 	private WebApplicationContext webAppContext;
