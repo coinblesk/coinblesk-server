@@ -165,7 +165,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		Transaction microPaymentTransaction = new Transaction(params);
 		microPaymentTransaction.addInput(fundingTx.getOutput(0));
-		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverKeySender));
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverKeySender, params));
 		signAllInputs(microPaymentTransaction, inputAddress.createRedeemScript(), clientKey);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction);
@@ -190,7 +190,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		Transaction microPaymentTransaction = new Transaction(params);
 		microPaymentTransaction.addInput(fundingTx1.getOutput(0));
-		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverKeySender));
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverKeySender, params));
 		signAllInputs(microPaymentTransaction, inputAddress.createRedeemScript(), clientKey);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, receiverKey, microPaymentTransaction);
@@ -302,7 +302,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		watchAndMineTransactions(fundingTx);
 
 		Transaction microPaymentTransaction = new Transaction(params);
-		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey, params));
 		microPaymentTransaction.addInput(fundingTx.getOutput(0));
 		signAllInputs(microPaymentTransaction, timeLockedAddress.createRedeemScript(), senderKey);
 
@@ -324,7 +324,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		Transaction microPaymentTransaction = new Transaction(params);
 		microPaymentTransaction.addInput(fundingTx.getOutput(0));
-		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey, params));
 		signAllInputs(microPaymentTransaction, timeLockedAddress.createRedeemScript(), senderKey);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, senderKey, microPaymentTransaction);
@@ -347,7 +347,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		Transaction microPaymentTransaction = new Transaction(params);
 		microPaymentTransaction.addInput(fundingTx.getOutput(0));
-		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey, params));
 		microPaymentTransaction.addOutput(changeOutput(microPaymentTransaction, timeLockedAddress));
 		microPaymentTransaction.addOutput(changeOutput(microPaymentTransaction, timeLockedAddress));
 		signAllInputs(microPaymentTransaction, timeLockedAddress.createRedeemScript(), senderKey);
@@ -374,7 +374,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		Transaction microPaymentTransaction = new Transaction(params);
 		microPaymentTransaction.addInput(fundingTx.getOutput(0));
-		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey, params));
 		microPaymentTransaction.addOutput(changeOutput(microPaymentTransaction, changeAddress));
 		signAllInputs(microPaymentTransaction, inputAddress.createRedeemScript(), senderKey);
 
@@ -400,7 +400,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		Transaction microPaymentTransaction = new Transaction(params);
 		microPaymentTransaction.addInput(fundingTx.getOutput(0));
-		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey, params));
 		microPaymentTransaction.addOutput(anyP2PKOutput(microPaymentTransaction));
 		signAllInputs(microPaymentTransaction, inputAddress.createRedeemScript(), senderKey);
 
@@ -426,7 +426,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		Transaction microPaymentTransaction = new Transaction(params);
 		microPaymentTransaction.addInput(fundingTx.getOutput(0));
-		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey, params));
 		signAllInputs(microPaymentTransaction, inputAddress.createRedeemScript(), senderKey);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction);
@@ -449,7 +449,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		Transaction microPaymentTransaction = new Transaction(params);
 		microPaymentTransaction.addInput(fundingTx.getOutput(0));
-		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey));
+		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey, params));
 		signAllInputs(microPaymentTransaction, inputAddress.createRedeemScript(), senderKey);
 
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 1000L, 0L);
@@ -569,7 +569,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		final Coin amountToServer = Coin.valueOf(1000L);
 		final Coin fee = Coin.valueOf(estimatedSize * LOW_FEE);
 		final Coin changeAmount = fundingTx.getOutput(0).getValue().minus(amountToServer).minus(fee);
-		Transaction microPaymentTransaction = createChannelTx(changeAmount.getValue(), senderKey, serverPublicKey, inputAddress, amountToServer.getValue(), fundingTx.getOutput(0)
+		Transaction microPaymentTransaction = createChannelTx(changeAmount.getValue(), senderKey, serverPublicKey,
+			inputAddress, amountToServer.getValue(), params, fundingTx.getOutput(0)
 		);
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, amountToServer
 			.getValue());
@@ -732,7 +733,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		mineTransaction(fundingTx3);
 
 		Transaction channelTx = new Transaction(params);
-		channelTx.addOutput(P2PKOutput(channelTx, serverKey, 1000L));
+		channelTx.addOutput(P2PKOutput(channelTx, serverKey, 1000L, params));
 		channelTx.addOutput(changeOutput(channelTx, tla3));
 		channelTx.addInput(fundingTx1.getOutput(0));
 		channelTx.addInput(fundingTx2.getOutput(0));
@@ -757,22 +758,22 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		Coin valueOfUTXOs = Arrays.stream(usedOutputs).map(TransactionOutput::getValue).reduce(Coin.ZERO, Coin::plus);
 		final Coin changeAmount = valueOfUTXOs.minus(amountToServer).minus(fee);
 		Transaction microPaymentTransaction = createChannelTx(changeAmount.getValue(), from, serverPublicKey, address,
-			amountToServer.getValue(), usedOutputs);
+			amountToServer.getValue(), params, usedOutputs);
 		return createMicroPaymentRequestDTO(from, to, microPaymentTransaction, amount);
 	}
 
 	private Transaction createChannelTx(TransactionOutput input, ECKey senderKey, ECKey serverPK, TimeLockedAddress
 		changeAddress, long amountToServer) {
 		return createChannelTx(input.getValue().getValue()
-			- amountToServer, senderKey, serverPK, changeAddress, amountToServer, input);
+			- amountToServer, senderKey, serverPK, changeAddress, amountToServer, params, input);
 	}
 
 	public static Transaction createChannelTx(long amountToChange, ECKey senderKey, ECKey serverPK, TimeLockedAddress
-		change, long amountToServer, TransactionOutput... usedOutputs) {
+		change, long amountToServer, NetworkParameters params, TransactionOutput... usedOutputs) {
 		Transaction channelTransaction = new Transaction(params);
 		Arrays.asList(usedOutputs).forEach(channelTransaction::addInput);
-		channelTransaction.addOutput(P2PKOutput(channelTransaction, serverPK, amountToServer));
-		channelTransaction.addOutput(changeOutput(channelTransaction, change, amountToChange));
+		channelTransaction.addOutput(P2PKOutput(channelTransaction, serverPK, amountToServer, params));
+		channelTransaction.addOutput(changeOutput(channelTransaction, change, amountToChange, params));
 		signAllInputs(channelTransaction, change.createRedeemScript(), senderKey);
 		return channelTransaction;
 	}
@@ -781,8 +782,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 											  TransactionOutput... inputs) {
 		Transaction tx = new Transaction(params);
 		Arrays.asList(inputs).forEach(tx::addInput);
-		tx.addOutput(P2PKOutput(tx, serverPK, 1L));
-		tx.addOutput(changeOutput(tx, change, 1L));
+		tx.addOutput(P2PKOutput(tx, serverPK, 1L, params));
+		tx.addOutput(changeOutput(tx, change, 1L, params));
 		for (int i = 0; i < tx.getInputs().size(); i++) {
 			TransactionSignature clientSig = tx.calculateSignature(i, senderKey, change.createRedeemScript()
 				.getProgram(), SigHash.ALL, false);
@@ -837,19 +838,19 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		return new TransactionOutput(params, forTransaction, Coin.valueOf(100), new ECKey().toAddress(params));
 	}
 
-	public static TransactionOutput P2PKOutput(Transaction forTransaction, ECKey to, long value) {
+	public static TransactionOutput P2PKOutput(Transaction forTransaction, ECKey to, long value, NetworkParameters params) {
 		return new TransactionOutput(params, forTransaction, Coin.valueOf(value), to.toAddress(params));
 	}
 
-	private TransactionOutput P2PKOutput(Transaction forTransaction, ECKey to) {
-		return P2PKOutput(forTransaction, to, 100);
+	private TransactionOutput P2PKOutput(Transaction forTransaction, ECKey to, NetworkParameters params) {
+		return P2PKOutput(forTransaction, to, 100, params);
 	}
 
 	private TransactionOutput changeOutput(Transaction forTransaction, TimeLockedAddress changeTo) {
-		return changeOutput(forTransaction, changeTo, 100);
+		return changeOutput(forTransaction, changeTo, 100, params);
 	}
 
-	public static TransactionOutput changeOutput(Transaction forTransaction, TimeLockedAddress changeTo, long value) {
+	public static TransactionOutput changeOutput(Transaction forTransaction, TimeLockedAddress changeTo, long value, NetworkParameters params) {
 		return new TransactionOutput(params, forTransaction, Coin.valueOf(value), changeTo.getAddress(params));
 	}
 

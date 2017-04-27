@@ -35,6 +35,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @Service
 public class MicropaymentService {
@@ -410,6 +411,21 @@ public class MicropaymentService {
 				e.printStackTrace();
 			}
 		});
+	}
+
+	public Coin getTotalPendingChannelSum() {
+		return StreamSupport.stream(accountRepository.findAll().spliterator(), false)
+			.filter(account -> account.getChannelTransaction() != null)
+			.map(account -> {
+				Transaction tx = new Transaction(appConfig.getNetworkParameters(), account.getChannelTransaction());
+				Address serverAddress = ECKey.fromPrivateAndPrecalculatedPublic(account.serverPrivateKey(),
+					account.serverPublicKey()).toAddress(appConfig.getNetworkParameters());
+				return tx.getOutputs().stream()
+					.filter(out -> Objects.equals(out.getAddressFromP2PKHScript(appConfig.getNetworkParameters()), serverAddress))
+					.findFirst()
+					.map(TransactionOutput::getValue)
+					.orElse(Coin.ZERO);
+			}).reduce(Coin.ZERO, Coin::add);
 	}
 
 	/***
