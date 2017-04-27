@@ -416,16 +416,21 @@ public class MicropaymentService {
 	public Coin getPendingChannelValue() {
 		return StreamSupport.stream(accountRepository.findAll().spliterator(), false)
 			.filter(account -> account.getChannelTransaction() != null)
-			.map(account -> {
-				Transaction tx = new Transaction(appConfig.getNetworkParameters(), account.getChannelTransaction());
-				Address serverAddress = ECKey.fromPrivateAndPrecalculatedPublic(account.serverPrivateKey(),
-					account.serverPublicKey()).toAddress(appConfig.getNetworkParameters());
-				return tx.getOutputs().stream()
-					.filter(out -> Objects.equals(out.getAddressFromP2PKHScript(appConfig.getNetworkParameters()), serverAddress))
-					.findFirst()
-					.map(TransactionOutput::getValue)
-					.orElse(Coin.ZERO);
-			}).reduce(Coin.ZERO, Coin::add);
+			.map(this::getPendingChannelValue)
+			.reduce(Coin.ZERO, Coin::add);
+	}
+
+	public Coin getPendingChannelValue(Account account) {
+		if (account.getChannelTransaction() == null)
+			return Coin.ZERO;
+		Transaction tx = new Transaction(appConfig.getNetworkParameters(), account.getChannelTransaction());
+		Address serverAddress = ECKey.fromPrivateAndPrecalculatedPublic(account.serverPrivateKey(),
+			account.serverPublicKey()).toAddress(appConfig.getNetworkParameters());
+		return tx.getOutputs().stream()
+			.filter(out -> Objects.equals(out.getAddressFromP2PKHScript(appConfig.getNetworkParameters()), serverAddress))
+			.findFirst()
+			.map(TransactionOutput::getValue)
+			.orElse(Coin.ZERO);
 	}
 
 	public Coin getMicroPaymentPotValue() {
