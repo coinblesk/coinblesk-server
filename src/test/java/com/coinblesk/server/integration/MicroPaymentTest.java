@@ -61,7 +61,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(properties = {
 	"spring.datasource.url: jdbc:h2:mem:testdb",
 	"bitcoin.net: regtest",
-	"coinblesk.channelClosingThresholdUSD:10",
+	"coinblesk.maximumChannelAmountUSD:10",
 	"bitcoin.potprivkey:114122219063265213986617636129320327184744405155083861238127390715845993923252",
 	"bitcoin.potCreationTime:1492214400"
 })
@@ -74,7 +74,7 @@ public class MicroPaymentTest {
 	private final ECKey KEY_MERCHANT = new ECKey();
 	private NetworkParameters params;
 	private Coin oneUSD;
-	private Coin oneCent;
+	private Coin tenCents;
 
 	private static MockMvc mockMvc;
 
@@ -106,8 +106,8 @@ public class MicroPaymentTest {
 	public void setUp() throws Exception {
 		mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();
 		params = appConfig.getNetworkParameters();
-		oneUSD = Coin.valueOf(BigDecimal.valueOf(100000000).divide(forexService.getExchangeRate("BTC", "USD"), BigDecimal.ROUND_UP).longValue());
-		oneCent = oneUSD.div(100);
+		tenCents = Coin.valueOf(BigDecimal.valueOf(100000000).divide(forexService.getExchangeRate("BTC", "USD"), BigDecimal.ROUND_UP).divide(BigDecimal.TEN).longValue());
+		oneUSD = tenCents.multiply(10);
 	}
 
 	@Test
@@ -152,7 +152,7 @@ public class MicroPaymentTest {
 
 		// Alice uses the 1 USD virtual balance to pay the merchant 30 cents.
 		VirtualPaymentRequestDTO req1 = new VirtualPaymentRequestDTO(KEY_ALICE.getPublicKeyAsHex(),
-			KEY_MERCHANT.getPublicKeyAsHex(), oneCent.multiply(30).getValue(), now());
+			KEY_MERCHANT.getPublicKeyAsHex(), tenCents.multiply(3).getValue(), now());
 		SignedDTO dto2 = DTOUtils.serializeAndSign(req1, KEY_ALICE);
 		sendAndExpectSuccess(URL_VIRTUAL_PAYMENT, dto2);
 
@@ -166,8 +166,8 @@ public class MicroPaymentTest {
 		+----------+-----------------+--------+-----------------------------+
 		 */
 		assertAccountState(KEY_BOB, Coin.ZERO, false, oneUSD);
-		assertAccountState(KEY_ALICE, oneCent.multiply(70), false, Coin.ZERO);
-		assertAccountState(KEY_MERCHANT, oneCent.multiply(30), false, Coin.ZERO);
+		assertAccountState(KEY_ALICE, tenCents.multiply(7), false, Coin.ZERO);
+		assertAccountState(KEY_MERCHANT, tenCents.multiply(3), false, Coin.ZERO);
 
 		// Alice creates an account and sends loads it with USD 30 and a block is mined
 		TimeLockedAddress addressAlice = createAddress(KEY_ALICE, inAMonth());
@@ -189,27 +189,15 @@ public class MicroPaymentTest {
 		| Merchant | 8.30 USD        | false  | null                        |
 		+----------+-----------------+--------+-----------------------------+ */
 		assertAccountState(KEY_BOB, Coin.ZERO, false, oneUSD);
-		assertAccountState(KEY_ALICE, oneCent.multiply(70), false, oneUSD.multiply(8));
-		assertAccountState(KEY_MERCHANT, oneCent.multiply(830), false, Coin.ZERO);
+		assertAccountState(KEY_ALICE, tenCents.multiply(7), false, oneUSD.multiply(8));
+		assertAccountState(KEY_MERCHANT, tenCents.multiply(83), false, Coin.ZERO);
 
-		// Alice sends another 3 Dollar via micro payment to Bob. Since the threshold of 10 dollar is reached, the
-		// server closes the channel.
+		// Alice sends another 4 Dollar via micro payment to Bob. This should not work as it would bring the pending
+		// channel amount > USD 10
 		Thread.sleep(1001);
-		SignedDTO dto4 = createMicroPaymentRequestDTO(KEY_ALICE, KEY_BOB, oneUSD.multiply(3).getValue(), addressAlice,
+		SignedDTO dto4 = createMicroPaymentRequestDTO(KEY_ALICE, KEY_BOB, oneUSD.multiply(4).getValue(), addressAlice,
 			params, oneUSD.multiply(8).getValue(), getUTXOsForAddress(addressAlice));
-		sendAndExpectSuccess(URL_MICRO_PAYMENT, dto4);
-
-		/*
-		+----------+-----------------+--------+-----------------------------+
-		| Account  | Virtual Balance | Locked | PendingPaymentChannelAmount |
-		+----------+-----------------+--------+-----------------------------+
-		| Bob      | 3.00 USD        | false  | 1 USD                       |
-		| Alice    | 0.70 USD        | true   | USD 11                      |
-		| Merchant | 8.30 USD        | false  | null                        |
-		+----------+-----------------+--------+-----------------------------+ */
-		assertAccountState(KEY_BOB, oneUSD.times(3), false, oneUSD);
-		assertAccountState(KEY_ALICE, oneCent.multiply(70), true, oneUSD.multiply(11));
-		assertAccountState(KEY_MERCHANT, oneCent.multiply(830), false, Coin.ZERO);
+		sendAndExpectError(URL_MICRO_PAYMENT, dto4);
 
 	}
 
@@ -285,6 +273,10 @@ public class MicroPaymentTest {
 	private void sendAndExpectSuccess(String url, SignedDTO dto) throws Exception {
 		mockMvc.perform(post(url).contentType(APPLICATION_JSON).content(DTOUtils.toJSON(dto)))
 			.andExpect(status().is2xxSuccessful());
+	}
+	private void sendAndExpectError(String url, SignedDTO dto) throws Exception {
+		mockMvc.perform(post(url).contentType(APPLICATION_JSON).content(DTOUtils.toJSON(dto)))
+			.andExpect(status().is4xxClientError());
 	}
 
 }
