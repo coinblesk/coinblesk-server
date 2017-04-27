@@ -219,18 +219,11 @@ public class WalletService {
 		return retVal;
 	}
 
-	public Coin microPaymentPot() {
-		final Set<Address> serverPotAddresses = accountService.allAccounts().stream().map(account -> ECKey
-			.fromPublicOnly(account.serverPublicKey()).toAddress(appConfig.getNetworkParameters())).collect(Collectors
-			.toSet());
-
-		return wallet.calculateAllSpendCandidates().stream().filter(output -> {
-			Address address = output.getAddressFromP2PKHScript(appConfig.getNetworkParameters());
-			return serverPotAddresses.contains(address);
-		}).map(TransactionOutput::getValue).reduce(Coin.ZERO, Coin::add);
+	public List<TransactionOutput> getAllSpendCandidates() {
+		return wallet.calculateAllSpendCandidates(true, false);
 	}
 
-
+	@VisibleForTesting
 	public BlockChain blockChain() {
 		return blockChain;
 	}

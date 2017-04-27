@@ -413,7 +413,7 @@ public class MicropaymentService {
 		});
 	}
 
-	public Coin getTotalPendingChannelSum() {
+	public Coin getPendingChannelValue() {
 		return StreamSupport.stream(accountRepository.findAll().spliterator(), false)
 			.filter(account -> account.getChannelTransaction() != null)
 			.map(account -> {
@@ -427,6 +427,19 @@ public class MicropaymentService {
 					.orElse(Coin.ZERO);
 			}).reduce(Coin.ZERO, Coin::add);
 	}
+
+	public Coin getMicroPaymentPotValue() {
+		final Set<Address> serverPotAddresses = accountService.allAccounts().stream().map(account -> ECKey
+			.fromPublicOnly(account.serverPublicKey()).toAddress(appConfig.getNetworkParameters())).collect(Collectors
+			.toSet());
+
+		return walletService.getAllSpendCandidates().stream().filter(output -> {
+			Address address = output.getAddressFromP2PKHScript(appConfig.getNetworkParameters());
+			return serverPotAddresses.contains(address);
+		}).map(TransactionOutput::getValue).reduce(Coin.ZERO, Coin::add);
+	}
+
+
 
 	/***
 	 * Add a listener for when a transaction we are watching's confidence

@@ -7,6 +7,7 @@ import com.coinblesk.server.dto.ErrorDTO;
 import com.coinblesk.server.dto.MicroPaymentRequestDTO;
 import com.coinblesk.server.dto.SignedDTO;
 import com.coinblesk.server.service.AccountService;
+import com.coinblesk.server.service.MicropaymentService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.FakeTxBuilder;
@@ -49,6 +50,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	private WebApplicationContext webAppContext;
 	@Autowired
 	private WalletService walletService;
+	@Autowired
+	private MicropaymentService micropaymentService;
 	@Autowired
 	private AccountService accountService;
 	@Autowired
@@ -688,7 +691,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		final ECKey receiverKey = new ECKey();
 		accountService.createAcount(receiverKey);
 
-		assertThat(walletService.microPaymentPot(), is(Coin.ZERO));
+		assertThat(micropaymentService.getMicroPaymentPotValue(), is(Coin.ZERO));
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
@@ -705,7 +708,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 			()).getChannelTransaction());
 		mineTransaction(openChannelTx);
 
-		assertThat(walletService.microPaymentPot(), is(Coin.valueOf((1337))));
+		assertThat(micropaymentService.getMicroPaymentPotValue(), is(Coin.valueOf((1337))));
 	}
 
 	@Test
