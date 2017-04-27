@@ -50,7 +50,7 @@ public class UserDetailsService implements org.springframework.security.core.use
 
 			// Populate authority list
 			List<GrantedAuthority> grantedAuthorities = Collections.singletonList(new SimpleGrantedAuthority(user
-				.getUserRole().getAuthority()));
+				.getUserRole()));
 
 			return new org.springframework.security.core.userdetails.User(lowercaseLogin, user.getPassword(),
 				grantedAuthorities);

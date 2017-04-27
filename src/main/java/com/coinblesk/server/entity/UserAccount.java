@@ -145,8 +145,8 @@ public class UserAccount implements Serializable {
 		return this;
 	}
 
-	public UserRole getUserRole() {
-		return userRole;
+	public String getUserRole() {
+		return userRole.getAuthority();
 	}
 
 	public UserAccount setUserRole(UserRole userRole) {

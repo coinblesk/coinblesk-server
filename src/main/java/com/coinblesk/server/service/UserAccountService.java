@@ -44,11 +44,11 @@ import com.coinblesk.json.v1.UserAccountTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dao.TimeLockedAddressRepository;
 import com.coinblesk.server.dao.UserAccountRepository;
-import com.coinblesk.server.dto.UserAccountAdminDTO;
-import com.coinblesk.server.dto.UserAccountCreateDTO;
-import com.coinblesk.server.dto.UserAccountCreateVerifyDTO;
-import com.coinblesk.server.dto.UserAccountDTO;
-import com.coinblesk.server.dto.UserAccountForgotVerifyDTO;
+import com.coinblesk.dto.UserAccountAdminDTO;
+import com.coinblesk.dto.UserAccountCreateDTO;
+import com.coinblesk.dto.UserAccountCreateVerifyDTO;
+import com.coinblesk.dto.UserAccountDTO;
+import com.coinblesk.dto.UserAccountForgotVerifyDTO;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.enumerator.EventType;
 import com.coinblesk.server.exceptions.BusinessException;
@@ -65,7 +65,7 @@ import com.coinblesk.util.CoinbleskException;
 import com.coinblesk.util.InsufficientFunds;
 
 /**
- * @author draft
+ * @author Thomas Bocek
  */
 @Service
 public class UserAccountService {

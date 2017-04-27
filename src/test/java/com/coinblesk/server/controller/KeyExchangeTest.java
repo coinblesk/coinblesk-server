@@ -15,7 +15,7 @@
  */
 package com.coinblesk.server.controller;
 
-import com.coinblesk.server.dto.KeyExchangeRequestDTO;
+import com.coinblesk.dto.KeyExchangeRequestDTO;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.util.SerializeUtils;
 import org.bitcoinj.core.ECKey;

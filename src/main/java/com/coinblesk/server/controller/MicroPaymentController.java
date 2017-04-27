@@ -1,6 +1,6 @@
 package com.coinblesk.server.controller;
 
-import com.coinblesk.server.dto.*;
+import com.coinblesk.dto.*;
 import com.coinblesk.server.exceptions.*;
 import com.coinblesk.server.service.MicropaymentService;
 import com.coinblesk.server.utils.DTOUtils;

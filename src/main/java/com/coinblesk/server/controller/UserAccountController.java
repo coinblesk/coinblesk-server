@@ -54,12 +54,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.coinblesk.server.auth.TokenProvider;
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.dto.LoginDTO;
-import com.coinblesk.server.dto.TokenDTO;
-import com.coinblesk.server.dto.UserAccountCreateDTO;
-import com.coinblesk.server.dto.UserAccountCreateVerifyDTO;
-import com.coinblesk.server.dto.UserAccountForgotDTO;
-import com.coinblesk.server.dto.UserAccountForgotVerifyDTO;
+import com.coinblesk.dto.LoginDTO;
+import com.coinblesk.dto.TokenDTO;
+import com.coinblesk.dto.UserAccountCreateDTO;
+import com.coinblesk.dto.UserAccountCreateVerifyDTO;
+import com.coinblesk.dto.UserAccountForgotDTO;
+import com.coinblesk.dto.UserAccountForgotVerifyDTO;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskAuthenticationException;
