@@ -79,11 +79,11 @@ public class ForexController {
 		}
 
 		BigDecimal exchangeRate = forexExchangeRateService.getExchangeRate(fromSymbol, toSymbol);
-		result.setCurrencyA(fromSymbol);
-		result.setCurrencyB(toSymbol);
+		result.setCurrencyFrom(fromSymbol);
+		result.setCurrencyTo(toSymbol);
 		result.setRate(exchangeRate);
 
-		LOG.debug("{exchange-rate} - {}, {}, rate: {}", result.getCurrencyA(), result.getCurrencyB(), result.getRate());
+		LOG.debug("{exchange-rate} - {}, {}, rate: {}", result.getCurrencyFrom(), result.getCurrencyTo(), result.getRate());
 		return result;
 	}
 }

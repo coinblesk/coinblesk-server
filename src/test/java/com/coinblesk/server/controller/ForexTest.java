@@ -51,7 +51,7 @@ public class ForexTest extends CoinbleskTest {
 		MvcResult res = mockMvc.perform(get("/forex/exchange-rate/CHF").secure(true)).andExpect(status().isOk())
 			.andReturn();
 		ForexDTO output = GSON.fromJson(res.getResponse().getContentAsString(), ForexDTO.class);
-		System.out.println(output.getCurrencyA() + "/" + output.getCurrencyB() + ": " + output.getRate());
+		System.out.println(output.getCurrencyFrom() + "/" + output.getCurrencyTo() + ": " + output.getRate());
 		Assert.assertNotNull(output);
 	}
 
@@ -60,7 +60,7 @@ public class ForexTest extends CoinbleskTest {
 		MvcResult res = mockMvc.perform(get("/forex/exchange-rate/CHF/EUR").secure(true)).andExpect(status().isOk())
 			.andReturn();
 		ForexDTO output = GSON.fromJson(res.getResponse().getContentAsString(), ForexDTO.class);
-		System.out.println(output.getCurrencyA() + "/" + output.getCurrencyB() + ": " + output.getRate());
+		System.out.println(output.getCurrencyFrom() + "/" + output.getCurrencyTo() + ": " + output.getRate());
 		Assert.assertNotNull(output);
 	}
 }
