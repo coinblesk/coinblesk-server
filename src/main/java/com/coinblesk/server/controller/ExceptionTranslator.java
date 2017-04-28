@@ -1,5 +1,6 @@
 package com.coinblesk.server.controller;
 
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -40,6 +42,8 @@ public class ExceptionTranslator {
 			responseStatus = UNAUTHORIZED;
 		} else if (e instanceof AccessDeniedException) {
 			responseStatus = FORBIDDEN;
+		} else if (e instanceof MethodArgumentNotValidException) {
+			responseStatus = BAD_REQUEST;
 		}
 
 		ErrorDTO result = new ErrorDTO();
