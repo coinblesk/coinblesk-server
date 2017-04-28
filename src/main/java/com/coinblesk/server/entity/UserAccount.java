@@ -154,7 +154,7 @@ public class UserAccount implements Serializable {
 		return this;
 	}
 
-	public boolean isEmailVerified() {
+	public boolean isActivationVerified() {
 		return this.activationEmailToken == null;
 	}
 
