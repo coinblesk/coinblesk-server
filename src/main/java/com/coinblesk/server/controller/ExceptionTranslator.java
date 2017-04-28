@@ -3,7 +3,9 @@ package com.coinblesk.server.controller;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import static org.springframework.http.HttpStatus.METHOD_NOT_ALLOWED;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
+import static org.springframework.http.HttpStatus.UNSUPPORTED_MEDIA_TYPE;
 
 import java.util.Date;
 
@@ -12,8 +14,11 @@ import javax.servlet.http.HttpServletRequest;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageConversionException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.HttpMediaTypeException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -42,8 +47,13 @@ public class ExceptionTranslator {
 			responseStatus = UNAUTHORIZED;
 		} else if (e instanceof AccessDeniedException) {
 			responseStatus = FORBIDDEN;
-		} else if (e instanceof MethodArgumentNotValidException) {
+		} else if (e instanceof MethodArgumentNotValidException
+				|| e instanceof HttpMessageConversionException) {
 			responseStatus = BAD_REQUEST;
+		} else if (e instanceof HttpRequestMethodNotSupportedException) {
+			responseStatus = METHOD_NOT_ALLOWED;
+		} else if (e instanceof HttpMediaTypeException) {
+			responseStatus = UNSUPPORTED_MEDIA_TYPE;
 		}
 
 		ErrorDTO result = new ErrorDTO();
