@@ -150,7 +150,7 @@ public class UserAccountController {
 		try {
 			LOG.debug("send email to {}", userAccount.getEmail());
 			String path = "#/activation/"
-					+ URLEncoder.encode(userAccount.getEmail(), "UTF-8")
+					+ encodeURL(userAccount.getEmail())
 					+ "/"
 					+ userAccount.getActivationEmailToken();
 			String url = cfg.getUrl() + path;
@@ -166,10 +166,10 @@ public class UserAccountController {
 		}
 	}
 
-	private void sendActivationEmailToUser(UserAccount userAccount, Locale locale) throws Exception {
+	private void sendActivationEmailToUser(UserAccount userAccount, Locale locale) {
 		LOG.debug("send email to {}", userAccount.getEmail());
 		String path = "#/activation/"
-				+ URLEncoder.encode(userAccount.getEmail(), "UTF-8")
+				+ encodeURL(userAccount.getEmail())
 				+ "/"
 				+ userAccount.getActivationEmailToken();
 		String url = cfg.getUrl() + path;
