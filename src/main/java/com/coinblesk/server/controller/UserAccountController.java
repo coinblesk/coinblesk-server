@@ -52,17 +52,16 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.coinblesk.server.auth.TokenProvider;
-import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.dto.LoginDTO;
 import com.coinblesk.dto.TokenDTO;
 import com.coinblesk.dto.UserAccountCreateDTO;
 import com.coinblesk.dto.UserAccountCreateVerifyDTO;
 import com.coinblesk.dto.UserAccountForgotDTO;
 import com.coinblesk.dto.UserAccountForgotVerifyDTO;
+import com.coinblesk.server.auth.TokenProvider;
+import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.exceptions.BusinessException;
-import com.coinblesk.server.exceptions.CoinbleskAuthenticationException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
 import com.coinblesk.server.exceptions.UserAccountDeletedException;
 import com.coinblesk.server.service.EventService;
@@ -129,7 +128,7 @@ public class UserAccountController {
 
 		} catch (AuthenticationException exception) {
 			eventService.warn(USER_ACCOUNT_LOGIN_FAILED, "Failed login with e-mail '" + loginDTO.getEmail()+ "'");
-			throw new CoinbleskAuthenticationException();
+			throw exception;
 		}
 	}
 
