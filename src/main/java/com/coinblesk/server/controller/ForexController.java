@@ -19,6 +19,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.coinblesk.dto.ForexDTO;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.InvalidCurrencyPatternException;
+import com.coinblesk.server.service.ForexBitcoinService;
 import com.coinblesk.server.service.ForexService;
 import com.coinblesk.server.utils.ApiVersion;
 
@@ -47,16 +49,19 @@ public class ForexController {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ForexController.class);
 
-	private final ForexService forexExchangeRateService;
+	private final ForexService forexService;
+	private final ForexBitcoinService forexBitcoinService;
 
 	@Autowired
-	public ForexController(ForexService forexExchangeRateService) {
-		this.forexExchangeRateService = forexExchangeRateService;
+	public ForexController(ForexService forexExchangeRateService, ForexBitcoinService forexBitcoinService) {
+		this.forexService = forexExchangeRateService;
+		this.forexBitcoinService = forexBitcoinService;
 	}
 
 	@RequestMapping(value = "/exchange-rate/{symbol}", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public ForexDTO forexExchangeRate(@PathVariable(value = "symbol") String symbol) throws BusinessException {
+		validateSymbol(symbol);
 		return forexExchangeRate(symbol, "USD");
 	}
 
@@ -74,16 +79,35 @@ public class ForexController {
 		LOG.debug("{exchange-rate} - Received exchange rate request for currency {}/{}", fromSymbol, toSymbol);
 		ForexDTO result = new ForexDTO();
 
-		if (!Pattern.matches("[A-Z]{3}", fromSymbol) || !Pattern.matches("[A-Z]{3}", toSymbol)) {
-			throw new InvalidCurrencyPatternException();
-		}
+		validateSymbol(fromSymbol);
+		validateSymbol(toSymbol);
 
-		BigDecimal exchangeRate = forexExchangeRateService.getExchangeRate(fromSymbol, toSymbol);
+		BigDecimal exchangeRate = forexService.getExchangeRate(fromSymbol, toSymbol);
 		result.setCurrencyFrom(fromSymbol);
 		result.setCurrencyTo(toSymbol);
 		result.setRate(exchangeRate);
 
 		LOG.debug("{exchange-rate} - {}, {}, rate: {}", result.getCurrencyFrom(), result.getCurrencyTo(), result.getRate());
 		return result;
+	}
+
+	@RequestMapping(value = "/exchange-rate/bitcoin/current/{symbol}", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@ResponseBody
+	public ForexDTO bitcoinCurrentRate(@PathVariable("symbol") String symbol) throws BusinessException {
+		validateSymbol(symbol);
+		return forexBitcoinService.getCurrentRate(symbol);
+	}
+
+	@RequestMapping(value = "/exchange-rate/bitcoin/history/{symbol}", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@ResponseBody
+	public List<ForexDTO> bitcoinHistoricRates(@PathVariable("symbol") String symbol) throws BusinessException {
+		validateSymbol(symbol);
+		return forexBitcoinService.getHistoricRates(symbol);
+	}
+
+	private void validateSymbol(String symbol) throws BusinessException {
+		if (!Pattern.matches("[A-Z]{3}", symbol)) {
+			throw new InvalidCurrencyPatternException();
+		}
 	}
 }
