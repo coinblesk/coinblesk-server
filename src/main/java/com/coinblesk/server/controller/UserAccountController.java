@@ -166,6 +166,19 @@ public class UserAccountController {
 		}
 	}
 
+	private void sendActivationEmailToUser(UserAccount userAccount, Locale locale) throws Exception {
+		LOG.debug("send email to {}", userAccount.getEmail());
+		String path = "#/activation/"
+				+ URLEncoder.encode(userAccount.getEmail(), "UTF-8")
+				+ "/"
+				+ userAccount.getActivationEmailToken();
+		String url = cfg.getUrl() + path;
+
+		mailService.sendUserMail(userAccount.getEmail(),
+				messageSource.getMessage("activation.email" + ".title", null, locale),
+				messageSource.getMessage("activation.email.text", new String[] { url }, locale));
+	}
+
 	@RequestMapping(value = "/create-verify", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE)
 	public void verifyEmail(@Valid @RequestBody UserAccountCreateVerifyDTO createVerifyDTO) throws BusinessException {
 		LOG.debug("Activate account for {}", createVerifyDTO.getEmail());
@@ -193,33 +206,42 @@ public class UserAccountController {
 	public void forgot(Locale locale, @Valid @RequestBody UserAccountForgotDTO forgotDTO) throws BusinessException {
 
 		LOG.debug("Forgot password for {}", forgotDTO.getEmail());
-		try {
-			userAccountService.forgot(forgotDTO.getEmail());
-		} catch (BusinessException exception) {
-			LOG.warn("Could not handle forgot request", exception);
-			eventService.warn(USER_ACCOUNT_COULD_NOT_HANDLE_FORGET_REQUEST, "An exception occured during the forgot request - "+exception.getClass().getSimpleName());
-			throw exception;
-		}
-
-		LOG.debug("Send forgot email to {}", forgotDTO.getEmail());
 		UserAccount userAccount = userAccountService.getByEmail(forgotDTO.getEmail());
-		String forgotToken = userAccount.getForgotEmailToken();
-		String url;
-		try {
-			String path = "user-account/forgot-verify/" + URLEncoder.encode(forgotDTO.getEmail(), "UTF-8") + "/" + forgotToken;
-			url = cfg.getUrl() + path;
-		} catch (UnsupportedEncodingException exception) {
-			throw new CoinbleskInternalError("An internal error occured.");
+
+		// user is not activated
+		if(userAccountService.userExists(forgotDTO.getEmail())
+				&& !userAccount.isActivationVerified()) {
+			try {
+				sendActivationEmailToUser(userAccount, locale);
+			} catch (Exception e) {
+				eventService.error(USER_ACCOUNT_COULD_NOT_HANDLE_FORGET_REQUEST, "The activation email during forget-password (user is not yet activated) could not be sent to '" + forgotDTO.getEmail() + "'.");
+				LOG.error("Mail send error", e);
+				throw new CoinbleskInternalError("An error happend while sending an e-mail.");
+			}
 		}
+		else {
+			try {
+				userAccountService.forgot(forgotDTO.getEmail());
+			} catch (BusinessException exception) {
+				LOG.warn("Could not handle forgot request", exception);
+				eventService.warn(USER_ACCOUNT_COULD_NOT_HANDLE_FORGET_REQUEST, "An exception occured during the forgot request - "+exception.getClass().getSimpleName());
+				throw exception;
+			}
 
-		try {
-			mailService.sendUserMail(forgotDTO.getEmail(), messageSource.getMessage("forgot.email.title", null, locale),
-					messageSource.getMessage("forgot.email.text", new String[] { url }, locale));
+			try {
+				LOG.debug("Send forgot email to {}", forgotDTO.getEmail());
+				String forgotToken = userAccount.getForgotEmailToken();
+				String path = "user-account/forgot-verify/" + encodeURL(forgotDTO.getEmail()) + "/" + forgotToken;
+				String url = cfg.getUrl() + path;
 
-		} catch (Exception e) {
-			eventService.error(USER_ACCOUNT_COULD_NOT_SEND_FORGET_EMAIL, "The forgot email could not be sent to '" + forgotDTO.getEmail() + "'.");
-			LOG.error("Mail send error", e);
-			throw new CoinbleskInternalError("An error happend while sending an e-mail.");
+				mailService.sendUserMail(forgotDTO.getEmail(), messageSource.getMessage("forgot.email.title", null, locale),
+						messageSource.getMessage("forgot.email.text", new String[] { url }, locale));
+
+			} catch (Exception e) {
+				eventService.error(USER_ACCOUNT_COULD_NOT_SEND_FORGET_EMAIL, "The forgot email could not be sent to '" + forgotDTO.getEmail() + "'.");
+				LOG.error("Mail send error", e);
+				throw new CoinbleskInternalError("An error happend while sending an e-mail.");
+			}
 		}
 	}
 
@@ -242,5 +264,13 @@ public class UserAccountController {
 		}
 
 		LOG.debug("Activate forgot password success for {}", forgotVerifyDTO.getEmail());
+	}
+
+	private String encodeURL(String string) {
+		try {
+			return URLEncoder.encode(string, "UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			throw new CoinbleskInternalError("An internal error occured.");
+		}
 	}
 }
