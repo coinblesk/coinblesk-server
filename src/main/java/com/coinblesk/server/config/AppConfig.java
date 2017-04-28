@@ -15,8 +15,11 @@
  */
 package com.coinblesk.server.config;
 
-import com.coinblesk.bitcoin.BitcoinNet;
-import com.coinblesk.server.utils.CoinUtils;
+import java.math.BigInteger;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.TimeZone;
+
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.LoggerFactory;
@@ -25,10 +28,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.retry.annotation.EnableRetry;
 
-import java.math.BigInteger;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.TimeZone;
+import com.coinblesk.bitcoin.BitcoinNet;
+import com.coinblesk.server.utils.CoinUtils;
 
 @Configuration
 @EnableRetry
@@ -49,6 +50,8 @@ public class AppConfig {
 
 	@Value("${coinblesk.url}")
 	private String url;
+	@Value("${coinblesk.frontendUrl}")
+	private String frontendUrl;
 	@Value("${coinblesk.config.dir}")
 	private FileSystemResource configDir;
 	@Value("${coinblesk.defaultApiVersion}")
@@ -111,6 +114,10 @@ public class AppConfig {
 
 	public String getUrl() {
 		return url;
+	}
+
+	public String getFrontendUrl() {
+		return frontendUrl;
 	}
 
 	public String getJwtSecret() {

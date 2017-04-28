@@ -149,11 +149,11 @@ public class UserAccountController {
 
 		try {
 			LOG.debug("send email to {}", userAccount.getEmail());
-			String path = "#/activation/"
+			String path = "activation/"
 					+ encodeURL(userAccount.getEmail())
 					+ "/"
 					+ userAccount.getActivationEmailToken();
-			String url = cfg.getUrl() + path;
+			String url = cfg.getFrontendUrl() + path;
 
 			mailService.sendUserMail(userAccount.getEmail(),
 					messageSource.getMessage("activation.email" + ".title", null, locale),
@@ -168,11 +168,11 @@ public class UserAccountController {
 
 	private void sendActivationEmailToUser(UserAccount userAccount, Locale locale) {
 		LOG.debug("send email to {}", userAccount.getEmail());
-		String path = "#/activation/"
+		String path = "activation/"
 				+ encodeURL(userAccount.getEmail())
 				+ "/"
 				+ userAccount.getActivationEmailToken();
-		String url = cfg.getUrl() + path;
+		String url = cfg.getFrontendUrl() + path;
 
 		mailService.sendUserMail(userAccount.getEmail(),
 				messageSource.getMessage("activation.email" + ".title", null, locale),
@@ -231,8 +231,8 @@ public class UserAccountController {
 			try {
 				LOG.debug("Send forgot email to {}", forgotDTO.getEmail());
 				String forgotToken = userAccount.getForgotEmailToken();
-				String path = "user-account/forgot-verify/" + encodeURL(forgotDTO.getEmail()) + "/" + forgotToken;
-				String url = cfg.getUrl() + path;
+				String path = "password-forgotten-verification/" + encodeURL(forgotDTO.getEmail()) + "/" + forgotToken;
+				String url = cfg.getFrontendUrl() + path;
 
 				mailService.sendUserMail(forgotDTO.getEmail(), messageSource.getMessage("forgot.email.title", null, locale),
 						messageSource.getMessage("forgot.email.text", new String[] { url }, locale));
