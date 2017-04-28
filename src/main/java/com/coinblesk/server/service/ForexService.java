@@ -15,9 +15,17 @@
  */
 package com.coinblesk.server.service;
 
-import com.coinblesk.server.utils.DTOUtils;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
+import static java.lang.Boolean.TRUE;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,9 +33,12 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
+import com.coinblesk.server.exceptions.BusinessException;
+import com.coinblesk.server.exceptions.CoinbleskInternalError;
+import com.coinblesk.server.exceptions.InvalidCurrencyPatternException;
+import com.coinblesk.server.utils.DTOUtils;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 
 /**
  * Service that provides bitcoin and forex exchange rates. This class also
@@ -63,18 +74,18 @@ final public class ForexService {
 	 * @return the forex exchange rate
 	 * @throws Exception
 	 */
-	public BigDecimal getExchangeRate(final String symbolFrom, final String symbolTo) throws Exception {
+	public BigDecimal getExchangeRate(final String symbolFrom, final String symbolTo) throws BusinessException {
 		final String pair = symbolFrom + symbolTo;
 		return getExchangeRates(pair).get(pair);
 	}
 
-	Map<String, BigDecimal> getExchangeRates(final String... pairs) throws Exception {
+	public Map<String, BigDecimal> getExchangeRates(final String... pairs) throws BusinessException {
 		// mark as used
 		Map<String, BigDecimal> exchangeRates = new HashMap<>(pairs.length);
 		// this empty most of the times:
 		List<String> unknowRates = new ArrayList<>(1);
 		for (String pair : pairs) {
-			exchangeRatesSymbolCache.put(pair, Boolean.TRUE);
+			exchangeRatesSymbolCache.put(pair, TRUE);
 			BigDecimal exchangeRate = exchangeRatesCache.getIfPresent(pair);
 
 			if (exchangeRate == null) {
@@ -88,20 +99,31 @@ final public class ForexService {
 			String values = String.join("\",\"", unknowRates);
 			String rates = '"' + values + '"';
 			final String url = YAHOO_API.replace(PLACEHOLDER, rates);
-			final StringBuffer response = ServiceUtils.doHttpRequest(url);
-			// gets actual exchange rate out of Json Object and saves it to last.
-			if (unknowRates.size() > 1) {
-				final RootMulti root = DTOUtils.fromJSON(response.toString(), RootMulti.class);
-				for (RootMulti.Query.Results.Rate rate : root.query.results.rate) {
-					BigDecimal exchangeRate = new BigDecimal(rate.Rate);
-					exchangeRatesCache.put(rate.id, exchangeRate);
-					exchangeRates.put(rate.id, exchangeRate);
+			try {
+				final StringBuffer response = ServiceUtils.doHttpRequest(url);
+
+				// gets actual exchange rate out of Json Object and saves it to last.
+				if (unknowRates.size() > 1) {
+					final RootMulti root = DTOUtils.fromJSON(response.toString(), RootMulti.class);
+					for (RootMulti.Query.Results.Rate rate : root.query.results.rate) {
+						if(rate.Rate.equals("N/A")) {
+							throw new InvalidCurrencyPatternException();
+						}
+						BigDecimal exchangeRate = new BigDecimal(rate.Rate);
+						exchangeRatesCache.put(rate.id, exchangeRate);
+						exchangeRates.put(rate.id, exchangeRate);
+					}
+				} else {
+					final RootSingle root = DTOUtils.fromJSON(response.toString(), RootSingle.class);
+					if(root.query.results.rate.Rate.equals("N/A")) {
+						throw new InvalidCurrencyPatternException();
+					}
+					BigDecimal exchangeRate = new BigDecimal(root.query.results.rate.Rate);
+					exchangeRatesCache.put(root.query.results.rate.id, exchangeRate);
+					exchangeRates.put(root.query.results.rate.id, exchangeRate);
 				}
-			} else {
-				final RootSingle root = DTOUtils.fromJSON(response.toString(), RootSingle.class);
-				BigDecimal exchangeRate = new BigDecimal(root.query.results.rate.Rate);
-				exchangeRatesCache.put(root.query.results.rate.id, exchangeRate);
-				exchangeRates.put(root.query.results.rate.id, exchangeRate);
+			} catch(IOException ex) {
+				throw new CoinbleskInternalError("Could not fetch the forex rates");
 			}
 		}
 

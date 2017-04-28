@@ -15,9 +15,10 @@
  */
 package com.coinblesk.server.controller;
 
-import com.coinblesk.json.v1.ExchangeRateTO;
-import com.coinblesk.server.utilTest.CoinbleskTest;
-import com.coinblesk.util.SerializeUtils;
+import static com.coinblesk.util.SerializeUtils.GSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,8 +28,8 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.coinblesk.dto.ForexDTO;
+import com.coinblesk.server.utilTest.CoinbleskTest;
 
 /**
  * @author Thomas Bocek
@@ -47,21 +48,19 @@ public class ForexTest extends CoinbleskTest {
 
 	@Test
 	public void testV1() throws Exception {
-		MvcResult res = mockMvc.perform(get("/forex/exchangeRate/CHF").secure(true)).andExpect(status().isOk())
+		MvcResult res = mockMvc.perform(get("/forex/exchange-rate/CHF").secure(true)).andExpect(status().isOk())
 			.andReturn();
-		ExchangeRateTO rate = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), ExchangeRateTO
-			.class);
-		System.out.println("rate is: " + rate.rate() + "/" + rate.name());
-		Assert.assertNotNull(rate);
+		ForexDTO output = GSON.fromJson(res.getResponse().getContentAsString(), ForexDTO.class);
+		System.out.println(output.getCurrencyA() + "/" + output.getCurrencyB() + ": " + output.getRate());
+		Assert.assertNotNull(output);
 	}
 
 	@Test
 	public void testV2() throws Exception {
-		MvcResult res = mockMvc.perform(get("/forex/rate/CHF-EUR").secure(true)).andExpect(status().isOk())
+		MvcResult res = mockMvc.perform(get("/forex/exchange-rate/CHF/EUR").secure(true)).andExpect(status().isOk())
 			.andReturn();
-		ExchangeRateTO rate = SerializeUtils.GSON.fromJson(res.getResponse().getContentAsString(), ExchangeRateTO
-			.class);
-		System.out.println("rate is: " + rate.rate() + "/" + rate.name());
-		Assert.assertNotNull(rate);
+		ForexDTO output = GSON.fromJson(res.getResponse().getContentAsString(), ForexDTO.class);
+		System.out.println(output.getCurrencyA() + "/" + output.getCurrencyB() + ": " + output.getRate());
+		Assert.assertNotNull(output);
 	}
 }
