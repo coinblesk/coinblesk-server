@@ -251,11 +251,14 @@ public class WalletService {
 			LOG.error("cannot close blockStore in shutdown", e);
 		}
 		try {
+			BitcoinNet bitcoinNet = appConfig.getBitcoinNet();
 			if (wallet != null) {
 				// TODO: the method name is misleading, it stops auto-save, but
 				// does not save.
 				LOG.info("shutdown wallet...");
-				wallet.shutdownAutosaveAndWait();
+				if (bitcoinNet.equals(BitcoinNet.MAINNET) || bitcoinNet.equals(BitcoinNet.TESTNET)) {
+					wallet.shutdownAutosaveAndWait();
+				}
 				wallet = null;
 			}
 		} catch (Exception e) {
