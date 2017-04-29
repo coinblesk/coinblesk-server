@@ -126,7 +126,7 @@ public class MicroPaymentTest {
 		// Bob tries his first micro payment of 1 USD to Alice, which fails because the 100 USD transaction is not
 		// yet mined
 		channelBob.addToServerOutput(oneUSD);
-		SignedDTO dto1 = createMicroPaymentRequestDTO(KEY_BOB, KEY_ALICE, channelBob.buildTx(), oneUSD.getValue());
+		SignedDTO dto1 = buildRequestDTO(KEY_BOB, KEY_ALICE, channelBob.buildTx(), oneUSD.getValue());
 		mockMvc.perform(post(URL_MICRO_PAYMENT).contentType(APPLICATION_JSON).content(DTOUtils.toJSON(dto1)))
 			.andExpect(content().string(containsString("UTXO must be mined")));
 
@@ -183,7 +183,7 @@ public class MicroPaymentTest {
 
 		// Alice makes a micro payment of USD 8 to the merchant.
 		channelAlice.addToServerOutput(oneUSD.multiply(8));
-		SignedDTO dto3 = createMicroPaymentRequestDTO(KEY_ALICE, KEY_MERCHANT, channelAlice.buildTx(), oneUSD.multiply(8).getValue());
+		SignedDTO dto3 = buildRequestDTO(KEY_ALICE, KEY_MERCHANT, channelAlice.buildTx(), oneUSD.multiply(8).getValue());
 		sendAndExpectSuccess(URL_MICRO_PAYMENT, dto3);
 
 		/*
@@ -203,9 +203,10 @@ public class MicroPaymentTest {
 
 		// Alice sends another 4 Dollar via micro payment to Bob. This should not work as it would bring the pending
 		// channel amount > USD 10
-		SignedDTO dto4 = createMicroPaymentRequestDTO(KEY_ALICE, KEY_BOB, oneUSD.multiply(4).getValue(), addressAlice,
-			params, oneUSD.multiply(8).getValue(), getUTXOsForAddress(addressAlice));
+		channelAlice.addToServerOutput(oneUSD.multiply(4));
+		SignedDTO dto4 = buildRequestDTO(KEY_ALICE, KEY_MERCHANT, channelAlice.buildTx(), oneUSD.multiply(4).getValue());
 		sendAndExpectError(URL_MICRO_PAYMENT, dto4);
+		channelAlice.setServerOutput(oneUSD.multiply(8)); // reset
 
 		// Alice closes the channel, by sending the 4 dollar directly to bob
 		channelAlice.addOutput(addressBob.getAddress(params), oneUSD.multiply(4));

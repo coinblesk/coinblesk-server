@@ -50,8 +50,23 @@ public class PaymentChannel {
 		return this;
 	}
 
+	public PaymentChannel addToServerOutput(Long value) {
+		serverValue = serverValue.plus(Coin.valueOf(value));
+		return this;
+	}
+
 	public PaymentChannel addToServerOutput(Coin value) {
 		serverValue = serverValue.plus(value);
+		return this;
+	}
+
+	public PaymentChannel setServerOutput(Long value) {
+		serverValue = Coin.valueOf(value);
+		return this;
+	}
+
+	public PaymentChannel setServerOutput(Coin value) {
+		serverValue = value;
 		return this;
 	}
 
