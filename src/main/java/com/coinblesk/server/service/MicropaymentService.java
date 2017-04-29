@@ -153,89 +153,15 @@ public class MicropaymentService {
 		tx = new Transaction(appConfig.getNetworkParameters(), txInByes);
 		tx.verify(); // Checks for no input or outputs and no negative values.
 
-		// 1: Validating all inputs
-		// 1.1 Make sure all the UTXOs are known to the wallet
-		List<TransactionOutput> spentOutputs = tx.getInputs().stream().map(walletService::findOutputFor).collect
-			(Collectors.toList());
-		if (spentOutputs.stream().anyMatch(Objects::isNull)) {
-			throw new RuntimeException("Transaction spends unknown UTXOs");
-		}
+		// Get account from server
+		Account accountSender = accountService.getByClientPublicKey(senderPublicKey.getPubKey());
 
-		// 1.2 All outputs must be spendable and at least 1 block deep
-		spentOutputs.forEach(transactionOutput -> {
-			if (!transactionOutput.isAvailableForSpending()) {
-				throw new RuntimeException("Input is already spent");
-			}
+		// Calculate needed fee
+		long neededSatoshiPerByte = feeService.fee();
+		final Coin neededFee = Coin.valueOf(tx.bitcoinSerialize().length * neededSatoshiPerByte);
 
-			if (transactionOutput.getParentTransactionDepthInBlocks() < 1) {
-				throw new RuntimeException("UTXO must be mined");
-			}
-		});
-
-		// 1.3 Make sure all inputs are from P2SH addresses
-		Set<Address> spentAddresses = spentOutputs.stream().map(transactionOutput -> transactionOutput
-			.getAddressFromP2SH(appConfig.getNetworkParameters())).collect(Collectors.toSet());
-		if (spentAddresses.contains(null)) {
-			throw new RuntimeException("Transaction must spent P2SH addresses");
-		}
-
-		// 1.4 Make sure all inputs come from known time locked addresses and from a single account
-		List<byte[]> addressHashes = spentAddresses.stream().map(Address::getHash160).collect(Collectors.toList());
-		List<TimeLockedAddressEntity> addresses = timeLockedAddressRepository.findByAddressHashIn(addressHashes);
-		if (addresses.size() != spentAddresses.size()) {
-			throw new RuntimeException("Used TLA inputs are not known to server");
-		}
-		Map<Account, List<TimeLockedAddressEntity>> inputAccounts = addresses.stream().collect(Collectors.groupingBy
-			(TimeLockedAddressEntity::getAccount));
-		if (inputAccounts.isEmpty()) {
-			throw new RuntimeException("Used TLA inputs are not known to server");
-		} else if (inputAccounts.size() != 1) {
-			throw new RuntimeException("Inputs must be from one account");
-		}
-
-		// 1.5 Make sure that owner of inputs is the same as in the request, that signed the DTO
-		// 	   (sender, signer and owner of inputs must be equal)
-		Account accountSender = inputAccounts.keySet().iterator().next();
-		if (!ECKey.fromPublicOnly(accountSender.clientPublicKey()).equals(senderPublicKey)) {
-			throw new RuntimeException("Request was not signed by owner of inputs");
-		}
-
-		// 1.6 All time locked addresses used must still be locked for some time
-		final Instant minimumLockedUntil = Instant.now().plus(Duration.ofSeconds(appConfig.getMinimumLockTimeSeconds()));
-		final List<TimeLockedAddressEntity> usedAddresses = inputAccounts.values().iterator().next();
-		final boolean allInputsLocked = usedAddresses.stream().allMatch(tla ->
-			Instant.ofEpochSecond(tla.getLockTime()).isAfter(minimumLockedUntil));
-		if (!allInputsLocked) {
-			throw new RuntimeException("Inputs must be locked at least until " + minimumLockedUntil);
-		}
-
-		// 1.7 Inputs must be correctly partially signed by sender
-		for (int i = 0; i < tx.getInputs().size(); i++) {
-			TransactionInput input = tx.getInput(i);
-			Script spendingScript = input.getScriptSig();
-			if (spendingScript.getChunks().size() == 0) {
-				throw new RuntimeException("Input was not signed");
-			}
-			if (spendingScript.getChunks().size() != 1 && !spendingScript.getChunks().get(0).isPushData()) {
-				throw new RuntimeException("Signature for input had wrong format");
-			}
-
-			// Calculate server signature
-			Script scriptPubKey = walletService.findOutputFor(input).getScriptPubKey();
-			byte[] connectedAddressHash = scriptPubKey.getPubKeyHash();
-			byte[] redeemScript = usedAddresses.stream().filter(tla -> Arrays.equals(tla.getAddressHash(),
-				connectedAddressHash)).findAny().get().getRedeemScript();
-			final ECKey serverPrivateKey = ECKey.fromPrivateAndPrecalculatedPublic(accountSender.serverPrivateKey(),
-				accountSender.serverPublicKey());
-			TransactionSignature serverSig = tx.calculateSignature(i, serverPrivateKey, redeemScript, SigHash.ALL,
-				false);
-
-			// Append server signature and rest of script to check if it makes it spendable
-			Script finalSig = new ScriptBuilder(spendingScript).data(serverSig.encodeToBitcoin()).smallNum(1).data
-				(redeemScript).build();
-			input.setScriptSig(finalSig);
-			finalSig.correctlySpends(tx, i, scriptPubKey, Script.ALL_VERIFY_FLAGS);
-		}
+		// 1 Check inputs
+		final long broadcastBefore = checkInputs(tx, accountSender, neededFee);
 
 		// 2 Check all outputs
 		final Set<TransactionOutput> remainingOutputs = new HashSet<>(tx.getOutputs());
@@ -323,18 +249,7 @@ public class MicropaymentService {
 			throw new RuntimeException("Maximum channel value reached");
 		}
 
-		// 4.4) Check for enough fee
-		long neededSatoshiPerByte = feeService.fee();
-		final Coin neededFee = Coin.valueOf(tx.bitcoinSerialize().length * neededSatoshiPerByte);
-		Coin givenFee = spentOutputs.stream().map(TransactionOutput::getValue).reduce(Coin.ZERO, Coin::add).minus(tx
-			.getOutputSum());
-		if (givenFee.isLessThan(neededFee)) {
-			throw new RuntimeException("Insufficient transaction fee. Given: " + givenFee.divide(tx.bitcoinSerialize()
-				.length) + " satoshi per byte. Needed: " + neededSatoshiPerByte);
-		}
-
 		// Execute micro payment
-		final long broadcastBefore = usedAddresses.stream().mapToLong(TimeLockedAddressEntity::getLockTime).min().getAsLong();
 		accountSender
 			.nonce(nonce)
 			.channelTransaction(tx.bitcoinSerialize())
@@ -355,6 +270,81 @@ public class MicropaymentService {
 		res.broadcastedTx = sendOutTransaction;
 
 		return new MicroPaymentResult();
+	}
+
+	/***
+	 * Checks all inputs for validity.
+	 *
+	 * @param tx The transaction to check
+	 * @param accountSender Every input must be from an address from this account
+	 * @param neededFee Total fee that the given transaction should have
+	 * @return long (UNIX timestamp) that indicates then when the first address used is unlocked
+	 */
+	private long checkInputs(Transaction tx, Account accountSender, Coin neededFee) {
+		Coin valueOfInputs = Coin.ZERO;
+		long earliestLockTime = Long.MAX_VALUE;
+
+		for (int i=0; i<tx.getInputs().size(); i++) {
+			TransactionInput input = tx.getInput(i);
+
+			TransactionOutput out = walletService.findOutputFor(input);
+			if (out == null) {
+				throw new RuntimeException("Transaction spends unknown UTXOs");
+			}
+			valueOfInputs = valueOfInputs.add(out.getValue());
+			if (!out.isAvailableForSpending()) {
+				throw new RuntimeException("Input is already spent");
+			}
+			if (out.getParentTransactionDepthInBlocks() < 1) {
+				throw new RuntimeException("UTXO must be mined");
+			}
+
+			Address fromAddress = out.getAddressFromP2SH(appConfig.getNetworkParameters());
+			if (fromAddress == null) {
+				throw new RuntimeException("Transaction must spent P2SH addresses");
+			}
+
+			TimeLockedAddressEntity tlaEntity = timeLockedAddressRepository.findByAddressHash(fromAddress.getHash160());
+			if (tlaEntity == null) {
+				throw new RuntimeException("Used TLA inputs are not known to server");
+			}
+			if (!tlaEntity.getAccount().equals(accountSender)) {
+				throw new RuntimeException("Inputs must be from sender account");
+			}
+
+			final Instant minimumLockedUntil = Instant.now()
+				.plus(Duration.ofSeconds(appConfig.getMinimumLockTimeSeconds()));
+			if (Instant.ofEpochSecond(tlaEntity.getLockTime()).isBefore(minimumLockedUntil)) {
+				throw new RuntimeException("Inputs must be locked at least until " + minimumLockedUntil);
+			}
+			earliestLockTime = Math.min(earliestLockTime, tlaEntity.getLockTime());
+
+			Script spendingScript = input.getScriptSig();
+			if (spendingScript.getChunks().size() == 0) {
+				throw new RuntimeException("Input was not signed");
+			}
+			if (spendingScript.getChunks().size() != 1 && !spendingScript.getChunks().get(0).isPushData()) {
+				throw new RuntimeException("Signature for input had wrong format");
+			}
+			byte[] redeemScript = tlaEntity.getRedeemScript();
+			final ECKey serverPrivateKey = ECKey.fromPrivateAndPrecalculatedPublic(accountSender.serverPrivateKey(),
+				accountSender.serverPublicKey());
+			TransactionSignature serverSig = tx.calculateSignature(i, serverPrivateKey, redeemScript, SigHash.ALL,
+				false);
+			Script finalSig = new ScriptBuilder(spendingScript).data(serverSig.encodeToBitcoin()).smallNum(1).data
+				(redeemScript).build();
+			input.setScriptSig(finalSig);
+			finalSig.correctlySpends(tx, i, out.getScriptPubKey(), Script.ALL_VERIFY_FLAGS);
+		}
+
+		// Check fee
+		Coin givenFee = valueOfInputs.minus(tx.getOutputSum());
+		if (givenFee.isLessThan(neededFee)) {
+			throw new RuntimeException("Insufficient transaction fee. Given: " + givenFee.divide(tx.bitcoinSerialize()
+				.length) + " satoshi per byte. Needed: " + neededFee.divide(tx.bitcoinSerialize().length));
+		}
+
+		return earliestLockTime;
 	}
 
 	@Transactional

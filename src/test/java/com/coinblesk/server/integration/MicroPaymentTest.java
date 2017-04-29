@@ -1,8 +1,8 @@
 package com.coinblesk.server.integration;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
+import com.coinblesk.dto.*;
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.dto.*;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.ForexService;
@@ -24,7 +24,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import javax.annotation.Signed;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
