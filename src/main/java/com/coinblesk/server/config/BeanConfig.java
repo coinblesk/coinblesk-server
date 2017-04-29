@@ -15,6 +15,7 @@
  */
 package com.coinblesk.server.config;
 
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -32,12 +33,14 @@ import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 @Configuration
 @ComponentScan("com.coinblesk.server")
 @EnableScheduling
+@EnableCaching
 public class BeanConfig {
 
-        private final AppConfig appConfig;
-        public BeanConfig(AppConfig appConfig) {
-            this.appConfig = appConfig;
-        }
+	private final AppConfig appConfig;
+
+	public BeanConfig(AppConfig appConfig) {
+		this.appConfig = appConfig;
+	}
 
 	@Bean
 	public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {

@@ -21,6 +21,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.coinblesk.dto.ForexDTO;
@@ -33,12 +36,13 @@ import com.coinblesk.server.utils.DTOUtils;
  * Service that provides current & historic bitcoin exchange rates.
  */
 @Service
-final public class ForexBitcoinService {
+public class ForexBitcoinService {
 
 	private final static String PLACEHOLDER = "{{PLACEHOLDER}}";
 	private final static String COINDESK_CURRENT_API = "http://api.coindesk.com/v1/bpi/currentprice/" + PLACEHOLDER + ".json";
 	private final static String COINDESK_HISTORIC_API = "http://api.coindesk.com/v1/bpi/historical/close.json?currency=" + PLACEHOLDER;
 
+	@Cacheable("forex-bitcoin-current-rates")
 	public ForexDTO getCurrentRate(String currencySymbol) throws BusinessException {
 		String url = COINDESK_CURRENT_API.replace(PLACEHOLDER, currencySymbol);
 		try {
@@ -64,6 +68,7 @@ final public class ForexBitcoinService {
 		}
 	}
 
+	@Cacheable("forex-bitcoin-historic-rates")
 	public List<ForexDTO> getHistoricRates(String currencySymbol) throws BusinessException {
 		String url = COINDESK_HISTORIC_API.replace(PLACEHOLDER, currencySymbol);
 		try {
@@ -104,4 +109,13 @@ final public class ForexBitcoinService {
 	private static class HistoricJsonStructure {
 		private Map<Date, Double> bpi;
 	}
+
+	@Scheduled(fixedRate = 60000L) // every minute, the current rate is wiped
+	@CacheEvict(value = { "forex-bitcoin-current-rates" }, allEntries = true)
+	public void evictCurrentCache() { }
+
+	@Scheduled(fixedRate = 3600000L) // every hour, the history is wiped
+	@CacheEvict(value = { "forex-bitcoin-historic-rates" }, allEntries = true)
+	public void evictHistoricCache() { }
+
 }
