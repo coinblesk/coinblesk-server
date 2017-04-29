@@ -44,7 +44,7 @@ public class UserDetailsService implements org.springframework.security.core.use
 			}
 
 			// Check for email verification
-			if (!user.isEmailVerified()) {
+			if (!user.isActivationVerified()) {
 				throw new AuthenticationServiceException("Email for user " + lowercaseLogin + " not verified yet");
 			}
 

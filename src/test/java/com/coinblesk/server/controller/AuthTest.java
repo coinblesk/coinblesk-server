@@ -46,14 +46,14 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.WebApplicationContext;
 
-import com.coinblesk.json.v1.UserAccountTO;
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.dao.UserAccountRepository;
 import com.coinblesk.dto.LoginDTO;
 import com.coinblesk.dto.UserAccountCreateDTO;
 import com.coinblesk.dto.UserAccountCreateVerifyDTO;
 import com.coinblesk.dto.UserAccountForgotDTO;
 import com.coinblesk.dto.UserAccountForgotVerifyDTO;
+import com.coinblesk.json.v1.UserAccountTO;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.dao.UserAccountRepository;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.service.MailService;
 import com.coinblesk.server.service.UserAccountService;
@@ -215,10 +215,21 @@ public class AuthTest extends CoinbleskTest {
 	}
 
 	@Test
-	public void forgotFailsWhenUserIsNotActivated() throws Exception {
+	public void forgotWorksWhenUserIsNotActivated() throws Exception {
 		String email = "test@test.test";
 		createUser(email, "12345678").andExpect(status().is2xxSuccessful());
-		forgotPassword(email).andExpect(status().is4xxClientError());
+
+		String activationToken = userAccountService.getByEmail(email).getActivationEmailToken();
+		Assert.assertNotNull(activationToken);
+		String forgotToken = userAccountService.getByEmail(email).getForgotEmailToken();
+		Assert.assertNull(forgotToken);
+
+		forgotPassword(email).andExpect(status().is2xxSuccessful());
+
+		String activationTokenAfter = userAccountService.getByEmail(email).getActivationEmailToken();
+		Assert.assertNotNull(activationTokenAfter);
+		String forgotTokenAfter = userAccountService.getByEmail(email).getForgotEmailToken();
+		Assert.assertNull(forgotTokenAfter);
 	}
 	@Test
 	public void forgotFailsWhenUserIsDeleted() throws Exception {
