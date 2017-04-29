@@ -331,19 +331,19 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		final ECKey receiverKey = new ECKey();
 
 		accountService.createAcount(senderKey);
+		accountService.createAcount(receiverKey);
 		TimeLockedAddress timeLockedAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, timeLockedAddress.getAddress
 			(params));
 		watchAndMineTransactions(fundingTx);
 
-		Transaction microPaymentTransaction = new Transaction(params);
-		microPaymentTransaction.addOutput(anyP2PKOutput(microPaymentTransaction));
-		microPaymentTransaction.addInput(fundingTx.getOutput(0));
-		signAllInputs(microPaymentTransaction, timeLockedAddress.createRedeemScript(), senderKey);
-
-		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction);
-		sendAndExpect4xxError(dto, "Transaction must have exactly one output for server");
+		Transaction tx = new Transaction(params);
+		tx.addInput(fundingTx.getOutput(0));
+		tx.addOutput(changeOutput(tx, timeLockedAddress, 100L, params));
+		signAllInputs(tx, timeLockedAddress.createRedeemScript(), senderKey);
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, tx);
+		sendAndExpect4xxError(dto, "Invalid amount. 100 requested but 0 given");
 	}
 
 	@Test
@@ -389,63 +389,9 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	}
 
 	@Test
-	public void microPayment_failsWithMultipleChangeOutputs() throws Exception {
-		final ECKey senderKey = new ECKey();
-		final ECKey receiverKey = new ECKey();
-
-		ECKey serverPublicKey = accountService.createAcount(senderKey);
-		accountService.createAcount(receiverKey);
-
-		TimeLockedAddress timeLockedAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
-			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, timeLockedAddress.getAddress
-			(params));
-		watchAndMineTransactions(fundingTx);
-
-		Transaction microPaymentTransaction = new Transaction(params);
-		microPaymentTransaction.addInput(fundingTx.getOutput(0));
-		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey, params));
-		microPaymentTransaction.addOutput(changeOutput(microPaymentTransaction, timeLockedAddress));
-		microPaymentTransaction.addOutput(changeOutput(microPaymentTransaction, timeLockedAddress));
-		signAllInputs(microPaymentTransaction, timeLockedAddress.createRedeemScript(), senderKey);
-
-		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, senderKey, microPaymentTransaction);
-		sendAndExpect4xxError(dto, "Cannot have multiple change outputs");
-	}
-
-	@Test
-	public void microPayment_closesChannelWhenChangeOutputIsNotLongestLockedAddress() throws Exception {
-		final ECKey senderKey = new ECKey();
-		final ECKey receiverKey = new ECKey();
-
-		ECKey serverPublicKey = accountService.createAcount(senderKey);
-		accountService.createAcount(receiverKey);
-
-		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(senderKey, validLockTime)
-			.getTimeLockedAddress();
-		TimeLockedAddress changeAddress = accountService.createTimeLockedAddress(senderKey,
-			Instant.ofEpochSecond(validLockTime).minus (Duration.ofHours(1)).getEpochSecond()).getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, inputAddress.getAddress
-			(params));
-		watchAndMineTransactions(fundingTx);
-
-		Transaction microPaymentTransaction = new Transaction(params);
-		microPaymentTransaction.addInput(fundingTx.getOutput(0));
-		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey, params));
-		microPaymentTransaction.addOutput(changeOutput(microPaymentTransaction, changeAddress));
-		signAllInputs(microPaymentTransaction, inputAddress.createRedeemScript(), senderKey);
-
-		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction);
-		sendAndExpect2xxSuccess(dto);
-		assertThat(accountService.getByClientPublicKey(senderKey.getPubKey()).isLocked(), is(true));
-	}
-
-	@Test
 	public void microPayment_closesChannelWhenSendingToThirdParty() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey receiverKey = new ECKey();
-		ECKey serverPublicKey = accountService.createAcount(senderKey);
-		accountService.createAcount(receiverKey);
+		accountService.createAcount(senderKey);
 
 		assertThat(accountService.getByClientPublicKey(senderKey.getPubKey()).isLocked(), is(false));
 
@@ -457,11 +403,10 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 		Transaction microPaymentTransaction = new Transaction(params);
 		microPaymentTransaction.addInput(fundingTx.getOutput(0));
-		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey, params));
 		microPaymentTransaction.addOutput(anyP2PKOutput(microPaymentTransaction));
 		signAllInputs(microPaymentTransaction, inputAddress.createRedeemScript(), senderKey);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction);
+		SignedDTO dto = createExternalPaymentRequestDTO(senderKey, microPaymentTransaction);
 		sendAndExpect2xxSuccess(dto);
 		assertThat(accountService.getByClientPublicKey(senderKey.getPubKey()).isLocked(), is(true));
 	}
@@ -509,11 +454,12 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		microPaymentTransaction.addOutput(P2PKOutput(microPaymentTransaction, serverPublicKey, params));
 		signAllInputs(microPaymentTransaction, inputAddress.createRedeemScript(), senderKey);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 1000L, 0L);
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 100L, 0L);
 		sendAndExpect4xxError(dto, "Invalid nonce");
 
-		accountRepository.save(accountRepository.findByClientPublicKey(senderKey.getPubKey()).nonce(validNonce()));
-		dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction);
+		long validNonce = validNonce();
+		accountRepository.save(accountRepository.findByClientPublicKey(senderKey.getPubKey()).nonce(validNonce));
+		dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 100L, validNonce-100);
 		sendAndExpect4xxError(dto, "Invalid nonce");
 	}
 
@@ -894,6 +840,18 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 	public static SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx, Long amount) {
 		return createMicroPaymentRequestDTO(from, to, tx, amount, validNonce());
+	}
+
+	public static SignedDTO createExternalPaymentRequestDTO(ECKey from, Transaction tx) {
+		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(DTOUtils.toHex(tx.bitcoinSerialize
+			()), from.getPublicKeyAsHex(), "", 0L, validNonce());
+		return DTOUtils.serializeAndSign(microPaymentRequestDTO, from);
+	}
+
+	public static SignedDTO createExternalPaymentRequestDTO(ECKey from, Transaction tx, Long nonce) {
+		MicroPaymentRequestDTO microPaymentRequestDTO = new MicroPaymentRequestDTO(DTOUtils.toHex(tx.bitcoinSerialize
+			()), from.getPublicKeyAsHex(), "", 0L, nonce);
+		return DTOUtils.serializeAndSign(microPaymentRequestDTO, from);
 	}
 
 	public static SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx, Long amount, Long nonce) {

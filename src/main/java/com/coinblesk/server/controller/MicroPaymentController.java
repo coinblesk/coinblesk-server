@@ -48,18 +48,16 @@ public class MicroPaymentController {
 
 			requestDTO = DTOUtils.parseAndValidate(request, MicroPaymentRequestDTO.class);
 			senderPublicKey = DTOUtils.getECKeyFromHexPublicKey(requestDTO.getFromPublicKey());
-			receiverPublicKey = DTOUtils.getECKeyFromHexPublicKey(requestDTO.getToPublicKey());
 			DTOUtils.validateSignature(request.getPayload(), request.getSignature(), senderPublicKey);
 
 			// Call the service and map failures to error messages
 			MicropaymentService.MicroPaymentResult result = micropaymentService.microPayment(senderPublicKey,
-				receiverPublicKey, requestDTO.getTx(), requestDTO.getAmount(), requestDTO.getNonce());
+				requestDTO.getToPublicKey(), requestDTO.getTx(), requestDTO.getAmount(), requestDTO.getNonce());
 
 			if (result.broadcastedTx == null) {
 				return new ResponseEntity<>("New balance receiver: " + result.newBalanceReceiver, OK);
 			} else {
-				return new ResponseEntity<>("New balance receiver: " + result.newBalanceReceiver +
-					" Broadcast Transaction: " + result.broadcastedTx.getHashAsString(), OK);
+				return new ResponseEntity<>(" Broadcast Transaction: " + result.broadcastedTx.getHashAsString(), OK);
 			}
 
 		} catch (CoinbleskInternalError e) {

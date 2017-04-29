@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
@@ -149,13 +150,12 @@ public class MicropaymentService {
 	}
 
 	@Transactional(isolation = Isolation.SERIALIZABLE)
-	public MicroPaymentResult microPayment(ECKey senderPublicKey, ECKey receiverPublicKey, String txInHex, Long
+	public MicroPaymentResult microPayment(ECKey senderPublicKey, String receiverPublicKey, String txInHex, Long
 		amount, Long nonce) throws Exception {
 
 		// Parse the transaction
-		byte[] txInByes = DTOUtils.fromHex(txInHex);
-		final Transaction tx;
-		tx = new Transaction(appConfig.getNetworkParameters(), txInByes);
+		byte[] txInBytes = DTOUtils.fromHex(txInHex);
+		Transaction tx = new Transaction(appConfig.getNetworkParameters(), txInBytes);
 		tx.verify(); // Checks for no input or outputs and no negative values.
 
 		// Check account for locked and nonce
@@ -171,108 +171,73 @@ public class MicropaymentService {
 		}
 
 		// Check inputs
-		long neededSatoshiPerByte = feeService.fee();
-		final Coin neededFee = Coin.valueOf(tx.bitcoinSerialize().length * neededSatoshiPerByte);
+		final Coin neededFee = Coin.valueOf(tx.bitcoinSerialize().length * feeService.fee());
 		final long broadcastBefore = checkInputs(tx, accountSender, neededFee);
 
-		// 2. Check all outputs
-		final Set<TransactionOutput> remainingOutputs = new HashSet<>(tx.getOutputs());
-
-		// 2.1) Transaction must have one and only one output to the server pot
+		// Amount given to server must be equal to last channel or higher
 		final ECKey serverPubKey = ECKey.fromPublicOnly(accountSender.serverPublicKey());
-		final TransactionOutput outputForServer = getOutputForServer(tx, serverPubKey);
-		if (!remainingOutputs.remove(outputForServer)) {
-			throw new CoinbleskInternalError("Could not remove server output from set");
-		}
+		final Coin amountToServer = getOutputForP2PK(txInBytes, serverPubKey);
+		final Coin actualAmountSent = amountToServer.minus(
+			getOutputForP2PK(accountSender.getChannelTransaction(), serverPubKey));
+		if (actualAmountSent.isNegative())
+			throw new RuntimeException("Amount to server must more than in open channel.");
 
-		// 2.2) Transaction must have at most one change output back to sender, which is the TLA last to expire
-		final TimeLockedAddress latestTimeLockedAddress = timeLockedAddressRepository
-			.findTopByAccount_clientPublicKeyOrderByLockTimeDesc(senderPublicKey.getPubKey()).toTimeLockedAddress();
-		List<TransactionOutput> changeOutputs = remainingOutputs.stream().filter(output -> {
-			Address p2SHAddress = output.getAddressFromP2SH(appConfig.getNetworkParameters());
-			return (p2SHAddress != null && p2SHAddress.equals(latestTimeLockedAddress.getAddress(appConfig
-				.getNetworkParameters())));
-		}).collect(Collectors.toList());
-		if (changeOutputs.size() == 0) {
-			LOG.warn("Client provided no change in micropayment");
-		} else if (changeOutputs.size() == 1) {
-			final TransactionOutput changeOutput = changeOutputs.get(0);
-			if (!remainingOutputs.remove(changeOutput)) {
-				throw new CoinbleskInternalError("Could not remove change output from set");
+		if (amount.equals(0L) && receiverPublicKey.equals("")) { // External payment
+			accountSender
+				.nonce(nonce)
+				.channelTransaction(tx.bitcoinSerialize())
+				.broadcastBefore(Instant.now().getEpochSecond());
+			accountRepository.save(accountSender);
+
+			closeMicroPaymentChannel(senderPublicKey);
+
+			MicroPaymentResult res = new MicroPaymentResult();
+			res.broadcastedTx = tx;
+			return res;
+
+		} else { // Payment to other coinblesk user.
+
+			// Check for valid amount
+			final Coin amountFromRequest = Coin.valueOf(amount);
+			if (amountFromRequest.isNegative() || amountFromRequest.isZero()) {
+				throw new RuntimeException("Can't send zero or negative amont");
 			}
-		} else if (changeOutputs.size() > 1) {
-			throw new RuntimeException("Cannot have multiple change outputs");
-		}
+			if (!actualAmountSent.equals(amountFromRequest)) {
+				throw new RuntimeException("Invalid amount. " + amountFromRequest + " requested but " + actualAmountSent +
+					" given");
+			}
 
-		// 2.3) If there are other outputs, we must close the channel
-		boolean mustClose = false;
-		if (!remainingOutputs.isEmpty()) {
-			mustClose = true;
-		}
+			final BigDecimal btc_usd = forexService.getExchangeRate("BTC", "USD");
+			final long channelAmountInUSD = btc_usd.divide(new BigDecimal(100000000))
+				.multiply(new BigDecimal(amountToServer.getValue())).longValue();
+			if (channelAmountInUSD > appConfig.getMaximumChannelAmountUSD()) {
+				throw new RuntimeException("Maximum channel value reached");
+			}
 
-		// 3) Check receiver
-		// 3.1) Make sure the receiving public key is known to the server
-		final Account accountReceiver = accountService.getByClientPublicKey(receiverPublicKey.getPubKey());
-		if (accountReceiver == null) {
-			throw new RuntimeException("Receiver is unknown to server");
-		}
-		// 3.2) Sending to oneself is not allowed
-		if (accountReceiver.equals(accountSender)) {
-			throw new RuntimeException("Sender and receiver must be different");
-		}
+			// Make sure the receiving public key is known to the server
+			ECKey receiverKey = DTOUtils.getECKeyFromHexPublicKey(receiverPublicKey);
+			final Account accountReceiver = accountService.getByClientPublicKey(receiverKey.getPubKey());
+			if (accountReceiver == null) {
+				throw new RuntimeException("Receiver is unknown to server");
+			}
+			// Sending to oneself is not allowed
+			if (accountReceiver.equals(accountSender)) {
+				throw new RuntimeException("Sender and receiver must be different");
+			}
 
-		// 4) Check pending channel rules
-		Transaction prevChannelTransaction = null;
-		if (accountSender.getChannelTransaction() != null) {
-			prevChannelTransaction = new Transaction(appConfig.getNetworkParameters(), accountSender
-				.getChannelTransaction());
-		}
+			// Execute micro payment
+			accountSender
+				.nonce(nonce)
+				.channelTransaction(tx.bitcoinSerialize())
+				.broadcastBefore(broadcastBefore);
+			final long newAmountReceiver = accountReceiver.virtualBalance() + actualAmountSent.getValue();
+			accountReceiver
+				.virtualBalance(newAmountReceiver);
 
-
-		// 4.3) Check for valid amount
-		final Coin amountFromRequest = Coin.valueOf(amount);
-		if (amountFromRequest.isNegative() || amountFromRequest.isZero()) {
-			throw new RuntimeException("Can't send zero or negative amont");
+			MicroPaymentResult res = new MicroPaymentResult();
+			res.newBalanceReceiver = newAmountReceiver;
+			return res;
 		}
-		final Coin actualAmountSent;
-		if (prevChannelTransaction == null) {
-			actualAmountSent = outputForServer.getValue();
-		} else {
-			actualAmountSent = outputForServer.getValue().minus(getOutputForServer(prevChannelTransaction,
-				serverPubKey).getValue());
-		}
-		if (!actualAmountSent.equals(amountFromRequest)) {
-			throw new RuntimeException("Invalid amount. " + amountFromRequest + " requested but " + actualAmountSent +
-				" given");
-		}
-		final BigDecimal btc_usd = forexService.getExchangeRate("BTC", "USD");
-		final long channelAmountInUSD = btc_usd.divide(new BigDecimal(100000000))
-			.multiply(new BigDecimal(outputForServer.getValue().getValue())).longValue();
-		if (channelAmountInUSD > appConfig.getMaximumChannelAmountUSD()) {
-			throw new RuntimeException("Maximum channel value reached");
-		}
-
-		// Execute micro payment
-		accountSender
-			.nonce(nonce)
-			.channelTransaction(tx.bitcoinSerialize())
-			.broadcastBefore(broadcastBefore);
-		final long newAmountReceiver = accountReceiver.virtualBalance() + actualAmountSent.getValue();
-		accountReceiver
-			.virtualBalance(newAmountReceiver);
-
-		// If we need to close, do so and send out transaction
-		Transaction sendOutTransaction = null;
-		if (mustClose) {
-			 // Can block up to 10 seconds. Throws when not successful.
-			sendOutTransaction = closeMicroPaymentChannel(senderPublicKey);
-		}
-
-		MicroPaymentResult res = new MicroPaymentResult();
-		res.newBalanceReceiver = newAmountReceiver;
-		res.broadcastedTx = sendOutTransaction;
-
-		return new MicroPaymentResult();
 	}
 
 	/***
@@ -464,17 +429,35 @@ public class MicropaymentService {
 		});
 	}
 
-	private TransactionOutput getOutputForServer(Transaction micropaymentTransaction, ECKey serverPubKey) {
-		final Address serverPot = serverPubKey.toAddress(appConfig.getNetworkParameters());
-		final List<TransactionOutput> outputsForServer = micropaymentTransaction.getOutputs().stream().filter(output
-			-> {
-			Address p2PKAddress = output.getAddressFromP2PKHScript(appConfig.getNetworkParameters());
-			return (p2PKAddress != null && p2PKAddress.equals(serverPot));
-		}).collect(Collectors.toList());
-		if (outputsForServer.size() != 1) {
-			throw new RuntimeException("Transaction must have exactly one output for server");
+	/***
+	 * Finds value of the outputs for the given public key in the transaction.
+	 * @param txBytes The serialized transaction or null
+	 * @param publicKey The public key of the address
+	 * @return Coin value of the sum of outputs that match or Coin.ZERO if none found, or txBytes is null
+	 */
+	private Coin getOutputForP2PK(@Nullable byte[] txBytes, ECKey publicKey) {
+		if (txBytes == null)
+			return Coin.ZERO;
+		final Transaction tx = new Transaction(appConfig.getNetworkParameters(), txBytes);
+		return getOutputForP2PK(tx, publicKey);
+	}
+
+	/***
+	 * Finds value of first output for the given public key in the transaction.
+	 * @param tx The transaction to search
+	 * @param publicKey The public key of the address
+	 * @return Coin value of the first matching output or Coin.ZERO if none found
+	 */
+	private Coin getOutputForP2PK(Transaction tx, ECKey publicKey) {
+		final Address serverPot = publicKey.toAddress(appConfig.getNetworkParameters());
+		Coin value = Coin.ZERO;
+
+		for(int i=0; i<tx.getOutputs().size(); i++) {
+			Address p2PKAddress = tx.getOutput(i).getAddressFromP2PKHScript(appConfig.getNetworkParameters());
+			if (Objects.equals(tx.getOutput(i).getAddressFromP2PKHScript(appConfig.getNetworkParameters()), serverPot))
+				value = value.plus(tx.getOutput(i).getValue());
 		}
-		return outputsForServer.get(0);
+		return value;
 	}
 
 }
