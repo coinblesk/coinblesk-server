@@ -6,6 +6,9 @@ import com.coinblesk.server.dao.AccountRepository;
 import com.coinblesk.dto.ErrorDTO;
 import com.coinblesk.dto.MicroPaymentRequestDTO;
 import com.coinblesk.dto.SignedDTO;
+import com.coinblesk.server.dao.TimeLockedAddressRepository;
+import com.coinblesk.server.entity.Account;
+import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.ForexService;
 import com.coinblesk.server.service.MicropaymentService;
@@ -63,9 +66,15 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	@Autowired
 	private AccountRepository accountRepository;
 	@Autowired
+	private TimeLockedAddressRepository timeLockedAddressRepository;
+	@Autowired
 	private AppConfig appConfig;
 
 	public static NetworkParameters params;
+
+	private static long validNonce()  {
+		return Instant.now().toEpochMilli();
+	}
 
 	@Before
 	public void setUp() throws Exception {
@@ -233,22 +242,29 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 	@Test
 	public void microPayment_failsOnSoonLockedInputs() throws Exception {
-		final ECKey clientKey = new ECKey();
-		final long lockTime = Instant.now().plus(Duration.ofSeconds(appConfig.getMinimumLockTimeSeconds()+1))
+		final ECKey senderKey = new ECKey();
+		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
+
+		// Simulate an address that was created some time ago
+		final long lockTime = Instant.now().plus(Duration.ofSeconds(appConfig.getMinimumLockTimeSeconds()-1))
 			.getEpochSecond();
-		accountService.createAcount(clientKey);
-		TimeLockedAddress inputAddress = accountService.createTimeLockedAddress(clientKey, lockTime)
-			.getTimeLockedAddress();
-		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, inputAddress.getAddress
-			(params));
-		watchAndMineTransactions(fundingTx);
+		TimeLockedAddress tla = new TimeLockedAddress(senderKey.getPubKey(), serverKey.getPubKey(), lockTime);
+		TimeLockedAddressEntity tlaEntity = new TimeLockedAddressEntity();
+		Account senderAccount = accountService.getByClientPublicKey(senderKey.getPubKey());
+		tlaEntity.setAccount(senderAccount);
+		tlaEntity.setTimeCreated(Instant.now().minusSeconds(10000).getEpochSecond());
+		tlaEntity.setAddressHash(tla.getAddressHash());
+		tlaEntity.setLockTime(lockTime);
+		tlaEntity.setRedeemScript(tla.createRedeemScript().getProgram());
+		timeLockedAddressRepository.save(tlaEntity);
+		walletService.addWatching(tla.getAddress(params));
 
-		Transaction microPaymentTransaction = new Transaction(params);
-		microPaymentTransaction.addInput(fundingTx.getOutput(0));
-		microPaymentTransaction.addOutput(anyP2PKOutput(microPaymentTransaction));
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
+		mineTransaction(fundingTx);
 
-		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction);
-		Thread.sleep(1500);
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1337L, tla, params, fundingTx.getOutput(0));
 		sendAndExpect4xxError(dto, "Inputs must be locked at least until");
 	}
 
@@ -496,10 +512,8 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, 1000L, 0L);
 		sendAndExpect4xxError(dto, "Invalid nonce");
 
-		accountRepository.save(accountRepository.findByClientPublicKey(senderKey.getPubKey()).nonce(Instant.now()
-			.getEpochSecond()));
-		dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction, Instant.now().minus
-			(Duration.ofMinutes(10)).getEpochSecond());
+		accountRepository.save(accountRepository.findByClientPublicKey(senderKey.getPubKey()).nonce(validNonce()));
+		dto = createMicroPaymentRequestDTO(senderKey, receiverKey, microPaymentTransaction);
 		sendAndExpect4xxError(dto, "Invalid nonce");
 	}
 
@@ -638,7 +652,6 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		SignedDTO dto2 = createMicroPaymentRequestDTO(senderKey, receiverKey,
 			value.getValue(), tla, params, fundingTx.getOutput(0));
 		sendAndExpect2xxSuccess(dto2); // channel is now one dollar below full
-		Thread.sleep(1001);
 		SignedDTO dto3 = createMicroPaymentRequestDTO(senderKey, receiverKey, oneUSD.multiply(2).getValue(),
 			tla, params, value.getValue(), fundingTx.getOutput(0));
 		sendAndExpect4xxError(dto3, "Maximum channel value reached");
@@ -709,7 +722,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		MicroPaymentRequestDTO orig = DTOUtils.fromJSON(DTOUtils.fromBase64(dto.getPayload()),
 			MicroPaymentRequestDTO .class);
 		MicroPaymentRequestDTO modifiedRequest = new MicroPaymentRequestDTO(orig.getTx(), orig.getFromPublicKey(),
-			orig.getToPublicKey(), orig.getAmount(), Instant.now().plus(Duration.ofMinutes(1L)).getEpochSecond());
+			orig.getToPublicKey(), orig.getAmount(), validNonce());
 		sendAndExpect4xxError(new SignedDTO(DTOUtils.toBase64(DTOUtils.toJSON(modifiedRequest)), dto.getSignature()),
 			"Signature is not valid");
 
@@ -720,8 +733,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		ECKey otherOwnedAccount = new ECKey();
 		accountService.createAcount(otherOwnedAccount);
 		MicroPaymentRequestDTO modifiedRequest2 = new MicroPaymentRequestDTO(orig.getTx(), otherOwnedAccount
-			.getPublicKeyAsHex(), orig.getToPublicKey(), orig.getAmount(), Instant.now().plus(Duration.ofMinutes(1L))
-			.getEpochSecond());
+			.getPublicKeyAsHex(), orig.getToPublicKey(), orig.getAmount(), validNonce());
 		sendAndExpect4xxError(DTOUtils.serializeAndSign(modifiedRequest2, otherOwnedAccount),
 			"Inputs must be from sender account");
 
@@ -877,11 +889,11 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	}
 
 	public static SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx) {
-		return createMicroPaymentRequestDTO(from, to, tx, 100L, Instant.now().getEpochSecond());
+		return createMicroPaymentRequestDTO(from, to, tx, 100L, validNonce());
 	}
 
 	public static SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx, Long amount) {
-		return createMicroPaymentRequestDTO(from, to, tx, amount, Instant.now().getEpochSecond());
+		return createMicroPaymentRequestDTO(from, to, tx, amount, validNonce());
 	}
 
 	public static SignedDTO createMicroPaymentRequestDTO(ECKey from, ECKey to, Transaction tx, Long amount, Long nonce) {
