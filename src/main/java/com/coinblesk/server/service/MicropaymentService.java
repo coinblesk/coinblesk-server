@@ -144,6 +144,11 @@ public class MicropaymentService {
 	}
 
 	@Transactional(isolation = Isolation.SERIALIZABLE)
+	public void externalPayment(ECKey senderPublicKey, ECKey receiverPublicKey, String txInHex, Long
+		amount, Long nonce) throws Exception {
+	}
+
+	@Transactional(isolation = Isolation.SERIALIZABLE)
 	public MicroPaymentResult microPayment(ECKey senderPublicKey, ECKey receiverPublicKey, String txInHex, Long
 		amount, Long nonce) throws Exception {
 
@@ -153,17 +158,24 @@ public class MicropaymentService {
 		tx = new Transaction(appConfig.getNetworkParameters(), txInByes);
 		tx.verify(); // Checks for no input or outputs and no negative values.
 
-		// Get account from server
+		// Check account for locked and nonce
 		Account accountSender = accountService.getByClientPublicKey(senderPublicKey.getPubKey());
+		if (accountSender == null) {
+			throw new RuntimeException("Unknown sender");
+		}
+		if (accountSender.isLocked()) {
+			throw new RuntimeException("Channel is locked");
+		}
+		if (nonce <= accountSender.nonce()) {
+			throw new RuntimeException("Invalid nonce");
+		}
 
-		// Calculate needed fee
+		// Check inputs
 		long neededSatoshiPerByte = feeService.fee();
 		final Coin neededFee = Coin.valueOf(tx.bitcoinSerialize().length * neededSatoshiPerByte);
-
-		// 1 Check inputs
 		final long broadcastBefore = checkInputs(tx, accountSender, neededFee);
 
-		// 2 Check all outputs
+		// 2. Check all outputs
 		final Set<TransactionOutput> remainingOutputs = new HashSet<>(tx.getOutputs());
 
 		// 2.1) Transaction must have one and only one output to the server pot
@@ -216,15 +228,6 @@ public class MicropaymentService {
 				.getChannelTransaction());
 		}
 
-		// 4.1) Channel must not be locked (i.e. the channel is being closed);
-		if (accountSender.isLocked()) {
-			throw new RuntimeException("Channel is locked");
-		}
-
-		// 4.2) Nonce must be valid
-		if (nonce <= accountSender.nonce()) {
-			throw new RuntimeException("Invalid nonce");
-		}
 
 		// 4.3) Check for valid amount
 		final Coin amountFromRequest = Coin.valueOf(amount);

@@ -117,33 +117,56 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 
 	@Test
 	public void microPayment_failsOnUnknownUTXOs() throws Exception {
-		ECKey clientKey = new ECKey();
-		Transaction microPaymentTransaction = FakeTxBuilder.createFakeTx(params);
-		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction);
+		final ECKey senderKey = new ECKey();
+		accountService.createAcount(senderKey);
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
+
+		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
+			.getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
+		walletService.addWatching(tla.getAddress(params));
+		// Funding tx is not mined or broadcasted
+
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, 1337L, tla, params, fundingTx.getOutput(0));
 		sendAndExpect4xxError(dto, "Transaction spends unknown UTXOs");
 	}
 
 	@Test
 	public void microPayment_failsOnWrongAddressType() throws Exception {
-		ECKey clientKey = new ECKey();
+		final ECKey senderKey = new ECKey();
+		final ECKey serverKey = accountService.createAcount(senderKey);
 
-		Transaction fundingTx1 = FakeTxBuilder.createFakeTx(params); // Creates a P2PKHash output, not what we want
-		Transaction fundingTx2 = FakeTxBuilder.createFakeP2SHTx(params); // Creates a P2SH output, this would be ok
-		watchAndMineTransactions(fundingTx1, fundingTx2);
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
 
-		Transaction microPaymentTransaction = new Transaction(params);
-		microPaymentTransaction.addOutput(anyP2PKOutput(microPaymentTransaction));
-		microPaymentTransaction.addInput(fundingTx1.getOutput(0));
-		microPaymentTransaction.addInput(fundingTx2.getOutput(0));
+		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
+			.getTimeLockedAddress();
+		walletService.addWatching(tla.getAddress(params));
 
-		SignedDTO dto = createMicroPaymentRequestDTO(clientKey, new ECKey(), microPaymentTransaction);
+		Transaction goodInput = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
+		// Bad input is a pay 2 public key utxo from sender, that the server for some reason watches.
+		Transaction badInput = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, senderKey.toAddress(params));
+		watchAndMineTransactions(goodInput, badInput);
+
+		Transaction tx = new Transaction(params);
+		tx.addOutput(P2PKOutput(tx, serverKey, 500L, params));
+		tx.addInput(goodInput.getOutput(0));
+		tx.addInput(badInput.getOutput(0));
+		signInput(tx, 0, tla.createRedeemScript(), senderKey);
+		TransactionSignature sig = tx.calculateSignature(1, senderKey, badInput.getOutput(0).getScriptPubKey(), SigHash.ALL, false);
+		tx.getInput(1).setScriptSig(new ScriptBuilder().data(sig.encodeToBitcoin()).build());
+
+
+		SignedDTO dto = createMicroPaymentRequestDTO(senderKey, receiverKey, tx, 500L);
 		sendAndExpect4xxError(dto, "Transaction must spent P2SH addresses");
 	}
 
 	@Test
 	public void microPayment_failsOnUnknownTLAInputs() throws Exception {
 		final ECKey clientKey = new ECKey();
-		final ECKey serverKey = new ECKey();
+
+		ECKey serverKey = accountService.createAcount(clientKey);
 
 		// Create a tla but without registering it in any way with the server
 		TimeLockedAddress tla = new TimeLockedAddress(clientKey.getPubKey(), serverKey.getPubKey(), validLockTime);
@@ -264,9 +287,11 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnSignedByWrongAccount() throws Exception {
 		final ECKey clientKey = new ECKey();
+		final ECKey otherClientKey = new ECKey();
 		final ECKey receiverKey = new ECKey();
 
 		ECKey serverKey = accountService.createAcount(clientKey);
+		accountService.createAcount(otherClientKey);
 		accountService.createAcount(receiverKey);
 		TimeLockedAddress addressClient = accountService.createTimeLockedAddress(clientKey, validLockTime)
 			.getTimeLockedAddress();
@@ -280,7 +305,7 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		signInput(microPaymentTransaction, 0, addressClient.createRedeemScript(), clientKey);
 
 		// Sign with random new ECKey
-		SignedDTO dto = createMicroPaymentRequestDTO(new ECKey(), receiverKey, microPaymentTransaction);
+		SignedDTO dto = createMicroPaymentRequestDTO(otherClientKey, receiverKey, microPaymentTransaction);
 		sendAndExpect4xxError(dto, "Inputs must be from sender account");
 	}
 
