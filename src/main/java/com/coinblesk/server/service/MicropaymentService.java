@@ -145,11 +145,6 @@ public class MicropaymentService {
 	}
 
 	@Transactional(isolation = Isolation.SERIALIZABLE)
-	public void externalPayment(ECKey senderPublicKey, ECKey receiverPublicKey, String txInHex, Long
-		amount, Long nonce) throws Exception {
-	}
-
-	@Transactional(isolation = Isolation.SERIALIZABLE)
 	public MicroPaymentResult microPayment(ECKey senderPublicKey, String receiverPublicKey, String txInHex, Long
 		amount, Long nonce) throws Exception {
 
@@ -290,7 +285,7 @@ public class MicropaymentService {
 			if (spendingScript.getChunks().size() == 0) {
 				throw new RuntimeException("Input was not signed");
 			}
-			if (spendingScript.getChunks().size() != 1 && !spendingScript.getChunks().get(0).isPushData()) {
+			if (spendingScript.getChunks().size() != 1 || !spendingScript.getChunks().get(0).isPushData()) {
 				throw new RuntimeException("Signature for input had wrong format");
 			}
 			byte[] redeemScript = tlaEntity.getRedeemScript();

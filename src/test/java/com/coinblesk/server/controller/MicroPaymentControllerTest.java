@@ -22,6 +22,7 @@ import org.bitcoinj.core.Transaction.SigHash;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
+import org.bitcoinj.script.ScriptOpCodes;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import javax.annotation.Signed;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
@@ -360,6 +362,22 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 	}
 
 	@Test
+	public void microPayment_failsOnUnknownSender() throws Exception {
+		final ECKey senderKey = new ECKey();
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
+
+		TimeLockedAddress tla = new TimeLockedAddress(senderKey.getPubKey(), new ECKey().getPubKey(), validLockTime);
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
+		watchAndMineTransactions(fundingTx);
+
+		PaymentChannel channel = new PaymentChannel(params, tla.getAddress(params), senderKey, new ECKey())
+			.addInputs(tla, fundingTx.getOutput(0)).addToServerOutput(1337L);
+		SignedDTO dto = buildRequestDTO(senderKey, receiverKey, channel.buildTx(), 1337L);
+		sendAndExpect4xxError(dto, "Unknown sender");
+	}
+
+	@Test
 	public void microPayment_failsSendingToOneself() throws Exception {
 		final ECKey senderKey = new ECKey();
 		final ECKey serverKey = accountService.createAcount(senderKey);
@@ -665,6 +683,57 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		mineTransaction(openChannelTx);
 
 		assertThat(micropaymentService.getMicroPaymentPotValue(), is(Coin.valueOf((1337))));
+	}
+
+	@Test
+	public void microPayment_failsOnNotSignedInputs() throws Exception {
+		final ECKey senderKey = new ECKey();
+		final ECKey serverPublicKey = accountService.createAcount(senderKey);
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
+
+		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime).getTimeLockedAddress();
+
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
+		watchAndMineTransactions(fundingTx);
+
+		Transaction tx = new PaymentChannel(params, tla.getAddress(params), senderKey, serverPublicKey)
+			.addInputs(tla, fundingTx.getOutput(0))
+			.addToServerOutput(Coin.valueOf(200))
+			.buildTx();
+		tx.getInput(0).clearScriptBytes();
+
+		SignedDTO dto = buildRequestDTO(senderKey, receiverKey, tx, 200L, validNonce());
+		sendAndExpect4xxError(dto, "Input was not signed");
+	}
+
+	@Test
+	public void microPayment_failsOnWrongSignatureFormat() throws Exception {
+		final ECKey senderKey = new ECKey();
+		final ECKey serverPublicKey = accountService.createAcount(senderKey);
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
+
+		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime).getTimeLockedAddress();
+
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
+		watchAndMineTransactions(fundingTx);
+
+		Transaction tx = new PaymentChannel(params, tla.getAddress(params), senderKey, serverPublicKey)
+			.addInputs(tla, fundingTx.getOutput(0))
+			.addToServerOutput(Coin.valueOf(200))
+			.buildTx();
+
+		tx.getInput(0).setScriptSig(new ScriptBuilder()
+			.data(new byte[10])
+			.op(ScriptOpCodes.OP_DUP).build());
+		SignedDTO dto = buildRequestDTO(senderKey, receiverKey, tx, 200L, validNonce());
+		sendAndExpect4xxError(dto, "Signature for input had wrong format");
+
+		tx.getInput(0).setScriptSig(new ScriptBuilder()
+			.data(new byte[72]).data(new byte[72]).build());
+		dto = buildRequestDTO(senderKey, receiverKey, tx, 200L, validNonce());
+		sendAndExpect4xxError(dto, "Signature for input had wrong format");
 	}
 
 	@Test
