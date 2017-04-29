@@ -15,6 +15,7 @@ import com.coinblesk.server.service.MicropaymentService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.FakeTxBuilder;
+import com.coinblesk.server.utilTest.PaymentChannel;
 import com.coinblesk.server.utils.DTOUtils;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.Transaction.SigHash;
@@ -82,6 +83,24 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		params = appConfig.getNetworkParameters();
 		oneUSD = Coin.valueOf(BigDecimal.valueOf(100000000).divide(forexService.getExchangeRate("BTC", "USD"), BigDecimal.ROUND_UP).longValue());
 		channelThreshold = oneUSD.multiply(appConfig.getMaximumChannelAmountUSD());
+	}
+
+	@Test
+	public void microPayment_returns200OK() throws Exception{
+		final ECKey senderKey = new ECKey();
+		ECKey serverPublicKey = accountService.createAcount(senderKey);
+		final ECKey receiverKey = new ECKey();
+		accountService.createAcount(receiverKey);
+
+		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime).getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
+		watchAndMineTransactions(fundingTx);
+
+		PaymentChannel channel = new PaymentChannel(params, tla.getAddress(params), senderKey, serverPublicKey)
+			.addInputs(tla, fundingTx.getOutput(0))
+			.addToServerOutput(Coin.valueOf(200));
+
+		sendAndExpect2xxSuccess(createMicroPaymentRequestDTO(senderKey, receiverKey, channel.buildTx(), 200L, validNonce()));
 	}
 
 	@Test

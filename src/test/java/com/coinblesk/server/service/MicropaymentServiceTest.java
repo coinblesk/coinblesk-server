@@ -7,6 +7,7 @@ import com.coinblesk.server.dao.AccountRepository;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.FakeTxBuilder;
+import com.coinblesk.server.utilTest.PaymentChannel;
 import org.bitcoinj.core.*;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Objects;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -81,15 +83,54 @@ public class MicropaymentServiceTest extends CoinbleskTest {
 		assertThat(micropaymentService.getMicroPaymentPotValue(), is(Coin.valueOf(2, 0)));
 	}
 
-	private void mineTransaction(Transaction tx) throws PrunedException {
-		Block lastBlock = walletService.blockChain().getChainHead().getHeader();
-		Transaction spendTXClone = new Transaction(params(), tx.bitcoinSerialize());
-		Block newBlock = FakeTxBuilder.makeSolvedTestBlock(lastBlock, spendTXClone);
-		walletService.blockChain().add(newBlock);
+	@Test
+	public void testPaymentChannel() throws Exception {
+		ECKey clientKey = new ECKey();
+		ECKey serverKey1 = accountService.createAcount(clientKey);
+		walletService.addWatching(serverKey1.toAddress(params()));
+		TimeLockedAddress tla = accountService.createTimeLockedAddress(clientKey,
+			Instant.now().plus(Duration.ofDays(90)).getEpochSecond()).getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), tla.getAddress(params()));
+		watchAndMineTransactions(fundingTx);
+
+		Transaction tx = new PaymentChannel(params(), tla.getAddress(params()), clientKey, serverKey1)
+			.addInputs(tla, getUTXOsForAddress(tla))
+			.buildTx();
+		tx.verify();
+		assertThat(tx.getInputs().size(), is(1));
 	}
 
 	private NetworkParameters params() {
 		return appConfig.getNetworkParameters();
 	}
 
+	private TransactionOutput[] getUTXOsForAddress(TimeLockedAddress address) {
+		return walletService.getWallet().getWatchedOutputs(true).stream()
+			.filter(o -> Objects.equals(o.getAddressFromP2SH(params()), address.getAddress(params())))
+			.toArray(TransactionOutput[]::new);
+	}
+
+	private void watchAndMineTransactions(Transaction... txs) throws PrunedException {
+		for (Transaction tx : Arrays.asList(txs)) {
+			watchAllOutputs(tx);
+			mineTransaction(tx);
+		}
+	}
+
+	private void watchAllOutputs(Transaction tx) {
+		tx.getOutputs().forEach(output -> {
+			if (output.getScriptPubKey().isSentToAddress())
+				walletService.addWatching(output.getAddressFromP2PKHScript(params()));
+
+			if (output.getScriptPubKey().isPayToScriptHash())
+				walletService.addWatching(output.getAddressFromP2SH(params()));
+		});
+	}
+
+	private void mineTransaction(Transaction tx) throws PrunedException {
+		Block lastBlock = walletService.blockChain().getChainHead().getHeader();
+		Transaction spendTXClone = new Transaction(params(), tx.bitcoinSerialize());
+		Block newBlock = FakeTxBuilder.makeSolvedTestBlock(lastBlock, spendTXClone);
+		walletService.blockChain().add(newBlock);
+	}
 }

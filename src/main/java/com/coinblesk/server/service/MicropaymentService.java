@@ -171,8 +171,7 @@ public class MicropaymentService {
 		}
 
 		// Check inputs
-		final Coin neededFee = Coin.valueOf(tx.bitcoinSerialize().length * feeService.fee());
-		final long broadcastBefore = checkInputs(tx, accountSender, neededFee);
+		final long broadcastBefore = checkInputs(tx, accountSender, feeService.fee());
 
 		// Amount given to server must be equal to last channel or higher
 		final ECKey serverPubKey = ECKey.fromPublicOnly(accountSender.serverPublicKey());
@@ -245,10 +244,10 @@ public class MicropaymentService {
 	 *
 	 * @param tx The transaction to check
 	 * @param accountSender Every input must be from an address from this account
-	 * @param neededFee Total fee that the given transaction should have
+	 * @param neededFeeInSatoshi Fee in Satoshi/Byte that the given transaction should have
 	 * @return long (UNIX timestamp) that indicates then when the first address used is unlocked
 	 */
-	private long checkInputs(Transaction tx, Account accountSender, Coin neededFee) {
+	private long checkInputs(Transaction tx, Account accountSender, int neededFeeInSatoshi) {
 		Coin valueOfInputs = Coin.ZERO;
 		long earliestLockTime = Long.MAX_VALUE;
 
@@ -307,6 +306,7 @@ public class MicropaymentService {
 
 		// Check fee
 		Coin givenFee = valueOfInputs.minus(tx.getOutputSum());
+		Coin neededFee = Coin.valueOf(neededFeeInSatoshi * tx.bitcoinSerialize().length);
 		if (givenFee.isLessThan(neededFee)) {
 			throw new RuntimeException("Insufficient transaction fee. Given: " + givenFee.divide(tx.bitcoinSerialize()
 				.length) + " satoshi per byte. Needed: " + neededFee.divide(tx.bitcoinSerialize().length));
@@ -393,7 +393,7 @@ public class MicropaymentService {
 
 		return walletService.getAllSpendCandidates().stream().filter(output -> {
 			Address address = output.getAddressFromP2PKHScript(appConfig.getNetworkParameters());
-			return serverPotAddresses.contains(address);
+			return serverPotAddresses.contains(address) && output.getParentTransactionDepthInBlocks() >= appConfig.getMinConf();
 		}).map(TransactionOutput::getValue).reduce(Coin.ZERO, Coin::add);
 	}
 
