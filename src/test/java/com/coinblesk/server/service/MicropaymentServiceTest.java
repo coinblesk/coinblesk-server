@@ -2,7 +2,7 @@ package com.coinblesk.server.service;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.controller.MicroPaymentControllerTest;
+import com.coinblesk.server.controller.MicroPaymentTest;
 import com.coinblesk.server.dao.AccountRepository;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.utilTest.CoinbleskTest;
@@ -56,8 +56,8 @@ public class MicropaymentServiceTest extends CoinbleskTest {
 		Transaction fundingTx1 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), address1.getAddress(params()));
 		Transaction fundingTx2 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), address2.getAddress(params()));
 
-		Transaction tx1 = MicroPaymentControllerTest.createChannelTx(10000, acc1, serverKey1, address1, 337, params(), fundingTx1.getOutput(0));
-		Transaction tx2 = MicroPaymentControllerTest.createChannelTx(10000, acc1, serverKey2, address2, 662, params(), fundingTx2.getOutput(0));
+		Transaction tx1 = MicroPaymentTest.createChannelTx(10000, acc1, serverKey1, address1, 337, params(), fundingTx1.getOutput(0));
+		Transaction tx2 = MicroPaymentTest.createChannelTx(10000, acc1, serverKey2, address2, 662, params(), fundingTx2.getOutput(0));
 
 		Account account1 = accountRepository.findByClientPublicKey(acc1.getPubKey())
 			.channelTransaction(tx1.bitcoinSerialize())

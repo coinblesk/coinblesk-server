@@ -32,9 +32,10 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 
-import static com.coinblesk.server.controller.MicroPaymentControllerTest.*;
+import static com.coinblesk.server.controller.MicroPaymentTest.*;
 import static com.coinblesk.server.controller.PaymentControllerTest.URL_CREATE_TIME_LOCKED_ADDRESS;
 import static com.coinblesk.server.controller.PaymentControllerTest.URL_KEY_EXCHANGE;
+import static com.coinblesk.server.controller.VirtualPaymentTest.URL_VIRTUAL_PAYMENT;
 import static com.coinblesk.server.integration.helper.RegtestHelper.generateBlock;
 import static com.coinblesk.server.integration.helper.RegtestHelper.sendToAddress;
 import static org.hamcrest.MatcherAssert.assertThat;

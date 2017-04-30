@@ -47,10 +47,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /***
  * @author Sebastian Stephan
  */
-public class MicroPaymentControllerTest extends CoinbleskTest {
+public class MicroPaymentTest extends CoinbleskTest {
 	public static final String URL_MICRO_PAYMENT = "/payment/micropayment";
-	public static final String URL_VIRTUAL_PAYMENT = "/payment/virtualpayment";
-	private static final int VALID_FEE = 250;
 	private static final int LOW_FEE = 50;
 	private static Coin oneUSD;
 	private static Coin channelThreshold;
@@ -103,17 +101,6 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 			.addToServerOutput(Coin.valueOf(200));
 
 		sendAndExpect2xxSuccess(buildRequestDTO(senderKey, receiverKey, channel.buildTx(), 200L, validNonce()));
-	}
-
-	@Test
-	public void microPayment_failsOnEmpty() throws Exception {
-		mockMvc.perform(post(URL_VIRTUAL_PAYMENT)).andExpect(status().is4xxClientError());
-	}
-
-	@Test
-	public void microPayment_failsOnEmptyPayload() throws Exception {
-		mockMvc.perform(post(URL_VIRTUAL_PAYMENT).contentType(APPLICATION_JSON).content("{}")).andExpect(status()
-			.is4xxClientError());
 	}
 
 	@Test
@@ -873,12 +860,6 @@ public class MicroPaymentControllerTest extends CoinbleskTest {
 		Transaction spendTXClone = new Transaction(params, tx.bitcoinSerialize());
 		Block newBlock = FakeTxBuilder.makeSolvedTestBlock(lastBlock, spendTXClone);
 		walletService.blockChain().add(newBlock);
-	}
-
-	@Test
-	public void virtualPayment_failsOnEmpty() throws Exception {
-		mockMvc.perform(post(URL_VIRTUAL_PAYMENT)).andExpect(status().is4xxClientError());
-                //TODO: more of those
 	}
 
 }
