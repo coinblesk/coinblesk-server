@@ -51,8 +51,6 @@ public class VirtualPaymentTest extends CoinbleskTest {
 	private AccountService accountService;
 	@Autowired
 	private AccountRepository accountRepository;
-	@Autowired
-	private EntityManager em;
 
 	@Before
 	public void setUp() {
