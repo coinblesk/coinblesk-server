@@ -1,7 +1,6 @@
 package com.coinblesk.server.controller;
 
 import com.coinblesk.dto.*;
-import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dao.AccountRepository;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.exceptions.UserNotFoundException;
@@ -9,16 +8,26 @@ import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utils.DTOUtils;
 import org.bitcoinj.core.ECKey;
+import org.hamcrest.CoreMatchers;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
-import javax.annotation.Signed;
+import javax.persistence.EntityManager;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.*;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
@@ -31,9 +40,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * @author Sebastian Stephan
  */
 public class VirtualPaymentTest extends CoinbleskTest {
+	private final static Logger LOG = LoggerFactory.getLogger(VirtualPaymentTest.class);
 	public static final String URL_VIRTUAL_PAYMENT = "/payment/virtualpayment";
 	private static MockMvc mockMvc;
 	private static long validNonce()  { return Instant.now().toEpochMilli(); }
+	private volatile boolean stop;
 	@Autowired
 	private WebApplicationContext webAppContext;
 	@Autowired
@@ -41,7 +52,7 @@ public class VirtualPaymentTest extends CoinbleskTest {
 	@Autowired
 	private AccountRepository accountRepository;
 	@Autowired
-	private AppConfig appConfig;
+	private EntityManager em;
 
 	@Before
 	public void setUp() {
@@ -231,6 +242,75 @@ public class VirtualPaymentTest extends CoinbleskTest {
 		DTOUtils.validateSignature(response.getPayload(), response.getSignatureForSender(), serverKeySender);
 		DTOUtils.validateSignature(response.getPayload(), response.getSignatureForReceiver(), serverKeyReceiver);
 
+	}
+
+	@Test
+	@Transactional(propagation = Propagation.NOT_SUPPORTED) // Otherwise threads don't see changes...
+	public void loadTest() throws InterruptedException, UserNotFoundException, ExecutionException {
+		final ECKey keyA = new ECKey();
+		final ECKey keyB = new ECKey();
+		final ECKey keyC = new ECKey();
+		try {
+			accountService.createAcount(keyA);
+			accountService.createAcount(keyB);
+			accountService.createAcount(keyC);
+			giveUserBalance(keyA, 10000L);
+			giveUserBalance(keyB, 10000L);
+			giveUserBalance(keyC, 10000L);
+			ExecutorService executor = Executors.newFixedThreadPool(4);
+			stop = false;
+			Callable<Void> stopper = () -> {
+				Thread.sleep(10000);
+				stop = true;
+				return null;
+			};
+			executor.submit(stopper);
+			List<Future<Exception>> res = executor.invokeAll(
+				Arrays.asList(sender(keyA, keyB), sender(keyB, keyC), sender(keyC, keyA)));
+			for (Future<Exception> f : res) {
+				assertThat("There was an error in one of the senders", f.get(), CoreMatchers.nullValue());
+			}
+
+			long balanceA = accountService.getVirtualBalanceByClientPublicKey(keyA.getPubKey()).getBalance();
+			long balanceB = accountService.getVirtualBalanceByClientPublicKey(keyB.getPubKey()).getBalance();
+			long balanceC = accountService.getVirtualBalanceByClientPublicKey(keyC.getPubKey()).getBalance();
+			assertThat(balanceA + balanceB + balanceC, is(30000L));
+			System.out.println(balanceA);
+			System.out.println(balanceB);
+			System.out.println(balanceC);
+		} finally {
+			// Clean up since we had no transaction.
+			accountService.deleteAccount(keyA);
+			accountService.deleteAccount(keyB);
+			accountService.deleteAccount(keyC);
+		}
+	}
+
+	private Callable<Exception> sender(ECKey from, ECKey to) {
+		Random rand = new Random();
+		return () -> {
+			while(!stop) {
+				long value = rand.nextInt(99) + 1;
+				SignedDTO dto = DTOUtils.serializeAndSign(createDTO(from, to, value, validNonce()), from);
+				MvcResult res = mockMvc.perform(post(URL_VIRTUAL_PAYMENT).contentType(APPLICATION_JSON)
+					.content(DTOUtils.toJSON(dto))).andReturn();
+				if (res.getResponse().getStatus() == HttpStatus.OK.value()) {
+					VirtualPaymentResponseDTO resDTO = DTOUtils.fromJSON(DTOUtils.fromBase64(
+						DTOUtils.fromJSON(res.getResponse().getContentAsString(), MultiSignedDTO.class)
+							.getPayload()), VirtualPaymentResponseDTO.class);
+					LOG.info("Transfered: {}, Sender: {}, Receiver: {}", resDTO.getAmountTransfered(),
+						resDTO.getNewBalanceSender(), resDTO.getNewBalanceReceiver());
+				} else {
+					ErrorDTO err = DTOUtils.fromJSON(res.getResponse().getContentAsString(), ErrorDTO.class);
+					if (err.getError().contains("Insufficient funds")) {
+						Thread.sleep(rand.nextInt(10));
+					} else {
+						return new RuntimeException(err.getError());
+					}
+				}
+			}
+			return null;
+		};
 	}
 
 	private long getBalance(ECKey account) throws UserNotFoundException {

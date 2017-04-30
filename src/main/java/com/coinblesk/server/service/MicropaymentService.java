@@ -86,7 +86,7 @@ public class MicropaymentService {
 	}
 
 	@Transactional(isolation = Isolation.SERIALIZABLE)
-	@Retryable(TransientDataAccessException.class)
+	@Retryable(value = TransientDataAccessException.class, maxAttempts = 5)
 	public VirtualPaymentResult virtualPayment(@NonNull ECKey keySender, @NonNull ECKey keyReceiver, long amount, long
 		requestNonce) throws InvalidNonceException, UserNotFoundException, InvalidAmountException, InsufficientFunds,
 		InvalidRequestException {

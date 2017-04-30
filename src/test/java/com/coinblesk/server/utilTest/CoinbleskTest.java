@@ -10,8 +10,11 @@ import org.springframework.transaction.annotation.Transactional;
 @RunWith(SpringRunner.class)
 @Transactional
 @TestPropertySource(properties = {
-	"spring.datasource.url: jdbc:h2:mem:testdb",
+	//"spring.datasource.url:jdbc:postgresql://localhost/postgres?user=postgres",
+	"spring.datasource.url:jdbc:h2:mem:testdb;mv_store=false",
 	"bitcoin.net:unittest"
 })
+// ;mv_store=false needed for correct isolation level:
+// http://h2-database.66688.n3.nabble.com/Am-I-bananas-or-does-serializable-isolation-not-work-as-it-should-tp4030767p4030768.html
 public abstract class CoinbleskTest {
 }

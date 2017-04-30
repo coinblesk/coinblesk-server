@@ -25,6 +25,7 @@ import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.exceptions.InvalidLockTimeException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
 import com.coinblesk.server.utils.DTOUtils;
+import com.google.common.annotations.VisibleForTesting;
 import lombok.Data;
 import lombok.NonNull;
 import org.bitcoinj.core.ECKey;
@@ -94,6 +95,17 @@ public class AccountService {
 		final Account newAccount = accountRepository.save(clientKey);
 
 		return ECKey.fromPrivateAndPrecalculatedPublic(newAccount.serverPrivateKey(), newAccount.serverPublicKey());
+	}
+
+	@Transactional
+	@VisibleForTesting
+	public boolean deleteAccount(ECKey publicKey) {
+		final Account existingAccount = accountRepository.findByClientPublicKey(publicKey.getPubKey());
+		if (existingAccount != null) {
+			accountRepository.delete(existingAccount);
+			return true;
+		}
+		return false;
 	}
 
 	@Transactional(readOnly = true)
