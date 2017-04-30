@@ -66,7 +66,7 @@ public class Event implements Serializable {
 	@Column(name = "EVENT_URGENCE", nullable = false)
 	private EventUrgence urgence;
 
-	@Column(name = "EVENT_DESCRIPTION", nullable = true)
+	@Column(name = "EVENT_DESCRIPTION", nullable = true, columnDefinition="TEXT")
 	private String description;
 
 }
