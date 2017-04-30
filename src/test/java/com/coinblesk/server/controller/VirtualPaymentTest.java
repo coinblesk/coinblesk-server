@@ -246,6 +246,7 @@ public class VirtualPaymentTest extends CoinbleskTest {
 
 	@Test
 	@Transactional(propagation = Propagation.NOT_SUPPORTED) // Otherwise threads don't see changes...
+	// See: https://www.javacodegeeks.com/2011/12/spring-pitfalls-transactional-tests.html
 	public void loadTest() throws InterruptedException, UserNotFoundException, ExecutionException {
 		final ECKey keyA = new ECKey();
 		final ECKey keyB = new ECKey();
