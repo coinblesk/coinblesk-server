@@ -140,7 +140,7 @@ public class PaymentControllerTest extends CoinbleskTest {
 	@Test
 	public void testCreateTimeLockedAddress_NoPublicKey() throws Exception {
 		ECKey clientKey = new ECKey();
-		accountService.createAcount(clientKey);
+		accountService.createAccount(clientKey);
 
 		CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO("", validLocktime());
 		SignedDTO requestDTO = DTOUtils.serializeAndSign(innerDTO, clientKey);
@@ -152,7 +152,7 @@ public class PaymentControllerTest extends CoinbleskTest {
 	@Test
 	public void testCreateTimeLockedAddress_NoSignature() throws Exception {
 		ECKey clientKey = new ECKey();
-		accountService.createAcount(clientKey);
+		accountService.createAccount(clientKey);
 
 		CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO(clientKey.getPublicKeyAsHex(), validLocktime());
 		String payload = DTOUtils.toBase64(innerDTO);
@@ -166,7 +166,7 @@ public class PaymentControllerTest extends CoinbleskTest {
 	public void testCreateTimeLockedAddress_WrongSignature() throws Exception {
 		ECKey clientKey = new ECKey();
 		ECKey wrongKey = new ECKey();
-		accountService.createAcount(clientKey);
+		accountService.createAccount(clientKey);
 
 		CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO(clientKey.getPublicKeyAsHex(), validLocktime());
 		SignedDTO requestDTO = DTOUtils.serializeAndSign(innerDTO, wrongKey);
@@ -189,7 +189,7 @@ public class PaymentControllerTest extends CoinbleskTest {
 	@Test
 	public void testCreateTimeLockedAddress_NoLockTime() throws Exception {
 		ECKey clientKey = new ECKey();
-		accountService.createAcount(clientKey);
+		accountService.createAccount(clientKey);
 
 		CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO(clientKey.getPublicKeyAsHex(), 0L);
 		SignedDTO requestDTO = DTOUtils.serializeAndSign(innerDTO, clientKey);
@@ -202,7 +202,7 @@ public class PaymentControllerTest extends CoinbleskTest {
 	@Test
 	public void testCreateTimeLockedAddress_ValidSignature() throws Exception {
 		ECKey clientKey = new ECKey();
-		ECKey serverKey = accountService.createAcount(clientKey);
+		ECKey serverKey = accountService.createAccount(clientKey);
 
 		long lockTime = validLocktime();
 		CreateAddressRequestDTO innerDTO = new CreateAddressRequestDTO(clientKey.getPublicKeyAsHex(), lockTime);
@@ -220,7 +220,7 @@ public class PaymentControllerTest extends CoinbleskTest {
 	@Test
 	public void testCreateTimeLockedAddress_NewAddress_ClientKnown() throws Exception {
 		ECKey clientKey = new ECKey();
-		ECKey serverKey = accountService.createAcount(clientKey);
+		ECKey serverKey = accountService.createAccount(clientKey);
 		long requestedLockTime = validLocktime();
 
 		TimeLockedAddress expectedAddress = new TimeLockedAddress(clientKey.getPubKey(), serverKey.getPubKey(),

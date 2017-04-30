@@ -44,9 +44,9 @@ public class MicropaymentServiceTest extends CoinbleskTest {
 	public void getPendingChannelValue() throws Exception {
 		ECKey acc1 = new ECKey();
 		ECKey acc2 = new ECKey();
-		ECKey serverKey1 = accountService.createAcount(acc1); // Two accounts with open channels
-		ECKey serverKey2 = accountService.createAcount(acc2);
-		accountService.createAcount(new ECKey()); // Account with no open channel
+		ECKey serverKey1 = accountService.createAccount(acc1); // Two accounts with open channels
+		ECKey serverKey2 = accountService.createAccount(acc2);
+		accountService.createAccount(new ECKey()); // Account with no open channel
 
 		TimeLockedAddress address1 = accountService.createTimeLockedAddress(acc1,
 			Instant.now().plus(Duration.ofDays(90)).getEpochSecond()).getTimeLockedAddress();
@@ -72,8 +72,8 @@ public class MicropaymentServiceTest extends CoinbleskTest {
 
 	@Test
 	public void getMicroPaymentPotValue() throws Exception {
-		ECKey serverKey1 = accountService.createAcount(new ECKey());
-		ECKey serverKey2 = accountService.createAcount(new ECKey());
+		ECKey serverKey1 = accountService.createAccount(new ECKey());
+		ECKey serverKey2 = accountService.createAccount(new ECKey());
 		walletService.addWatching(serverKey1.toAddress(params()));
 		walletService.addWatching(serverKey2.toAddress(params()));
 		Transaction tx1 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), serverKey1.toAddress(params()));
@@ -86,7 +86,7 @@ public class MicropaymentServiceTest extends CoinbleskTest {
 	@Test
 	public void testPaymentChannel() throws Exception {
 		ECKey clientKey = new ECKey();
-		ECKey serverKey1 = accountService.createAcount(clientKey);
+		ECKey serverKey1 = accountService.createAccount(clientKey);
 		walletService.addWatching(serverKey1.toAddress(params()));
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(clientKey,
 			Instant.now().plus(Duration.ofDays(90)).getEpochSecond()).getTimeLockedAddress();

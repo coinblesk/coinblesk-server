@@ -87,9 +87,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_returns200OK() throws Exception{
 		final ECKey senderKey = new ECKey();
-		final ECKey serverPublicKey = accountService.createAcount(senderKey);
+		final ECKey serverPublicKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime).getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
@@ -122,9 +122,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnUnknownUTXOs() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverPublicKey = accountService.createAcount(senderKey);
+		final ECKey serverPublicKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime).getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
@@ -141,10 +141,10 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnWrongAddressType() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey serverKey = accountService.createAccount(senderKey);
 
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
@@ -170,9 +170,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnUnknownTLAInputs() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey serverKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		// Create a tla but without creating it on the server
 		TimeLockedAddress tla = new TimeLockedAddress(senderKey.getPubKey(), serverKey.getPubKey(), validLockTime);
@@ -188,9 +188,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnSpentUTXOs() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey serverKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime).getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
@@ -220,9 +220,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnNonMinedUTXOs() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverPublicKey = accountService.createAcount(senderKey);
+		final ECKey serverPublicKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime).getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
@@ -239,9 +239,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnSoonLockedInputs() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey serverKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		// Simulate an address that was created some time ago
 		final long lockTime = Instant.now().plus(Duration.ofSeconds(appConfig.getMinimumLockTimeSeconds()-1))
@@ -270,8 +270,8 @@ public class MicroPaymentTest extends CoinbleskTest {
 	public void microPayment_failsOnInputsBelongingToMultipleAccounts() throws Exception {
 		final ECKey clientKey1 = new ECKey();
 		final ECKey clientKey2 = new ECKey();
-		accountService.createAcount(clientKey1);
-		accountService.createAcount(clientKey2);
+		accountService.createAccount(clientKey1);
+		accountService.createAccount(clientKey2);
 
 		TimeLockedAddress tla1 = accountService.createTimeLockedAddress(clientKey1, validLockTime).getTimeLockedAddress();
 		TimeLockedAddress tla2 = accountService.createTimeLockedAddress(clientKey2, validLockTime).getTimeLockedAddress();
@@ -296,9 +296,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnSignedByWrongAccount() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey serverKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime).getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
@@ -316,9 +316,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnNoOutputForServer() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey serverKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime).getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
@@ -334,7 +334,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnUnknownReceiver() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey serverKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime).getTimeLockedAddress();
@@ -351,7 +351,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	public void microPayment_failsOnUnknownSender() throws Exception {
 		final ECKey senderKey = new ECKey();
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		TimeLockedAddress tla = new TimeLockedAddress(senderKey.getPubKey(), new ECKey().getPubKey(), validLockTime);
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
@@ -366,7 +366,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsSendingToOneself() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey serverKey = accountService.createAccount(senderKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime).getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
@@ -381,7 +381,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_closesChannelWhenSendingToThirdParty() throws Exception {
 		final ECKey senderKey = new ECKey();
-		accountService.createAcount(senderKey);
+		accountService.createAccount(senderKey);
 
 		assertThat(accountService.getByClientPublicKey(senderKey.getPubKey()).isLocked(), is(false));
 
@@ -400,9 +400,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsWhenChannelIsLocked() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey serverKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime).getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
@@ -419,9 +419,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnInvalidNonce() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey serverKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime) .getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress (params));
@@ -443,9 +443,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsWhenInputAmountIsTooSmall() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey serverKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime) .getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress (params));
@@ -461,9 +461,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsWithWrongAmountOnOpenChannel() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey serverKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime) .getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress (params));
@@ -505,9 +505,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsWithInsufficientFee() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey serverKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime).getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress (params));
@@ -522,9 +522,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsWhenSendingOverThreshold() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey serverKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
@@ -553,9 +553,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_sendsAmountToReceiver() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey serverKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
@@ -573,9 +573,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_savesBroadcastableTransaction() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey serverKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
@@ -597,9 +597,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_replayAttackFails() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey serverKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
@@ -630,7 +630,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 
 		// Change sender to some other account's public key (that we own) in order to 'trick' system
 		ECKey otherOwnedAccount = new ECKey();
-		accountService.createAcount(otherOwnedAccount);
+		accountService.createAccount(otherOwnedAccount);
 		MicroPaymentRequestDTO modifiedRequest2 = new MicroPaymentRequestDTO(orig.getTx(), otherOwnedAccount
 			.getPublicKeyAsHex(), orig.getToPublicKey(), orig.getAmount(), validNonce());
 		sendAndExpect4xxError(DTOUtils.serializeAndSign(modifiedRequest2, otherOwnedAccount),
@@ -644,9 +644,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_increasesServerPotWhenMined() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey serverKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 		walletService.addWatching(serverKey.toAddress(params));
 
 		assertThat(micropaymentService.getMicroPaymentPotValue(), is(Coin.ZERO));
@@ -674,9 +674,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnNotSignedInputs() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverPublicKey = accountService.createAcount(senderKey);
+		final ECKey serverPublicKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime).getTimeLockedAddress();
 
@@ -696,9 +696,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnWrongSignatureFormat() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverPublicKey = accountService.createAcount(senderKey);
+		final ECKey serverPublicKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime).getTimeLockedAddress();
 
@@ -725,9 +725,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_setsCorrectBroadcastBefore() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAcount(senderKey);
+		final ECKey serverKey = accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		// Use of three different TLAs. Second one is earliest and should be used by server for broadcast
 		TimeLockedAddress tla1 = accountService.createTimeLockedAddress(senderKey, Instant.now().plus(Duration.ofDays(10)).getEpochSecond())

@@ -83,7 +83,7 @@ public class UserAccountServiceTest extends CoinbleskTest {
 			"" + ".test").setActivationEmailToken(null).setPassword(passwordEncoder.encode("test"));
 		userAccountRepository.save(userAccount);
 
-		accountService.createAcount(ecKeyClient);
+		accountService.createAccount(ecKeyClient);
 		accountService.createTimeLockedAddress(ecKeyClient, Instant.now().plus(Duration.ofDays(7)).getEpochSecond());
 	}
 

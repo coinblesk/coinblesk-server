@@ -74,7 +74,7 @@ public class VirtualPaymentTest extends CoinbleskTest {
 	public void virtualPayment_failsOnUnknownSender() throws Exception {
 		final ECKey senderKey = new ECKey();
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(receiverKey);
 
 		SignedDTO dto = DTOUtils.serializeAndSign(createDTO(senderKey, receiverKey, 100L, validNonce()), senderKey);
 		sendAndExpect4xxError(dto, "Could not find user with public key");
@@ -84,7 +84,7 @@ public class VirtualPaymentTest extends CoinbleskTest {
 	public void virtualPayment_failsOnUnknownReceiver() throws Exception {
 		final ECKey senderKey = new ECKey();
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(senderKey);
+		accountService.createAccount(senderKey);
 		giveUserBalance(senderKey,100L);
 
 		SignedDTO dto = DTOUtils.serializeAndSign(createDTO(senderKey, receiverKey, 100L, validNonce()), senderKey);
@@ -95,8 +95,8 @@ public class VirtualPaymentTest extends CoinbleskTest {
 	public void virtualPayment_failsOnReplayedRequest() throws Exception {
 		final ECKey senderKey = new ECKey();
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(senderKey);
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(senderKey);
+		accountService.createAccount(receiverKey);
 		giveUserBalance(senderKey,100L);
 
 		SignedDTO dto = DTOUtils.serializeAndSign(createDTO(senderKey, receiverKey, 10L, validNonce()), senderKey);
@@ -111,8 +111,8 @@ public class VirtualPaymentTest extends CoinbleskTest {
 	public void virtualPayment_failsOnSignedByWrongAccount() throws Exception {
 		final ECKey senderKey = new ECKey();
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(senderKey);
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(senderKey);
+		accountService.createAccount(receiverKey);
 		giveUserBalance(senderKey,100L);
 
 		SignedDTO dto = DTOUtils.serializeAndSign(createDTO(senderKey, receiverKey, 10L, validNonce()), receiverKey);
@@ -123,8 +123,8 @@ public class VirtualPaymentTest extends CoinbleskTest {
 	public void virtualPayment_failsOnModifiedPayload() throws Exception {
 		final ECKey senderKey = new ECKey();
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(senderKey);
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(senderKey);
+		accountService.createAccount(receiverKey);
 		giveUserBalance(senderKey,100L);
 
 		VirtualPaymentRequestDTO payload = createDTO(senderKey, receiverKey, 10L, validNonce());
@@ -138,8 +138,8 @@ public class VirtualPaymentTest extends CoinbleskTest {
 	public void virtualPayment_failsOnInsufficientFunds() throws Exception {
 		final ECKey senderKey = new ECKey();
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(senderKey);
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(senderKey);
+		accountService.createAccount(receiverKey);
 		giveUserBalance(senderKey,100L);
 
 		SignedDTO dto = DTOUtils.serializeAndSign(createDTO(senderKey, receiverKey, 101L, validNonce()), senderKey);
@@ -150,8 +150,8 @@ public class VirtualPaymentTest extends CoinbleskTest {
 	public void virtualPayment_failsOnZeroAmount() throws Exception {
 		final ECKey senderKey = new ECKey();
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(senderKey);
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(senderKey);
+		accountService.createAccount(receiverKey);
 		giveUserBalance(senderKey,100L);
 
 		SignedDTO dto = DTOUtils.serializeAndSign(createDTO(senderKey, receiverKey, 0L, validNonce()), senderKey);
@@ -162,8 +162,8 @@ public class VirtualPaymentTest extends CoinbleskTest {
 	public void virtualPayment_failsOnNegativeAmount() throws Exception {
 		final ECKey senderKey = new ECKey();
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(senderKey);
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(senderKey);
+		accountService.createAccount(receiverKey);
 		giveUserBalance(senderKey,100L);
 		giveUserBalance(receiverKey,100L);
 
@@ -175,8 +175,8 @@ public class VirtualPaymentTest extends CoinbleskTest {
 	public void virtualPayment_increasesReceiverBalance() throws Exception {
 		final ECKey senderKey = new ECKey();
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(senderKey);
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(senderKey);
+		accountService.createAccount(receiverKey);
 		giveUserBalance(senderKey,1337);
 		giveUserBalance(receiverKey,42L);
 
@@ -189,8 +189,8 @@ public class VirtualPaymentTest extends CoinbleskTest {
 	public void virtualPayment_decreasesSenderBalance() throws Exception {
 		final ECKey senderKey = new ECKey();
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(senderKey);
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(senderKey);
+		accountService.createAccount(receiverKey);
 		giveUserBalance(senderKey,1337);
 		giveUserBalance(receiverKey,42L);
 
@@ -202,7 +202,7 @@ public class VirtualPaymentTest extends CoinbleskTest {
 	@Test
 	public void virtualPayment_cannotSendToSelf() throws Exception {
 		final ECKey senderKey = new ECKey();
-		accountService.createAcount(senderKey);
+		accountService.createAccount(senderKey);
 		giveUserBalance(senderKey,1337);
 
 		SignedDTO dto = DTOUtils.serializeAndSign(createDTO(senderKey, senderKey, 13L, validNonce()), senderKey);
@@ -213,8 +213,8 @@ public class VirtualPaymentTest extends CoinbleskTest {
 	public void virtualPayment_responseContainsCorrectBalances() throws Exception {
 		final ECKey senderKey = new ECKey();
 		final ECKey receiverKey = new ECKey();
-		accountService.createAcount(senderKey);
-		accountService.createAcount(receiverKey);
+		accountService.createAccount(senderKey);
+		accountService.createAccount(receiverKey);
 		giveUserBalance(senderKey,1337);
 		giveUserBalance(receiverKey,42L);
 
@@ -232,8 +232,8 @@ public class VirtualPaymentTest extends CoinbleskTest {
 	public void virtualPayment_responseIsCorrectlySigned() throws Exception {
 		final ECKey senderKey = new ECKey();
 		final ECKey receiverKey = new ECKey();
-		ECKey serverKeySender = accountService.createAcount(senderKey);
-		ECKey serverKeyReceiver = accountService.createAcount(receiverKey);
+		ECKey serverKeySender = accountService.createAccount(senderKey);
+		ECKey serverKeyReceiver = accountService.createAccount(receiverKey);
 		giveUserBalance(senderKey,1337);
 		giveUserBalance(receiverKey,42L);
 
@@ -252,9 +252,9 @@ public class VirtualPaymentTest extends CoinbleskTest {
 		final ECKey keyB = new ECKey();
 		final ECKey keyC = new ECKey();
 		try {
-			accountService.createAcount(keyA);
-			accountService.createAcount(keyB);
-			accountService.createAcount(keyC);
+			accountService.createAccount(keyA);
+			accountService.createAccount(keyB);
+			accountService.createAccount(keyC);
 			giveUserBalance(keyA, 10000L);
 			giveUserBalance(keyB, 10000L);
 			giveUserBalance(keyC, 10000L);

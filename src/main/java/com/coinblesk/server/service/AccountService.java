@@ -77,7 +77,7 @@ public class AccountService {
 	 * @return The server ECKey pair associated with that account.
 	 */
 	@Transactional
-	public ECKey createAcount(@NonNull ECKey clientPublicKey) {
+	public ECKey createAccount(@NonNull ECKey clientPublicKey) {
 
 		// Check if client has already account
 		final Account existingAccount = accountRepository.findByClientPublicKey(clientPublicKey.getPubKey());

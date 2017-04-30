@@ -57,7 +57,7 @@ public class AccountServiceTest extends CoinbleskTest {
 
 	@Test
 	public void createAccountReturnsServerPublicKey() {
-		final ECKey serverPublicKey = accountService.createAcount(new ECKey());
+		final ECKey serverPublicKey = accountService.createAccount(new ECKey());
 		Assert.assertNotNull(serverPublicKey);
 		Assert.assertNotNull(serverPublicKey.getPubKey());
 	}
@@ -65,14 +65,14 @@ public class AccountServiceTest extends CoinbleskTest {
 	@Test
 	public void createAccountSavesNewAccount() {
 		ECKey clientKey = new ECKey();
-		accountService.createAcount(clientKey);
+		accountService.createAccount(clientKey);
 		assertNotNull(accountRepository.findByClientPublicKey(clientKey.getPubKey()));
 	}
 
 	@Test
 	public void createdAccountContainsReturnedServerPublicKey() {
 		ECKey clientKey = new ECKey();
-		ECKey returnedServerPublicKey = accountService.createAcount(clientKey);
+		ECKey returnedServerPublicKey = accountService.createAccount(clientKey);
 		Account account = accountRepository.findByClientPublicKey(clientKey.getPubKey());
 		assertArrayEquals("Returned serverKey must be the one saved", returnedServerPublicKey.getPubKey(), account
 			.serverPublicKey());
@@ -81,7 +81,7 @@ public class AccountServiceTest extends CoinbleskTest {
 	@Test
 	public void createdAccountHasBalanceZero() {
 		ECKey clientKey = new ECKey();
-		accountService.createAcount(clientKey);
+		accountService.createAccount(clientKey);
 		Account account = accountRepository.findByClientPublicKey(clientKey.getPubKey());
 		assertEquals("Initial virtual balance must be zero", account.virtualBalance(), 0);
 	}
@@ -89,7 +89,7 @@ public class AccountServiceTest extends CoinbleskTest {
 	@Test
 	public void createdAccountHasZeroNonce() {
 		ECKey clientKey = new ECKey();
-		accountService.createAcount(clientKey);
+		accountService.createAccount(clientKey);
 		Account account = accountRepository.findByClientPublicKey(clientKey.getPubKey());
 		assertEquals("Initial nonce must be zero", account.nonce(), 0);
 	}
@@ -97,7 +97,7 @@ public class AccountServiceTest extends CoinbleskTest {
 	@Test
 	public void createdAccountContainsTimeCreated() {
 		ECKey clientKey = new ECKey();
-		accountService.createAcount(clientKey);
+		accountService.createAccount(clientKey);
 		Account account = accountRepository.findByClientPublicKey(clientKey.getPubKey());
 		assertTrue("timeCreated must not be in the future", account.timeCreated() <= Instant.now().getEpochSecond());
 		assertTrue("timeCreated must be somthing in the last 10 seconds", account.timeCreated() >= Instant.now().minus
@@ -107,8 +107,8 @@ public class AccountServiceTest extends CoinbleskTest {
 	@Test
 	public void creatingAccountTwiceOnlyInsertsOnce() {
 		ECKey clientKey = new ECKey();
-		accountService.createAcount(clientKey);
-		accountService.createAcount(clientKey);
+		accountService.createAccount(clientKey);
+		accountService.createAccount(clientKey);
 		List resultList = em.createQuery("SELECT a FROM ACCOUNT a WHERE a.clientPublicKey = :pubKey").setParameter
 			("pubKey", clientKey.getPubKey()).getResultList();
 		assertEquals(resultList.size(), 1);
@@ -117,8 +117,8 @@ public class AccountServiceTest extends CoinbleskTest {
 	@Test
 	public void creatingAccountTwiceReturnsSameServerKey() {
 		ECKey clientKey = new ECKey();
-		ECKey serverKey1 = accountService.createAcount(clientKey);
-		ECKey serverKey2 = accountService.createAcount(clientKey);
+		ECKey serverKey1 = accountService.createAccount(clientKey);
+		ECKey serverKey2 = accountService.createAccount(clientKey);
 		assertEquals(serverKey1, serverKey2);
 	}
 
@@ -173,7 +173,7 @@ public class AccountServiceTest extends CoinbleskTest {
 	@Test
 	public void createTimeLockedAddressSucceedsWithKnownUser() throws InvalidLockTimeException, UserNotFoundException {
 		final ECKey clientKey = new ECKey();
-		accountService.createAcount(clientKey);
+		accountService.createAccount(clientKey);
 		TimeLockedAddress address = accountService.createTimeLockedAddress(clientKey, validLocktime())
 			.getTimeLockedAddress();
 		assertNotNull(address);
@@ -182,7 +182,7 @@ public class AccountServiceTest extends CoinbleskTest {
 	@Test
 	public void createTimeLockedAddressIsSaved() throws InvalidLockTimeException, UserNotFoundException {
 		final ECKey clientKey = new ECKey();
-		accountService.createAcount(clientKey);
+		accountService.createAccount(clientKey);
 		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, validLocktime())
 			.getTimeLockedAddress();
 		TimeLockedAddress fromDB = accountService.getTimeLockedAddressByAddressHash(intoDB.getAddressHash());
@@ -194,7 +194,7 @@ public class AccountServiceTest extends CoinbleskTest {
 	@Test
 	public void createTimeLockedAddressCreatesCorrentHash() throws InvalidLockTimeException, UserNotFoundException {
 		final ECKey clientKey = new ECKey();
-		accountService.createAcount(clientKey);
+		accountService.createAccount(clientKey);
 		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, validLocktime())
 			.getTimeLockedAddress();
 
@@ -211,7 +211,7 @@ public class AccountServiceTest extends CoinbleskTest {
 	public void createTimeLockedAddressCreatesCorrentRedeemScript() throws InvalidLockTimeException,
 		UserNotFoundException {
 		final ECKey clientKey = new ECKey();
-		accountService.createAcount(clientKey);
+		accountService.createAccount(clientKey);
 		TimeLockedAddress intoDB = accountService.createTimeLockedAddress(clientKey, validLocktime())
 			.getTimeLockedAddress();
 

@@ -139,7 +139,7 @@ public class PaymentController {
 		}
 
 		try {
-			final ECKey serverPublicKey = accountService.createAcount(clientPublicKey);
+			final ECKey serverPublicKey = accountService.createAccount(clientPublicKey);
 			walletService.addWatching(serverPublicKey.toAddress(appConfig.getNetworkParameters()));
 			return new ResponseEntity<>(new KeyExchangeResponseDTO(serverPublicKey.getPublicKeyAsHex()), OK);
 		} catch (Throwable e) {
