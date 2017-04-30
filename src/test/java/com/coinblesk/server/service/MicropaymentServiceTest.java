@@ -78,9 +78,13 @@ public class MicropaymentServiceTest extends CoinbleskTest {
 		walletService.addWatching(serverKey2.toAddress(params()));
 		Transaction tx1 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), serverKey1.toAddress(params()));
 		Transaction tx2 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), serverKey2.toAddress(params()));
+		Transaction tx3 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), serverKey2.toAddress(params()));
 		mineTransaction(tx1);
 		mineTransaction(tx2);
+		walletService.getWallet().maybeCommitTx(tx3);
 		assertThat(micropaymentService.getMicroPaymentPotValue(), is(Coin.valueOf(2, 0)));
+		mineTransaction(tx3);
+		assertThat(micropaymentService.getMicroPaymentPotValue(), is(Coin.valueOf(3, 0)));
 	}
 
 	@Test
