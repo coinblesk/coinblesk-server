@@ -1,11 +1,11 @@
 package com.coinblesk.server.service;
 
-import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dao.AccountRepository;
 import com.coinblesk.server.dao.TimeLockedAddressRepository;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
+import com.coinblesk.server.enumerator.EventType;
 import com.coinblesk.server.exceptions.*;
 import com.coinblesk.server.utils.CoinUtils;
 import com.coinblesk.server.utils.DTOUtils;
@@ -28,7 +28,13 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Nullable;
+import java.io.BufferedWriter;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -41,30 +47,23 @@ import java.util.stream.StreamSupport;
 @Service
 public class MicropaymentService {
 	private final static Logger LOG = LoggerFactory.getLogger(WalletService.class);
-
 	private final AccountRepository accountRepository;
-
 	private final TimeLockedAddressRepository timeLockedAddressRepository;
-
 	private final AppConfig appConfig;
-
+	private final EventService eventService;
 	private final WalletService walletService;
-
 	private final AccountService accountService;
-
 	private final FeeService feeService;
-
 	private final ForexService forexService;
-
-	private final Duration MINIMUM_LOCKTIME_DURATION = Duration.ofHours(24);
 
 	@Autowired
 	public MicropaymentService(AccountRepository accountRepository, TimeLockedAddressRepository
-		timeLockedAddressRepository, AppConfig appConfig, WalletService walletService, AccountService accountService,
-							   FeeService feeService, ForexService forexService) {
+		timeLockedAddressRepository, AppConfig appConfig, EventService eventService, WalletService walletService,
+							   AccountService accountService, FeeService feeService, ForexService forexService) {
 		this.accountRepository = accountRepository;
 		this.timeLockedAddressRepository = timeLockedAddressRepository;
 		this.appConfig = appConfig;
+		this.eventService = eventService;
 		this.walletService = walletService;
 		this.accountService = accountService;
 		this.feeService = feeService;
@@ -311,14 +310,16 @@ public class MicropaymentService {
 	}
 
 	@Transactional
-	private Transaction closeMicroPaymentChannel(ECKey forAccount) throws UserNotFoundException, InterruptedException,
+	private void closeMicroPaymentChannel(ECKey forAccount) throws UserNotFoundException, InterruptedException,
 		ExecutionException, TimeoutException {
 		Account account = accountRepository.findByClientPublicKey(forAccount.getPubKey());
 		if (account == null)
 			throw new UserNotFoundException(forAccount.getPublicKeyAsHex());
 
 		if (account.getChannelTransaction() == null) {
-			LOG.warn("Trying to close non-existing channel for user " + forAccount.getPublicKeyAsHex());
+			final String logString = "Trying to close non-existing channel for user " + forAccount.getPublicKeyAsHex();
+			eventService.error(EventType.MICRO_PAYMENT_CLOSING_OF_NONEXISTING_CHANNEL, logString);
+			LOG.error(logString);
 			throw new RuntimeException("No open channel");
 		}
 
@@ -329,13 +330,31 @@ public class MicropaymentService {
 
 		Transaction tx = new Transaction(appConfig.getNetworkParameters(), account.getChannelTransaction());
 
-		// TODO: append to local file
+		final String txAsString = DTOUtils.toHex(tx.bitcoinSerialize());
+		final String logString = "Closing channel for "
+			+ forAccount.getPublicKeyAsHex() + " with " + getPendingChannelValue(account)
+			+ " pending BTC. Transaction: " + txAsString;
+		eventService.info(EventType.MICRO_PAYMENT_CLOSING_CHANNEL, logString);
+		appendToCloseLog(txAsString);
 		try {
-			return walletService.broadCastAsync(tx).get(10, TimeUnit.SECONDS);
+			walletService.broadCastAsync(tx).get(10, TimeUnit.SECONDS);
 		} catch (Exception e) {
 			LOG.error("Error trying to close channel. Tx: {}", DTOUtils.toHex(tx.bitcoinSerialize()));
-			// TODO: send out email to admin in case of failure
+			eventService.fatal(EventType.MICRO_PAYMENT_COULD_NOT_BROADCAST_CHANNEL_TRANSACTION,
+				"Error trying to close channel: " + logString);
 			throw(e);
+		}
+	}
+
+	private void appendToCloseLog(String txAsString) {
+		try(BufferedWriter bw = Files.newBufferedWriter(Paths.get(appConfig.getConfigDir().getPath(),
+				"broadcasted-transactions"), Charset.defaultCharset(), StandardOpenOption.CREATE,
+				StandardOpenOption.APPEND);) {
+			bw.append(txAsString).append("\n");
+		} catch (IOException e) {
+			eventService.error(EventType.MICRO_PAYMENT_COULD_NOT_LOG_TO_FILE, "Tx:" + txAsString
+				+ " Error:" + e.getMessage());
+			LOG.error(e.toString());
 		}
 	}
 
@@ -347,7 +366,7 @@ public class MicropaymentService {
 		accountRepository.save(account);
 	}
 
-	@Scheduled(fixedDelay = 1000L) // 1 minute
+	@Scheduled(fixedDelay = 60000L) // 1 minute
 	public void checkForExpiringChannels() {
 		final long threshold = Instant.now().plus(Duration.ofSeconds(appConfig.getMinimumLockTimeSeconds()))
 			.getEpochSecond();
