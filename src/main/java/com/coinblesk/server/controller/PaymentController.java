@@ -139,9 +139,9 @@ public class PaymentController {
 		}
 
 		try {
-			final ECKey serverPublicKey = accountService.createAccount(clientPublicKey);
-			walletService.addWatching(serverPublicKey.toAddress(appConfig.getNetworkParameters()));
-			return new ResponseEntity<>(new KeyExchangeResponseDTO(serverPublicKey.getPublicKeyAsHex()), OK);
+			final ECKey serverKey = accountService.createAccount(clientPublicKey);
+			walletService.getWallet().importKey(serverKey);
+			return new ResponseEntity<>(new KeyExchangeResponseDTO(serverKey.getPublicKeyAsHex()), OK);
 		} catch (Throwable e) {
 			return new ResponseEntity<>(new ErrorDTO("Error during key exchange"), INTERNAL_SERVER_ERROR);
 		}

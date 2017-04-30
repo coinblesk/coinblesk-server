@@ -113,7 +113,13 @@ public class MicroPaymentTest {
 		// Accounts for everyone
 		ECKey serverPubKeyBob = createAccount(KEY_BOB);
 		ECKey serverPubKeyAlice = createAccount(KEY_ALICE);
-		createAccount(KEY_MERCHANT);
+		ECKey serverPubKeyMerchant = createAccount(KEY_MERCHANT);
+
+		// Server pot gets 100 dollar
+		blockUntilAddressChanged(() -> {
+			sendToAddress(serverPubKeyAlice.toAddress(params).toBase58(), oneUSD.times(100));
+			generateBlock(1);
+		}, serverPubKeyAlice.toAddress(params), 1);
 
 		// Bob creates an address
 		TimeLockedAddress addressBob = createAddress(KEY_BOB, inAMonth());
@@ -145,33 +151,32 @@ public class MicroPaymentTest {
 		| Alice    | USD 1.00        | false  | USD 0.00                    |
 		| Merchant | USD 0.00        | false  | USD 0.00                    |
 		+----------+-----------------+--------+-----------------------------+
-		| Pot                                   USD 0.00                    |
+		| Pot                                 USD 100.00                    |
 		+-------------------------------------------------------------------+ */
 		assertAccountState(KEY_BOB, Coin.ZERO, false, oneUSD);
 		assertAccountState(KEY_ALICE, oneUSD, false, Coin.ZERO);
 		assertAccountState(KEY_MERCHANT, Coin.ZERO, false, Coin.ZERO);
-		assertPotSize(Coin.ZERO);
+		assertPotSize(oneUSD.multiply(100));
 
-		// Alice uses the 1 USD virtual balance to pay the merchant 30 cents.
+		// Alice uses the 1 USD virtual balance to pay the merchant 90 cents.
 		VirtualPaymentRequestDTO req1 = new VirtualPaymentRequestDTO(KEY_ALICE.getPublicKeyAsHex(),
-			KEY_MERCHANT.getPublicKeyAsHex(), tenCents.multiply(3).getValue(), now());
+			KEY_MERCHANT.getPublicKeyAsHex(), tenCents.multiply(9).getValue(), now());
 		SignedDTO dto2 = DTOUtils.serializeAndSign(req1, KEY_ALICE);
 		sendAndExpectSuccess(URL_VIRTUAL_PAYMENT, dto2);
-
 		/*
 		+----------+-----------------+--------+-----------------------------+
 		| Account  | Virtual Balance | Locked | PendingPaymentChannelAmount |
 		+----------+-----------------+--------+-----------------------------+
 		| Bob      | USD 0.00        | false  | USD 1.00                    |
-		| Alice    | USD 0.70        | false  | USD 0.00                    |
-		| Merchant | USD 0.30        | false  | USD 0.00                    |
+		| Alice    | USD 0.10        | false  | USD 0.00                    |
+		| Merchant | USD 0.90        | false  | USD 0.00                    |
 		+----------+-----------------+--------+-----------------------------+
-		| Pot                                   USD 0.00                    |
+		| Pot                                 USD 100.00                    |
 		+-------------------------------------------------------------------+ */
 		assertAccountState(KEY_BOB, Coin.ZERO, false, oneUSD);
-		assertAccountState(KEY_ALICE, tenCents.multiply(7), false, Coin.ZERO);
-		assertAccountState(KEY_MERCHANT, tenCents.multiply(3), false, Coin.ZERO);
-		assertPotSize(Coin.ZERO);
+		assertAccountState(KEY_ALICE, tenCents.multiply(1), false, Coin.ZERO);
+		assertAccountState(KEY_MERCHANT, tenCents.multiply(9), false, Coin.ZERO);
+		assertPotSize(oneUSD.multiply(100));
 
 		// Alice creates an account and sends loads it with USD 30 and a block is mined
 		TimeLockedAddress addressAlice = createAddress(KEY_ALICE, inAMonth());
@@ -182,7 +187,7 @@ public class MicroPaymentTest {
 		PaymentChannel channelAlice = new PaymentChannel(params, addressAlice.getAddress(params), KEY_ALICE, serverPubKeyAlice)
 			.addInputs(addressAlice, getUTXOsForAddress(addressAlice));
 
-		// Alice makes a micro payment of USD 8 to the merchant.
+		// Alice makes a micro payment of USD 8.00 to the merchant.
 		channelAlice.addToServerOutput(oneUSD.multiply(8));
 		SignedDTO dto3 = buildRequestDTO(KEY_ALICE, KEY_MERCHANT, channelAlice.buildTx(), oneUSD.multiply(8).getValue());
 		sendAndExpectSuccess(URL_MICRO_PAYMENT, dto3);
@@ -192,15 +197,15 @@ public class MicroPaymentTest {
 		| Account  | Virtual Balance | Locked | PendingPaymentChannelAmount |
 		+----------+-----------------+--------+-----------------------------+
 		| Bob      | USD 0.00        | false  | USD 1.00                    |
-		| Alice    | USD 0.70        | false  | USD 8.00                    |
-		| Merchant | USD 8.30        | false  | USD 0.00                    |
+		| Alice    | USD 0.10        | false  | USD 8.00                    |
+		| Merchant | USD 8.90        | false  | USD 0.00                    |
 		+----------+-----------------+--------+-----------------------------+
-		| Pot                                   USD 0.00                    |
+		| Pot                                 USD 100.00                    |
 		+-------------------------------------------------------------------+ */
 		assertAccountState(KEY_BOB, Coin.ZERO, false, oneUSD);
-		assertAccountState(KEY_ALICE, tenCents.multiply(7), false, oneUSD.multiply(8));
-		assertAccountState(KEY_MERCHANT, tenCents.multiply(83), false, Coin.ZERO);
-		assertPotSize(Coin.ZERO);
+		assertAccountState(KEY_ALICE, tenCents.multiply(1), false, oneUSD.multiply(8));
+		assertAccountState(KEY_MERCHANT, tenCents.multiply(89), false, Coin.ZERO);
+		assertPotSize(oneUSD.multiply(100));
 
 		// Alice sends another 4 Dollar via micro payment to Bob. This should not work as it would bring the pending
 		// channel amount > USD 10
@@ -219,15 +224,15 @@ public class MicroPaymentTest {
 		| Account  | Virtual Balance | Locked | PendingPaymentChannelAmount |
 		+----------+-----------------+--------+-----------------------------+
 		| Bob      | USD 0.00        | false  | USD 1.00                    |
-		| Alice    | USD 0.70        |  true  | USD 8.00                    |
-		| Merchant | USD 8.30        | false  | USD 0.00                    |
+		| Alice    | USD 0.10        |  true  | USD 8.00                    |
+		| Merchant | USD 8.90        | false  | USD 0.00                    |
 		+----------+-----------------+--------+-----------------------------+
-		| Pot                                   USD 0.00                    |
+		| Pot                                 USD 100.00                    |
 		+-------------------------------------------------------------------+ */
 		assertAccountState(KEY_BOB, Coin.ZERO, false, oneUSD);
-		assertAccountState(KEY_ALICE, tenCents.multiply(7), true, oneUSD.multiply(8));
-		assertAccountState(KEY_MERCHANT, tenCents.multiply(83), false, Coin.ZERO);
-		assertPotSize(Coin.ZERO);
+		assertAccountState(KEY_ALICE, tenCents.multiply(1), true, oneUSD.multiply(8));
+		assertAccountState(KEY_MERCHANT, tenCents.multiply(89), false, Coin.ZERO);
+		assertPotSize(oneUSD.multiply(100));
 
 		blockUntilAddressChanged(() -> generateBlock(1), serverPubKeyAlice.toAddress(params), 1);
 
@@ -237,16 +242,51 @@ public class MicroPaymentTest {
 		| Account  | Virtual Balance | Locked | PendingPaymentChannelAmount |
 		+----------+-----------------+--------+-----------------------------+
 		| Bob      | USD 0.00        | false  | USD 1.00                    |
-		| Alice    | USD 0.70        | false  | USD 0.00                    |
-		| Merchant | USD 8.30        | false  | USD 0.00                    |
+		| Alice    | USD 0.10        | false  | USD 0.00                    |
+		| Merchant | USD 8.90        | false  | USD 0.00                    |
 		+----------+-----------------+--------+-----------------------------+
-		| Pot                                   USD 8.00                    |
+		| Pot                                 USD 108.00                    |
 		+-------------------------------------------------------------------+ */
 		assertAccountState(KEY_BOB, Coin.ZERO, false, oneUSD);
-		assertAccountState(KEY_ALICE, tenCents.multiply(7), false, Coin.ZERO);
-		assertAccountState(KEY_MERCHANT, tenCents.multiply(83), false, Coin.ZERO);
-		assertPotSize(oneUSD.multiply(8));
+		assertAccountState(KEY_ALICE, tenCents.multiply(1), false, Coin.ZERO);
+		assertAccountState(KEY_MERCHANT, tenCents.multiply(89), false, Coin.ZERO);
+		assertPotSize(oneUSD.multiply(108));
 
+		// Alice tries to pay out (but fails as 10 cents are not enough to cover fee)
+		try {
+			micropaymentService.payOutVirtualBalance(KEY_ALICE, addressAlice.getAddress(params));
+		} catch (IllegalArgumentException e) { }
+		// Everything stayed the same though
+		assertAccountState(KEY_BOB, Coin.ZERO, false, oneUSD);
+		assertAccountState(KEY_ALICE, tenCents, false, Coin.ZERO);
+		assertAccountState(KEY_MERCHANT, tenCents.multiply(89), false, Coin.ZERO);
+		assertPotSize(oneUSD.multiply(108));
+
+		// Merchant pays out
+		micropaymentService.payOutVirtualBalance(KEY_MERCHANT, new ECKey().toAddress(params));
+		blockUntilAddressChanged(() -> generateBlock(1), serverPubKeyMerchant.toAddress(params), 1);
+		/*
+		+----------+-----------------+--------+-----------------------------+
+		| Account  | Virtual Balance | Locked | PendingPaymentChannelAmount |
+		+----------+-----------------+--------+-----------------------------+
+		| Bob      | USD 0.00        | false  | USD 1.00                    |
+		| Alice    | USD 0.10        | false  | USD 0.00                    |
+		| Merchant | USD 0.00        | false  | USD 0.00                    |
+		+----------+-----------------+--------+-----------------------------+
+		| Pot                                 USD  99.10                    |
+		+-------------------------------------------------------------------+ */
+		assertAccountState(KEY_BOB, Coin.ZERO, false, oneUSD);
+		assertAccountState(KEY_ALICE, tenCents, false, Coin.ZERO);
+		assertAccountState(KEY_MERCHANT, Coin.ZERO, false, Coin.ZERO);
+		assertPotSize(tenCents.multiply(991));
+
+		// Server want's his money back and closes Bob's channel
+		micropaymentService.closeMicroPaymentChannel(KEY_BOB);
+		assertAccountState(KEY_BOB, Coin.ZERO, true, oneUSD);
+		assertPotSize(tenCents.multiply(991));
+		blockUntilAddressChanged(() -> generateBlock(1), serverPubKeyBob.toAddress(params), 1);
+		assertAccountState(KEY_BOB, Coin.ZERO, false, Coin.ZERO);
+		assertPotSize(tenCents.multiply(1001));
 
 	}
 

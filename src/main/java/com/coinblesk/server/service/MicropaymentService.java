@@ -10,6 +10,7 @@ import com.coinblesk.server.exceptions.*;
 import com.coinblesk.server.utils.CoinUtils;
 import com.coinblesk.server.utils.DTOUtils;
 import com.coinblesk.util.InsufficientFunds;
+import com.google.common.annotations.VisibleForTesting;
 import lombok.Data;
 import lombok.NonNull;
 import org.bitcoinj.core.*;
@@ -17,6 +18,7 @@ import org.bitcoinj.core.Transaction.SigHash;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
+import org.bitcoinj.wallet.SendRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +45,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
+
+import static com.coinblesk.server.enumerator.EventType.MICRO_PAYMENT_POT_EXHAUSTED;
 
 @Service
 public class MicropaymentService {
@@ -309,8 +313,43 @@ public class MicropaymentService {
 		return earliestLockTime;
 	}
 
+	@Transactional(isolation = Isolation.SERIALIZABLE)
+	public Transaction payOutVirtualBalance(ECKey accountOwner, Address toAddress) throws UserNotFoundException,
+		InsufficientMoneyException, IOException, BusinessException {
+		Account account = accountService.getByClientPublicKey(accountOwner.getPubKey());
+		if (account == null)
+			throw new UserNotFoundException(accountOwner.getPublicKeyAsHex());
+
+		final Coin virtualBalance = Coin.valueOf(account.virtualBalance());
+		final Coin potValue = getMicroPaymentPotValue();
+		LOG.info("Micropot value is {}", potValue);
+		if (potValue.isLessThan(virtualBalance)) {
+			eventService.warn(MICRO_PAYMENT_POT_EXHAUSTED, "Not enough coin in pot. " + virtualBalance + " needed " +
+			"but only " + potValue + " available.");
+			return null;
+		}
+
+		Address changeAddress = ECKey.fromPrivate(account.serverPrivateKey()).toAddress(appConfig.getNetworkParameters());
+		account.virtualBalance(0L);
+
+		// Estimate fee
+		final Coin feePer1000Bytes = Coin.valueOf(feeService.fee() * 1000);
+		SendRequest estimateRequest = SendRequest.to(toAddress, virtualBalance);
+		estimateRequest.feePerKb = feePer1000Bytes;
+		estimateRequest.changeAddress = changeAddress;
+		walletService.getWallet().completeTx(estimateRequest);
+		final Coin requiredFee = estimateRequest.tx.getFee();
+
+		// Make actual request which subtracts fee from virtual balance
+		SendRequest actualRequest = SendRequest.to(toAddress, virtualBalance.minus(requiredFee));
+		actualRequest.feePerKb = feePer1000Bytes;
+		actualRequest.changeAddress = changeAddress;
+		return walletService.getWallet().sendCoins(actualRequest).tx;
+	}
+
+	@VisibleForTesting
 	@Transactional
-	private void closeMicroPaymentChannel(ECKey forAccount) throws UserNotFoundException, InterruptedException,
+	public void closeMicroPaymentChannel(ECKey forAccount) throws UserNotFoundException, InterruptedException,
 		ExecutionException, TimeoutException {
 		Account account = accountRepository.findByClientPublicKey(forAccount.getPubKey());
 		if (account == null)
@@ -401,17 +440,21 @@ public class MicropaymentService {
 	}
 
 	public Coin getMicroPaymentPotValue() {
+		return getAllPotOutputs().stream().map(TransactionOutput::getValue).reduce(Coin.ZERO, Coin::add);
+	}
+
+	private List<TransactionOutput> getAllPotOutputs() {
 		final Set<Address> serverPotAddresses = accountService.allAccounts().stream().map(account -> ECKey
 			.fromPublicOnly(account.serverPublicKey()).toAddress(appConfig.getNetworkParameters())).collect(Collectors
 			.toSet());
 
 		return walletService.getAllSpendCandidates().stream().filter(output -> {
 			Address address = output.getAddressFromP2PKHScript(appConfig.getNetworkParameters());
-			return serverPotAddresses.contains(address) && output.getParentTransactionDepthInBlocks() >= appConfig.getMinConf();
-		}).map(TransactionOutput::getValue).reduce(Coin.ZERO, Coin::add);
+			return serverPotAddresses.contains(address) &&
+				output.getParentTransaction().getConfidence().getConfidenceType().equals(TransactionConfidence
+					.ConfidenceType.BUILDING) && output.getParentTransactionDepthInBlocks() >= appConfig.getMinConf();
+		}).collect(Collectors.toList());
 	}
-
-
 
 	/***
 	 * Add a listener for when a transaction we are watching's confidence
