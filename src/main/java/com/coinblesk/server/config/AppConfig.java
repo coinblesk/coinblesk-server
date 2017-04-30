@@ -15,6 +15,8 @@
  */
 package com.coinblesk.server.config;
 
+import java.io.File;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.util.HashSet;
 import java.util.Set;
@@ -80,7 +82,13 @@ public class AppConfig {
 	@Value("${bitcoin.potCreationTime}")
 	private Long potCreationTime;
 
-	public FileSystemResource getConfigDir() {
+	public FileSystemResource getConfigDir() throws IOException {
+		final File directory = configDir.getFile();
+		if (!directory.exists()) {
+			if (!directory.mkdirs()) {
+				throw new IOException("Could not create directory " + directory.getAbsolutePath());
+			}
+		}
 		return configDir;
 	}
 

@@ -89,11 +89,6 @@ public class WalletService {
 		BitcoinNet bitcoinNet = appConfig.getBitcoinNet();
 		if (bitcoinNet.equals(BitcoinNet.MAINNET) || bitcoinNet.equals(BitcoinNet.TESTNET)) {
 			final File directory = appConfig.getConfigDir().getFile();
-			if (!directory.exists()) {
-				if (!directory.mkdirs()) {
-					throw new IOException("Could not create directory " + directory.getAbsolutePath());
-				}
-			}
 			// Init chain and wallet files
 			final File chainFile = new File(directory, "coinblesk2-" + appConfig.getBitcoinNet() + ".spvchain");
 			final File walletFile = new File(directory, "coinblesk2-" + appConfig.getBitcoinNet() + ".wallet");
