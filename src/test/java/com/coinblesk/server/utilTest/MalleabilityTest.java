@@ -12,8 +12,19 @@ import static org.bitcoinj.core.ECKey.*;
  * @author
  */
 public class MalleabilityTest {
+	/***
+	 * This test showcases that changing the S value of a signature does not invalidate it.
+	 * Even though nodes do not relay high-S value signatures, they accept blocks containing
+	 * them, as some old wallets used to produce them.
+	 *
+	 * There were cases where miners changed the signatures, causing chains of transaction
+	 * to be invalidated.
+	 */
 	@Test
 	public void attack() {
+		System.out.println(ECKey.CURVE.getN());
+		System.out.println(ECKey.HALF_CURVE_ORDER);
+
 		byte[] message = {0x01, 0x02, 0x03, 0x04};
 		Sha256Hash hash = Sha256Hash.of(message);
 
@@ -24,14 +35,7 @@ public class MalleabilityTest {
 		key.verify(hash, sig);
 
 		// Change signature
-		BigInteger sPrime;
-		if (sig.s.compareTo(ECKey.HALF_CURVE_ORDER) <= 0) {
-			// If below half order set s' = -s mod N
-			sPrime = sig.s.multiply(BigInteger.valueOf(-1)).mod(CURVE.getN());
-		} else {
-			// set s' = N - s
-			sPrime = CURVE.getN().subtract(sig.s);
-		}
+		BigInteger sPrime = sig.s.multiply(BigInteger.valueOf(-1)).mod(CURVE.getN());
 		ECDSASignature sig2 = new ECDSASignature(sig.r, sPrime);
 
 		// Still valid
