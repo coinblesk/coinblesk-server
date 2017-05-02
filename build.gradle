@@ -125,6 +125,7 @@ task deploy {
 	ssh.settings {
 		user = "$System.env.USER"
 		identity = file("$System.env.HOME/.ssh/id_rsa")
+		knownHosts = allowAnyHosts
 	}
 
 	doLast {
@@ -133,7 +134,7 @@ task deploy {
 					session(remotes."$env") {
 						execute 'sudo systemctl stop coinblesk'
 						put from: "build/libs/$archiveName", into: dst
-						execute "chown $System.env.USER:coinblesk $dst; chmod ug+x $dst"
+						execute "chown -f $System.env.USER:coinblesk $dst; chmod -f ug+x $dst || true"
 						execute 'sudo systemctl start coinblesk'
 					}
 				}
