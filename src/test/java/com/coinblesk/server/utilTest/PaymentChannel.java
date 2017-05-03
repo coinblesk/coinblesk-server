@@ -18,7 +18,7 @@ public class PaymentChannel {
 	private Transaction tx;
 	private Address changeAddress;
 	private ECKey privateKey, serverPubKey;
-	private int fee = 250;
+	private int fee = 350;
 	private Map<Integer, TimeLockedAddress> inputToAddress = new HashMap<>();
 	private Coin serverValue = Coin.ZERO;
 
