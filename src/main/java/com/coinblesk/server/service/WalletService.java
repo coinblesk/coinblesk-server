@@ -118,9 +118,13 @@ public class WalletService {
 		blockChain.addWallet(wallet);
 		peerGroup.addWallet(wallet);
 
-		// If we're in unittest net we don't need any peer discovery or chain download logic
-		// and we are done here.
+		// Mock broadcast in unittest.
 		if (bitcoinNet.equals(BitcoinNet.UNITTEST)) {
+			wallet.setTransactionBroadcaster(tx -> {
+				SettableFuture<Transaction> future = SettableFuture.create();
+				future.set(tx);
+				return TransactionBroadcast.createMockBroadcast(tx, future);
+			});
 			LOG.info("wallet init done.");
 			return;
 		}
