@@ -74,6 +74,7 @@ public class MicropaymentServiceTest extends CoinbleskTest {
 	public void getMicroPaymentPotValue() throws Exception {
 		ECKey serverKey1 = accountService.createAccount(new ECKey());
 		ECKey serverKey2 = accountService.createAccount(new ECKey());
+		Coin potBefore = micropaymentService.getMicroPaymentPotValue();
 		walletService.addWatching(serverKey1.toAddress(params()));
 		walletService.addWatching(serverKey2.toAddress(params()));
 		Transaction tx1 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), serverKey1.toAddress(params()));
@@ -82,9 +83,9 @@ public class MicropaymentServiceTest extends CoinbleskTest {
 		mineTransaction(tx1);
 		mineTransaction(tx2);
 		walletService.getWallet().maybeCommitTx(tx3);
-		assertThat(micropaymentService.getMicroPaymentPotValue(), is(Coin.valueOf(2, 0)));
+		assertThat(micropaymentService.getMicroPaymentPotValue(), is(potBefore.plus(Coin.valueOf(2, 0))));
 		mineTransaction(tx3);
-		assertThat(micropaymentService.getMicroPaymentPotValue(), is(Coin.valueOf(3, 0)));
+		assertThat(micropaymentService.getMicroPaymentPotValue(), is(potBefore.plus(Coin.valueOf(3, 0))));
 	}
 
 	@Test

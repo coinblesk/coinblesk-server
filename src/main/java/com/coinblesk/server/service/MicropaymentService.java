@@ -19,6 +19,7 @@ import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.wallet.SendRequest;
+import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -313,26 +314,34 @@ public class MicropaymentService {
 		return earliestLockTime;
 	}
 
+	public static class PayoutResponse {
+		public long valuePaidOut;
+		public String transaction;
+	}
 	@Transactional(isolation = Isolation.SERIALIZABLE)
-	public Transaction payOutVirtualBalance(ECKey accountOwner, Address toAddress) throws UserNotFoundException,
-		InsufficientMoneyException, IOException, BusinessException {
-		Account account = accountService.getByClientPublicKey(accountOwner.getPubKey());
+	public PayoutResponse payOutVirtualBalance(ECKey accountOwner, String addressAsString) throws UserNotFoundException,
+		InsufficientMoneyException, IOException, BusinessException, InsufficientFunds {
+		final Address toAddress = Address.fromBase58(appConfig.getNetworkParameters(), addressAsString);
+
+		final Account account = accountService.getByClientPublicKey(accountOwner.getPubKey());
 		if (account == null)
 			throw new UserNotFoundException(accountOwner.getPublicKeyAsHex());
 
 		final Coin virtualBalance = Coin.valueOf(account.virtualBalance());
+		if (!virtualBalance.isPositive())
+			throw new InsufficientFunds();
+
 		final Coin potValue = getMicroPaymentPotValue();
 		LOG.info("Micropot value is {}", potValue);
 		if (potValue.isLessThan(virtualBalance)) {
 			eventService.warn(MICRO_PAYMENT_POT_EXHAUSTED, "Not enough coin in pot. " + virtualBalance + " needed " +
 			"but only " + potValue + " available.");
-			return null;
+			return new PayoutResponse();
 		}
 
 		Address changeAddress = ECKey.fromPrivate(account.serverPrivateKey()).toAddress(appConfig.getNetworkParameters());
-		account.virtualBalance(0L);
 
-		// Estimate fee
+		// Estimate fee by creating a send request
 		final Coin feePer1000Bytes = Coin.valueOf(feeService.fee() * 1000);
 		SendRequest estimateRequest = SendRequest.to(toAddress, virtualBalance);
 		estimateRequest.feePerKb = feePer1000Bytes;
@@ -341,10 +350,33 @@ public class MicropaymentService {
 		final Coin requiredFee = estimateRequest.tx.getFee();
 
 		// Make actual request which subtracts fee from virtual balance
-		SendRequest actualRequest = SendRequest.to(toAddress, virtualBalance.minus(requiredFee));
+		final Coin coinSendToUser = virtualBalance.minus(requiredFee);
+		SendRequest actualRequest = SendRequest.to(toAddress, coinSendToUser);
 		actualRequest.feePerKb = feePer1000Bytes;
 		actualRequest.changeAddress = changeAddress;
-		return walletService.getWallet().sendCoins(actualRequest).tx;
+		Wallet.SendResult sendResult =  walletService.getWallet().sendCoins(actualRequest);
+
+		// At this point we must consider the coins to be gone, even in case of failure as it has been transmitted
+		// to the broadcaster.
+		account.virtualBalance(0L);
+		accountRepository.save(account);
+
+		// Wait for actual broadcast to succeed
+		Transaction broadcastedTx;
+		try {
+			broadcastedTx = sendResult.broadcastComplete.get();
+		} catch (InterruptedException | ExecutionException e) {
+			eventService.error(EventType.MICRO_PAYMENT_PAYOUT_ERROR, "Could not broadcast payout request "
+				+ "for account " + accountOwner.getPublicKeyAsHex() + ". Transaction: "
+				+ DTOUtils.toHex(sendResult.tx.bitcoinSerialize()) + " Reason:" + e.toString());
+			e.printStackTrace();
+			return new PayoutResponse();
+		}
+
+		PayoutResponse response = new PayoutResponse();
+		response.transaction = DTOUtils.toHex(broadcastedTx.bitcoinSerialize());
+		response.valuePaidOut = coinSendToUser.getValue();
+		return response;
 	}
 
 	@VisibleForTesting

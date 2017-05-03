@@ -52,7 +52,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *
  * Activate this test by setting INTEGRATION_TEST=true environment variable.
  *
- * TODO: refactor such that it runs also on testnet
  *
  * @author Sebastian Stephan
  */
@@ -254,7 +253,7 @@ public class MicroPaymentTest {
 
 		// Alice tries to pay out (but fails as 10 cents are not enough to cover fee)
 		try {
-			micropaymentService.payOutVirtualBalance(KEY_ALICE, addressAlice.getAddress(params));
+			micropaymentService.payOutVirtualBalance(KEY_ALICE, addressAlice.getAddress(params).toBase58());
 		} catch (IllegalArgumentException e) { }
 		// Everything stayed the same though
 		assertAccountState(KEY_BOB, Coin.ZERO, false, oneUSD);
@@ -263,7 +262,7 @@ public class MicroPaymentTest {
 		assertPotSize(oneUSD.multiply(108));
 
 		// Merchant pays out
-		micropaymentService.payOutVirtualBalance(KEY_MERCHANT, new ECKey().toAddress(params));
+		micropaymentService.payOutVirtualBalance(KEY_MERCHANT, new ECKey().toAddress(params).toBase58());
 		blockUntilAddressChanged(() -> generateBlock(1), serverPubKeyMerchant.toAddress(params), 1);
 		/*
 		+----------+-----------------+--------+-----------------------------+

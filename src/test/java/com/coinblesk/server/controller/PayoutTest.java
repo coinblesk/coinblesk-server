@@ -8,9 +8,14 @@ import com.coinblesk.server.service.MicropaymentService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.FakeTxBuilder;
+import com.coinblesk.server.utils.DTOUtils;
 import org.bitcoinj.core.*;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Objects;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.CoreMatchers.is;
@@ -20,6 +25,7 @@ import static org.hamcrest.CoreMatchers.is;
  * @author Sebastian Stephan
  */
 public class PayoutTest extends CoinbleskTest {
+	public static final String URL_MICRO_PAYMENT = "/payment/payout";
 	@Autowired
 	private AccountService accountService;
 	@Autowired
@@ -36,24 +42,33 @@ public class PayoutTest extends CoinbleskTest {
 	}
 
 	@Test
+	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	public void payout_works() throws Exception {
-		final Address serverPot = appConfig.getPotPrivateKeyAddress().toAddress(params());
-		Transaction fundPot = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), serverPot);
-		mineTransaction(fundPot);
-
 		ECKey user = new ECKey();
 		ECKey serverKey = accountService.createAccount(user);
 		final Address microPotAddress = serverKey.toAddress(params());
 		walletService.getWallet().importKey(ECKey.fromPrivate(accountService.getByClientPublicKey(user.getPubKey()).serverPrivateKey()));
 
+		// Load up some money to the server pot
 		Transaction funding = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), microPotAddress);
 		mineTransaction(funding);
+
+		// Give the user virtual balance
 		giveUserBalance(user, 100000L);
 		Coin potBefore = micropaymentService.getMicroPaymentPotValue();
 
-		Transaction tx = micropaymentService.payOutVirtualBalance(user, new ECKey().toAddress(params()));
-		assertThat(tx.getInputs().size(), is(1));
+		// Payout
+		String txString = micropaymentService.payOutVirtualBalance(user,
+			new ECKey().toAddress(params()).toBase58()).transaction;
+		Transaction tx = new Transaction(params(), DTOUtils.fromHex(txString));
+		tx.verify();
+		TransactionOutput serverOut = tx.getOutputs().stream().filter(out ->
+			Objects.equals(out.getAddressFromP2PKHScript(params()), microPotAddress))
+			.findFirst().get();
+		assertThat(serverOut.getValue(), is(Coin.COIN.minus(Coin.valueOf(100000L))));
+
 		mineTransaction(tx);
+
 		assertThat(micropaymentService.getMicroPaymentPotValue(), is(potBefore.minus(Coin.valueOf(100000L))));
 
 	}

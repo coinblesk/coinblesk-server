@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.validation.Valid;
 import java.time.Instant;
 
+import static com.coinblesk.server.service.MicropaymentService.*;
 import static org.springframework.http.HttpStatus.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
@@ -51,7 +52,7 @@ public class MicroPaymentController {
 			DTOUtils.validateSignature(request.getPayload(), request.getSignature(), senderPublicKey);
 
 			// Call the service and map failures to error messages
-			MicropaymentService.MicroPaymentResult result = micropaymentService.microPayment(senderPublicKey,
+			MicroPaymentResult result = micropaymentService.microPayment(senderPublicKey,
 				requestDTO.getToPublicKey(), requestDTO.getTx(), requestDTO.getAmount(), requestDTO.getNonce());
 
 			if (result.broadcastedTx == null) {
@@ -121,6 +122,36 @@ public class MicroPaymentController {
 		MultiSignedDTO signedResponse = new MultiSignedDTO(responseAsBase64, signatureForSender, signatureForReceiver);
 
 		return new ResponseEntity<>(signedResponse, OK);
+	}
+
+	@RequestMapping(value = "/payout", method = POST)
+	public ResponseEntity payout(@RequestBody @Valid SignedDTO request) {
+		// Get the embedded payload and check signature
+		final PayoutRequestDTO requestDTO;
+		try {
+			requestDTO = DTOUtils.parseAndValidate(request, PayoutRequestDTO.class);
+			ECKey signingKey = DTOUtils.getECKeyFromHexPublicKey(requestDTO.getPublicKey());
+			DTOUtils.validateSignature(request.getPayload(), request.getSignature(), signingKey);
+		} catch (MissingFieldException | InvalidSignatureException e) {
+			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
+		} catch (Throwable e) {
+			return new ResponseEntity<>(new ErrorDTO("Bad request"), BAD_REQUEST);
+		}
+
+		final ECKey accountOwner = DTOUtils.getECKeyFromHexPublicKey(requestDTO.getPublicKey());
+
+		PayoutResponse res;
+		try {
+			res = micropaymentService.payOutVirtualBalance(accountOwner, requestDTO.getToAddress());
+		} catch (Throwable e) {
+			return new ResponseEntity<>(new ErrorDTO(e.getMessage()), BAD_REQUEST);
+		}
+
+		if (res.valuePaidOut == 0L) {
+			return new ResponseEntity<>(new ErrorDTO("Not enough money available, try again later."), SERVICE_UNAVAILABLE);
+		}
+
+		return new ResponseEntity<>("", OK);
 	}
 
 }
