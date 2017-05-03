@@ -8,7 +8,7 @@ import com.coinblesk.server.service.MicropaymentService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.FakeTxBuilder;
-import com.coinblesk.server.utils.DTOUtils;
+import com.coinblesk.util.DTOUtils;
 import org.bitcoinj.core.*;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
