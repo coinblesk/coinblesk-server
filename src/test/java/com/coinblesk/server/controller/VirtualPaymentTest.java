@@ -27,7 +27,9 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
@@ -256,27 +258,29 @@ public class VirtualPaymentTest extends CoinbleskTest {
 			giveUserBalance(keyA, 10000L);
 			giveUserBalance(keyB, 10000L);
 			giveUserBalance(keyC, 10000L);
-			ExecutorService executor = Executors.newFixedThreadPool(4);
+			ExecutorService executor = Executors.newFixedThreadPool(5);
 			stop = false;
 			Callable<Void> stopper = () -> {
 				Thread.sleep(10000);
 				stop = true;
 				return null;
 			};
+			Callable<Void> checker = ()-> {
+				while (!stop) {
+					checkStateForLoadTest(30000L, keyA, keyB, keyC);
+					Thread.sleep(1000);
+				}
+				return null;
+			};
 			executor.submit(stopper);
+			executor.submit(checker);
 			List<Future<Exception>> res = executor.invokeAll(
 				Arrays.asList(sender(keyA, keyB), sender(keyB, keyC), sender(keyC, keyA)));
 			for (Future<Exception> f : res) {
 				assertThat("There was an error in one of the senders", f.get(), CoreMatchers.nullValue());
 			}
+			checkStateForLoadTest(30000L, keyA, keyB, keyC);
 
-			long balanceA = accountService.getVirtualBalanceByClientPublicKey(keyA.getPubKey()).getBalance();
-			long balanceB = accountService.getVirtualBalanceByClientPublicKey(keyB.getPubKey()).getBalance();
-			long balanceC = accountService.getVirtualBalanceByClientPublicKey(keyC.getPubKey()).getBalance();
-			assertThat(balanceA + balanceB + balanceC, is(30000L));
-			System.out.println(balanceA);
-			System.out.println(balanceB);
-			System.out.println(balanceC);
 		} finally {
 			// Clean up since we had no transaction.
 			accountService.deleteAccount(keyA);
@@ -285,28 +289,39 @@ public class VirtualPaymentTest extends CoinbleskTest {
 		}
 	}
 
+	private void checkStateForLoadTest(Long balance, ECKey... accounts) {
+		Set<String> accountsToSum = Arrays.stream(accounts)
+			.map(ECKey::getPublicKeyAsHex).map(String::toUpperCase).collect(Collectors.toSet());
+		long total = 0L;
+		for (Account account : accountRepository.findAll()) {
+			if (accountsToSum.contains(DTOUtils.toHex(account.clientPublicKey()))) {
+				System.out.println(account.virtualBalance());
+				total += account.virtualBalance();
+			}
+		}
+		System.out.println(total);
+		System.out.println("==========");
+		assertThat(total, is(balance));
+	}
+
 	private Callable<Exception> sender(ECKey from, ECKey to) {
 		Random rand = new Random();
 		return () -> {
+			long nonce = validNonce();
 			while(!stop) {
 				long value = rand.nextInt(99) + 1;
-				SignedDTO dto = DTOUtils.serializeAndSign(createDTO(from, to, value, validNonce()), from);
+				SignedDTO dto = DTOUtils.serializeAndSign(createDTO(from, to, value, nonce++), from);
 				MvcResult res = mockMvc.perform(post(URL_VIRTUAL_PAYMENT).contentType(APPLICATION_JSON)
 					.content(DTOUtils.toJSON(dto))).andReturn();
-				if (res.getResponse().getStatus() == HttpStatus.OK.value()) {
-					VirtualPaymentResponseDTO resDTO = DTOUtils.fromJSON(DTOUtils.fromBase64(
-						DTOUtils.fromJSON(res.getResponse().getContentAsString(), MultiSignedDTO.class)
-							.getPayload()), VirtualPaymentResponseDTO.class);
-					LOG.info("Transfered: {}, Sender: {}, Receiver: {}", resDTO.getAmountTransfered(),
-						resDTO.getNewBalanceSender(), resDTO.getNewBalanceReceiver());
-				} else {
+				if (res.getResponse().getStatus() != HttpStatus.OK.value()) {
 					ErrorDTO err = DTOUtils.fromJSON(res.getResponse().getContentAsString(), ErrorDTO.class);
 					if (err.getError().contains("Insufficient funds")) {
-						Thread.sleep(rand.nextInt(10));
+						// That's fine, try some more
 					} else {
 						return new RuntimeException(err.getError());
 					}
 				}
+				Thread.sleep(10);
 			}
 			return null;
 		};
