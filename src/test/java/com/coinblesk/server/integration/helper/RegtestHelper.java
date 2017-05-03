@@ -1,6 +1,6 @@
 package com.coinblesk.server.integration.helper;
 
-import com.coinblesk.server.utils.DTOUtils;
+import com.coinblesk.util.DTOUtils;
 import org.bitcoinj.core.Coin;
 
 import java.io.BufferedReader;

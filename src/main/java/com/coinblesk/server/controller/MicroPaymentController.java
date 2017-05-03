@@ -3,8 +3,10 @@ package com.coinblesk.server.controller;
 import com.coinblesk.dto.*;
 import com.coinblesk.server.exceptions.*;
 import com.coinblesk.server.service.MicropaymentService;
-import com.coinblesk.server.utils.DTOUtils;
+import com.coinblesk.util.DTOUtils;
 import com.coinblesk.util.InsufficientFunds;
+import com.coinblesk.util.InvalidSignatureException;
+import com.coinblesk.util.MissingFieldException;
 import org.bitcoinj.core.ECKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +28,7 @@ import static org.springframework.web.bind.annotation.RequestMethod.POST;
 @RequestMapping(
 	value = "/payment",
 	consumes = APPLICATION_JSON_UTF8_VALUE,
-	produces = { APPLICATION_JSON_UTF8_VALUE, "application/vnd.coinblesk.v4+json"})
+	produces = APPLICATION_JSON_UTF8_VALUE)
 @CrossOrigin
 public class MicroPaymentController {
 

@@ -15,12 +15,19 @@
  */
 package com.coinblesk.server.service;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import org.knowm.xchange.Exchange;
+import org.knowm.xchange.ExchangeFactory;
+import org.knowm.xchange.bitstamp.BitstampExchange;
+import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.marketdata.Ticker;
+import org.knowm.xchange.service.marketdata.MarketDataService;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -30,7 +37,7 @@ import com.coinblesk.dto.ForexDTO;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
 import com.coinblesk.server.exceptions.InvalidCurrencyPatternException;
-import com.coinblesk.server.utils.DTOUtils;
+import com.coinblesk.util.DTOUtils;
 
 /**
  * Service that provides current & historic bitcoin exchange rates.
@@ -41,6 +48,26 @@ public class ForexBitcoinService {
 	private final static String PLACEHOLDER = "{{PLACEHOLDER}}";
 	private final static String COINDESK_CURRENT_API = "http://api.coindesk.com/v1/bpi/currentprice/" + PLACEHOLDER + ".json";
 	private final static String COINDESK_HISTORIC_API = "http://api.coindesk.com/v1/bpi/historical/close.json?currency=" + PLACEHOLDER;
+
+	private final static MarketDataService MARKET_DATA_SERVICE  = ExchangeFactory.INSTANCE.createExchange(BitstampExchange.class.getName()).getMarketDataService();
+
+	/**
+	 * Get the exchange rate from Bitstamp. As a trader can do a tradeback, we need the specific exchange. The exchange
+	 * rate for the fiat currency is then calculated in a second step.
+	 * @return
+	 * @throws IOException
+	 */
+	public ForexDTO getBitstampBTCUSDRate() throws IOException {
+		Ticker ticker = MARKET_DATA_SERVICE.getTicker(CurrencyPair.BTC_USD);
+
+		ForexDTO forexDTO = new ForexDTO();
+		forexDTO.setCurrencyFrom("BTC");
+		forexDTO.setCurrencyTo("USD");
+		forexDTO.setRate(ticker.getAsk().add(ticker.getBid()).divide(BigDecimal.valueOf(2)));
+		forexDTO.setUpdatedAt(ticker.getTimestamp());
+
+		return forexDTO;
+	}
 
 	@Cacheable("forex-bitcoin-current-rates")
 	public ForexDTO getCurrentRate(String currencySymbol) throws BusinessException {

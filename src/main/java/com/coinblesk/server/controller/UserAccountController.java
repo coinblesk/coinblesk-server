@@ -67,14 +67,12 @@ import com.coinblesk.server.exceptions.UserAccountDeletedException;
 import com.coinblesk.server.service.EventService;
 import com.coinblesk.server.service.MailService;
 import com.coinblesk.server.service.UserAccountService;
-import com.coinblesk.server.utils.ApiVersion;
 
 /**
  * @author Thomas Bocek
  */
 @RestController
 @RequestMapping(value = "/user-account")
-@ApiVersion({ "v1", "" })
 public class UserAccountController {
 
 	private final static Logger LOG = LoggerFactory.getLogger(UserAccountController.class);

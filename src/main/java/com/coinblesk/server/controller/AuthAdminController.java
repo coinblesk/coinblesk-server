@@ -57,7 +57,6 @@ import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.EventService;
 import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.server.service.WalletService;
-import com.coinblesk.server.utils.ApiVersion;
 import com.coinblesk.util.Pair;
 import com.coinblesk.util.SerializeUtils;
 
@@ -69,7 +68,6 @@ import com.coinblesk.util.SerializeUtils;
 
 @Controller
 @RequestMapping(value = "/auth/admin")
-@ApiVersion({ "" })
 @Secured(ROLE_ADMIN)
 public class AuthAdminController {
 

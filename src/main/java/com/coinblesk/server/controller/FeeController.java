@@ -17,7 +17,6 @@ package com.coinblesk.server.controller;
 
 import com.coinblesk.json.v1.FeeTO;
 import com.coinblesk.server.service.FeeService;
-import com.coinblesk.server.utils.ApiVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +35,6 @@ import static org.springframework.web.bind.annotation.RequestMethod.GET;
  * Controller for serving Tx fee requests.
  */
 @RestController
-@ApiVersion({"v1"})
 public class FeeController {
 
 	private static final Logger LOG = LoggerFactory.getLogger(FeeController.class);

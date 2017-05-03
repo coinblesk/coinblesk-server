@@ -20,7 +20,7 @@ import com.coinblesk.dto.*;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.utilTest.CoinbleskTest;
-import com.coinblesk.server.utils.DTOUtils;
+import com.coinblesk.util.DTOUtils;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.SerializeUtils;
 import org.bitcoinj.core.ECKey;

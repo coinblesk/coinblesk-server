@@ -6,7 +6,7 @@ import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.exceptions.UserNotFoundException;
 import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.utilTest.CoinbleskTest;
-import com.coinblesk.server.utils.DTOUtils;
+import com.coinblesk.util.DTOUtils;
 import org.bitcoinj.core.ECKey;
 import org.hamcrest.CoreMatchers;
 import org.junit.Before;

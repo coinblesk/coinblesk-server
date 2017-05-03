@@ -36,7 +36,7 @@ import org.springframework.stereotype.Service;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
 import com.coinblesk.server.exceptions.InvalidCurrencyPatternException;
-import com.coinblesk.server.utils.DTOUtils;
+import com.coinblesk.util.DTOUtils;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
