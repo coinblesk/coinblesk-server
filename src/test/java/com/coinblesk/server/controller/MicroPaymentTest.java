@@ -649,7 +649,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 		accountService.createAccount(receiverKey);
 		walletService.addWatching(serverKey.toAddress(params));
 
-		assertThat(micropaymentService.getMicroPaymentPotValue(), is(Coin.ZERO));
+		Coin potBefore = micropaymentService.getMicroPaymentPotValue();
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime)
 			.getTimeLockedAddress();
@@ -668,7 +668,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 			()).getChannelTransaction());
 		mineTransaction(openChannelTx);
 
-		assertThat(micropaymentService.getMicroPaymentPotValue(), is(Coin.valueOf((1337))));
+		assertThat(micropaymentService.getMicroPaymentPotValue(), is(potBefore.plus(Coin.valueOf((1337)))));
 	}
 
 	@Test
