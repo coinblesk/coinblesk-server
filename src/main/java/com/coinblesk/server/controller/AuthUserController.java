@@ -35,14 +35,12 @@ import com.coinblesk.json.v1.BaseTO;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.UserAccountTO;
 import com.coinblesk.server.service.UserAccountService;
-import com.coinblesk.server.utils.ApiVersion;
 
 /**
  * @author Thomas Bocek
  */
 @RestController
 @RequestMapping(value = { "/auth/user" })
-@ApiVersion({ "v1", "" })
 @Secured(ROLE_USER)
 public class AuthUserController {
 

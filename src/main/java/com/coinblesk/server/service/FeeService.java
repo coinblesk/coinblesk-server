@@ -18,7 +18,7 @@ package com.coinblesk.server.service;
  * @author Thomas Bocek
  */
 
-import com.coinblesk.server.utils.DTOUtils;
+import com.coinblesk.util.DTOUtils;
 import com.coinblesk.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

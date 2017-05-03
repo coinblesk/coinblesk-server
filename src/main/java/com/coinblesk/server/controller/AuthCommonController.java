@@ -43,14 +43,12 @@ import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
 import com.coinblesk.server.service.EventService;
 import com.coinblesk.server.service.UserAccountService;
-import com.coinblesk.server.utils.ApiVersion;
 
 /**
  * @author Thomas Bocek
  */
 @RestController
 @RequestMapping("/auth/common")
-@ApiVersion({ "" })
 @Secured({ ROLE_USER, ROLE_ADMIN })
 public class AuthCommonController {
 

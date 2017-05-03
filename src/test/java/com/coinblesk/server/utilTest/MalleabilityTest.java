@@ -1,6 +1,6 @@
 package com.coinblesk.server.utilTest;
 
-import com.coinblesk.server.utils.DTOUtils;
+import com.coinblesk.util.DTOUtils;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Sha256Hash;
 import org.junit.Test;

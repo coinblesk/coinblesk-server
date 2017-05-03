@@ -18,7 +18,9 @@ package com.coinblesk.server.controller;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -35,7 +37,6 @@ import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.InvalidCurrencyPatternException;
 import com.coinblesk.server.service.ForexBitcoinService;
 import com.coinblesk.server.service.ForexService;
-import com.coinblesk.server.utils.ApiVersion;
 
 /**
  * Controller for client http requests regarding Transactions between two
@@ -44,7 +45,6 @@ import com.coinblesk.server.utils.ApiVersion;
 @RestController
 // "/wallet" is for v1 only and should not be used anymore
 @RequestMapping({"/wallet", "/forex"})
-@ApiVersion({"v1", ""})
 public class ForexController {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ForexController.class);
@@ -71,7 +71,6 @@ public class ForexController {
 	 * @return CustomResponseObject with exchangeRate BTC/CHF as a String
 	 */
 	@RequestMapping(value = "/exchange-rate/{fromSymbol}/{toSymbol}", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
-	@ApiVersion({"v2"})
 	@ResponseBody
 	public ForexDTO forexExchangeRate(@PathVariable(value = "fromSymbol") String fromSymbol,
 			@PathVariable(value = "toSymbol") String toSymbol) throws BusinessException {
@@ -89,6 +88,20 @@ public class ForexController {
 
 		LOG.debug("{exchange-rate} - {}, {}, rate: {}", result.getCurrencyFrom(), result.getCurrencyTo(), result.getRate());
 		return result;
+	}
+
+	@RequestMapping(value = "/exchange-rate/bitcoin/bitstamp/current/{symbol}", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@ResponseBody
+	public ForexDTO bitcoinBitstampCurrentRate(@PathVariable("symbol") String symbol) throws BusinessException, IOException {
+		validateSymbol(symbol);
+		ForexDTO forexBTCUSD = forexBitcoinService.getBitstampBTCUSDRate();
+		BigDecimal forexUSDCHF = forexService.getExchangeRate("USD", "CHF");
+
+		forexBTCUSD.setCurrencyTo(symbol);
+		forexBTCUSD.setRate(forexBTCUSD.getRate().multiply(forexUSDCHF));
+		forexBTCUSD.setUpdatedAt(new Date());
+
+		return forexBTCUSD;
 	}
 
 	@RequestMapping(value = "/exchange-rate/bitcoin/current/{symbol}", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)

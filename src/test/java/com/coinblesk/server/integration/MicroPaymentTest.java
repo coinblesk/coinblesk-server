@@ -9,7 +9,7 @@ import com.coinblesk.server.service.ForexService;
 import com.coinblesk.server.service.MicropaymentService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.server.utilTest.PaymentChannel;
-import com.coinblesk.server.utils.DTOUtils;
+import com.coinblesk.util.DTOUtils;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
 import org.junit.*;

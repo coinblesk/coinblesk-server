@@ -8,7 +8,7 @@ import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.enumerator.EventType;
 import com.coinblesk.server.exceptions.*;
 import com.coinblesk.server.utils.CoinUtils;
-import com.coinblesk.server.utils.DTOUtils;
+import com.coinblesk.util.DTOUtils;
 import com.coinblesk.util.InsufficientFunds;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.Data;

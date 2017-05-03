@@ -43,13 +43,12 @@ import com.coinblesk.dto.SignedDTO;
 import com.coinblesk.dto.VirtualBalanceRequestDTO;
 import com.coinblesk.dto.VirtualBalanceResponseDTO;
 import com.coinblesk.server.exceptions.InvalidLockTimeException;
-import com.coinblesk.server.exceptions.InvalidSignatureException;
-import com.coinblesk.server.exceptions.MissingFieldException;
+import com.coinblesk.util.InvalidSignatureException;
+import com.coinblesk.util.MissingFieldException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
 import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.WalletService;
-import com.coinblesk.server.utils.ApiVersion;
-import com.coinblesk.server.utils.DTOUtils;
+import com.coinblesk.util.DTOUtils;
 
 /**
  * @author Alessandro Di Carli
@@ -57,8 +56,11 @@ import com.coinblesk.server.utils.DTOUtils;
  * @author Andreas Albrecht
  */
 @RestController
-@RequestMapping(value = "/payment")
-@ApiVersion({"v1", ""})
+@RequestMapping(
+	value = "/payment",
+	consumes = APPLICATION_JSON_UTF8_VALUE,
+	produces = APPLICATION_JSON_UTF8_VALUE)
+
 public class PaymentController {
 
 	private final AppConfig appConfig;
@@ -73,8 +75,7 @@ public class PaymentController {
 		this.accountService = accountService;
 	}
 
-	@RequestMapping(value = "/createTimeLockedAddress", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE,
-		produces = APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/createTimeLockedAddress", method = POST)
 	@ResponseBody
 	@CrossOrigin
 	public ResponseEntity createTimeLockedAddress(@RequestBody @Valid SignedDTO request) {
@@ -125,8 +126,7 @@ public class PaymentController {
 	 * Input is the KeyExchangeRequestDTO with the client public key. The server will create for
 	 * this client public key its own server keypair and return the server public key
 	 */
-	@RequestMapping(value = "/key-exchange", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE, produces =
-		APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/key-exchange", method = POST)
 	@ResponseBody
 	@CrossOrigin
 	public ResponseEntity keyExchange(@RequestBody @Valid KeyExchangeRequestDTO request) {
@@ -147,8 +147,7 @@ public class PaymentController {
 		}
 	}
 
-	@RequestMapping(value = {"/virtualbalance"}, method = POST, consumes = "application/json; charset=UTF-8", produces
-		= "application/json; charset=UTF-8")
+	@RequestMapping(value = {"/virtualbalance"}, method = POST)
 	@ResponseBody
 	public ResponseEntity virtualBalance(@RequestBody @Valid SignedDTO request) {
 

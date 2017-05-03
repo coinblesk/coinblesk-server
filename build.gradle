@@ -72,10 +72,9 @@ dependencies {
 
 	// Shared resources with android client
 	// (includes transfer-objects)
-	compile 'com.coinblesk:coinblesk-shared-resources:1.4.76'
+	compile 'com.coinblesk:coinblesk-shared-resources:1.4.79'
 
-	// JWT Authentication
-	compile 'io.jsonwebtoken:jjwt:0.6.0'
+	compile 'org.knowm.xchange:xchange-bitstamp:4.2.0'
 
 	// Misc
 	compile 'org.apache.commons:commons-lang3:3.5'
@@ -125,6 +124,7 @@ task deploy {
 	ssh.settings {
 		user = "$System.env.USER"
 		identity = file("$System.env.HOME/.ssh/id_rsa")
+		knownHosts = allowAnyHosts
 	}
 
 	doLast {
@@ -133,7 +133,7 @@ task deploy {
 					session(remotes."$env") {
 						execute 'sudo systemctl stop coinblesk'
 						put from: "build/libs/$archiveName", into: dst
-						execute "chown $System.env.USER:coinblesk $dst; chmod ug+x $dst"
+						execute "chown -f $System.env.USER:coinblesk $dst; chmod -f ug+x $dst || true"
 						execute 'sudo systemctl start coinblesk'
 					}
 				}
