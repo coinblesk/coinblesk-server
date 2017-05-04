@@ -44,10 +44,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.dto.AccountDTO;
+import com.coinblesk.dto.ServerBalanceDTO;
 import com.coinblesk.dto.TimeLockedAddressDTO;
 import com.coinblesk.dto.UserAccountAdminDTO;
+import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.Event;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
@@ -55,6 +56,7 @@ import com.coinblesk.server.enumerator.EventUrgence;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.EventService;
+import com.coinblesk.server.service.MicropaymentService;
 import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.util.Pair;
@@ -78,21 +80,35 @@ public class AuthAdminController {
 	private final UserAccountService userAccountService;
 	private final AccountService accountService;
 	private final EventService eventService;
+	private final MicropaymentService microPaymentService;
 
 	@Autowired
 	public AuthAdminController(AppConfig appConfig, WalletService walletService, UserAccountService userAccountService,
-			AccountService accountService, EventService eventService) {
+			AccountService accountService, EventService eventService, MicropaymentService microPaymentService) {
 		this.appConfig = appConfig;
 		this.walletService = walletService;
 		this.userAccountService = userAccountService;
 		this.accountService = accountService;
 		this.eventService = eventService;
+		this.microPaymentService = microPaymentService;
 	}
 
 	@RequestMapping(value = "/balance", method = GET)
 	@ResponseBody
 	public Coin balance() {
 		return walletService.getBalance();
+	}
+
+	@RequestMapping(value = "/server-balance", method = GET)
+	@ResponseBody
+	public ServerBalanceDTO getServerBalance() {
+		ServerBalanceDTO result = new ServerBalanceDTO();
+		result.setSumOfAllPendingTransactions(microPaymentService.getPendingChannelValue().getValue());
+		result.setServerPotCurrent(microPaymentService.getMicroPaymentPotValue().getValue());
+		result.setServerPotInitial(-1); // TODO
+		result.setSumOfAllVirtualPayments(-1); // TODO
+
+		return result;
 	}
 
 	@RequestMapping(value = "/addresses", method = GET)
