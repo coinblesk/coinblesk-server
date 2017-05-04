@@ -59,12 +59,12 @@ public class MicropaymentService {
 	private final WalletService walletService;
 	private final AccountService accountService;
 	private final FeeService feeService;
-	private final ForexService forexService;
+	private final ForexBitcoinService forexService;
 
 	@Autowired
 	public MicropaymentService(AccountRepository accountRepository, TimeLockedAddressRepository
 		timeLockedAddressRepository, AppConfig appConfig, EventService eventService, WalletService walletService,
-							   AccountService accountService, FeeService feeService, ForexService forexService) {
+							   AccountService accountService, FeeService feeService, ForexBitcoinService forexService) {
 		this.accountRepository = accountRepository;
 		this.timeLockedAddressRepository = timeLockedAddressRepository;
 		this.appConfig = appConfig;
@@ -206,7 +206,7 @@ public class MicropaymentService {
 					" given");
 			}
 
-			final BigDecimal btc_usd = forexService.getExchangeRate("BTC", "USD");
+			final BigDecimal btc_usd = forexService.getBitstampBTCUSDRate().getRate();
 			final long channelAmountInUSD = btc_usd.divide(new BigDecimal(100000000))
 				.multiply(new BigDecimal(amountToServer.getValue())).longValue();
 			if (channelAmountInUSD > appConfig.getMaximumChannelAmountUSD()) {

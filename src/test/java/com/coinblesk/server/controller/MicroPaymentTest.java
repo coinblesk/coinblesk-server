@@ -10,10 +10,7 @@ import com.coinblesk.dto.SignedDTO;
 import com.coinblesk.server.dao.TimeLockedAddressRepository;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
-import com.coinblesk.server.service.AccountService;
-import com.coinblesk.server.service.ForexService;
-import com.coinblesk.server.service.MicropaymentService;
-import com.coinblesk.server.service.WalletService;
+import com.coinblesk.server.service.*;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 import com.coinblesk.server.utilTest.FakeTxBuilder;
 import com.coinblesk.server.utilTest.PaymentChannel;
@@ -63,7 +60,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Autowired
 	private AccountService accountService;
 	@Autowired
-	private ForexService forexService;
+	private ForexBitcoinService forexService;
 	@Autowired
 	private AccountRepository accountRepository;
 	@Autowired
@@ -83,7 +80,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	public void setUp() throws Exception {
 		mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();
 		params = appConfig.getNetworkParameters();
-		oneUSD = Coin.valueOf(BigDecimal.valueOf(100000000).divide(forexService.getExchangeRate("BTC", "USD"), BigDecimal.ROUND_UP).longValue());
+		oneUSD = Coin.valueOf(BigDecimal.valueOf(100000000).divide(forexService.getBitstampBTCUSDRate().getRate(), BigDecimal.ROUND_UP).longValue());
 		channelThreshold = oneUSD.multiply(appConfig.getMaximumChannelAmountUSD());
 		serverKey = appConfig.getMicroPaymentPotPrivKey();
 	}
