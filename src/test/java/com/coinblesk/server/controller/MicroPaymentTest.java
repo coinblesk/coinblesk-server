@@ -1,6 +1,7 @@
 package com.coinblesk.server.controller;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
+import com.coinblesk.dto.MicroPaymentResponseDTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dao.AccountRepository;
 import com.coinblesk.dto.ErrorDTO;
@@ -100,6 +101,35 @@ public class MicroPaymentTest extends CoinbleskTest {
 			.addToServerOutput(Coin.valueOf(200));
 
 		sendAndExpect2xxSuccess(buildRequestDTO(senderKey, receiverKey, channel.buildTx(), 200L, validNonce()));
+	}
+
+	@Test
+	public void microPayment_returnsSignedResponseWithNewBalance() throws Exception{
+		final ECKey senderKey = new ECKey();
+		final ECKey senderServerPKey = accountService.createAccount(senderKey);
+		final ECKey receiverKey = new ECKey();
+		final ECKey receiverServerPKey = accountService.createAccount(receiverKey);
+
+		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime).getTimeLockedAddress();
+		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
+		watchAndMineTransactions(fundingTx);
+
+		PaymentChannel channel = new PaymentChannel(params, tla.getAddress(params), senderKey, senderServerPKey)
+			.addInputs(tla, fundingTx.getOutput(0))
+			.addToServerOutput(Coin.valueOf(200));
+
+		String res = sendAndExpect2xxSuccess(buildRequestDTO(senderKey, receiverKey, channel.buildTx(), 200L, validNonce()));
+		SignedDTO resDTO = DTOUtils.fromJSON(res, SignedDTO.class);
+		DTOUtils.validateSignature(resDTO.getPayload(), resDTO.getSignature(), receiverServerPKey);
+		MicroPaymentResponseDTO innerDTO = DTOUtils.parseAndValidate(resDTO, MicroPaymentResponseDTO.class);
+		assertThat(innerDTO.getBalanceReceiver(), is(200L));
+
+		channel.addToServerOutput(500L);
+		res = sendAndExpect2xxSuccess(buildRequestDTO(senderKey, receiverKey, channel.buildTx(), 500L, validNonce()+1));
+		resDTO = DTOUtils.fromJSON(res, SignedDTO.class);
+		DTOUtils.validateSignature(resDTO.getPayload(), resDTO.getSignature(), receiverServerPKey);
+		innerDTO = DTOUtils.parseAndValidate(resDTO, MicroPaymentResponseDTO.class);
+		assertThat(innerDTO.getBalanceReceiver(), is(700L));
 	}
 
 	@Test
@@ -820,9 +850,9 @@ public class MicroPaymentTest extends CoinbleskTest {
 		assertThat(errorMessage, containsString(expectedErrorMessage));
 	}
 
-	private void sendAndExpect2xxSuccess(SignedDTO dto) throws Exception {
-		mockMvc.perform(post(URL_MICRO_PAYMENT).contentType(APPLICATION_JSON).content(DTOUtils.toJSON(dto))).andExpect
-			(status().is2xxSuccessful());
+	private String sendAndExpect2xxSuccess(SignedDTO dto) throws Exception {
+		return mockMvc.perform(post(URL_MICRO_PAYMENT).contentType(APPLICATION_JSON).content(DTOUtils.toJSON(dto))).andExpect
+			(status().is2xxSuccessful()).andReturn().getResponse().getContentAsString();
 	}
 
 	private TransactionOutput anyP2PKOutput(Transaction forTransaction) {
