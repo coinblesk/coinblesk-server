@@ -102,7 +102,7 @@ public class UserAccountServiceTest extends CoinbleskTest {
 	@Test
 	public void testTransferSuccess() throws BlockStoreException, VerificationException, PrunedException {
 		Block block = FakeTxBuilder.makeSolvedTestBlock(walletService.blockChain().getBlockStore(), appConfig
-			.getPotPrivateKeyAddress().toAddress(appConfig.getNetworkParameters()));
+			.getPotPrivKey().toAddress(appConfig.getNetworkParameters()));
 		walletService.blockChain().add(block);
 		UserAccountTO result = userAccountService.transferP2SH(ecKeyClient, "test@test.test");
 		Assert.assertTrue(result.isSuccess());

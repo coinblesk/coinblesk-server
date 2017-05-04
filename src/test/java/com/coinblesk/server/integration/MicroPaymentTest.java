@@ -105,24 +105,27 @@ public class MicroPaymentTest {
 		params = appConfig.getNetworkParameters();
 		tenCents = Coin.valueOf(BigDecimal.valueOf(100000000).divide(forexService.getExchangeRate("BTC", "USD"), BigDecimal.ROUND_UP).divide(BigDecimal.TEN).longValue());
 		oneUSD = tenCents.multiply(10);
+		generateBlock(101);
 	}
 
 	@Test
 	public void fullTest() throws Exception {
 		// Accounts for everyone
-		ECKey serverPubKeyBob = createAccount(KEY_BOB);
-		ECKey serverPubKeyAlice = createAccount(KEY_ALICE);
-		ECKey serverPubKeyMerchant = createAccount(KEY_MERCHANT);
+		createAccount(KEY_BOB);
+		createAccount(KEY_ALICE);
+		createAccount(KEY_MERCHANT);
+
+		ECKey serverMicroPotKey = appConfig.getMicroPaymentPotPrivKey();
 
 		// Server pot gets 100 dollar
 		blockUntilAddressChanged(() -> {
-			sendToAddress(serverPubKeyAlice.toAddress(params).toBase58(), oneUSD.times(100));
+			sendToAddress(serverMicroPotKey.toAddress(params).toBase58(), oneUSD.times(100));
 			generateBlock(1);
-		}, serverPubKeyAlice.toAddress(params), 1);
+		}, serverMicroPotKey.toAddress(params), 1);
 
 		// Bob creates an address
 		TimeLockedAddress addressBob = createAddress(KEY_BOB, inAMonth());
-		PaymentChannel channelBob = new PaymentChannel(params, addressBob.getAddress(params), KEY_BOB, serverPubKeyBob);
+		PaymentChannel channelBob = new PaymentChannel(params, addressBob.getAddress(params), KEY_BOB, serverMicroPotKey);
 
 		// Bob loads ~100 USD to his account
 		blockUntilAddressChanged(() -> sendToAddress(addressBob.getAddress(params).toBase58(), oneUSD.times(100)),
@@ -183,7 +186,7 @@ public class MicroPaymentTest {
 				sendToAddress(addressAlice.getAddress(params).toBase58(), oneUSD.times(30));
 				generateBlock(1);
 			}, addressAlice.getAddress(params), 1);
-		PaymentChannel channelAlice = new PaymentChannel(params, addressAlice.getAddress(params), KEY_ALICE, serverPubKeyAlice)
+		PaymentChannel channelAlice = new PaymentChannel(params, addressAlice.getAddress(params), KEY_ALICE, serverMicroPotKey)
 			.addInputs(addressAlice, getUTXOsForAddress(addressAlice));
 
 		// Alice makes a micro payment of USD 8.00 to the merchant.
@@ -233,7 +236,7 @@ public class MicroPaymentTest {
 		assertAccountState(KEY_MERCHANT, tenCents.multiply(89), false, Coin.ZERO);
 		assertPotSize(oneUSD.multiply(100));
 
-		blockUntilAddressChanged(() -> generateBlock(1), serverPubKeyAlice.toAddress(params), 1);
+		blockUntilAddressChanged(() -> generateBlock(1), serverMicroPotKey.toAddress(params), 1);
 
 		// Channel gets reopened after block, pot size increases
 		/*
@@ -263,7 +266,7 @@ public class MicroPaymentTest {
 
 		// Merchant pays out
 		micropaymentService.payOutVirtualBalance(KEY_MERCHANT, new ECKey().toAddress(params).toBase58());
-		blockUntilAddressChanged(() -> generateBlock(1), serverPubKeyMerchant.toAddress(params), 1);
+		blockUntilAddressChanged(() -> generateBlock(1), serverMicroPotKey.toAddress(params), 1);
 		/*
 		+----------+-----------------+--------+-----------------------------+
 		| Account  | Virtual Balance | Locked | PendingPaymentChannelAmount |
@@ -283,7 +286,7 @@ public class MicroPaymentTest {
 		micropaymentService.closeMicroPaymentChannel(KEY_BOB);
 		assertAccountState(KEY_BOB, Coin.ZERO, true, oneUSD);
 		assertPotSize(tenCents.multiply(991));
-		blockUntilAddressChanged(() -> generateBlock(1), serverPubKeyBob.toAddress(params), 1);
+		blockUntilAddressChanged(() -> generateBlock(1), serverMicroPotKey.toAddress(params), 1);
 		assertAccountState(KEY_BOB, Coin.ZERO, false, Coin.ZERO);
 		assertPotSize(tenCents.multiply(1001));
 

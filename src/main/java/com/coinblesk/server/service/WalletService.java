@@ -110,7 +110,7 @@ public class WalletService {
 
 		walletWatchKeysCLTV(params);
 		walletWatchKeysPot(params);
-		walletWatchMicropaymentPot(params);
+		walletWatchMicropaymentPot();
 
 		blockChain = new BlockChain(params, blockStore);
 		peerGroup = new PeerGroup(params, blockChain);
@@ -171,18 +171,13 @@ public class WalletService {
 	}
 
 	private void walletWatchKeysPot(final NetworkParameters params) {
-		ECKey potAddress = appConfig.getPotPrivateKeyAddress();
+		ECKey potAddress = appConfig.getPotPrivKey();
 		wallet.addWatchedAddress(potAddress.toAddress(params), appConfig.getPotCreationTime());
 		LOG.info("walletWatchKeysPot: {}, createdAt: {}", potAddress.toAddress(params), Instant.ofEpochSecond(appConfig.getPotCreationTime()));
 	}
 
-	private void walletWatchMicropaymentPot(final NetworkParameters params) {
-		accountService.allAccounts().forEach(account -> {
-				Address address = ECKey.fromPublicOnly(account.serverPublicKey()).toAddress(params);
-				LOG.info("Watch serverPotAddress: {}", address);
-				wallet.addWatchedAddress(address, account.timeCreated());
-			}
-		);
+	private void walletWatchMicropaymentPot() {
+		wallet.importKey(appConfig.getMicroPaymentPotPrivKey());
 	}
 
 	/**
@@ -203,7 +198,7 @@ public class WalletService {
 	}
 
 	public List<TransactionOutput> potTransactionOutput(final NetworkParameters params) {
-		ECKey potAddress = appConfig.getPotPrivateKeyAddress();
+		ECKey potAddress = appConfig.getPotPrivKey();
 		final List<TransactionOutput> retVal = new ArrayList<TransactionOutput>();
 		for (TransactionOutput output : wallet.getWatchedOutputs(true)) {
 			Address to = output.getScriptPubKey().getToAddress(params);

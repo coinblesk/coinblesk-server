@@ -73,6 +73,8 @@ public class MicroPaymentTest extends CoinbleskTest {
 
 	public static NetworkParameters params;
 
+	private static ECKey serverKey;
+
 	private static long validNonce()  {
 		return Instant.now().toEpochMilli();
 	}
@@ -83,20 +85,22 @@ public class MicroPaymentTest extends CoinbleskTest {
 		params = appConfig.getNetworkParameters();
 		oneUSD = Coin.valueOf(BigDecimal.valueOf(100000000).divide(forexService.getExchangeRate("BTC", "USD"), BigDecimal.ROUND_UP).longValue());
 		channelThreshold = oneUSD.multiply(appConfig.getMaximumChannelAmountUSD());
+		serverKey = appConfig.getMicroPaymentPotPrivKey();
 	}
 
 	@Test
 	public void microPayment_returns200OK() throws Exception{
 		final ECKey senderKey = new ECKey();
-		final ECKey serverPublicKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 		accountService.createAccount(receiverKey);
+		appConfig.getMicroPaymentPotPrivKey();
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime).getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
 		watchAndMineTransactions(fundingTx);
 
-		PaymentChannel channel = new PaymentChannel(params, tla.getAddress(params), senderKey, serverPublicKey)
+		PaymentChannel channel = new PaymentChannel(params, tla.getAddress(params), senderKey, serverKey)
 			.addInputs(tla, fundingTx.getOutput(0))
 			.addToServerOutput(Coin.valueOf(200));
 
@@ -106,7 +110,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_returnsSignedResponseWithNewBalance() throws Exception{
 		final ECKey senderKey = new ECKey();
-		final ECKey senderServerPKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 		final ECKey receiverServerPKey = accountService.createAccount(receiverKey);
 
@@ -114,7 +118,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
 		watchAndMineTransactions(fundingTx);
 
-		PaymentChannel channel = new PaymentChannel(params, tla.getAddress(params), senderKey, senderServerPKey)
+		PaymentChannel channel = new PaymentChannel(params, tla.getAddress(params), senderKey, serverKey)
 			.addInputs(tla, fundingTx.getOutput(0))
 			.addToServerOutput(Coin.valueOf(200));
 
@@ -171,7 +175,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnWrongAddressType() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 
 		final ECKey receiverKey = new ECKey();
 		accountService.createAccount(receiverKey);
@@ -200,7 +204,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnUnknownTLAInputs() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 		accountService.createAccount(receiverKey);
 
@@ -218,7 +222,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnSpentUTXOs() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 		accountService.createAccount(receiverKey);
 
@@ -269,7 +273,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnSoonLockedInputs() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 		accountService.createAccount(receiverKey);
 
@@ -326,7 +330,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnSignedByWrongAccount() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 		accountService.createAccount(receiverKey);
 
@@ -346,7 +350,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnNoOutputForServer() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 		accountService.createAccount(receiverKey);
 
@@ -364,7 +368,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnUnknownReceiver() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime).getTimeLockedAddress();
@@ -396,7 +400,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsSendingToOneself() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 
 		TimeLockedAddress tla = accountService.createTimeLockedAddress(senderKey, validLockTime).getTimeLockedAddress();
 		Transaction fundingTx = FakeTxBuilder.createFakeTxWithoutChangeAddress(params, tla.getAddress(params));
@@ -430,7 +434,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsWhenChannelIsLocked() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 		accountService.createAccount(receiverKey);
 
@@ -449,7 +453,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsOnInvalidNonce() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 		accountService.createAccount(receiverKey);
 
@@ -473,7 +477,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsWhenInputAmountIsTooSmall() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 		accountService.createAccount(receiverKey);
 
@@ -491,7 +495,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsWithWrongAmountOnOpenChannel() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 		accountService.createAccount(receiverKey);
 
@@ -535,7 +539,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsWithInsufficientFee() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 		accountService.createAccount(receiverKey);
 
@@ -552,7 +556,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_failsWhenSendingOverThreshold() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 		accountService.createAccount(receiverKey);
 
@@ -583,7 +587,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_sendsAmountToReceiver() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 		accountService.createAccount(receiverKey);
 
@@ -603,7 +607,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_savesBroadcastableTransaction() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 		accountService.createAccount(receiverKey);
 
@@ -627,7 +631,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_replayAttackFails() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 		accountService.createAccount(receiverKey);
 
@@ -674,7 +678,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_increasesServerPotWhenMined() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 		accountService.createAccount(receiverKey);
 		walletService.addWatching(serverKey.toAddress(params));
@@ -755,7 +759,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	@Test
 	public void microPayment_setsCorrectBroadcastBefore() throws Exception {
 		final ECKey senderKey = new ECKey();
-		final ECKey serverKey = accountService.createAccount(senderKey);
+		accountService.createAccount(senderKey);
 		final ECKey receiverKey = new ECKey();
 		accountService.createAccount(receiverKey);
 

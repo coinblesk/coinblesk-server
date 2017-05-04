@@ -174,7 +174,7 @@ public class MicropaymentService {
 		final long broadcastBefore = checkInputs(tx, accountSender, feeService.fee());
 
 		// Amount given to server must be equal to last channel or higher
-		final ECKey serverPubKey = ECKey.fromPublicOnly(accountSender.serverPublicKey());
+		final ECKey serverPubKey = appConfig.getMicroPaymentPotPrivKey();
 		final Coin amountToServer = getOutputForP2PK(txInBytes, serverPubKey);
 		final Coin actualAmountSent = amountToServer.minus(
 			getOutputForP2PK(accountSender.getChannelTransaction(), serverPubKey));
@@ -341,7 +341,7 @@ public class MicropaymentService {
 			return new PayoutResponse();
 		}
 
-		Address changeAddress = ECKey.fromPrivate(account.serverPrivateKey()).toAddress(appConfig.getNetworkParameters());
+		Address changeAddress = appConfig.getMicroPaymentPotPrivKey().toAddress(appConfig.getNetworkParameters());
 
 		// Estimate fee by creating a send request
 		final Coin feePer1000Bytes = Coin.valueOf(feeService.fee() * 1000);
@@ -464,8 +464,7 @@ public class MicropaymentService {
 		if (account.getChannelTransaction() == null)
 			return Coin.ZERO;
 		Transaction tx = new Transaction(appConfig.getNetworkParameters(), account.getChannelTransaction());
-		Address serverAddress = ECKey.fromPrivateAndPrecalculatedPublic(account.serverPrivateKey(),
-			account.serverPublicKey()).toAddress(appConfig.getNetworkParameters());
+		Address serverAddress = appConfig.getMicroPaymentPotPrivKey().toAddress(appConfig.getNetworkParameters());
 		return tx.getOutputs().stream()
 			.filter(out -> Objects.equals(out.getAddressFromP2PKHScript(appConfig.getNetworkParameters()), serverAddress))
 			.findFirst()
@@ -478,13 +477,11 @@ public class MicropaymentService {
 	}
 
 	private List<TransactionOutput> getAllPotOutputs() {
-		final Set<Address> serverPotAddresses = accountService.allAccounts().stream().map(account -> ECKey
-			.fromPublicOnly(account.serverPublicKey()).toAddress(appConfig.getNetworkParameters())).collect(Collectors
-			.toSet());
+		Address microPaymentPotAddress = appConfig.getMicroPaymentPotPrivKey().toAddress(appConfig.getNetworkParameters());
 
 		return walletService.getAllSpendCandidates().stream().filter(output -> {
 			Address address = output.getAddressFromP2PKHScript(appConfig.getNetworkParameters());
-			return serverPotAddresses.contains(address) &&
+			return Objects.equals(address, microPaymentPotAddress) &&
 				output.getParentTransaction().getConfidence().getConfidenceType().equals(TransactionConfidence
 					.ConfidenceType.BUILDING) && output.getParentTransactionDepthInBlocks() >= appConfig.getMinConf();
 		}).collect(Collectors.toList());
@@ -540,12 +537,11 @@ public class MicropaymentService {
 	 * @return Coin value of the first matching output or Coin.ZERO if none found
 	 */
 	private Coin getOutputForP2PK(Transaction tx, ECKey publicKey) {
-		final Address serverPot = publicKey.toAddress(appConfig.getNetworkParameters());
+		final Address address = publicKey.toAddress(appConfig.getNetworkParameters());
 		Coin value = Coin.ZERO;
 
 		for(int i=0; i<tx.getOutputs().size(); i++) {
-			Address p2PKAddress = tx.getOutput(i).getAddressFromP2PKHScript(appConfig.getNetworkParameters());
-			if (Objects.equals(tx.getOutput(i).getAddressFromP2PKHScript(appConfig.getNetworkParameters()), serverPot))
+			if (Objects.equals(tx.getOutput(i).getAddressFromP2PKHScript(appConfig.getNetworkParameters()), address))
 				value = value.plus(tx.getOutput(i).getValue());
 		}
 		return value;

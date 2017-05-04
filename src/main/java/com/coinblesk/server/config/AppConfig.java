@@ -79,6 +79,8 @@ public class AppConfig {
 	// this private key is just use for unit tests
 	@Value("${bitcoin.potprivkey}")
 	private BigInteger potPrivateKeyAddress;
+	@Value("${bitcoin.micropaymentpotprivkey}")
+	private BigInteger microPaymentPotPrivateKey;
 	@Value("${bitcoin.potCreationTime}")
 	private Long potCreationTime;
 
@@ -108,9 +110,15 @@ public class AppConfig {
 		return new HashSet<>(SUPPORTED_CLIENT_VERSIONS);
 	}
 
-	public ECKey getPotPrivateKeyAddress() {
+	public ECKey getPotPrivKey() {
 		ECKey ecKey = ECKey.fromPrivate(potPrivateKeyAddress);
 		LOG.info("Pot address is: {}", ecKey.toAddress(getNetworkParameters()));
+		return ecKey;
+	}
+
+	public ECKey getMicroPaymentPotPrivKey() {
+		ECKey ecKey = ECKey.fromPrivate(microPaymentPotPrivateKey);
+		LOG.info("Micropayment Pot address is: {}", ecKey.toAddress(getNetworkParameters()));
 		return ecKey;
 	}
 

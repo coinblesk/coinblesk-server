@@ -37,8 +37,7 @@ public class RegtestHelper {
 	}
 
 	private static <T> T sendRegtestCommand(String method, String params, Class<T> resultClass) throws IOException {
-		String cookie = new String(Files.readAllBytes(Paths.get(System.getProperty("user.home") +
-			"/.bitcoin/regtest/.cookie")));
+		String cookie = new String(Files.readAllBytes(Paths.get("/tmp/regtest/regtest/.cookie")));
 		String base64Auth = DTOUtils.toBase64(cookie);
 		URL obj = new URL(BITCOIN_CLI_URL);
 		HttpURLConnection con = (HttpURLConnection) obj.openConnection();

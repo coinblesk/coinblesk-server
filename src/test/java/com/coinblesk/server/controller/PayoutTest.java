@@ -45,8 +45,8 @@ public class PayoutTest extends CoinbleskTest {
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	public void payout_works() throws Exception {
 		ECKey user = new ECKey();
-		ECKey serverKey = accountService.createAccount(user);
-		final Address microPotAddress = serverKey.toAddress(params());
+		accountService.createAccount(user);
+		final Address microPotAddress = appConfig.getMicroPaymentPotPrivKey().toAddress(params());
 		walletService.getWallet().importKey(ECKey.fromPrivate(accountService.getByClientPublicKey(user.getPubKey()).serverPrivateKey()));
 
 		// Load up some money to the server pot

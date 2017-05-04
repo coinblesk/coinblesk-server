@@ -44,9 +44,10 @@ public class MicropaymentServiceTest extends CoinbleskTest {
 	public void getPendingChannelValue() throws Exception {
 		ECKey acc1 = new ECKey();
 		ECKey acc2 = new ECKey();
-		ECKey serverKey1 = accountService.createAccount(acc1); // Two accounts with open channels
-		ECKey serverKey2 = accountService.createAccount(acc2);
+		accountService.createAccount(acc1); // Two accounts with open channels
+		accountService.createAccount(acc2);
 		accountService.createAccount(new ECKey()); // Account with no open channel
+		ECKey serverKey = appConfig.getMicroPaymentPotPrivKey();
 
 		TimeLockedAddress address1 = accountService.createTimeLockedAddress(acc1,
 			Instant.now().plus(Duration.ofDays(90)).getEpochSecond()).getTimeLockedAddress();
@@ -56,8 +57,8 @@ public class MicropaymentServiceTest extends CoinbleskTest {
 		Transaction fundingTx1 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), address1.getAddress(params()));
 		Transaction fundingTx2 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), address2.getAddress(params()));
 
-		Transaction tx1 = MicroPaymentTest.createChannelTx(10000, acc1, serverKey1, address1, 337, params(), fundingTx1.getOutput(0));
-		Transaction tx2 = MicroPaymentTest.createChannelTx(10000, acc1, serverKey2, address2, 662, params(), fundingTx2.getOutput(0));
+		Transaction tx1 = MicroPaymentTest.createChannelTx(10000, acc1, serverKey, address1, 337, params(), fundingTx1.getOutput(0));
+		Transaction tx2 = MicroPaymentTest.createChannelTx(10000, acc1, serverKey, address2, 662, params(), fundingTx2.getOutput(0));
 
 		Account account1 = accountRepository.findByClientPublicKey(acc1.getPubKey())
 			.channelTransaction(tx1.bitcoinSerialize())
@@ -72,14 +73,16 @@ public class MicropaymentServiceTest extends CoinbleskTest {
 
 	@Test
 	public void getMicroPaymentPotValue() throws Exception {
-		ECKey serverKey1 = accountService.createAccount(new ECKey());
-		ECKey serverKey2 = accountService.createAccount(new ECKey());
+		accountService.createAccount(new ECKey());
+		accountService.createAccount(new ECKey());
+		ECKey serverKey = appConfig.getMicroPaymentPotPrivKey();
+
 		Coin potBefore = micropaymentService.getMicroPaymentPotValue();
-		walletService.addWatching(serverKey1.toAddress(params()));
-		walletService.addWatching(serverKey2.toAddress(params()));
-		Transaction tx1 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), serverKey1.toAddress(params()));
-		Transaction tx2 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), serverKey2.toAddress(params()));
-		Transaction tx3 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), serverKey2.toAddress(params()));
+		walletService.addWatching(serverKey.toAddress(params()));
+		walletService.addWatching(serverKey.toAddress(params()));
+		Transaction tx1 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), serverKey.toAddress(params()));
+		Transaction tx2 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), serverKey.toAddress(params()));
+		Transaction tx3 = FakeTxBuilder.createFakeTxWithoutChangeAddress(params(), serverKey.toAddress(params()));
 		mineTransaction(tx1);
 		mineTransaction(tx2);
 		walletService.getWallet().maybeCommitTx(tx3);

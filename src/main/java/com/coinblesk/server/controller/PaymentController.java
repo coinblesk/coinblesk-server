@@ -130,7 +130,6 @@ public class PaymentController {
 	@ResponseBody
 	@CrossOrigin
 	public ResponseEntity keyExchange(@RequestBody @Valid KeyExchangeRequestDTO request) {
-
 		ECKey clientPublicKey;
 		try {
 			clientPublicKey = DTOUtils.getECKeyFromHexPublicKey(request.getPublicKey());
@@ -140,7 +139,6 @@ public class PaymentController {
 
 		try {
 			final ECKey serverKey = accountService.createAccount(clientPublicKey);
-			walletService.getWallet().importKey(serverKey);
 			return new ResponseEntity<>(new KeyExchangeResponseDTO(serverKey.getPublicKeyAsHex()), OK);
 		} catch (Throwable e) {
 			return new ResponseEntity<>(new ErrorDTO("Error during key exchange"), INTERNAL_SERVER_ERROR);

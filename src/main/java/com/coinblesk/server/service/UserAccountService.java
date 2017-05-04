@@ -248,7 +248,7 @@ public class UserAccountService {
 		if (userAccount == null) {
 			return new UserAccountTO().type(Type.NO_ACCOUNT);
 		}
-		final ECKey pot = appConfig.getPotPrivateKeyAddress();
+		final ECKey pot = appConfig.getPotPrivKey();
 		long satoshi = userAccount	.getBalance()
 									.multiply(new BigDecimal(ONE_BITCOIN_IN_SATOSHI))
 									.longValue();
