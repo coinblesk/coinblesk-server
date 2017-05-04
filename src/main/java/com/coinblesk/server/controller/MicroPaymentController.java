@@ -58,7 +58,10 @@ public class MicroPaymentController {
 				requestDTO.getToPublicKey(), requestDTO.getTx(), requestDTO.getAmount(), requestDTO.getNonce());
 
 			if (result.broadcastedTx == null) {
-				return new ResponseEntity<>("New balance receiver: " + result.newBalanceReceiver, OK);
+				MicroPaymentResponseDTO payload = new MicroPaymentResponseDTO(result.newBalanceReceiver,
+					Instant.now().getEpochSecond());
+				SignedDTO dto = DTOUtils.serializeAndSign(payload, result.privateKeyServer);
+				return new ResponseEntity<>(dto, OK);
 			} else {
 				return new ResponseEntity<>(" Broadcast Transaction: " + result.broadcastedTx.getHashAsString(), OK);
 			}

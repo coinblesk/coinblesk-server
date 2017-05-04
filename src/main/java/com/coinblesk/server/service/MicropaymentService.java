@@ -144,6 +144,7 @@ public class MicropaymentService {
 
 	// Represents a successful micro payment
 	public static class MicroPaymentResult {
+		public ECKey privateKeyServer;
 		public long newBalanceReceiver;
 		public Transaction broadcastedTx; // Non-null if the channel was closed
 	}
@@ -234,6 +235,7 @@ public class MicropaymentService {
 
 			MicroPaymentResult res = new MicroPaymentResult();
 			res.newBalanceReceiver = newAmountReceiver;
+			res.privateKeyServer = ECKey.fromPrivate(accountReceiver.serverPrivateKey());
 			return res;
 		}
 	}
