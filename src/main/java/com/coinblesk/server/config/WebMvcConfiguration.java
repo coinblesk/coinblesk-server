@@ -15,23 +15,18 @@
  */
 package com.coinblesk.server.config;
 
-import com.coinblesk.util.SerializeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
-import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.json.GsonHttpMessageConverter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.util.Arrays;
-import java.util.List;
 
 import static java.util.Arrays.asList;
 
@@ -44,13 +39,6 @@ public class WebMvcConfiguration extends WebMvcConfigurerAdapter {
 	@Autowired
 	public WebMvcConfiguration(Environment environment) {
 		this.environment = environment;
-	}
-
-	@Override
-	public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
-		GsonHttpMessageConverter gsonHttpMessageConverter = new GsonHttpMessageConverter();
-		gsonHttpMessageConverter.setGson(SerializeUtils.GSON);
-		converters.add(gsonHttpMessageConverter);
 	}
 
 	@Override
