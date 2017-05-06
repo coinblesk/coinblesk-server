@@ -15,6 +15,7 @@
  */
 package com.coinblesk.server.config;
 
+import static com.coinblesk.server.config.Constants.PROFILE_PROD;
 import static java.util.Arrays.asList;
 import static org.springframework.http.HttpMethod.OPTIONS;
 
@@ -22,6 +23,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -50,14 +52,16 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	private final TokenProvider tokenProvider;
 	private final UserDetailsService userDetailsService;
 	private final PasswordEncoder passwordEncoder;
+	private final Environment env;
 
 	@Autowired
 	public SecurityConfig(Http401UnauthorizedEntryPoint http401UnauthorizedEntryPoint, TokenProvider tokenProvider,
-						  UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
+						  UserDetailsService userDetailsService, PasswordEncoder passwordEncoder, Environment env) {
 		this.http401UnauthorizedEntryPoint = http401UnauthorizedEntryPoint;
 		this.tokenProvider = tokenProvider;
 		this.userDetailsService = userDetailsService;
 		this.passwordEncoder = passwordEncoder;
+		this.env = env;
 	}
 
 	@Autowired
@@ -102,10 +106,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			@Override
 			public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
 				CorsConfiguration corsConfig = new CorsConfiguration();
-				corsConfig.setAllowedOrigins(asList("*"));
-				corsConfig.setAllowedMethods(asList("GET", "PUT", "POST", "DELETE", "OPTIONS"));
-				corsConfig.setAllowedHeaders(asList("*"));
-				corsConfig.setMaxAge(1800L);
+
+				if(!asList(env.getActiveProfiles()).contains(PROFILE_PROD)) {
+					corsConfig.setAllowedOrigins(asList("*"));
+					corsConfig.setAllowedMethods(asList("GET", "PUT", "POST", "DELETE", "OPTIONS"));
+					corsConfig.setAllowedHeaders(asList("*"));
+					corsConfig.setMaxAge(1800L);
+				}
 				return corsConfig;
 			}
 		};
