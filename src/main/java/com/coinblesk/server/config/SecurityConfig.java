@@ -15,7 +15,10 @@
  */
 package com.coinblesk.server.config;
 
+import static java.util.Arrays.asList;
 import static org.springframework.http.HttpMethod.OPTIONS;
+
+import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +30,8 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 import com.coinblesk.server.auth.Http401UnauthorizedEntryPoint;
 import com.coinblesk.server.auth.JWTConfigurer;
@@ -68,6 +73,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	protected void configure(HttpSecurity http) throws Exception {
 		http
 			.cors()
+			.configurationSource(corsConfiguration())
 		.and()
 			.exceptionHandling()
 			.authenticationEntryPoint(http401UnauthorizedEntryPoint)
@@ -80,11 +86,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		.and()
 			.sessionManagement()
 			.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-		.and() // allow CORS's OPTIONS preflight
-			.authorizeRequests()
-			.antMatchers(OPTIONS, "/**").permitAll()
 		.and()
 			.authorizeRequests()
+			.antMatchers(OPTIONS, "/**").permitAll()
 		.and()
 			.apply(securityConfigurerAdapter());
 	}
@@ -93,4 +97,17 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		return new JWTConfigurer(tokenProvider);
 	}
 
+	private CorsConfigurationSource corsConfiguration() {
+		return new CorsConfigurationSource() {
+			@Override
+			public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
+				CorsConfiguration corsConfig = new CorsConfiguration();
+				corsConfig.setAllowedOrigins(asList("*"));
+				corsConfig.setAllowedMethods(asList("GET", "PUT", "POST", "DELETE", "OPTIONS"));
+				corsConfig.setAllowedHeaders(asList("*"));
+				corsConfig.setMaxAge(1800L);
+				return corsConfig;
+			}
+		};
+	}
 }
