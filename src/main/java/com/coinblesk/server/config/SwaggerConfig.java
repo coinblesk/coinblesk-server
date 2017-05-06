@@ -27,9 +27,9 @@ public class SwaggerConfig {
 				.apiInfo(apiInfo())
 				.select()
 				.apis(any())
-				// do not include default spring /error page,
-				// see https://regex101.com/r/hHdVDj/1
-				.paths(regex("^(?!\\/error$).*$"))
+				// do not include default spring /error page and /debug,
+				// see https://regex101.com/r/hHdVDj/3
+				.paths(regex("^(?!\\/error$|\\/debug).*$"))
 				.build()
 				.securitySchemes(apiKeys());
 	}
@@ -42,9 +42,9 @@ public class SwaggerConfig {
 				.apiInfo(apiInfo())
 				.select()
 				.apis(any())
-				// do not include default spring /error page (and /v1),
-				// see  https://regex101.com/r/hHdVDj/2
-				.paths(regex("^(?!(\\/v1|\\/error$)).*$"))
+				// do not include default spring /error page, /debug (and /v1),
+				// see  https://regex101.com/r/hHdVDj/4
+				.paths(regex("^(?!(\\/v1|\\/error$|\\/debug)).*$"))
 				.build()
 				.securitySchemes(apiKeys());
 	}

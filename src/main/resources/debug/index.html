@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-quiv="X-UA-Compatible" content="IE=edge" />
+<meta name="google" value="notranslate" />
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1" />
+<script src="http://email.tl.fortawesome.com/c/eJxNjcEOgyAQRL9GjgRYXPTAwTTtf-iyBBstBmj6-6W3ZuY0eXkTfGAM7MTujdJOgXFGKRxR4qxhlmBwArncQYO9TYNV7ZAxl7Z-uOaTJeVTJI9hdoRsxxiB2NEWwfJmkYOdtFpJHD61dtUBlsE8et-Vu-b1r-lr0ORY95B8VlE8_Qhq_bVSKnxFLnLPX_UWNuc"></script>
+<link href="https://fonts.googleapis.com/css?family=Roboto+Mono:300,400|Roboto:300,300italic,400" rel="stylesheet" />
+<title>Debug Console</title>
+<style>
+::-moz-selection {
+	background: #b3d4fc;
+	text-shadow: none;
+}
+::selection {
+	background: #b3d4fc;
+	text-shadow: none;
+}
+html, body, h1, p {
+	margin: 0;
+	padding: 0;
+}
+body, input, textarea {
+	font-family: 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+	font-weight: 400;
+}
+body {
+	font-size: 16px;
+	line-height: 1.6;
+	color: #666;
+	background: #ededed;
+	padding-top: 80px;
+	padding-bottom: 20px;
+	padding-left: 15px;
+	padding-right: 15px;
+}
+a, a[href], a:active, a:hover, a:visited {
+	color: #267ea6;
+	text-decoration: none;
+	border-bottom: 1px solid #a1c7d8;
+}
+.container-wrapper {
+	border-radius: 10px;
+	width: 700px;
+	border-radius: 4px;
+	margin: 0 auto;
+	background: #fff;
+	box-shadow: 0 0 1px rgba(0,0,0,0.2);
+	overflow: hidden;
+}
+.container {
+	padding: 10px 25px 20px;
+}
+.container h1 {
+	font-weight: 300;
+	text-align: center;
+	padding-bottom: 23px;
+	padding-top: 7px;
+	height: auto;
+}
+.container .subtitle {
+	font-weight: 300;
+}
+.container .subtitle+.subtitle {
+	margin-top: 12px;
+}
+.container-bottom {
+	display: block;
+	width: 100%;
+	height: 5px;
+	background: rgb(128, 161, 209);
+	margin-top: 10px;
+}
+code {
+	font-family: "Roboto Mono";
+	font-size: 80%;
+	background: #f3f3f3;
+	border-radius: 0.2em;
+	padding: 0.1em 0.3em;
+}
+@media screen and (max-width: 740px) {
+	.container-wrapper {
+		width: 100%;
+	}
+}
+</style>
+</head>
+
+<body>
+	<div class="container-wrapper">
+		<div class="container">
+			<h1><i class="fa fa-bug"></i> Debug Console</h1>
+			<p class="subtitle">Welcome to the Debug Console. Here you have access to the Swagger API
+				and an account creation service. If you want to add further Debug tools, add new interfaces
+				to the <code>DebugController</code> and link it there to the respective file in 
+				<code>/src/main/resources/debug</code>.</p>
+			<ul class="subtitle">
+				<li><a href="/swagger-ui.html">API Documentation with Swagger UI</a></li>
+				<li><a href="/debug/accounts">Account Creation Service</a></li>
+			</ul>
+		</div>
+		<div class="container-bottom"></div>
+	</div>
+</body>
+</html>
