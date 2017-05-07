@@ -1,20 +1,35 @@
 package com.coinblesk.server.service;
 
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.dao.AccountRepository;
-import com.coinblesk.server.dao.TimeLockedAddressRepository;
-import com.coinblesk.server.entity.Account;
-import com.coinblesk.server.entity.TimeLockedAddressEntity;
-import com.coinblesk.server.enumerator.EventType;
-import com.coinblesk.server.exceptions.*;
-import com.coinblesk.server.utils.CoinUtils;
-import com.coinblesk.util.DTOUtils;
-import com.coinblesk.util.InsufficientFunds;
-import com.google.common.annotations.VisibleForTesting;
-import lombok.Data;
-import lombok.NonNull;
-import org.bitcoinj.core.*;
+import static com.coinblesk.server.enumerator.EventType.MICRO_PAYMENT_POT_EXHAUSTED;
+
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+import javax.annotation.Nullable;
+
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.InsufficientMoneyException;
+import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Transaction.SigHash;
+import org.bitcoinj.core.TransactionConfidence;
+import org.bitcoinj.core.TransactionInput;
+import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
@@ -30,24 +45,24 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.Nullable;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.dao.AccountRepository;
+import com.coinblesk.server.dao.TimeLockedAddressRepository;
+import com.coinblesk.server.entity.Account;
+import com.coinblesk.server.entity.TimeLockedAddressEntity;
+import com.coinblesk.server.enumerator.EventType;
+import com.coinblesk.server.exceptions.BusinessException;
+import com.coinblesk.server.exceptions.InvalidAmountException;
+import com.coinblesk.server.exceptions.InvalidNonceException;
+import com.coinblesk.server.exceptions.InvalidRequestException;
+import com.coinblesk.server.exceptions.UserNotFoundException;
+import com.coinblesk.server.utils.CoinUtils;
+import com.coinblesk.util.DTOUtils;
+import com.coinblesk.util.InsufficientFunds;
+import com.google.common.annotations.VisibleForTesting;
 
-import static com.coinblesk.server.enumerator.EventType.MICRO_PAYMENT_POT_EXHAUSTED;
+import lombok.Data;
+import lombok.NonNull;
 
 @Service
 public class MicropaymentService {
@@ -206,7 +221,7 @@ public class MicropaymentService {
 					" given");
 			}
 
-			final BigDecimal btc_usd = forexService.getBitstampBTCUSDRate().getRate();
+			final BigDecimal btc_usd = forexService.getBitstampCurrentRateBTCUSD().getRate();
 			final long channelAmountInUSD = btc_usd.divide(new BigDecimal(100000000))
 				.multiply(new BigDecimal(amountToServer.getValue())).longValue();
 			if (channelAmountInUSD > appConfig.getMaximumChannelAmountUSD()) {

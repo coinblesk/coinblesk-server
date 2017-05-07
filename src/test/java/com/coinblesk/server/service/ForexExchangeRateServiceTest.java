@@ -24,21 +24,21 @@ import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.coinblesk.dto.ForexDTO;
+import com.coinblesk.enumerator.ForexCurrency;
 import com.coinblesk.server.exceptions.BusinessException;
-import com.coinblesk.server.exceptions.InvalidCurrencyPatternException;
 import com.coinblesk.server.utilTest.CoinbleskTest;
 
 public class ForexExchangeRateServiceTest extends CoinbleskTest {
 
 	@Autowired
-	private ForexService forexService;
+	private ForexFiatService forexService;
 
 	@Autowired
 	private ForexBitcoinService forexBitcoinService;
 
 	@Test
 	public void testForex() throws Exception {
-		BigDecimal d = forexService.getExchangeRate("USD", "CHF");
+		BigDecimal d = forexService.getExchangeRate(ForexCurrency.USD, ForexCurrency.CHF);
 		Assert.assertNotNull(d);
 		System.out.println("rate is: " + d);
 	}
@@ -59,30 +59,20 @@ public class ForexExchangeRateServiceTest extends CoinbleskTest {
 	}
 
 	@Test
-	public void testBitcoinCurrent() throws BusinessException {
-		ForexDTO forexDTO = forexBitcoinService.getCurrentRate("EUR");
+	public void testGetCoindeskCurrentRate() throws BusinessException {
+		ForexDTO forexDTO = forexBitcoinService.getCoindeskCurrentRate(ForexCurrency.EUR);
 		Assert.assertNotNull(forexDTO);
-		Assert.assertTrue(forexDTO.getCurrencyFrom().equals("BTC"));
-		Assert.assertTrue(forexDTO.getCurrencyTo().equals("EUR"));
-	}
-
-	@Test(expected = InvalidCurrencyPatternException.class)
-	public void testBitcoinCurrentFailsWithWrongSymbol() throws BusinessException {
-		forexBitcoinService.getCurrentRate("ABC");
+		Assert.assertTrue(forexDTO.getCurrencyFrom().equals(ForexCurrency.BTC));
+		Assert.assertTrue(forexDTO.getCurrencyTo().equals(ForexCurrency.EUR));
 	}
 
 	@Test
 	public void testBitcoinHistory() throws BusinessException {
-		List<ForexDTO> list = forexBitcoinService.getHistoricRates("USD");
+		List<ForexDTO> list = forexBitcoinService.getCoindeskHistoricRates(ForexCurrency.USD);
 		Assert.assertNotNull(list);
 		Assert.assertTrue(list.size() > 10);
-		Assert.assertTrue(list.get(0).getCurrencyFrom().equals("BTC"));
-		Assert.assertTrue(list.get(0).getCurrencyTo().equals("USD"));
-	}
-
-	@Test(expected = InvalidCurrencyPatternException.class)
-	public void testBitcoinHistoryFailsWithWrongSymbol() throws BusinessException {
-		forexBitcoinService.getHistoricRates("CDE");
+		Assert.assertTrue(list.get(0).getCurrencyFrom().equals(ForexCurrency.BTC));
+		Assert.assertTrue(list.get(0).getCurrencyTo().equals(ForexCurrency.USD));
 	}
 
 }

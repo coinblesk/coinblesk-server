@@ -1,18 +1,40 @@
 package com.coinblesk.server.integration;
 
-import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.dto.*;
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.entity.Account;
-import com.coinblesk.server.service.AccountService;
-import com.coinblesk.server.service.ForexService;
-import com.coinblesk.server.service.MicropaymentService;
-import com.coinblesk.server.service.WalletService;
-import com.coinblesk.server.utilTest.PaymentChannel;
-import com.coinblesk.util.DTOUtils;
-import org.bitcoinj.core.*;
+import static com.coinblesk.server.controller.MicroPaymentTest.URL_MICRO_PAYMENT;
+import static com.coinblesk.server.controller.MicroPaymentTest.buildRequestDTO;
+import static com.coinblesk.server.controller.MicroPaymentTest.createExternalPaymentRequestDTO;
+import static com.coinblesk.server.controller.PaymentControllerTest.URL_CREATE_TIME_LOCKED_ADDRESS;
+import static com.coinblesk.server.controller.PaymentControllerTest.URL_KEY_EXCHANGE;
+import static com.coinblesk.server.controller.VirtualPaymentTest.URL_VIRTUAL_PAYMENT;
+import static com.coinblesk.server.integration.helper.RegtestHelper.generateBlock;
+import static com.coinblesk.server.integration.helper.RegtestHelper.sendToAddress;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
+
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
-import org.junit.*;
+import org.junit.Assume;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
@@ -26,24 +48,22 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.math.BigDecimal;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Objects;
-import java.util.concurrent.CountDownLatch;
-
-import static com.coinblesk.server.controller.MicroPaymentTest.*;
-import static com.coinblesk.server.controller.PaymentControllerTest.URL_CREATE_TIME_LOCKED_ADDRESS;
-import static com.coinblesk.server.controller.PaymentControllerTest.URL_KEY_EXCHANGE;
-import static com.coinblesk.server.controller.VirtualPaymentTest.URL_VIRTUAL_PAYMENT;
-import static com.coinblesk.server.integration.helper.RegtestHelper.generateBlock;
-import static com.coinblesk.server.integration.helper.RegtestHelper.sendToAddress;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
-import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.coinblesk.bitcoin.TimeLockedAddress;
+import com.coinblesk.dto.CreateAddressRequestDTO;
+import com.coinblesk.dto.CreateAddressResponseDTO;
+import com.coinblesk.dto.KeyExchangeRequestDTO;
+import com.coinblesk.dto.KeyExchangeResponseDTO;
+import com.coinblesk.dto.SignedDTO;
+import com.coinblesk.dto.VirtualPaymentRequestDTO;
+import com.coinblesk.enumerator.ForexCurrency;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.entity.Account;
+import com.coinblesk.server.service.AccountService;
+import com.coinblesk.server.service.ForexFiatService;
+import com.coinblesk.server.service.MicropaymentService;
+import com.coinblesk.server.service.WalletService;
+import com.coinblesk.server.utilTest.PaymentChannel;
+import com.coinblesk.util.DTOUtils;
 
 /**
  * This test simulates a real, complete payment exchange.
@@ -82,7 +102,7 @@ public class MicroPaymentTest {
 	private AccountService accountService;
 
 	@Autowired
-	private ForexService forexService;
+	private ForexFiatService forexService;
 
 	@Autowired
 	private MicropaymentService micropaymentService;
@@ -103,7 +123,7 @@ public class MicroPaymentTest {
 	public void setUp() throws Exception {
 		mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();
 		params = appConfig.getNetworkParameters();
-		tenCents = Coin.valueOf(BigDecimal.valueOf(100000000).divide(forexService.getExchangeRate("BTC", "USD"), BigDecimal.ROUND_UP).divide(BigDecimal.TEN).longValue());
+		tenCents = Coin.valueOf(BigDecimal.valueOf(100000000).divide(forexService.getExchangeRate(ForexCurrency.BTC, ForexCurrency.USD), BigDecimal.ROUND_UP).divide(BigDecimal.TEN).longValue());
 		oneUSD = tenCents.multiply(10);
 		generateBlock(101);
 	}

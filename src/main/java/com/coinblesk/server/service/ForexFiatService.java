@@ -20,6 +20,7 @@ import static java.lang.Boolean.TRUE;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,9 +34,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
+import com.coinblesk.dto.ForexDTO;
+import com.coinblesk.enumerator.ForexCurrency;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
-import com.coinblesk.server.exceptions.InvalidCurrencyPatternException;
+import com.coinblesk.server.exceptions.InvalidForexCurrencyException;
 import com.coinblesk.util.DTOUtils;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -48,7 +51,7 @@ import com.google.common.cache.CacheBuilder;
  * @author Thomas Bocek
  */
 @Service
-final public class ForexService {
+final public class ForexFiatService {
 
 	// 18min
 	private final static int CACHING_TIME_RATE_MILLIS = 18 * 60 * 1000;
@@ -74,9 +77,22 @@ final public class ForexService {
 	 * @return the forex exchange rate
 	 * @throws Exception
 	 */
-	public BigDecimal getExchangeRate(final String symbolFrom, final String symbolTo) throws BusinessException {
-		final String pair = symbolFrom + symbolTo;
+	public BigDecimal getExchangeRate(ForexCurrency from, ForexCurrency to) throws BusinessException {
+		String pair = from.name() + to.name();
 		return getExchangeRates(pair).get(pair);
+	}
+
+	public ForexDTO getExchangeRateDTO(ForexCurrency fromCurrency, ForexCurrency toCurrency) throws BusinessException {
+		ForexDTO result = new ForexDTO();
+
+		BigDecimal exchangeRate = getExchangeRate(fromCurrency, toCurrency);
+		result.setCurrencyFrom(fromCurrency);
+		result.setCurrencyTo(toCurrency);
+		result.setRate(exchangeRate);
+		result.setUpdatedAt(new Date());
+		System.out.println(result);
+
+		return result;
 	}
 
 	public Map<String, BigDecimal> getExchangeRates(final String... pairs) throws BusinessException {
@@ -107,7 +123,7 @@ final public class ForexService {
 					final RootMulti root = DTOUtils.fromJSON(response.toString(), RootMulti.class);
 					for (RootMulti.Query.Results.Rate rate : root.query.results.rate) {
 						if(rate.Rate.equals("N/A")) {
-							throw new InvalidCurrencyPatternException();
+							throw new InvalidForexCurrencyException();
 						}
 						BigDecimal exchangeRate = new BigDecimal(rate.Rate);
 						exchangeRatesCache.put(rate.id, exchangeRate);
@@ -116,7 +132,7 @@ final public class ForexService {
 				} else {
 					final RootSingle root = DTOUtils.fromJSON(response.toString(), RootSingle.class);
 					if(root.query.results.rate.Rate.equals("N/A")) {
-						throw new InvalidCurrencyPatternException();
+						throw new InvalidForexCurrencyException();
 					}
 					BigDecimal exchangeRate = new BigDecimal(root.query.results.rate.Rate);
 					exchangeRatesCache.put(root.query.results.rate.id, exchangeRate);
@@ -192,15 +208,15 @@ final public class ForexService {
 
 		private final static Logger Log = LoggerFactory.getLogger(ForexTask.class);
 
-		private final ForexService service;
+		private final ForexFiatService service;
 
 		@Autowired
-		public ForexTask(ForexService service) {
+		public ForexTask(ForexFiatService service) {
 			this.service = service;
 		}
 
 		// call every 6 minutes
-		@Scheduled(fixedRate = ForexService.CACHING_TIME_RATE_MILLIS / 3)
+		@Scheduled(fixedRate = ForexFiatService.CACHING_TIME_RATE_MILLIS / 3)
 		public void doTask() throws Exception {
 			Log.debug("Scheduled: Getting new rates...");
 			Set<String> set = service.exchangeRatesSymbolCache.asMap().keySet();

@@ -1,22 +1,25 @@
 package com.coinblesk.server.controller;
 
-import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.dto.MicroPaymentResponseDTO;
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.dao.AccountRepository;
-import com.coinblesk.dto.ErrorDTO;
-import com.coinblesk.dto.MicroPaymentRequestDTO;
-import com.coinblesk.dto.SignedDTO;
-import com.coinblesk.server.dao.TimeLockedAddressRepository;
-import com.coinblesk.server.entity.Account;
-import com.coinblesk.server.entity.TimeLockedAddressEntity;
-import com.coinblesk.server.service.*;
-import com.coinblesk.server.utilTest.CoinbleskTest;
-import com.coinblesk.server.utilTest.FakeTxBuilder;
-import com.coinblesk.server.utilTest.PaymentChannel;
-import com.coinblesk.util.DTOUtils;
-import org.bitcoinj.core.*;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Arrays;
+
+import org.bitcoinj.core.Block;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.PrunedException;
+import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Transaction.SigHash;
+import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
@@ -29,17 +32,24 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.math.BigDecimal;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Arrays;
-
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.coinblesk.bitcoin.TimeLockedAddress;
+import com.coinblesk.dto.ErrorDTO;
+import com.coinblesk.dto.MicroPaymentRequestDTO;
+import com.coinblesk.dto.MicroPaymentResponseDTO;
+import com.coinblesk.dto.SignedDTO;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.dao.AccountRepository;
+import com.coinblesk.server.dao.TimeLockedAddressRepository;
+import com.coinblesk.server.entity.Account;
+import com.coinblesk.server.entity.TimeLockedAddressEntity;
+import com.coinblesk.server.service.AccountService;
+import com.coinblesk.server.service.ForexBitcoinService;
+import com.coinblesk.server.service.MicropaymentService;
+import com.coinblesk.server.service.WalletService;
+import com.coinblesk.server.utilTest.CoinbleskTest;
+import com.coinblesk.server.utilTest.FakeTxBuilder;
+import com.coinblesk.server.utilTest.PaymentChannel;
+import com.coinblesk.util.DTOUtils;
 
 /***
  * @author Sebastian Stephan
@@ -80,7 +90,7 @@ public class MicroPaymentTest extends CoinbleskTest {
 	public void setUp() throws Exception {
 		mockMvc = MockMvcBuilders.webAppContextSetup(webAppContext).build();
 		params = appConfig.getNetworkParameters();
-		oneUSD = Coin.valueOf(BigDecimal.valueOf(100000000).divide(forexService.getBitstampBTCUSDRate().getRate(), BigDecimal.ROUND_UP).longValue());
+		oneUSD = Coin.valueOf(BigDecimal.valueOf(100000000).divide(forexService.getBitstampCurrentRateBTCUSD().getRate(), BigDecimal.ROUND_UP).longValue());
 		channelThreshold = oneUSD.multiply(appConfig.getMaximumChannelAmountUSD());
 		serverKey = appConfig.getMicroPaymentPotPrivKey();
 	}

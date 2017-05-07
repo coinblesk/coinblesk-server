@@ -15,7 +15,9 @@
  */
 package com.coinblesk.server.controller;
 
-import static com.coinblesk.util.SerializeUtils.GSON;
+import static com.coinblesk.enumerator.ForexCurrency.CHF;
+import static com.coinblesk.enumerator.ForexCurrency.EUR;
+import static com.coinblesk.enumerator.ForexCurrency.USD;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -30,6 +32,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 import com.coinblesk.dto.ForexDTO;
 import com.coinblesk.server.utilTest.CoinbleskTest;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * @author Thomas Bocek
@@ -38,6 +41,7 @@ import com.coinblesk.server.utilTest.CoinbleskTest;
 public class ForexTest extends CoinbleskTest {
 
 	private static MockMvc mockMvc;
+
 	@Autowired
 	private WebApplicationContext webAppContext;
 
@@ -48,19 +52,25 @@ public class ForexTest extends CoinbleskTest {
 
 	@Test
 	public void testV1() throws Exception {
-		MvcResult res = mockMvc.perform(get("/forex/exchange-rate/CHF").secure(true)).andExpect(status().isOk())
+		MvcResult res = mockMvc.perform(get("/forex/exchange-rate/fiat").param("fromCurrency", "CHF").secure(true)).andExpect(status().isOk())
 			.andReturn();
-		ForexDTO output = GSON.fromJson(res.getResponse().getContentAsString(), ForexDTO.class);
+		ForexDTO output = new ObjectMapper().readValue(res.getResponse().getContentAsString(), ForexDTO.class);
 		System.out.println(output.getCurrencyFrom() + "/" + output.getCurrencyTo() + ": " + output.getRate());
 		Assert.assertNotNull(output);
+		Assert.assertTrue(CHF.equals(output.getCurrencyFrom()));
+		Assert.assertTrue(USD.equals(output.getCurrencyTo()));
 	}
 
 	@Test
 	public void testV2() throws Exception {
-		MvcResult res = mockMvc.perform(get("/forex/exchange-rate/CHF/EUR").secure(true)).andExpect(status().isOk())
+		MvcResult res = mockMvc.perform(
+				get("/forex/exchange-rate/fiat").param("fromCurrency", "CHF").param("toCurrency", "EUR").secure(true))
+			.andExpect(status().isOk())
 			.andReturn();
-		ForexDTO output = GSON.fromJson(res.getResponse().getContentAsString(), ForexDTO.class);
+		ForexDTO output =  new ObjectMapper().readValue(res.getResponse().getContentAsString(), ForexDTO.class);
 		System.out.println(output.getCurrencyFrom() + "/" + output.getCurrencyTo() + ": " + output.getRate());
 		Assert.assertNotNull(output);
+		Assert.assertTrue(CHF.equals(output.getCurrencyFrom()));
+		Assert.assertTrue(EUR.equals(output.getCurrencyTo()));
 	}
 }

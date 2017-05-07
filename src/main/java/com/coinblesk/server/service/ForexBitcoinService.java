@@ -15,6 +15,10 @@
  */
 package com.coinblesk.server.service;
 
+import static com.coinblesk.enumerator.ForexCurrency.BTC;
+import static com.coinblesk.enumerator.ForexCurrency.USD;
+import static org.knowm.xchange.currency.CurrencyPair.BTC_USD;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -22,21 +26,21 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.bitstamp.BitstampExchange;
-import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.service.marketdata.MarketDataService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.coinblesk.dto.ForexDTO;
+import com.coinblesk.enumerator.ForexCurrency;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
-import com.coinblesk.server.exceptions.InvalidCurrencyPatternException;
+import com.coinblesk.server.exceptions.InvalidForexCurrencyException;
 import com.coinblesk.util.DTOUtils;
 
 /**
@@ -51,53 +55,86 @@ public class ForexBitcoinService {
 
 	private final static MarketDataService MARKET_DATA_SERVICE  = ExchangeFactory.INSTANCE.createExchange(BitstampExchange.class.getName()).getMarketDataService();
 
+	private ForexFiatService forexFiatService;
+
+	@Autowired
+	public ForexBitcoinService(ForexFiatService forexFiatService) {
+		this.forexFiatService = forexFiatService;
+	}
+
 	/**
 	 * Get the exchange rate from Bitstamp. As a trader can do a tradeback, we need the specific exchange. The exchange
 	 * rate for the fiat currency is then calculated in a second step.
 	 * @return
 	 * @throws IOException
 	 */
-	public ForexDTO getBitstampBTCUSDRate() throws IOException {
-		Ticker ticker = MARKET_DATA_SERVICE.getTicker(CurrencyPair.BTC_USD);
-
+	public ForexDTO getBitstampCurrentRateBTCUSD() {
 		ForexDTO forexDTO = new ForexDTO();
-		forexDTO.setCurrencyFrom("BTC");
-		forexDTO.setCurrencyTo("USD");
-		forexDTO.setRate(ticker.getAsk().add(ticker.getBid()).divide(BigDecimal.valueOf(2)));
-		forexDTO.setUpdatedAt(ticker.getTimestamp());
+
+		try {
+			Ticker ticker = MARKET_DATA_SERVICE.getTicker(BTC_USD);
+			forexDTO.setCurrencyFrom(BTC);
+			forexDTO.setCurrencyTo(USD);
+			forexDTO.setRate(ticker.getAsk().add(ticker.getBid()).divide(BigDecimal.valueOf(2)));
+			forexDTO.setUpdatedAt(ticker.getTimestamp());
+
+		} catch (IOException exception) {
+			throw new CoinbleskInternalError("Bitstamp currency rate currently not available.");
+		}
 
 		return forexDTO;
 	}
 
-	@Cacheable("forex-bitcoin-current-rates")
-	public ForexDTO getCurrentRate(String currencySymbol) throws BusinessException {
-		String url = COINDESK_CURRENT_API.replace(PLACEHOLDER, currencySymbol);
+	@Cacheable("forex-bitcoin-bitstamp")
+	public ForexDTO getBitstampCurrentRate(ForexCurrency currency) throws BusinessException {
+		ForexDTO forexBTCUSD = getBitstampCurrentRateBTCUSD();
+
+		if(USD.equals(currency)) {
+			return forexBTCUSD;
+
+		} else {
+			BigDecimal forexRateUSDOtherCurrency = forexFiatService.getExchangeRate(USD, currency);
+			BigDecimal forexRate = forexBTCUSD.getRate().multiply(forexRateUSDOtherCurrency);
+
+			ForexDTO forex = new ForexDTO();
+			forex.setCurrencyFrom(BTC);
+			forex.setCurrencyTo(currency);
+			forex.setRate(forexRate);
+			forex.setUpdatedAt(new Date());
+
+			return forex;
+		}
+	}
+
+	@Cacheable("forex-bitcoin-coindesk-current")
+	public ForexDTO getCoindeskCurrentRate(ForexCurrency currency) throws BusinessException {
+		String url = COINDESK_CURRENT_API.replace(PLACEHOLDER, currency.name());
 		try {
 			StringBuffer response = ServiceUtils.doHttpRequest(url);
 			CurrentJsonStructure json = DTOUtils.fromJSON(response.toString(), CurrentJsonStructure.class);
-			CurrentJsonStructure.Rate rate = json.bpi.get(currencySymbol);
+			CurrentJsonStructure.Rate rate = json.bpi.get(currency.name());
 			Date date = json.time.updatedISO;
 
-			if(!currencySymbol.equals(rate.code)) {
+			if(!currency.name().equals(rate.code)) {
 				throw new CoinbleskInternalError("The currency response could not be parsed correctly.");
 			}
 
 			ForexDTO forexDTO = new ForexDTO();
-			forexDTO.setCurrencyFrom("BTC");
-			forexDTO.setCurrencyTo(currencySymbol);
+			forexDTO.setCurrencyFrom(BTC);
+			forexDTO.setCurrencyTo(currency);
 			forexDTO.setRate(new BigDecimal(rate.rate_float));
 			forexDTO.setUpdatedAt(date);
 
 			return forexDTO;
 
 		} catch(Exception ex) {
-			throw new InvalidCurrencyPatternException();
+			throw new InvalidForexCurrencyException();
 		}
 	}
 
-	@Cacheable("forex-bitcoin-historic-rates")
-	public List<ForexDTO> getHistoricRates(String currencySymbol) throws BusinessException {
-		String url = COINDESK_HISTORIC_API.replace(PLACEHOLDER, currencySymbol);
+	@Cacheable("forex-bitcoin-coindesk-history")
+	public List<ForexDTO> getCoindeskHistoricRates(ForexCurrency currency) throws BusinessException {
+		String url = COINDESK_HISTORIC_API.replace(PLACEHOLDER, currency.name());
 		try {
 			StringBuffer response = ServiceUtils.doHttpRequest(url);
 			Map<Date, Double> map = DTOUtils.fromJSON(response.toString(), HistoricJsonStructure.class).bpi;
@@ -105,8 +142,8 @@ public class ForexBitcoinService {
 
 			for(Map.Entry<Date, Double> entrySet : map.entrySet()) {
 				ForexDTO dto = new ForexDTO();
-				dto.setCurrencyFrom("BTC");
-				dto.setCurrencyTo(currencySymbol);
+				dto.setCurrencyFrom(BTC);
+				dto.setCurrencyTo(currency);
 				dto.setRate(new BigDecimal(entrySet.getValue()));
 				dto.setUpdatedAt(entrySet.getKey());
 				result.add(dto);
@@ -115,7 +152,7 @@ public class ForexBitcoinService {
 			return result;
 
 		} catch(Exception ex) {
-			throw new InvalidCurrencyPatternException();
+			throw new InvalidForexCurrencyException();
 		}
 	}
 
@@ -138,11 +175,11 @@ public class ForexBitcoinService {
 	}
 
 	@Scheduled(fixedRate = 60000L) // every minute, the current rate is wiped
-	@CacheEvict(value = { "forex-bitcoin-current-rates" }, allEntries = true)
+	@CacheEvict(value = { "forex-bitcoin-coindesk-current", "forex-bitcoin-bitstamp" }, allEntries = true)
 	public void evictCurrentCache() { }
 
 	@Scheduled(fixedRate = 3600000L) // every hour, the history is wiped
-	@CacheEvict(value = { "forex-bitcoin-historic-rates" }, allEntries = true)
+	@CacheEvict(value = { "forex-bitcoin-coindesk-history" }, allEntries = true)
 	public void evictHistoricCache() { }
 
 }
