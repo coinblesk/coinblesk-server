@@ -46,8 +46,7 @@ import com.coinblesk.server.service.ForexFiatService;
  * UserAccounts.
  */
 @RestController
-// "/wallet" is for v1 only and should not be used anymore
-@RequestMapping({"/wallet", "/forex"})
+@RequestMapping("/forex")
 public class ForexController {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ForexController.class);

@@ -88,8 +88,6 @@ public class ForexBitcoinService {
 	@Cacheable("forex-bitcoin-bitstamp-current")
 	public ForexDTO getBitstampCurrentRate(ForexCurrency currency) throws BusinessException {
 		ForexDTO forexBTCUSD = getBitstampCurrentRateBTCUSD();
-		// TODO direct conversion between BTC and e.g. EUR/CHF/USD
-		// at the moment, BTC<->BTC conversion returns 1.0704715
 
 		if(BTC.equals(currency)) {
 			throw new InvalidForexCurrencyException();
@@ -144,7 +142,7 @@ public class ForexBitcoinService {
 		}
 	}
 
-	@Cacheable("forex-bitcoin-coindesk-history")
+	@Cacheable(value = "forex-bitcoin-coindesk-history")
 	public List<ForexDTO> getCoindeskHistoricRates(ForexCurrency currency) throws BusinessException {
 		String url = COINDESK_HISTORIC_API.replace(PLACEHOLDER, currency.name());
 
