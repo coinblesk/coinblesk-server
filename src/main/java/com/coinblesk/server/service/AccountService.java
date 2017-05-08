@@ -16,6 +16,18 @@
 
 package com.coinblesk.server.service;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.Utils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.dao.AccountRepository;
@@ -26,19 +38,9 @@ import com.coinblesk.server.exceptions.InvalidLockTimeException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
 import com.coinblesk.util.DTOUtils;
 import com.google.common.annotations.VisibleForTesting;
+
 import lombok.Data;
 import lombok.NonNull;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.Utils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 /**
  * @author Thomas Bocek
@@ -183,6 +185,17 @@ public class AccountService {
 	public TimeLockedAddress getTimeLockedAddressByAddressHash(@NonNull byte[] addressHash) {
 		TimeLockedAddressEntity entity = timeLockedAddressRepository.findByAddressHash(addressHash);
 		return entity == null ? null : TimeLockedAddress.fromRedeemScript(entity.getRedeemScript());
+	}
+
+	public long getSumOfAllVirtualBalances() {
+		long result = 0L;
+		Long dbValue = accountRepository.getSumOfAllVirtualBalances();
+
+		if(dbValue != null) {
+			result = dbValue;
+		}
+
+		return result;
 	}
 
 	@Data

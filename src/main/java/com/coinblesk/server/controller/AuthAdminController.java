@@ -108,9 +108,9 @@ public class AuthAdminController {
 	public ServerBalanceDTO getServerBalance() {
 		ServerBalanceDTO result = new ServerBalanceDTO();
 		result.setSumOfAllPendingTransactions(microPaymentService.getPendingChannelValue().getValue());
+		result.setSumOfAllVirtualBalances(accountService.getSumOfAllVirtualBalances());
 		result.setServerPotCurrent(microPaymentService.getMicroPaymentPotValue().getValue());
 		result.setServerPotBaseline(serverPotBaselineService.getServerPotBaseline());
-		result.setSumOfAllVirtualPayments(-1); // TODO
 
 		return result;
 	}
