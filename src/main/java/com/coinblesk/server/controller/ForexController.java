@@ -17,6 +17,7 @@ package com.coinblesk.server.controller;
 
 import static com.coinblesk.enumerator.ForexBitcoinVendor.BITSTAMP;
 import static com.coinblesk.enumerator.ForexBitcoinVendor.COINDESK;
+import static com.coinblesk.enumerator.ForexCurrency.BTC;
 import static com.coinblesk.enumerator.ForexCurrency.USD;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
@@ -35,6 +36,7 @@ import com.coinblesk.dto.ForexDTO;
 import com.coinblesk.enumerator.ForexBitcoinVendor;
 import com.coinblesk.enumerator.ForexCurrency;
 import com.coinblesk.server.exceptions.BusinessException;
+import com.coinblesk.server.exceptions.InvalidForexCurrencyException;
 import com.coinblesk.server.exceptions.InvalidForexVendorException;
 import com.coinblesk.server.service.ForexBitcoinService;
 import com.coinblesk.server.service.ForexFiatService;
@@ -50,12 +52,12 @@ public class ForexController {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ForexController.class);
 
-	private final ForexFiatService forexService;
+	private final ForexFiatService forexFiatService;
 	private final ForexBitcoinService forexBitcoinService;
 
 	@Autowired
 	public ForexController(ForexFiatService forexExchangeRateService, ForexBitcoinService forexBitcoinService) {
-		this.forexService = forexExchangeRateService;
+		this.forexFiatService = forexExchangeRateService;
 		this.forexBitcoinService = forexBitcoinService;
 	}
 
@@ -69,8 +71,13 @@ public class ForexController {
 			toCurrency = USD;
 		}
 
+		// do not allow BTC as a fiat currency, use the bitcoin interface for that
+		if(BTC.equals(fromCurrency) || BTC.equals(toCurrency)) {
+			throw new InvalidForexCurrencyException();
+		}
+
 		LOG.debug("{exchange-rate} - Received exchange rate request for currency {}/{}", fromCurrency, toCurrency);
-		ForexDTO result = forexService.getExchangeRateDTO(fromCurrency, toCurrency);
+		ForexDTO result = forexFiatService.getExchangeRateDTO(fromCurrency, toCurrency);
 		LOG.debug("{exchange-rate} - {}, {}, rate: {}", result.getCurrencyFrom(), result.getCurrencyTo(), result.getRate());
 
 		return result;

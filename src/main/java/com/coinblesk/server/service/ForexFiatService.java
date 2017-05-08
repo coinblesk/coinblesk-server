@@ -90,7 +90,6 @@ final public class ForexFiatService {
 		result.setCurrencyTo(toCurrency);
 		result.setRate(exchangeRate);
 		result.setUpdatedAt(new Date());
-		System.out.println(result);
 
 		return result;
 	}
