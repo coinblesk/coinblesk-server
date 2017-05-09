@@ -57,6 +57,7 @@ import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.EventService;
 import com.coinblesk.server.service.MicropaymentService;
+import com.coinblesk.server.service.ServerPotBaselineService;
 import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.util.Pair;
@@ -81,16 +82,19 @@ public class AuthAdminController {
 	private final AccountService accountService;
 	private final EventService eventService;
 	private final MicropaymentService microPaymentService;
+	private final ServerPotBaselineService serverPotBaselineService;
 
 	@Autowired
 	public AuthAdminController(AppConfig appConfig, WalletService walletService, UserAccountService userAccountService,
-			AccountService accountService, EventService eventService, MicropaymentService microPaymentService) {
+			AccountService accountService, EventService eventService, MicropaymentService microPaymentService,
+			ServerPotBaselineService serverPotBaselineService) {
 		this.appConfig = appConfig;
 		this.walletService = walletService;
 		this.userAccountService = userAccountService;
 		this.accountService = accountService;
 		this.eventService = eventService;
 		this.microPaymentService = microPaymentService;
+		this.serverPotBaselineService = serverPotBaselineService;
 	}
 
 	@RequestMapping(value = "/balance", method = GET)
@@ -104,9 +108,9 @@ public class AuthAdminController {
 	public ServerBalanceDTO getServerBalance() {
 		ServerBalanceDTO result = new ServerBalanceDTO();
 		result.setSumOfAllPendingTransactions(microPaymentService.getPendingChannelValue().getValue());
+		result.setSumOfAllVirtualBalances(accountService.getSumOfAllVirtualBalances());
 		result.setServerPotCurrent(microPaymentService.getMicroPaymentPotValue().getValue());
-		result.setServerPotInitial(-1); // TODO
-		result.setSumOfAllVirtualPayments(-1); // TODO
+		result.setServerPotBaseline(serverPotBaselineService.getServerPotBaseline());
 
 		return result;
 	}
@@ -197,4 +201,11 @@ public class AuthAdminController {
 	public List<Event> getEvents(@RequestParam("urgence") EventUrgence urgence) {
 		return eventService.getEventsWithUrgenceOrHigher(urgence);
 	}
+
+	@RequestMapping(value = "/server-pot-baseline", method = POST)
+	@ResponseBody
+	public void addNewAmountToServerBaselinePot(@RequestParam("amount") long amount) {
+		serverPotBaselineService.addNewServerPotBaselineAmount(amount);
+	}
+
 }

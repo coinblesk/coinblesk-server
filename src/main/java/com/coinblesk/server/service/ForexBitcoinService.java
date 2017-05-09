@@ -85,9 +85,13 @@ public class ForexBitcoinService {
 		return forexDTO;
 	}
 
-	@Cacheable("forex-bitcoin-bitstamp")
+	@Cacheable("forex-bitcoin-bitstamp-current")
 	public ForexDTO getBitstampCurrentRate(ForexCurrency currency) throws BusinessException {
 		ForexDTO forexBTCUSD = getBitstampCurrentRateBTCUSD();
+
+		if(BTC.equals(currency)) {
+			throw new InvalidForexCurrencyException();
+		}
 
 		if(USD.equals(currency)) {
 			return forexBTCUSD;
@@ -109,6 +113,12 @@ public class ForexBitcoinService {
 	@Cacheable("forex-bitcoin-coindesk-current")
 	public ForexDTO getCoindeskCurrentRate(ForexCurrency currency) throws BusinessException {
 		String url = COINDESK_CURRENT_API.replace(PLACEHOLDER, currency.name());
+
+		// BTC <-> BTC conversion is not supported (and not reasonable)
+		if(BTC.equals(currency)) {
+			throw new InvalidForexCurrencyException();
+		}
+
 		try {
 			StringBuffer response = ServiceUtils.doHttpRequest(url);
 			CurrentJsonStructure json = DTOUtils.fromJSON(response.toString(), CurrentJsonStructure.class);
@@ -132,9 +142,15 @@ public class ForexBitcoinService {
 		}
 	}
 
-	@Cacheable("forex-bitcoin-coindesk-history")
+	@Cacheable(value = "forex-bitcoin-coindesk-history")
 	public List<ForexDTO> getCoindeskHistoricRates(ForexCurrency currency) throws BusinessException {
 		String url = COINDESK_HISTORIC_API.replace(PLACEHOLDER, currency.name());
+
+		// BTC <-> BTC conversion is not supported (and not reasonable)
+		if(BTC.equals(currency)) {
+			throw new InvalidForexCurrencyException();
+		}
+
 		try {
 			StringBuffer response = ServiceUtils.doHttpRequest(url);
 			Map<Date, Double> map = DTOUtils.fromJSON(response.toString(), HistoricJsonStructure.class).bpi;
@@ -175,7 +191,7 @@ public class ForexBitcoinService {
 	}
 
 	@Scheduled(fixedRate = 60000L) // every minute, the current rate is wiped
-	@CacheEvict(value = { "forex-bitcoin-coindesk-current", "forex-bitcoin-bitstamp" }, allEntries = true)
+	@CacheEvict(value = { "forex-bitcoin-coindesk-current", "forex-bitcoin-bitstamp-current" }, allEntries = true)
 	public void evictCurrentCache() { }
 
 	@Scheduled(fixedRate = 3600000L) // every hour, the history is wiped
