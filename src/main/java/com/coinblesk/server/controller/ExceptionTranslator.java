@@ -20,6 +20,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.HttpMediaTypeException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -48,7 +49,8 @@ public class ExceptionTranslator {
 		} else if (e instanceof AccessDeniedException) {
 			responseStatus = FORBIDDEN;
 		} else if (e instanceof MethodArgumentNotValidException
-				|| e instanceof HttpMessageConversionException) {
+				|| e instanceof HttpMessageConversionException
+				|| e instanceof ServletRequestBindingException) {
 			responseStatus = BAD_REQUEST;
 		} else if (e instanceof HttpRequestMethodNotSupportedException) {
 			responseStatus = METHOD_NOT_ALLOWED;
