@@ -111,7 +111,7 @@ public class AuthAdminController {
 		result.setSumOfAllPendingTransactions(microPaymentService.getPendingChannelValue().getValue());
 		result.setSumOfAllVirtualBalances(accountService.getSumOfAllVirtualBalances());
 		result.setServerPotCurrent(microPaymentService.getMicroPaymentPotValue().getValue());
-		result.setServerPotBaseline(serverPotBaselineService.getServerPotBaseline());
+		result.setServerPotBaseline(serverPotBaselineService.getTotalServerPotBaseline());
 
 		return result;
 	}
@@ -213,6 +213,12 @@ public class AuthAdminController {
 	@ResponseBody
 	public List<ServerPotBaseline> getAllServerPotBaslineRows() {
 		return serverPotBaselineService.getAllServerPotBaselineRows();
+	}
+
+	@RequestMapping(value = "/server-pot-baseline/total", method = GET)
+	@ResponseBody
+	public long getTotalServerPotBasline() {
+		return serverPotBaselineService.getTotalServerPotBaseline();
 	}
 
 }

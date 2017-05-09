@@ -25,7 +25,7 @@ public class ServerPotBaselineService {
 	}
 
 	@Transactional(readOnly = true)
-	public long getServerPotBaseline() {
+	public long getTotalServerPotBaseline() {
 		LOG.debug("ServerPotBaseline is requested");
 		Long dbValue = serverPotBaselineRepository.getSumOfAllAmounts();
 
