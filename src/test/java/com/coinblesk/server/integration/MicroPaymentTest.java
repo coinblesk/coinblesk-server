@@ -5,6 +5,7 @@ import static com.coinblesk.server.controller.MicroPaymentTest.buildRequestDTO;
 import static com.coinblesk.server.controller.MicroPaymentTest.createExternalPaymentRequestDTO;
 import static com.coinblesk.server.controller.PaymentControllerTest.URL_CREATE_TIME_LOCKED_ADDRESS;
 import static com.coinblesk.server.controller.PaymentControllerTest.URL_KEY_EXCHANGE;
+import static com.coinblesk.server.controller.PayoutTest.URL_PAYOUT;
 import static com.coinblesk.server.controller.VirtualPaymentTest.URL_VIRTUAL_PAYMENT;
 import static com.coinblesk.server.integration.helper.RegtestHelper.generateBlock;
 import static com.coinblesk.server.integration.helper.RegtestHelper.sendToAddress;
@@ -24,6 +25,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 
+import com.coinblesk.dto.*;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
@@ -275,17 +277,22 @@ public class MicroPaymentTest {
 		assertPotSize(oneUSD.multiply(108));
 
 		// Alice tries to pay out (but fails as 10 cents are not enough to cover fee)
-		try {
-			micropaymentService.payOutVirtualBalance(KEY_ALICE, addressAlice.getAddress(params).toBase58());
-		} catch (IllegalArgumentException e) { }
+		PayoutRequestDTO payoutRequest = new PayoutRequestDTO(KEY_ALICE.getPublicKeyAsHex(),
+			addressAlice.getAddress(params).toBase58());
+		SignedDTO signedPayoutRequest = DTOUtils.serializeAndSign(payoutRequest, KEY_ALICE);
+		sendAndExpectError(URL_PAYOUT, signedPayoutRequest);
+
 		// Everything stayed the same though
 		assertAccountState(KEY_BOB, Coin.ZERO, false, oneUSD);
 		assertAccountState(KEY_ALICE, tenCents, false, Coin.ZERO);
 		assertAccountState(KEY_MERCHANT, tenCents.multiply(89), false, Coin.ZERO);
 		assertPotSize(oneUSD.multiply(108));
 
-		// Merchant pays out
-		micropaymentService.payOutVirtualBalance(KEY_MERCHANT, new ECKey().toAddress(params).toBase58());
+		// Merchant pays out to third party address
+		payoutRequest = new PayoutRequestDTO(KEY_MERCHANT.getPublicKeyAsHex(),
+			new ECKey().toAddress(params).toBase58());
+		signedPayoutRequest = DTOUtils.serializeAndSign(payoutRequest, KEY_MERCHANT);
+		sendAndExpectSuccess(URL_PAYOUT, signedPayoutRequest);
 		blockUntilAddressChanged(() -> generateBlock(1), serverMicroPotKey.toAddress(params), 1);
 		/*
 		+----------+-----------------+--------+-----------------------------+
@@ -302,13 +309,30 @@ public class MicroPaymentTest {
 		assertAccountState(KEY_MERCHANT, Coin.ZERO, false, Coin.ZERO);
 		assertPotSize(tenCents.multiply(991));
 
-		// Server want's his money back and closes Bob's channel
-		micropaymentService.closeMicroPaymentChannel(KEY_BOB);
-		assertAccountState(KEY_BOB, Coin.ZERO, true, oneUSD);
-		assertPotSize(tenCents.multiply(991));
+		// To make this complete, Bob sends Alice some coins so that she can pay out, then bob closes his channel
+		// and Alice pays out
+		channelBob.addToServerOutput(oneUSD);
+		sendAndExpectSuccess(URL_MICRO_PAYMENT, buildRequestDTO(KEY_BOB, KEY_ALICE, channelBob.buildTx(), oneUSD.getValue()));
+		sendAndExpectSuccess(URL_MICRO_PAYMENT, createExternalPaymentRequestDTO(KEY_BOB, channelBob.buildTx()));
+		sendAndExpectSuccess(URL_PAYOUT, DTOUtils.serializeAndSign(
+			new PayoutRequestDTO(KEY_ALICE.getPublicKeyAsHex(), addressAlice.getAddress(params).toBase58()), KEY_ALICE));
+		blockUntilAddressChanged(() -> {}, addressAlice.getAddress(params), -1);
 		blockUntilAddressChanged(() -> generateBlock(1), serverMicroPotKey.toAddress(params), 1);
+
+		/*
+		+----------+-----------------+--------+-----------------------------+
+		| Account  | Virtual Balance | Locked | PendingPaymentChannelAmount |
+		+----------+-----------------+--------+-----------------------------+
+		| Bob      | USD 0.00        | false  | USD 0.00                    |
+		| Alice    | USD 0.00        | false  | USD 0.00                    |
+		| Merchant | USD 0.00        | false  | USD 0.00                    |
+		+----------+-----------------+--------+-----------------------------+
+		| Pot                                 USD 100.00                    |
+		+-------------------------------------------------------------------+ */
 		assertAccountState(KEY_BOB, Coin.ZERO, false, Coin.ZERO);
-		assertPotSize(tenCents.multiply(1001));
+		assertAccountState(KEY_ALICE, Coin.ZERO, false, Coin.ZERO);
+		assertAccountState(KEY_MERCHANT, Coin.ZERO, false, Coin.ZERO);
+		assertPotSize(oneUSD.multiply(100));
 
 	}
 
@@ -395,8 +419,9 @@ public class MicroPaymentTest {
 			.andExpect(status().is2xxSuccessful());
 	}
 	private void sendAndExpectError(String url, SignedDTO dto) throws Exception {
-		mockMvc.perform(post(url).contentType(APPLICATION_JSON).content(DTOUtils.toJSON(dto)))
-			.andExpect(status().is4xxClientError());
+		String error = mockMvc.perform(post(url).contentType(APPLICATION_JSON).content(DTOUtils.toJSON(dto)))
+			.andExpect(status().is4xxClientError()).andReturn().getResponse().getContentAsString();
+		System.out.println(error);
 	}
 
 }

@@ -25,7 +25,7 @@ import static org.hamcrest.CoreMatchers.is;
  * @author Sebastian Stephan
  */
 public class PayoutTest extends CoinbleskTest {
-	public static final String URL_MICRO_PAYMENT = "/payment/payout";
+	public static final String URL_PAYOUT = "/payment/payout";
 	@Autowired
 	private AccountService accountService;
 	@Autowired
