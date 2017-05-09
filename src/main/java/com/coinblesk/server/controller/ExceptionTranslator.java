@@ -11,6 +11,7 @@ import java.util.Date;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.springframework.beans.TypeMismatchException;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -50,7 +51,8 @@ public class ExceptionTranslator {
 			responseStatus = FORBIDDEN;
 		} else if (e instanceof MethodArgumentNotValidException
 				|| e instanceof HttpMessageConversionException
-				|| e instanceof ServletRequestBindingException) {
+				|| e instanceof ServletRequestBindingException
+				|| e instanceof TypeMismatchException) {
 			responseStatus = BAD_REQUEST;
 		} else if (e instanceof HttpRequestMethodNotSupportedException) {
 			responseStatus = METHOD_NOT_ALLOWED;
