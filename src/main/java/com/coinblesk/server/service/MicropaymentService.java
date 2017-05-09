@@ -185,7 +185,7 @@ public class MicropaymentService {
 			throw new RuntimeException("Invalid nonce");
 		}
 
-		// Check inputs
+		// Check inputs and retrieve lastest time this transaction must be broadcast
 		final long broadcastBefore = checkInputs(tx, accountSender, feeService.fee());
 
 		// Amount given to server must be equal to last channel or higher
@@ -454,7 +454,7 @@ public class MicropaymentService {
 		accountRepository.save(account);
 	}
 
-	@Scheduled(fixedDelay = 60000L) // 1 minute
+	@Scheduled(fixedDelayString = "${coinblesk.closeSchedulerInterval}000")
 	public void checkForExpiringChannels() {
 		final long threshold = Instant.now().plus(Duration.ofSeconds(appConfig.getMinimumLockTimeSeconds()))
 			.getEpochSecond();

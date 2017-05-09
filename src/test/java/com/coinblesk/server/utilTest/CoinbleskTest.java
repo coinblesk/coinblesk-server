@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RunWith(SpringRunner.class)
 @Transactional
 @TestPropertySource(properties = {
-	//"spring.datasource.url:jdbc:postgresql://localhost/postgres?user=postgres",
 	"spring.datasource.url:jdbc:h2:mem:testdb;mv_store=false",
 	"bitcoin.net:unittest"
 })
