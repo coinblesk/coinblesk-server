@@ -1,5 +1,7 @@
 package com.coinblesk.server.dao;
 
+import java.util.List;
+
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 
@@ -9,5 +11,7 @@ public interface ServerPotBaselineRepository extends CrudRepository<ServerPotBas
 
 	@Query("SELECT SUM(amount) FROM SERVER_POT_BASELINE")
 	public Long getSumOfAllAmounts();
+
+	public List<ServerPotBaseline> findAllByOrderByTimestampAsc();
 
 }

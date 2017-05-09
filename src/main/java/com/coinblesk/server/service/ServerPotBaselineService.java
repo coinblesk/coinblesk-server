@@ -1,6 +1,7 @@
 package com.coinblesk.server.service;
 
 import java.util.Date;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,11 +39,16 @@ public class ServerPotBaselineService {
 	@Transactional
 	public void addNewServerPotBaselineAmount(long amount) {
 		LOG.debug("Adding new amount {} to server pot baseline.");
-		
+
 		ServerPotBaseline baselinePotAmount = new ServerPotBaseline();
 		baselinePotAmount.setAmount(amount);
 		baselinePotAmount.setTimestamp(new Date());
 		serverPotBaselineRepository.save(baselinePotAmount);
+	}
+
+	@Transactional
+	public List<ServerPotBaseline> getAllServerPotBaselineRows() {
+		return serverPotBaselineRepository.findAllByOrderByTimestampAsc();
 	}
 
 }

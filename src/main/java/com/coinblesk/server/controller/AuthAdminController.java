@@ -51,6 +51,7 @@ import com.coinblesk.dto.UserAccountAdminDTO;
 import com.coinblesk.server.config.AppConfig;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.Event;
+import com.coinblesk.server.entity.ServerPotBaseline;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.enumerator.EventUrgence;
 import com.coinblesk.server.exceptions.BusinessException;
@@ -206,6 +207,12 @@ public class AuthAdminController {
 	@ResponseBody
 	public void addNewAmountToServerBaselinePot(@RequestParam("amount") long amount) {
 		serverPotBaselineService.addNewServerPotBaselineAmount(amount);
+	}
+
+	@RequestMapping(value = "/server-pot-baseline", method = GET)
+	@ResponseBody
+	public List<ServerPotBaseline> getAllServerPotBaslineRows() {
+		return serverPotBaselineService.getAllServerPotBaselineRows();
 	}
 
 }
