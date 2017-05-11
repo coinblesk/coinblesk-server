@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -265,20 +266,26 @@ public class VirtualPaymentTest extends CoinbleskTest {
 				stop = true;
 				return null;
 			};
-			Callable<Void> checker = ()-> {
+			Callable<Throwable> checker = ()-> {
 				while (!stop) {
-					checkStateForLoadTest(30000L, keyA, keyB, keyC);
-					Thread.sleep(1000);
+					try {
+						checkStateForLoadTest(30000L, keyA, keyB, keyC);
+						Thread.sleep(1000);
+					} catch (Throwable e) {
+						return e;
+					}
 				}
 				return null;
 			};
 			executor.submit(stopper);
-			executor.submit(checker);
+			Future<Throwable> resultChecker = executor.submit(checker);
 			List<Future<Exception>> res = executor.invokeAll(
 				Arrays.asList(sender(keyA, keyB), sender(keyB, keyC), sender(keyC, keyA)));
 			for (Future<Exception> f : res) {
 				assertThat("There was an error in one of the senders", f.get(), CoreMatchers.nullValue());
 			}
+			assertThat(resultChecker.get(), nullValue());
+
 			checkStateForLoadTest(30000L, keyA, keyB, keyC);
 
 		} finally {
