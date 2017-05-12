@@ -33,6 +33,7 @@ import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.params.TestNet3Params;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +46,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.coinblesk.dto.AccountDTO;
+import com.coinblesk.dto.AccountDetailsDTO;
 import com.coinblesk.dto.ServerBalanceDTO;
 import com.coinblesk.dto.TimeLockedAddressDTO;
 import com.coinblesk.dto.UserAccountAdminDTO;
@@ -54,6 +56,7 @@ import com.coinblesk.server.entity.Event;
 import com.coinblesk.server.entity.ServerPotBaseline;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.enumerator.EventUrgence;
+import com.coinblesk.server.exceptions.AccountNotFoundException;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.EventService;
@@ -177,24 +180,71 @@ public class AuthAdminController {
 		Map<Address, Coin> balances = walletService.getBalanceByAddresses();
 
 		return accountService.allAddresses().stream().collect(Collectors.groupingBy
-			(TimeLockedAddressEntity::getAccount)).entrySet().stream().map(accountListEntry -> {
+				(TimeLockedAddressEntity::getAccount)).entrySet().stream().map(accountListEntry -> {
+
 			Account account = accountListEntry.getKey();
+
 			List<TimeLockedAddressDTO> addresses = accountListEntry.getValue().stream().map(tla -> {
 				Instant createdAt = Instant.ofEpochSecond(tla.getTimeCreated());
 				Instant lockedUntil = Instant.ofEpochSecond(tla.getLockTime());
 				Coin balance = balances.get(tla.toAddress(params));
 				return new TimeLockedAddressDTO(tla.toAddress(params).toString(), "http://" + (params.getClass()
-					.equals(TestNet3Params.class) ? "tbtc." : "") + "blockr.io/address/info/" + tla.toAddress(params),
-					Date.from(createdAt), Date.from(lockedUntil), lockedUntil.isAfter(Instant.now()), balance
-					.longValue());
+						.equals(TestNet3Params.class) ? "tbtc." : "") + "blockr.io/address/info/" + tla.toAddress(params),
+						Date.from(createdAt), Date.from(lockedUntil), lockedUntil.isAfter(Instant.now()), balance
+						.longValue());
 			}).collect(Collectors.toList());
 
 			long satoshiBalance = addresses.stream().mapToLong(TimeLockedAddressDTO::getBalance).sum();
 			return new AccountDTO(SerializeUtils.bytesToHex(account.clientPublicKey()), SerializeUtils.bytesToHex
 				(account.serverPublicKey()), SerializeUtils.bytesToHex(account.serverPrivateKey()), Date.from(Instant
 				.ofEpochSecond(account.timeCreated())), account.virtualBalance(), satoshiBalance, account
-				.virtualBalance() + satoshiBalance, addresses);
+				.virtualBalance() + satoshiBalance);
+
 		}).collect(Collectors.toList());
+	}
+
+	@RequestMapping(value = "/accounts/{client-public-key}", method = GET)
+	@ResponseBody
+	public AccountDetailsDTO getAccount(@PathVariable("client-public-key") String clientPublicKey) throws BusinessException {
+		byte[] clientPublicKeyBytes = null;
+		try {
+			clientPublicKeyBytes = Utils.HEX.decode(clientPublicKey.toLowerCase());
+		} catch(Exception e) {
+			throw new AccountNotFoundException();
+		}
+
+		Account account = accountService.getByClientPublicKey(clientPublicKeyBytes);
+		if(account == null) {
+			throw new AccountNotFoundException();
+		}
+
+		NetworkParameters params = appConfig.getNetworkParameters();
+		// Pre-calculate balances for each address
+		Map<Address, Coin> balances = walletService.getBalanceByAddresses();
+
+		List<TimeLockedAddressDTO> timeLockedAddressDTOs = new ArrayList<>();
+		for(TimeLockedAddressEntity tla : account.getTimeLockedAddresses()) {
+			Instant createdAt = Instant.ofEpochSecond(tla.getTimeCreated());
+			Instant lockedUntil = Instant.ofEpochSecond(tla.getLockTime());
+			Coin balance = balances.get(tla.toAddress(params));
+
+			timeLockedAddressDTOs.add(new TimeLockedAddressDTO(tla.toAddress(params).toString(), "http://" + (params.getClass()
+					.equals(TestNet3Params.class) ? "tbtc." : "") + "blockr.io/address/info/" + tla.toAddress(params),
+					Date.from(createdAt), Date.from(lockedUntil), lockedUntil.isAfter(Instant.now()), balance
+					.longValue()));
+		}
+
+		long satoshiBalance = timeLockedAddressDTOs.stream().mapToLong(TimeLockedAddressDTO::getBalance).sum();
+		AccountDTO accountDTO = new AccountDTO(SerializeUtils.bytesToHex(account.clientPublicKey()), SerializeUtils.bytesToHex
+				(account.serverPublicKey()), SerializeUtils.bytesToHex(account.serverPrivateKey()), Date.from(Instant
+						.ofEpochSecond(account.timeCreated())), account.virtualBalance(), satoshiBalance, account
+				.virtualBalance() + satoshiBalance);
+
+		AccountDetailsDTO dto = new AccountDetailsDTO();
+		dto.setTimeLockedAddresses(timeLockedAddressDTOs);
+		dto.setAccount(accountDTO);
+
+		return dto;
 	}
 
 	@RequestMapping(value = "/events", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)

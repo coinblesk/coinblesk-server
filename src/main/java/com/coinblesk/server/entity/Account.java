@@ -16,7 +16,9 @@
 package com.coinblesk.server.entity;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 import javax.persistence.Column;
@@ -25,8 +27,11 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Index;
+import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * @author Thomas Bocek
@@ -68,8 +73,13 @@ public class Account implements Serializable {
 	@Column(name = "LOCKED", nullable = false)
 	private boolean locked;
 
+	@JsonIgnore
 	@OneToOne(mappedBy = "account")
-	private transient UserAccount userAccount;
+	private UserAccount userAccount;
+
+	@JsonIgnore
+	@OneToMany(mappedBy = "account")
+	private List<TimeLockedAddressEntity> timeLockedAddresses = new ArrayList<>();
 
 	public byte[] clientPublicKey() {
 		return clientPublicKey;
@@ -149,6 +159,15 @@ public class Account implements Serializable {
 
 	public Account locked(boolean locked) {
 		this.locked = locked;
+		return this;
+	}
+
+	public List<TimeLockedAddressEntity> getTimeLockedAddresses() {
+		return timeLockedAddresses;
+	}
+
+	public Account setTimeLockedAddresses(List<TimeLockedAddressEntity> timeLockedAddresses) {
+		this.timeLockedAddresses = timeLockedAddresses;
 		return this;
 	}
 
