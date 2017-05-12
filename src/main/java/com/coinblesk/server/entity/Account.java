@@ -171,6 +171,10 @@ public class Account implements Serializable {
 		return this;
 	}
 
+	public long getNonce() {
+		return nonce;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o)
