@@ -1,5 +1,7 @@
 package com.coinblesk.server.controller;
 
+import static com.coinblesk.server.config.Constants.PROFILE_PROD;
+import static java.util.Arrays.asList;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
@@ -12,7 +14,9 @@ import java.util.Date;
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.TypeMismatchException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageConversionException;
@@ -26,13 +30,20 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
-import lombok.Data;
+import com.coinblesk.dto.GeneralErrorDTO;
 
 @ControllerAdvice
 public class ExceptionTranslator {
 
+	private final Environment env;
+
+	@Autowired
+	public ExceptionTranslator(Environment env) {
+		this.env = env;
+	}
+
 	@ExceptionHandler(Exception.class)
-	public ResponseEntity<ErrorDTO> handleExceptions(Exception e, HttpServletRequest request) {
+	public ResponseEntity<GeneralErrorDTO> handleExceptions(Exception e, HttpServletRequest request) {
 		// idea by http://blog.sizovs.net/spring-rest-exception-handler/
 		ResponseStatus annotation = AnnotationUtils.findAnnotation(e.getClass(), ResponseStatus.class);
 		HttpStatus responseStatus = INTERNAL_SERVER_ERROR;
@@ -60,27 +71,20 @@ public class ExceptionTranslator {
 			responseStatus = UNSUPPORTED_MEDIA_TYPE;
 		}
 
-		ErrorDTO result = new ErrorDTO();
+		GeneralErrorDTO result = new GeneralErrorDTO();
 		result.setTimestamp(new Date());
 		result.setStatus(responseStatus.value());
 		result.setError(responseStatus.getReasonPhrase());
-		result.setException(e.getClass().getSimpleName());
-		result.setMessage(message);
 		result.setMethod(request.getMethod());
 		result.setPath(request.getRequestURI());
 
-		return new ResponseEntity<>(result, responseStatus);
-	}
+		// mask the reason behind the exception on PROD
+		if(!asList(env.getActiveProfiles()).contains(PROFILE_PROD)) {
+			result.setException(e.getClass().getSimpleName());
+			result.setMessage(message);
+		}
 
-	@Data
-	public class ErrorDTO {
-		private Date timestamp;
-		private int status;
-		private String error;
-		private String exception;
-		private String message;
-		private String method;
-		private String path;
+		return new ResponseEntity<>(result, responseStatus);
 	}
 
 }
