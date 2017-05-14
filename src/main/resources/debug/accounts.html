@@ -178,7 +178,7 @@
 
 			getAccountsFromAdminEndpoint: function () {
 				var that = this
-				api.get('/admin/accounts').then(function (response) {
+				api.get('/auth/admin/accounts').then(function (response) {
 					that.accountsFromEndpoint = JSON.stringify(response.data, null, 3)
 				})
 			},
