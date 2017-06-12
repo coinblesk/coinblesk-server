@@ -60,7 +60,7 @@ import com.coinblesk.server.exceptions.AccountNotFoundException;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.EventService;
-import com.coinblesk.server.service.MicropaymentService;
+import com.coinblesk.server.service.ServerBalanceService;
 import com.coinblesk.server.service.ServerPotBaselineService;
 import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.server.service.WalletService;
@@ -85,20 +85,20 @@ public class AuthAdminController {
 	private final UserAccountService userAccountService;
 	private final AccountService accountService;
 	private final EventService eventService;
-	private final MicropaymentService microPaymentService;
 	private final ServerPotBaselineService serverPotBaselineService;
+	private final ServerBalanceService serverBalanceService;
 
 	@Autowired
 	public AuthAdminController(AppConfig appConfig, WalletService walletService, UserAccountService userAccountService,
-			AccountService accountService, EventService eventService, MicropaymentService microPaymentService,
-			ServerPotBaselineService serverPotBaselineService) {
+			AccountService accountService, EventService eventService, ServerPotBaselineService serverPotBaselineService,
+			ServerBalanceService serverBalanceService) {
 		this.appConfig = appConfig;
 		this.walletService = walletService;
 		this.userAccountService = userAccountService;
 		this.accountService = accountService;
 		this.eventService = eventService;
-		this.microPaymentService = microPaymentService;
 		this.serverPotBaselineService = serverPotBaselineService;
+		this.serverBalanceService = serverBalanceService;
 	}
 
 	@RequestMapping(value = "/balance", method = GET)
@@ -110,13 +110,7 @@ public class AuthAdminController {
 	@RequestMapping(value = "/server-balance", method = GET)
 	@ResponseBody
 	public ServerBalanceDTO getServerBalance() {
-		ServerBalanceDTO result = new ServerBalanceDTO();
-		result.setSumOfAllPendingTransactions(microPaymentService.getPendingChannelValue().getValue());
-		result.setSumOfAllVirtualBalances(accountService.getSumOfAllVirtualBalances());
-		result.setServerPotCurrent(microPaymentService.getMicroPaymentPotValue().getValue());
-		result.setServerPotBaseline(serverPotBaselineService.getTotalServerPotBaseline());
-
-		return result;
+		return serverBalanceService.getServerBalance();
 	}
 
 	@RequestMapping(value = "/addresses", method = GET)
