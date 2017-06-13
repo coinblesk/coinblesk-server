@@ -209,8 +209,13 @@ public class AuthAdminController {
 		Date nonce = account.getNonce() == 0 ? null : Date.from(Instant.ofEpochMilli(account.getNonce()));
 		String channelTransaction = account.getChannelTransaction() != null ? SerializeUtils.bytesToHex(account.getChannelTransaction()) : null;
 
+		String userAccountEmail = null;
+		if(account.getUserAccount() != null) {
+			userAccountEmail = account.getUserAccount().getEmail();
+		}
+
 		return new AccountDTO(clientPublicKey, serverPublicKey, serverPrivateKey, timeCreated, virtualBalance,
-				satoshiBalance, totalBalance, isLocked, broadcastBefore, nonce, channelTransaction);
+				satoshiBalance, totalBalance, isLocked, broadcastBefore, nonce, channelTransaction, userAccountEmail);
 	}
 
 	@RequestMapping(value = "/accounts/{client-public-key}", method = GET)

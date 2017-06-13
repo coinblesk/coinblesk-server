@@ -175,6 +175,15 @@ public class Account implements Serializable {
 		return nonce;
 	}
 
+	public UserAccount getUserAccount() {
+		return userAccount;
+	}
+
+	public Account setUserAccount(UserAccount userAccount) {
+		this.userAccount = userAccount;
+		return this;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o)

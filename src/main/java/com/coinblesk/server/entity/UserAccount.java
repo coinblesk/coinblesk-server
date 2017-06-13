@@ -158,6 +158,14 @@ public class UserAccount implements Serializable {
 		return this.activationEmailToken == null;
 	}
 
+	public Account getAccount() {
+		return account;
+	}
+
+	public void setAccount(Account account) {
+		this.account = account;
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder()

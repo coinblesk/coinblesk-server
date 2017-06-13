@@ -39,16 +39,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.json.v1.Type;
-import com.coinblesk.json.v1.UserAccountTO;
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.dao.TimeLockedAddressRepository;
-import com.coinblesk.server.dao.UserAccountRepository;
 import com.coinblesk.dto.UserAccountAdminDTO;
 import com.coinblesk.dto.UserAccountCreateDTO;
 import com.coinblesk.dto.UserAccountCreateVerifyDTO;
 import com.coinblesk.dto.UserAccountDTO;
 import com.coinblesk.dto.UserAccountForgotVerifyDTO;
+import com.coinblesk.json.v1.Type;
+import com.coinblesk.json.v1.UserAccountTO;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.dao.TimeLockedAddressRepository;
+import com.coinblesk.server.dao.UserAccountRepository;
+import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.enumerator.EventType;
 import com.coinblesk.server.exceptions.BusinessException;
@@ -63,6 +64,7 @@ import com.coinblesk.server.exceptions.UserAccountNotFoundException;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.CoinbleskException;
 import com.coinblesk.util.InsufficientFunds;
+import com.coinblesk.util.SerializeUtils;
 
 /**
  * @author Thomas Bocek
@@ -238,6 +240,10 @@ public class UserAccountService {
 		userAccountAdminDTO.setCreationDate(userAccount.getCreationDate());
 		userAccountAdminDTO.setUserRole(userAccount.getUserRole());
 		userAccountAdminDTO.setDeleted(userAccount.isDeleted());
+		if(userAccount.getAccount() != null) {
+			Account account = userAccount.getAccount();
+			userAccountAdminDTO.setAccountPublicKeyClient(SerializeUtils.bytesToHex(account.clientPublicKey()));
+		}
 		return userAccountAdminDTO;
 	}
 
