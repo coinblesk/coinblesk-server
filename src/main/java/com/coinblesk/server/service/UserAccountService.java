@@ -24,6 +24,7 @@ import static java.util.UUID.randomUUID;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 
@@ -31,6 +32,7 @@ import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,16 +55,18 @@ import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.enumerator.EventType;
 import com.coinblesk.server.exceptions.BusinessException;
+import com.coinblesk.server.exceptions.CoinbleskInternalError;
 import com.coinblesk.server.exceptions.EmailAlreadyRegisteredException;
 import com.coinblesk.server.exceptions.InvalidEmailProvidedException;
 import com.coinblesk.server.exceptions.InvalidEmailTokenException;
-import com.coinblesk.server.exceptions.NoEmailProvidedException;
+import com.coinblesk.server.exceptions.InvalidKeyProvidedException;
 import com.coinblesk.server.exceptions.PasswordTooShortException;
 import com.coinblesk.server.exceptions.UserAccountDeletedException;
 import com.coinblesk.server.exceptions.UserAccountNotActivatedException;
 import com.coinblesk.server.exceptions.UserAccountNotFoundException;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.CoinbleskException;
+import com.coinblesk.util.DTOUtils;
 import com.coinblesk.util.InsufficientFunds;
 import com.coinblesk.util.SerializeUtils;
 
@@ -84,16 +88,19 @@ public class UserAccountService {
 	private final AppConfig appConfig;
 	private final WalletService walletService;
 	private final EventService eventService;
+	private final AccountService accountService;
 
 	@Autowired
 	public UserAccountService(UserAccountRepository repository, TimeLockedAddressRepository addressRepository,
-			PasswordEncoder passwordEncoder, AppConfig appConfig, WalletService walletService, EventService eventService) {
+			PasswordEncoder passwordEncoder, AppConfig appConfig, WalletService walletService, EventService eventService,
+			AccountService accountService) {
 		this.repository = repository;
 		this.addressRepository = addressRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.appConfig = appConfig;
 		this.walletService = walletService;
 		this.eventService = eventService;
+		this.accountService = accountService;
 	}
 
 	@Transactional(readOnly = true)
@@ -110,14 +117,14 @@ public class UserAccountService {
 	@Transactional
 	public UserAccount create(UserAccountCreateDTO userAccountCreateDTO) throws BusinessException {
 		String email = userAccountCreateDTO.getEmail();
+		String password = userAccountCreateDTO.getPassword();
+		String privateKey = userAccountCreateDTO.getClientPrivateKeyEncrypted();
+		String publicKey = userAccountCreateDTO.getClientPublicKey().toLowerCase();
 
-		if (email == null) {
-			throw new NoEmailProvidedException();
-		}
 		if (!email.matches(EMAIL_PATTERN)) {
 			throw new InvalidEmailProvidedException();
 		}
-		if (userAccountCreateDTO.getPassword() == null || userAccountCreateDTO.getPassword().length() < MINIMAL_PASSWORD_LENGTH) {
+		if (password.length() < MINIMAL_PASSWORD_LENGTH) {
 			throw new PasswordTooShortException();
 		}
 		if (userExists(email)) {
@@ -128,8 +135,33 @@ public class UserAccountService {
 			}
 		}
 
+		// the encrypted private key must be valid base64
+		try {
+			Base64.getDecoder().decode(privateKey);
+		} catch(IllegalArgumentException e) {
+			throw new InvalidKeyProvidedException();
+		}
+
+		// creates the (bitcoin) account
+		try {
+			accountService.createAccount(DTOUtils.getECKeyFromHexPublicKey(publicKey));
+		} catch(Exception e) {
+			throw new CoinbleskInternalError("Account could not be created");
+		}
+
+		// retrieve the account
+		byte[] publicKeyBytes = null;
+		Account account = null;
+		try {
+			publicKeyBytes = Utils.HEX.decode(publicKey);
+			account = accountService.getByClientPublicKey(publicKeyBytes);
+		} catch(Exception e) {
+			throw new CoinbleskInternalError("Account could not be created");
+		}
+
 		// convert DTO to Entity
 		UserAccount userAccount = new UserAccount();
+		userAccount.setAccount(account);
 		userAccount.setEmail(userAccountCreateDTO.getEmail().toLowerCase(ENGLISH));
 		userAccount.setPassword(passwordEncoder.encode(userAccountCreateDTO.getPassword()));
 		userAccount.setCreationDate(new Date());
@@ -137,6 +169,7 @@ public class UserAccountService {
 		userAccount.setActivationEmailToken(randomUUID().toString());
 		userAccount.setUserRole(USER);
 		userAccount.setBalance(BigDecimal.valueOf(0L).divide(BigDecimal.valueOf(ONE_BITCOIN_IN_SATOSHI)));
+		userAccount.setClientPrivateKeyEncrypted(userAccountCreateDTO.getClientPrivateKeyEncrypted());
 		repository.save(userAccount);
 
 		return userAccount;

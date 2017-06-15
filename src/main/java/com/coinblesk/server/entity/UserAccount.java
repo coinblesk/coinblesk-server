@@ -30,6 +30,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
+import javax.persistence.Lob;
 import javax.persistence.OneToOne;
 import javax.persistence.Temporal;
 
@@ -73,6 +74,10 @@ public class UserAccount implements Serializable {
 	@Enumerated(STRING)
 	@Column(name = "USER_ROLE")
 	private UserRole userRole;
+
+	@Lob
+	@Column(name = "CLIENT_PRIVATE_KEY_ENCRYPTED")
+	private String clientPrivateKeyEncrypted;
 
 	@OneToOne
 	@JoinColumn(unique = true)
@@ -166,6 +171,14 @@ public class UserAccount implements Serializable {
 		this.account = account;
 	}
 
+	public String getClientPrivateKeyEncrypted() {
+		return clientPrivateKeyEncrypted;
+	}
+
+	public void setClientPrivateKeyEncrypted(String clientPrivateKeyEncrypted) {
+		this.clientPrivateKeyEncrypted = clientPrivateKeyEncrypted;
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder()
@@ -175,7 +188,8 @@ public class UserAccount implements Serializable {
 				.append(", creationDate: ").append(getCreationDate())
 				.append(", balance: ").append(getBalance())
 				.append(", emailToken: ").append(getActivationEmailToken())
-				.append(", userRoles: ").append(getUserRole());
+				.append(", userRoles: ").append(getUserRole())
+				.append(", clientPrivateKeyEncrypted: ").append(getClientPrivateKeyEncrypted());
 		return sb.toString();
 	}
 }
