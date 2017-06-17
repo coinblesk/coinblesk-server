@@ -340,6 +340,9 @@ public class AuthTest extends CoinbleskTest {
 		UserAccountCreateDTO userAccountCreateDTO = new UserAccountCreateDTO();
 		userAccountCreateDTO.setEmail(email);
 		userAccountCreateDTO.setPassword(password);
+		userAccountCreateDTO.setClientPrivateKeyEncrypted("eyJpdiI6InBRK1dycitoQkNVdzJkMXVxSGQwT0E9PSIsInYiOjEsIml0ZXIiOjEwMDAwLCJrcyI6MTI4LCJ0cyI6NjQsIm1vZGUiOiJjY20iLCJhZGF0YSI6IiIsImNpcGhlciI6ImFlcyIsInNhbHQiOiJlTVNrZ1E2N3B0dz0iLCJjdCI6ImFpU09WTEVaU1pJSEljMndCUi92UHUrSUsxc2JEVWtjejdoKzBtaG5zR08xckxZYTUvTXR0amc2QjhCVUhnS1czeldwSEtRQ3VST2R5LzBlIn0=");
+		userAccountCreateDTO.setClientPublicKey("030ad4737d72bb652054a87471c042d614b8ea055e75b67f112f9b8e5441f9b13a");
+		userAccountCreateDTO.setLockTime(1506352444L);
 
 		return mockMvc
 				.perform(post("/user-account/create")
