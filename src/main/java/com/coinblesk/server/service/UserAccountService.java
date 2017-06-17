@@ -18,6 +18,7 @@ package com.coinblesk.server.service;
 import static com.coinblesk.json.v1.Type.ACCOUNT_ERROR;
 import static com.coinblesk.server.config.UserRole.ADMIN;
 import static com.coinblesk.server.config.UserRole.USER;
+import static com.coinblesk.server.enumerator.EventType.ACCOUNT_COULD_NOT_BE_CREATED;
 import static com.coinblesk.util.BitcoinUtils.ONE_BITCOIN_IN_SATOSHI;
 import static java.util.Locale.ENGLISH;
 import static java.util.UUID.randomUUID;
@@ -120,6 +121,7 @@ public class UserAccountService {
 		String password = userAccountCreateDTO.getPassword();
 		String privateKey = userAccountCreateDTO.getClientPrivateKeyEncrypted();
 		String publicKey = userAccountCreateDTO.getClientPublicKey().toLowerCase();
+		Long lockTime = userAccountCreateDTO.getLockTime();
 
 		if (!email.matches(EMAIL_PATTERN)) {
 			throw new InvalidEmailProvidedException();
@@ -146,6 +148,7 @@ public class UserAccountService {
 		try {
 			accountService.createAccount(DTOUtils.getECKeyFromHexPublicKey(publicKey));
 		} catch(Exception e) {
+			eventService.error(ACCOUNT_COULD_NOT_BE_CREATED, "Account with public key " + publicKey + " could not be created: createAccount failed or publicKey is invalid.");
 			throw new CoinbleskInternalError("Account could not be created");
 		}
 
@@ -156,6 +159,18 @@ public class UserAccountService {
 			publicKeyBytes = Utils.HEX.decode(publicKey);
 			account = accountService.getByClientPublicKey(publicKeyBytes);
 		} catch(Exception e) {
+			eventService.error(ACCOUNT_COULD_NOT_BE_CREATED, "Account with public key " + publicKey + " could not be created: publicKey could not be parsed or accountService had an error.");
+			throw new CoinbleskInternalError("Account could not be created");
+		}
+
+		// create timelockedaddress
+		try {
+			ECKey publicECKey = DTOUtils.getECKeyFromHexPublicKey(publicKey);
+			accountService.createTimeLockedAddress(publicECKey, lockTime);
+
+		} catch(Exception e) {
+			eventService.error(ACCOUNT_COULD_NOT_BE_CREATED, "Time Locked Address could not be created for account with client public key " + publicKey);
+			accountService.deleteAccount(DTOUtils.getECKeyFromHexPublicKey(publicKey));
 			throw new CoinbleskInternalError("Account could not be created");
 		}
 
