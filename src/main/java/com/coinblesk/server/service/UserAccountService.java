@@ -166,11 +166,12 @@ public class UserAccountService {
 		// create timelockedaddress
 		try {
 			ECKey publicECKey = DTOUtils.getECKeyFromHexPublicKey(publicKey);
-			accountService.createTimeLockedAddress(publicECKey, lockTime);
+			AccountService.CreateTimeLockedAddressResponse response = accountService.createTimeLockedAddress(publicECKey, lockTime);
+			TimeLockedAddress tla = response.getTimeLockedAddress();
+			walletService.addWatching(tla.getAddress(appConfig.getNetworkParameters()));
 
 		} catch(Exception e) {
 			eventService.error(ACCOUNT_COULD_NOT_BE_CREATED, "Time Locked Address could not be created for account with client public key " + publicKey);
-			accountService.deleteAccount(DTOUtils.getECKeyFromHexPublicKey(publicKey));
 			throw new CoinbleskInternalError("Account could not be created");
 		}
 
