@@ -17,6 +17,7 @@ package com.coinblesk.server.service;
 
 import static com.coinblesk.json.v1.Type.ACCOUNT_ERROR;
 import static com.coinblesk.server.config.UserRole.ADMIN;
+import static com.coinblesk.server.config.UserRole.ROLE_USER;
 import static com.coinblesk.server.config.UserRole.USER;
 import static com.coinblesk.server.enumerator.EventType.ACCOUNT_COULD_NOT_BE_CREATED;
 import static com.coinblesk.util.BitcoinUtils.ONE_BITCOIN_IN_SATOSHI;
@@ -240,7 +241,7 @@ public class UserAccountService {
 			throw new UserAccountNotFoundException();
 		}
 
-		if(USER.equals(userAccount.getUserRole())) {
+		if(ROLE_USER.equals(userAccount.getUserRole())) {
 			userAccount.setUserRole(ADMIN);
 		} else {
 			userAccount.setUserRole(USER);
