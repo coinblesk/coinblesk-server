@@ -17,9 +17,17 @@ package com.coinblesk.server.controller;
 
 import static com.coinblesk.server.config.UserRole.ROLE_USER;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
+import static org.springframework.web.bind.annotation.RequestMethod.GET;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.NetworkParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,10 +39,19 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.coinblesk.dto.AccountBalanceDTO;
 import com.coinblesk.json.v1.BaseTO;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.UserAccountTO;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.entity.Account;
+import com.coinblesk.server.entity.TimeLockedAddressEntity;
+import com.coinblesk.server.entity.UserAccount;
+import com.coinblesk.server.exceptions.AccountNotFoundException;
+import com.coinblesk.server.exceptions.BusinessException;
+import com.coinblesk.server.exceptions.UserAccountNotFoundException;
 import com.coinblesk.server.service.UserAccountService;
+import com.coinblesk.server.service.WalletService;
 
 /**
  * @author Thomas Bocek
@@ -46,11 +63,15 @@ public class AuthUserController {
 
 	private final static Logger LOG = LoggerFactory.getLogger(AuthUserController.class);
 
+	private final AppConfig appConfig;
 	private final UserAccountService userAccountService;
+	private final WalletService walletService;
 
 	@Autowired
-	public AuthUserController(UserAccountService userAccountService) {
+	public AuthUserController(AppConfig appConfig, UserAccountService userAccountService, WalletService walletService) {
+		this.appConfig = appConfig;
 		this.userAccountService = userAccountService;
+		this.walletService = walletService;
 	}
 
 	@RequestMapping(value = "/transfer-p2sh", method = POST, produces = APPLICATION_JSON_UTF8_VALUE)
@@ -70,6 +91,49 @@ public class AuthUserController {
 		} catch (Exception e) {
 			LOG.error("User create error", e);
 			return new UserAccountTO().type(Type.SERVER_ERROR).message(e.getMessage());
+		}
+	}
+
+	@RequestMapping(value = "/balance", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@ResponseBody
+	public AccountBalanceDTO getTimeLockedAddressesWithBalance() throws BusinessException {
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		if(auth != null && userAccountService.userExists(auth.getName())) {
+			UserAccount user = userAccountService.getByEmail(auth.getName());
+			Account account = user.getAccount();
+
+			if(account == null) {
+				throw new AccountNotFoundException();
+			}
+
+			NetworkParameters params = appConfig.getNetworkParameters();
+			Map<String, Long> resultingTlas = new HashMap<>();
+			Long totalBalance = 0L;
+
+			List<TimeLockedAddressEntity> tlaList = account.getTimeLockedAddresses();
+			Map<String, TimeLockedAddressEntity> tlas = new HashMap<>();
+			for(TimeLockedAddressEntity tla : tlaList) {
+				tlas.put(tla.toAddress(params).toString(), tla);
+			}
+
+			Map<Address, Coin> balancesByAddresses = walletService.getBalanceByAddresses();
+			for(Map.Entry<Address, Coin> balance : balancesByAddresses.entrySet()) {
+				String addressString = balance.getKey().toString();
+				if(tlas.keySet().contains(addressString)) {
+					resultingTlas.put(addressString, balance.getValue().longValue());
+					totalBalance += balance.getValue().longValue();
+				}
+			}
+
+			AccountBalanceDTO dto = new AccountBalanceDTO();
+			dto.setTimeLockedAddresses(resultingTlas);
+			dto.setVirtualBalance(account.virtualBalance());
+			dto.setTotalBalance(totalBalance);
+
+			return dto;
+
+		} else {
+			throw new UserAccountNotFoundException();
 		}
 	}
 
