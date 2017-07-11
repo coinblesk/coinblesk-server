@@ -40,6 +40,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.coinblesk.dto.AccountBalanceDTO;
+import com.coinblesk.dto.EncryptedClientPrivateKeyDTO;
 import com.coinblesk.json.v1.BaseTO;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.UserAccountTO;
@@ -137,13 +138,17 @@ public class AuthUserController {
 		}
 	}
 
-	@RequestMapping(value = "/private-key", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/encrypted-private-key", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
-	public String getEncryptedPrivateKey() throws BusinessException {
+	public EncryptedClientPrivateKeyDTO getEncryptedPrivateKey() throws BusinessException {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		if(auth != null && userAccountService.userExists(auth.getName())) {
 			UserAccount user = userAccountService.getByEmail(auth.getName());
-			return user.getClientPrivateKeyEncrypted();
+
+			EncryptedClientPrivateKeyDTO dto = new EncryptedClientPrivateKeyDTO();
+			dto.setEncryptedClientPrivateKey(user.getClientPrivateKeyEncrypted());
+			return dto;
+
 		} else {
 			throw new UserAccountNotFoundException();
 		}
