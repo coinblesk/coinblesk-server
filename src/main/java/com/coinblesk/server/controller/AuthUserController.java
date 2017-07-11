@@ -137,4 +137,16 @@ public class AuthUserController {
 		}
 	}
 
+	@RequestMapping(value = "/private-key", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@ResponseBody
+	public String getEncryptedPrivateKey() throws BusinessException {
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		if(auth != null && userAccountService.userExists(auth.getName())) {
+			UserAccount user = userAccountService.getByEmail(auth.getName());
+			return user.getClientPrivateKeyEncrypted();
+		} else {
+			throw new UserAccountNotFoundException();
+		}
+	}
+
 }
