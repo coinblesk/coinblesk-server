@@ -46,6 +46,7 @@ import com.coinblesk.bitcoin.TimeLockedAddress;
 import com.coinblesk.dto.UserAccountAdminDTO;
 import com.coinblesk.dto.UserAccountCreateDTO;
 import com.coinblesk.dto.UserAccountCreateVerifyDTO;
+import com.coinblesk.dto.UserAccountCreateWithTokenDTO;
 import com.coinblesk.dto.UserAccountDTO;
 import com.coinblesk.dto.UserAccountForgotVerifyDTO;
 import com.coinblesk.json.v1.Type;
@@ -56,6 +57,7 @@ import com.coinblesk.server.dao.UserAccountRepository;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.enumerator.EventType;
+import com.coinblesk.server.exceptions.AccountNotFoundException;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
 import com.coinblesk.server.exceptions.EmailAlreadyRegisteredException;
@@ -66,6 +68,7 @@ import com.coinblesk.server.exceptions.PasswordTooShortException;
 import com.coinblesk.server.exceptions.UserAccountDeletedException;
 import com.coinblesk.server.exceptions.UserAccountNotActivatedException;
 import com.coinblesk.server.exceptions.UserAccountNotFoundException;
+import com.coinblesk.server.exceptions.UserAccountUnregisteredTokenInvalid;
 import com.coinblesk.util.BitcoinUtils;
 import com.coinblesk.util.CoinbleskException;
 import com.coinblesk.util.DTOUtils;
@@ -145,22 +148,36 @@ public class UserAccountService {
 			throw new InvalidKeyProvidedException();
 		}
 
-		// creates the (bitcoin) account
-		try {
-			accountService.createAccount(DTOUtils.getECKeyFromHexPublicKey(publicKey));
-		} catch(Exception e) {
-			eventService.error(ACCOUNT_COULD_NOT_BE_CREATED, "Account with public key " + publicKey + " could not be created: createAccount failed or publicKey is invalid.");
-			throw new CoinbleskInternalError("Account could not be created");
-		}
+		Account account = createAccountAndTimeLockedAddress(publicKey, lockTime);
 
-		// retrieve the account
-		byte[] publicKeyBytes = null;
+		// convert DTO to Entity
+		UserAccount userAccount = new UserAccount();
+		userAccount.setAccount(account);
+		userAccount.setEmail(userAccountCreateDTO.getEmail().toLowerCase(ENGLISH));
+		userAccount.setPassword(passwordEncoder.encode(userAccountCreateDTO.getPassword()));
+		userAccount.setCreationDate(new Date());
+		userAccount.setDeleted(false);
+		userAccount.setActivationEmailToken(randomUUID().toString());
+		userAccount.setUserRole(USER);
+		userAccount.setUnregisteredToken(null);
+		userAccount.setBalance(BigDecimal.valueOf(0L).divide(BigDecimal.valueOf(ONE_BITCOIN_IN_SATOSHI)));
+		userAccount.setClientPrivateKeyEncrypted(userAccountCreateDTO.getClientPrivateKeyEncrypted());
+		repository.save(userAccount);
+
+		return userAccount;
+	}
+
+	private Account createAccountAndTimeLockedAddress(String publicKey, long lockTime) {
+		// creates the (bitcoin) account
 		Account account = null;
 		try {
+			accountService.createAccount(DTOUtils.getECKeyFromHexPublicKey(publicKey));
+			// retrieve the account
+			byte[] publicKeyBytes = null;
 			publicKeyBytes = Utils.HEX.decode(publicKey);
 			account = accountService.getByClientPublicKey(publicKeyBytes);
 		} catch(Exception e) {
-			eventService.error(ACCOUNT_COULD_NOT_BE_CREATED, "Account with public key " + publicKey + " could not be created: publicKey could not be parsed or accountService had an error.");
+			eventService.error(ACCOUNT_COULD_NOT_BE_CREATED, "Account with public key " + publicKey + " could not be created: createAccount failed or publicKey is invalid.");
 			throw new CoinbleskInternalError("Account could not be created");
 		}
 
@@ -176,20 +193,98 @@ public class UserAccountService {
 			throw new CoinbleskInternalError("Account could not be created");
 		}
 
-		// convert DTO to Entity
+		return account;
+	}
+
+	@Transactional
+	public UserAccount autoCreateWithRegistrationToken(String email) throws BusinessException {
+
+		// password and keys are set during the activation
+		String password = randomUUID().toString();
+		String unregisteredToken = randomUUID().toString();
+		ECKey key = new ECKey();
+
+		if (!email.matches(EMAIL_PATTERN)) {
+			throw new InvalidEmailProvidedException();
+		}
+		if (userExists(email)) {
+			if (getByEmail(email).isDeleted()) {
+				throw new UserAccountDeletedException();
+			} else {
+				throw new EmailAlreadyRegisteredException();
+			}
+		}
+
+		Account account = null;
+		try {
+			accountService.createAccount(DTOUtils.getECKeyFromHexPublicKey(key.getPublicKeyAsHex()));
+			byte[] publicKeyBytes = Utils.HEX.decode(key.getPublicKeyAsHex());
+			account = accountService.getByClientPublicKey(publicKeyBytes);
+
+		} catch(Exception e) {
+			eventService.error(ACCOUNT_COULD_NOT_BE_CREATED, "Temporary account for " + email + " could not be created: createAccount failed or publicKey is invalid");
+			throw new CoinbleskInternalError("Account could not be created");
+		}
+
 		UserAccount userAccount = new UserAccount();
 		userAccount.setAccount(account);
-		userAccount.setEmail(userAccountCreateDTO.getEmail().toLowerCase(ENGLISH));
-		userAccount.setPassword(passwordEncoder.encode(userAccountCreateDTO.getPassword()));
+		userAccount.setEmail(email);
+		userAccount.setPassword(passwordEncoder.encode(password));
 		userAccount.setCreationDate(new Date());
 		userAccount.setDeleted(false);
-		userAccount.setActivationEmailToken(randomUUID().toString());
+		userAccount.setActivationEmailToken(null);
 		userAccount.setUserRole(USER);
-		userAccount.setBalance(BigDecimal.valueOf(0L).divide(BigDecimal.valueOf(ONE_BITCOIN_IN_SATOSHI)));
-		userAccount.setClientPrivateKeyEncrypted(userAccountCreateDTO.getClientPrivateKeyEncrypted());
+		userAccount.setBalance(BigDecimal.valueOf(0L));
+		userAccount.setClientPrivateKeyEncrypted(key.getPrivateKeyAsHex());
+		userAccount.setUnregisteredToken(unregisteredToken);
 		repository.save(userAccount);
 
 		return userAccount;
+	}
+
+	@Transactional
+	public void activateWithRegistrationToken(UserAccountCreateWithTokenDTO dto) throws BusinessException {
+
+		String email = dto.getEmail();
+		String password = dto.getPassword();
+		String privateKey = dto.getClientPrivateKeyEncrypted();
+		String publicKey = dto.getClientPublicKey();
+		String unregisteredToken = dto.getUnregisteredToken();
+		Long lockTime = dto.getLockTime();
+
+		UserAccount userAccount = getByEmail(email);
+
+		if (!email.matches(EMAIL_PATTERN)) {
+			throw new InvalidEmailProvidedException();
+		}
+		if (password.length() < MINIMAL_PASSWORD_LENGTH) {
+			throw new PasswordTooShortException();
+		}
+		if (userAccount == null) {
+			throw new AccountNotFoundException();
+		}
+		if (userAccount.getUnregisteredToken() == null || unregisteredToken == null) {
+			throw new UserAccountUnregisteredTokenInvalid();
+		}
+		if (!unregisteredToken.equals(userAccount.getUnregisteredToken())) {
+			throw new UserAccountUnregisteredTokenInvalid();
+		}
+
+		// moves the virtual balance to a newly created account
+		Account tempAccount = userAccount.getAccount();
+		Account newAccount = createAccountAndTimeLockedAddress(publicKey, lockTime);
+		newAccount.virtualBalance(tempAccount.virtualBalance());
+		tempAccount.virtualBalance(0L);
+
+		userAccount.setAccount(newAccount);
+		userAccount.setPassword(passwordEncoder.encode(password));
+		userAccount.setCreationDate(new Date());
+		userAccount.setActivationEmailToken(null);
+		userAccount.setClientPrivateKeyEncrypted(privateKey);
+		userAccount.setUnregisteredToken(null);
+		repository.save(userAccount);
+
+		accountService.deleteAccount(tempAccount);
 	}
 
 	@Transactional

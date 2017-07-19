@@ -16,6 +16,7 @@
 package com.coinblesk.server.controller;
 
 import static com.coinblesk.server.auth.JWTConfigurer.AUTHORIZATION_HEADER;
+import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_COULD_NOT_BE_ACTIVATED_WITH_REGISTRATION_TOKEN;
 import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_COULD_NOT_BE_ACTIVATED_WRONG_LINK;
 import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_COULD_NOT_CREATE_USER;
 import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_COULD_NOT_HANDLE_FORGET_REQUEST;
@@ -56,6 +57,7 @@ import com.coinblesk.dto.LoginDTO;
 import com.coinblesk.dto.TokenDTO;
 import com.coinblesk.dto.UserAccountCreateDTO;
 import com.coinblesk.dto.UserAccountCreateVerifyDTO;
+import com.coinblesk.dto.UserAccountCreateWithTokenDTO;
 import com.coinblesk.dto.UserAccountForgotDTO;
 import com.coinblesk.dto.UserAccountForgotVerifyDTO;
 import com.coinblesk.server.auth.TokenProvider;
@@ -64,6 +66,8 @@ import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
 import com.coinblesk.server.exceptions.UserAccountDeletedException;
+import com.coinblesk.server.exceptions.UserAccountNotFoundException;
+import com.coinblesk.server.exceptions.UserAccountUnregisteredTokenInvalid;
 import com.coinblesk.server.service.EventService;
 import com.coinblesk.server.service.MailService;
 import com.coinblesk.server.service.UserAccountService;
@@ -162,6 +166,30 @@ public class UserAccountController {
 			eventService.error(USER_ACCOUNT_CREATE_TOKEN_COULD_NOT_BE_SENT, "Token of '"+createDTO.getEmail() + "' could not be sent.");
 			throw new CoinbleskInternalError("An error happend while sending an e-mail.");
 		}
+	}
+
+	@RequestMapping(value = "/create-with-token", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE)
+	public void createAccountWithToken(Locale locale, @Valid @RequestBody UserAccountCreateWithTokenDTO createDTO) throws BusinessException {
+		LOG.debug("Create user account with token (update existing template user)");
+
+		UserAccount userAccount = userAccountService.getByEmail(createDTO.getEmail());
+
+		if(userAccount == null || userAccount.getUnregisteredToken() == null) {
+			throw new UserAccountNotFoundException();
+		}
+
+		if(!userAccount.getUnregisteredToken().equals(createDTO.getUnregisteredToken())) {
+			throw new UserAccountUnregisteredTokenInvalid();
+		}
+
+		try {
+			userAccountService.activateWithRegistrationToken(createDTO);
+		} catch(BusinessException exception) {
+			LOG.warn("An exception occurred during the creation of a user (from token)", exception);
+			eventService.warn(USER_ACCOUNT_COULD_NOT_BE_ACTIVATED_WITH_REGISTRATION_TOKEN, "An exception occurred during the activation of the user account (with registration token): " + exception.getClass().getSimpleName());
+			throw exception;
+		}
+
 	}
 
 	private void sendActivationEmailToUser(UserAccount userAccount, Locale locale) {

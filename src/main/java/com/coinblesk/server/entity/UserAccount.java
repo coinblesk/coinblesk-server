@@ -79,6 +79,11 @@ public class UserAccount implements Serializable {
 	@Column(name = "CLIENT_PRIVATE_KEY_ENCRYPTED")
 	private String clientPrivateKeyEncrypted;
 
+	// a user is unregistered, if the user account was generated
+	// from the server when it received funds from another account
+	@Column(name = "UNREGISTERED_TOKEN")
+	private String unregisteredToken;
+
 	@OneToOne
 	@JoinColumn(unique = true)
 	private Account account;
@@ -179,6 +184,14 @@ public class UserAccount implements Serializable {
 		this.clientPrivateKeyEncrypted = clientPrivateKeyEncrypted;
 	}
 
+	public String getUnregisteredToken() {
+		return unregisteredToken;
+	}
+
+	public void setUnregisteredToken(String unregisteredToken) {
+		this.unregisteredToken = unregisteredToken;
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder()
@@ -189,7 +202,8 @@ public class UserAccount implements Serializable {
 				.append(", balance: ").append(getBalance())
 				.append(", emailToken: ").append(getActivationEmailToken())
 				.append(", userRoles: ").append(getUserRole())
-				.append(", clientPrivateKeyEncrypted: ").append(getClientPrivateKeyEncrypted());
+				.append(", clientPrivateKeyEncrypted: ").append(getClientPrivateKeyEncrypted())
+				.append(", unregisteredToken: ").append(getUnregisteredToken());
 		return sb.toString();
 	}
 }

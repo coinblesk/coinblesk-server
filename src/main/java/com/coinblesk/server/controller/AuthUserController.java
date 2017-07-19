@@ -20,6 +20,10 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
+import java.io.IOException;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +32,7 @@ import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.params.TestNet3Params;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +46,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.coinblesk.dto.AccountBalanceDTO;
 import com.coinblesk.dto.EncryptedClientPrivateKeyDTO;
+import com.coinblesk.dto.FundsDTO;
+import com.coinblesk.dto.PaymentRequirementsDTO;
+import com.coinblesk.dto.TimeLockedAddressDTO;
+import com.coinblesk.dto.WebPaymentDTO;
 import com.coinblesk.json.v1.BaseTO;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.UserAccountTO;
@@ -50,9 +59,12 @@ import com.coinblesk.server.entity.TimeLockedAddressEntity;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.exceptions.AccountNotFoundException;
 import com.coinblesk.server.exceptions.BusinessException;
+import com.coinblesk.server.exceptions.CoinbleskInternalError;
 import com.coinblesk.server.exceptions.UserAccountNotFoundException;
+import com.coinblesk.server.service.FeeService;
 import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.server.service.WalletService;
+import com.coinblesk.util.SerializeUtils;
 
 /**
  * @author Thomas Bocek
@@ -67,12 +79,14 @@ public class AuthUserController {
 	private final AppConfig appConfig;
 	private final UserAccountService userAccountService;
 	private final WalletService walletService;
+	private final FeeService feeService;
 
 	@Autowired
-	public AuthUserController(AppConfig appConfig, UserAccountService userAccountService, WalletService walletService) {
+	public AuthUserController(AppConfig appConfig, UserAccountService userAccountService, WalletService walletService, FeeService feeService) {
 		this.appConfig = appConfig;
 		this.userAccountService = userAccountService;
 		this.walletService = walletService;
+		this.feeService = feeService;
 	}
 
 	@RequestMapping(value = "/transfer-p2sh", method = POST, produces = APPLICATION_JSON_UTF8_VALUE)
@@ -138,6 +152,57 @@ public class AuthUserController {
 		}
 	}
 
+	@RequestMapping(value = "/funds", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@ResponseBody
+	public FundsDTO getFunds() throws BusinessException {
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		if(auth != null && userAccountService.userExists(auth.getName())) {
+			UserAccount userAccount = userAccountService.getByEmail(auth.getName());
+			Account account = userAccount.getAccount();
+
+			if(account == null) {
+				throw new AccountNotFoundException();
+			}
+
+			NetworkParameters params = appConfig.getNetworkParameters();
+			Map<Address, Coin> balances = walletService.getBalanceByAddresses();
+
+			List<TimeLockedAddressEntity> tlaEntities = account.getTimeLockedAddresses();
+			List<TimeLockedAddressDTO> timeLockedAddresses = new ArrayList<>();
+
+			for(TimeLockedAddressEntity tlaEntity : tlaEntities) {
+				String bitcoinAddress = tlaEntity.toAddress(params).toString();
+				String addressUrl = "http://" + (params.getClass().equals(TestNet3Params.class) ? "tbtc." : "") + "blockr.io/address/info/" + tlaEntity.toAddress(params);
+				Date createdAt = Date.from(Instant.ofEpochSecond(tlaEntity.getTimeCreated()));
+				Instant lockedUntilInstant = Instant.ofEpochSecond(tlaEntity.getLockTime());
+				Date lockedUntil = Date.from(lockedUntilInstant);
+				boolean locked = lockedUntilInstant.isAfter(Instant.now());
+
+				Long balance = null;
+				for(Map.Entry<Address, Coin> mapSet : balances.entrySet()) {
+					Address address = mapSet.getKey();
+					Coin coin = mapSet.getValue();
+					if(address.toString().equals(bitcoinAddress)) {
+						balance = coin.longValue();
+						break;
+					}
+				}
+
+				timeLockedAddresses.add(new TimeLockedAddressDTO(bitcoinAddress, addressUrl, createdAt, lockedUntil, locked, balance));
+			}
+
+			String clientPublicKey = SerializeUtils.bytesToHex(account.clientPublicKey());
+			String serverPublicKey = SerializeUtils.bytesToHex(account.serverPublicKey());
+			Long virtualBalance = account.virtualBalance();
+			boolean locked = account.isLocked();
+
+			return new FundsDTO(clientPublicKey, serverPublicKey, virtualBalance, locked, timeLockedAddresses);
+
+		} else {
+			throw new UserAccountNotFoundException();
+		}
+	}
+
 	@RequestMapping(value = "/encrypted-private-key", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public EncryptedClientPrivateKeyDTO getEncryptedPrivateKey() throws BusinessException {
@@ -147,6 +212,41 @@ public class AuthUserController {
 
 			EncryptedClientPrivateKeyDTO dto = new EncryptedClientPrivateKeyDTO();
 			dto.setEncryptedClientPrivateKey(user.getClientPrivateKeyEncrypted());
+			return dto;
+
+		} else {
+			throw new UserAccountNotFoundException();
+		}
+	}
+
+	@RequestMapping(value = "/payment-requirements", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@ResponseBody
+	public PaymentRequirementsDTO getPaymentRequirement() throws BusinessException {
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		if (auth != null && userAccountService.userExists(auth.getName())) {
+			UserAccount user = userAccountService.getByEmail(auth.getName());
+
+			PaymentRequirementsDTO dto = new PaymentRequirementsDTO();
+			dto.setEncryptedClientPrivateKey(user.getClientPrivateKeyEncrypted());
+
+			try {
+				dto.setCurrentTransactionFees(feeService.fee());
+			} catch (IOException e) {
+				throw new CoinbleskInternalError("The fees could not be loaded.");
+			}
+
+			FundsDTO funds = getFunds();
+			long totalLockedAndVirtualBalance = funds.getVirtualBalance();
+			for(TimeLockedAddressDTO tla :funds.getTimeLockedAddresses()) {
+				if(tla.getLocked()) {
+					totalLockedAndVirtualBalance += tla.getBalance();
+				}
+			}
+			dto.setTotalLockedAndVirtualBalance(totalLockedAndVirtualBalance);
+
+			// TODO set previous transactions
+			dto.setPreviousTransactions(new ArrayList<>());
+
 			return dto;
 
 		} else {

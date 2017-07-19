@@ -110,6 +110,10 @@ public class AccountService {
 		return false;
 	}
 
+	public void deleteAccount(Account account) {
+		accountRepository.delete(account);
+	}
+
 	@Transactional(readOnly = true)
 	public List<Account> allAccounts() {
 		return StreamSupport.stream(accountRepository.findAll().spliterator(), false).collect(Collectors.toList());
