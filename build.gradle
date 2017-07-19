@@ -72,7 +72,7 @@ dependencies {
 
 	// Shared resources with android client
 	// (includes transfer-objects)
-	compile 'com.coinblesk:coinblesk-shared-resources:1.4.94'
+	compile 'com.coinblesk:coinblesk-shared-resources:1.4.95'
 
 	compile 'org.knowm.xchange:xchange-bitstamp:4.2.0'
 
