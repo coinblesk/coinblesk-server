@@ -49,7 +49,6 @@ import com.coinblesk.dto.EncryptedClientPrivateKeyDTO;
 import com.coinblesk.dto.FundsDTO;
 import com.coinblesk.dto.PaymentRequirementsDTO;
 import com.coinblesk.dto.TimeLockedAddressDTO;
-import com.coinblesk.dto.WebPaymentDTO;
 import com.coinblesk.json.v1.BaseTO;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.UserAccountTO;
