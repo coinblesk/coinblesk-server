@@ -66,6 +66,7 @@ import com.coinblesk.server.exceptions.InvalidEmailTokenException;
 import com.coinblesk.server.exceptions.InvalidKeyProvidedException;
 import com.coinblesk.server.exceptions.PasswordTooShortException;
 import com.coinblesk.server.exceptions.UserAccountDeletedException;
+import com.coinblesk.server.exceptions.UserAccountHasUnregisteredToken;
 import com.coinblesk.server.exceptions.UserAccountNotActivatedException;
 import com.coinblesk.server.exceptions.UserAccountNotFoundException;
 import com.coinblesk.server.exceptions.UserAccountUnregisteredTokenInvalid;
@@ -136,6 +137,8 @@ public class UserAccountService {
 		if (userExists(email)) {
 			if (getByEmail(email).isDeleted()) {
 				throw new UserAccountDeletedException();
+			} else if(getByEmail(email).hasUnregisteredToken()) {
+				throw new UserAccountHasUnregisteredToken();
 			} else {
 				throw new EmailAlreadyRegisteredException();
 			}
@@ -299,6 +302,9 @@ public class UserAccountService {
 		if (userAccount.isDeleted()) {
 			throw new UserAccountDeletedException();
 		}
+		if (userAccount.hasUnregisteredToken()) {
+			throw new UserAccountHasUnregisteredToken();
+		}
 		if (!userAccount.getActivationEmailToken().equals(createVerifyDTO.getToken())) {
 			throw new InvalidEmailTokenException();
 		}
@@ -308,7 +314,6 @@ public class UserAccountService {
 
 	@Transactional
 	public void delete(String email) throws BusinessException {
-
 		UserAccount userAccount = repository.findByEmail(email);
 		if (userAccount == null) {
 			throw new UserAccountNotFoundException();
@@ -319,7 +324,6 @@ public class UserAccountService {
 
 	@Transactional
 	public void undelete(String email) throws BusinessException {
-
 		UserAccount userAccount = repository.findByEmail(email);
 		if (userAccount == null) {
 			throw new UserAccountNotFoundException();
@@ -330,7 +334,6 @@ public class UserAccountService {
 
 	@Transactional
 	public void switchRole(String email) throws BusinessException {
-
 		UserAccount userAccount = repository.findByEmail(email);
 		if (userAccount == null) {
 			throw new UserAccountNotFoundException();
@@ -462,6 +465,9 @@ public class UserAccountService {
 		if (userAccount.isDeleted()) {
 			throw new UserAccountDeletedException();
 		}
+		if (userAccount.hasUnregisteredToken()) {
+			throw new UserAccountHasUnregisteredToken();
+		}
 		if (userAccount.getActivationEmailToken() != null) {
 			throw new UserAccountNotActivatedException();
 		}
@@ -478,6 +484,9 @@ public class UserAccountService {
 		}
 		if (userAccount.isDeleted()) {
 			throw new UserAccountDeletedException();
+		}
+		if (userAccount.hasUnregisteredToken()) {
+			throw new UserAccountHasUnregisteredToken();
 		}
 		if (userAccount.getActivationEmailToken() != null) {
 			throw new UserAccountNotActivatedException();

@@ -25,6 +25,7 @@ import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_COULD_NOT_V
 import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_CREATE_TOKEN_COULD_NOT_BE_SENT;
 import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_LOGIN_FAILED;
 import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_LOGIN_FAILED_WITH_DELETED_ACCOUNT;
+import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_LOGIN_FAILED_WITH_UNREGISTERED_ACCOUNT;
 import static java.util.Locale.ENGLISH;
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
@@ -66,6 +67,7 @@ import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
 import com.coinblesk.server.exceptions.UserAccountDeletedException;
+import com.coinblesk.server.exceptions.UserAccountHasUnregisteredToken;
 import com.coinblesk.server.exceptions.UserAccountNotFoundException;
 import com.coinblesk.server.exceptions.UserAccountUnregisteredTokenInvalid;
 import com.coinblesk.server.service.EventService;
@@ -110,6 +112,10 @@ public class UserAccountController {
 		if (userAccountService.userExists(loginDTO.getEmail()) && userAccountService.getByEmail(loginDTO.getEmail()).isDeleted()) {
 			eventService.error(USER_ACCOUNT_LOGIN_FAILED_WITH_DELETED_ACCOUNT, "Failed login with e-mail '" + loginDTO.getEmail()+ "'");
 			throw new UserAccountDeletedException();
+		}
+		if (userAccountService.userExists(loginDTO.getEmail()) && userAccountService.getByEmail(loginDTO.getEmail()).hasUnregisteredToken()) {
+			eventService.error(USER_ACCOUNT_LOGIN_FAILED_WITH_UNREGISTERED_ACCOUNT, "Failed login with e-mail '" + loginDTO.getEmail() + "'");
+			throw new UserAccountHasUnregisteredToken();
 		}
 
 		UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
@@ -234,9 +240,18 @@ public class UserAccountController {
 		LOG.debug("Forgot password for {}", forgotDTO.getEmail());
 		UserAccount userAccount = userAccountService.getByEmail(forgotDTO.getEmail());
 
+		if(userAccount == null) {
+			throw new UserAccountNotFoundException();
+		}
+		if(userAccount.isDeleted()) {
+			throw new UserAccountDeletedException();
+		}
+		if(userAccount.hasUnregisteredToken()) {
+			throw new UserAccountHasUnregisteredToken();
+		}
+
 		// user is not activated
-		if(userAccountService.userExists(forgotDTO.getEmail())
-				&& !userAccount.isActivationVerified()) {
+		if(!userAccount.isActivationVerified()) {
 			try {
 				sendActivationEmailToUser(userAccount, locale);
 			} catch (Exception e) {

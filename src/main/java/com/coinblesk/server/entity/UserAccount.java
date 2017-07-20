@@ -188,6 +188,10 @@ public class UserAccount implements Serializable {
 		return unregisteredToken;
 	}
 
+	public boolean hasUnregisteredToken() {
+		return unregisteredToken != null;
+	}
+
 	public void setUnregisteredToken(String unregisteredToken) {
 		this.unregisteredToken = unregisteredToken;
 	}
