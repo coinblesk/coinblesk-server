@@ -57,7 +57,6 @@ import com.coinblesk.server.dao.UserAccountRepository;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.enumerator.EventType;
-import com.coinblesk.server.exceptions.AccountNotFoundException;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
 import com.coinblesk.server.exceptions.EmailAlreadyRegisteredException;
@@ -254,19 +253,18 @@ public class UserAccountService {
 		String publicKey = dto.getClientPublicKey();
 		String unregisteredToken = dto.getUnregisteredToken();
 		Long lockTime = dto.getLockTime();
-
 		UserAccount userAccount = getByEmail(email);
 
+		if (!userExists(email)) {
+			throw new UserAccountNotFoundException();
+		}
 		if (!email.matches(EMAIL_PATTERN)) {
 			throw new InvalidEmailProvidedException();
 		}
 		if (password.length() < MINIMAL_PASSWORD_LENGTH) {
 			throw new PasswordTooShortException();
 		}
-		if (userAccount == null) {
-			throw new AccountNotFoundException();
-		}
-		if (userAccount.getUnregisteredToken() == null || unregisteredToken == null) {
+		if (!userAccount.hasUnregisteredToken() || unregisteredToken == null) {
 			throw new UserAccountUnregisteredTokenInvalid();
 		}
 		if (!unregisteredToken.equals(userAccount.getUnregisteredToken())) {

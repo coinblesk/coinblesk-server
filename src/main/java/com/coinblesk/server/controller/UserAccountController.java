@@ -69,7 +69,6 @@ import com.coinblesk.server.exceptions.CoinbleskInternalError;
 import com.coinblesk.server.exceptions.UserAccountDeletedException;
 import com.coinblesk.server.exceptions.UserAccountHasUnregisteredToken;
 import com.coinblesk.server.exceptions.UserAccountNotFoundException;
-import com.coinblesk.server.exceptions.UserAccountUnregisteredTokenInvalid;
 import com.coinblesk.server.service.EventService;
 import com.coinblesk.server.service.MailService;
 import com.coinblesk.server.service.UserAccountService;
@@ -109,13 +108,16 @@ public class UserAccountController {
 	public TokenDTO login(@Valid @RequestBody LoginDTO loginDTO, HttpServletResponse response) throws BusinessException {
 		LOG.debug("Login trial of user {}", loginDTO.getEmail());
 
-		if (userAccountService.userExists(loginDTO.getEmail()) && userAccountService.getByEmail(loginDTO.getEmail()).isDeleted()) {
-			eventService.error(USER_ACCOUNT_LOGIN_FAILED_WITH_DELETED_ACCOUNT, "Failed login with e-mail '" + loginDTO.getEmail()+ "'");
-			throw new UserAccountDeletedException();
-		}
-		if (userAccountService.userExists(loginDTO.getEmail()) && userAccountService.getByEmail(loginDTO.getEmail()).hasUnregisteredToken()) {
-			eventService.error(USER_ACCOUNT_LOGIN_FAILED_WITH_UNREGISTERED_ACCOUNT, "Failed login with e-mail '" + loginDTO.getEmail() + "'");
-			throw new UserAccountHasUnregisteredToken();
+		if (userAccountService.userExists(loginDTO.getEmail())) {
+			UserAccount userAccount = userAccountService.getByEmail(loginDTO.getEmail());
+			if (userAccount.isDeleted()) {
+				eventService.error(USER_ACCOUNT_LOGIN_FAILED_WITH_DELETED_ACCOUNT, "Failed login with e-mail '" + loginDTO.getEmail()+ "'");
+				throw new UserAccountDeletedException();
+			}
+			if (userAccount.hasUnregisteredToken()) {
+				eventService.error(USER_ACCOUNT_LOGIN_FAILED_WITH_UNREGISTERED_ACCOUNT, "Failed login with e-mail '" + loginDTO.getEmail() + "'");
+				throw new UserAccountHasUnregisteredToken();
+			}
 		}
 
 		UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
@@ -156,48 +158,13 @@ public class UserAccountController {
 		}
 
 		try {
-			LOG.debug("send email to {}", userAccount.getEmail());
-			String path = "activation/"
-					+ encodeURL(userAccount.getEmail())
-					+ "/"
-					+ userAccount.getActivationEmailToken();
-			String url = cfg.getFrontendUrl() + path;
-
-			mailService.sendUserMail(userAccount.getEmail(),
-					messageSource.getMessage("activation.email" + ".title", null, locale),
-					messageSource.getMessage("activation.email.text", new String[] { url }, locale));
-
+			sendActivationEmailToUser(userAccount, locale);
 		} catch (Exception e) {
 			LOG.error("Mail send error", e);
 			eventService.error(USER_ACCOUNT_CREATE_TOKEN_COULD_NOT_BE_SENT, "Token of '"+createDTO.getEmail() + "' could not be sent.");
 			throw new CoinbleskInternalError("An error happend while sending an e-mail.");
 		}
 	}
-
-	@RequestMapping(value = "/create-with-token", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE)
-	public void createAccountWithToken(Locale locale, @Valid @RequestBody UserAccountCreateWithTokenDTO createDTO) throws BusinessException {
-		LOG.debug("Create user account with token (update existing template user)");
-
-		UserAccount userAccount = userAccountService.getByEmail(createDTO.getEmail());
-
-		if(userAccount == null || userAccount.getUnregisteredToken() == null) {
-			throw new UserAccountNotFoundException();
-		}
-
-		if(!userAccount.getUnregisteredToken().equals(createDTO.getUnregisteredToken())) {
-			throw new UserAccountUnregisteredTokenInvalid();
-		}
-
-		try {
-			userAccountService.activateWithRegistrationToken(createDTO);
-		} catch(BusinessException exception) {
-			LOG.warn("An exception occurred during the creation of a user (from token)", exception);
-			eventService.warn(USER_ACCOUNT_COULD_NOT_BE_ACTIVATED_WITH_REGISTRATION_TOKEN, "An exception occurred during the activation of the user account (with registration token): " + exception.getClass().getSimpleName());
-			throw exception;
-		}
-
-	}
-
 	private void sendActivationEmailToUser(UserAccount userAccount, Locale locale) {
 		LOG.debug("send email to {}", userAccount.getEmail());
 		String path = "activation/"
@@ -305,6 +272,19 @@ public class UserAccountController {
 		}
 
 		LOG.debug("Activate forgot password success for {}", forgotVerifyDTO.getEmail());
+	}
+
+	@RequestMapping(value = "/create-with-token", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE)
+	public void createAccountWithToken(Locale locale, @Valid @RequestBody UserAccountCreateWithTokenDTO createDTO) throws BusinessException {
+		LOG.debug("Create user account with token (update existing template user)");
+
+		try {
+			userAccountService.activateWithRegistrationToken(createDTO);
+		} catch(BusinessException exception) {
+			LOG.warn("An exception occurred during the creation of a user (from token)", exception);
+			eventService.warn(USER_ACCOUNT_COULD_NOT_BE_ACTIVATED_WITH_REGISTRATION_TOKEN, "An exception occurred during the activation of the user account (with registration token): " + exception.getClass().getSimpleName());
+			throw exception;
+		}
 	}
 
 	private String encodeURL(String string) {
