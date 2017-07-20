@@ -23,7 +23,7 @@ import static com.coinblesk.server.enumerator.EventType.USER_ACCOUNT_PASSWORD_CO
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.web.bind.annotation.RequestMethod.DELETE;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
-import static org.springframework.web.bind.annotation.RequestMethod.POST;
+import static org.springframework.web.bind.annotation.RequestMethod.PUT;
 
 import javax.validation.Valid;
 
@@ -100,7 +100,7 @@ public class AuthCommonController {
 		LOG.debug("Delete account success for {}", auth.getName());
 	}
 
-	@RequestMapping(value = "/user-account/change-password", method = POST, consumes = APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/user-account/change-password", method = PUT, consumes = APPLICATION_JSON_UTF8_VALUE)
 	public void changePassword(@Valid @RequestBody UserAccountChangePasswordDTO changePasswordDTO) throws BusinessException {
 
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
