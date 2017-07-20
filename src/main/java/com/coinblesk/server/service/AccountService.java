@@ -34,6 +34,7 @@ import com.coinblesk.server.dao.AccountRepository;
 import com.coinblesk.server.dao.TimeLockedAddressRepository;
 import com.coinblesk.server.entity.Account;
 import com.coinblesk.server.entity.TimeLockedAddressEntity;
+import com.coinblesk.server.exceptions.CoinbleskInternalError;
 import com.coinblesk.server.exceptions.InvalidLockTimeException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
 import com.coinblesk.util.DTOUtils;
@@ -110,7 +111,7 @@ public class AccountService {
 		return false;
 	}
 
-	public void deleteAccount(Account account) {
+	private void deleteAccount(Account account) {
 		accountRepository.delete(account);
 	}
 
@@ -184,6 +185,22 @@ public class AccountService {
 
 		return new GetVirtualBalanceResponse(account.virtualBalance(), ECKey.fromPrivateAndPrecalculatedPublic(account
 			.serverPrivateKey(), account.serverPublicKey()));
+	}
+
+	@Transactional
+	// this method is used to empty the temporary account's virtual balance and directly delete it afterwards
+	// the account A cannot have a timelockedaddress, because it is only used as long as the user has an
+	// unregistered token (user who got funds, but is not yet registered). this method is used during the transition
+	// from unregistered to registered
+	public void moveVirtualBalanceFromAToBAndDeleteA(Account accountA, Account accountB) {
+
+		if (accountA.getTimeLockedAddresses().size() != 0) {
+			throw new CoinbleskInternalError("The account has time locked addresses.");
+		}
+
+		accountB.virtualBalance(accountA.virtualBalance());
+		accountA.virtualBalance(0L);
+		deleteAccount(accountA);
 	}
 
 	public TimeLockedAddress getTimeLockedAddressByAddressHash(@NonNull byte[] addressHash) {

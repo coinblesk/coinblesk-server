@@ -271,21 +271,17 @@ public class UserAccountService {
 			throw new UserAccountUnregisteredTokenInvalid();
 		}
 
-		// moves the virtual balance to a newly created account
-		Account tempAccount = userAccount.getAccount();
-		Account newAccount = createAccountAndTimeLockedAddress(publicKey, lockTime);
-		newAccount.virtualBalance(tempAccount.virtualBalance());
-		tempAccount.virtualBalance(0L);
+		Account accountA = userAccount.getAccount();
+		Account accountB = createAccountAndTimeLockedAddress(publicKey, lockTime);
+		accountService.moveVirtualBalanceFromAToBAndDeleteA(accountA, accountB);
 
-		userAccount.setAccount(newAccount);
+		userAccount.setAccount(accountB);
 		userAccount.setPassword(passwordEncoder.encode(password));
 		userAccount.setCreationDate(new Date());
 		userAccount.setActivationEmailToken(null);
 		userAccount.setClientPrivateKeyEncrypted(privateKey);
 		userAccount.setUnregisteredToken(null);
 		repository.save(userAccount);
-
-		accountService.deleteAccount(tempAccount);
 	}
 
 	@Transactional

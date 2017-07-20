@@ -15,14 +15,17 @@
  */
 package com.coinblesk.server.service;
 
-import com.coinblesk.bitcoin.TimeLockedAddress;
-import com.coinblesk.server.config.AppConfig;
-import com.coinblesk.server.dao.AccountRepository;
-import com.coinblesk.server.entity.Account;
-import com.coinblesk.server.entity.TimeLockedAddressEntity;
-import com.coinblesk.server.exceptions.InvalidLockTimeException;
-import com.coinblesk.server.exceptions.UserNotFoundException;
-import com.coinblesk.server.utilTest.CoinbleskTest;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+
+import javax.persistence.EntityManager;
+
 import org.assertj.core.api.Assertions;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Transaction;
@@ -31,12 +34,15 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import javax.persistence.EntityManager;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
-
-import static org.junit.Assert.*;
+import com.coinblesk.bitcoin.TimeLockedAddress;
+import com.coinblesk.server.config.AppConfig;
+import com.coinblesk.server.dao.AccountRepository;
+import com.coinblesk.server.entity.Account;
+import com.coinblesk.server.entity.TimeLockedAddressEntity;
+import com.coinblesk.server.exceptions.CoinbleskInternalError;
+import com.coinblesk.server.exceptions.InvalidLockTimeException;
+import com.coinblesk.server.exceptions.UserNotFoundException;
+import com.coinblesk.server.utilTest.CoinbleskTest;
 
 /**
  * @author Sebastian Stephan
@@ -224,4 +230,46 @@ public class AccountServiceTest extends CoinbleskTest {
 		assertEquals(intoDB, fromRedeemScript);
 	}
 
+	@Test
+	public void moveVirtualBalanceFromAToBAndDeleteA() {
+		ECKey accountAKey = new ECKey();
+		ECKey accountBKey = new ECKey();
+
+		accountService.createAccount(accountAKey);
+		accountService.createAccount(accountBKey);
+
+		Account accountA = accountRepository.findByClientPublicKey(accountAKey.getPubKey());
+		Account accountB = accountRepository.findByClientPublicKey(accountBKey.getPubKey());
+
+		Assert.assertNotNull(accountA);
+		Assert.assertNotNull(accountB);
+
+		long satoshis = 100000L;
+		accountA.virtualBalance(satoshis);
+		Assert.assertTrue(accountA.virtualBalance() == satoshis);
+		Assert.assertTrue(accountB.virtualBalance() == 0L);
+
+		accountService.moveVirtualBalanceFromAToBAndDeleteA(accountA, accountB);
+
+		Assert.assertTrue(accountA.virtualBalance() == 0L);
+		Assert.assertTrue(accountB.virtualBalance() == satoshis);
+
+		Assert.assertNull(accountRepository.findByClientPublicKey(accountAKey.getPubKey()));
+	}
+
+	@Test(expected = CoinbleskInternalError.class)
+	public void moveVirtualBalanceFromAToBAndDeleteA_AhasTimeLockedAddresses() {
+		ECKey accountAKey = new ECKey();
+		ECKey accountBKey = new ECKey();
+
+		accountService.createAccount(accountAKey);
+		accountService.createAccount(accountBKey);
+
+		Account accountA = accountRepository.findByClientPublicKey(accountAKey.getPubKey());
+		Account accountB = accountRepository.findByClientPublicKey(accountBKey.getPubKey());
+
+		accountA.getTimeLockedAddresses().add(new TimeLockedAddressEntity());
+
+		accountService.moveVirtualBalanceFromAToBAndDeleteA(accountA, accountB);
+	}
 }
