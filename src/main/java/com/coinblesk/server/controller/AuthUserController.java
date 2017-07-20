@@ -48,6 +48,7 @@ import com.coinblesk.dto.AccountBalanceDTO;
 import com.coinblesk.dto.EncryptedClientPrivateKeyDTO;
 import com.coinblesk.dto.FundsDTO;
 import com.coinblesk.dto.PaymentRequirementsDTO;
+import com.coinblesk.dto.PaymentRequirementsRequestDTO;
 import com.coinblesk.dto.TimeLockedAddressDTO;
 import com.coinblesk.json.v1.BaseTO;
 import com.coinblesk.json.v1.Type;
@@ -61,6 +62,7 @@ import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
 import com.coinblesk.server.exceptions.UserAccountNotFoundException;
 import com.coinblesk.server.service.FeeService;
+import com.coinblesk.server.service.PaymentForkService;
 import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.util.SerializeUtils;
@@ -79,13 +81,15 @@ public class AuthUserController {
 	private final UserAccountService userAccountService;
 	private final WalletService walletService;
 	private final FeeService feeService;
+	private final PaymentForkService paymentForkService;
 
 	@Autowired
-	public AuthUserController(AppConfig appConfig, UserAccountService userAccountService, WalletService walletService, FeeService feeService) {
+	public AuthUserController(AppConfig appConfig, UserAccountService userAccountService, WalletService walletService, FeeService feeService, PaymentForkService paymentForkService) {
 		this.appConfig = appConfig;
 		this.userAccountService = userAccountService;
 		this.walletService = walletService;
 		this.feeService = feeService;
+		this.paymentForkService = paymentForkService;
 	}
 
 	@RequestMapping(value = "/transfer-p2sh", method = POST, produces = APPLICATION_JSON_UTF8_VALUE)
@@ -218,9 +222,9 @@ public class AuthUserController {
 		}
 	}
 
-	@RequestMapping(value = "/payment-requirements", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/payment-requirements", method = POST, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
-	public PaymentRequirementsDTO getPaymentRequirement() throws BusinessException {
+	public PaymentRequirementsDTO getPaymentRequirement(@RequestBody PaymentRequirementsRequestDTO requestDTO) throws BusinessException {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		if (auth != null && userAccountService.userExists(auth.getName())) {
 			UserAccount user = userAccountService.getByEmail(auth.getName());
@@ -245,6 +249,8 @@ public class AuthUserController {
 
 			// TODO set previous transactions
 			dto.setPreviousTransactions(new ArrayList<>());
+
+			dto.setPaymentDecisionDTO(paymentForkService.getPaymentDecision(user.getAccount(), requestDTO.getReceiver(), requestDTO.getAmount()));
 
 			return dto;
 

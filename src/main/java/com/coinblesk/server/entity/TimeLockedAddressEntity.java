@@ -23,6 +23,8 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Utils;
 
 import javax.persistence.*;
+
+import java.time.Instant;
 import java.util.Comparator;
 
 @Entity(name = "TIME_LOCKED_ADDRESS")
@@ -110,6 +112,11 @@ public class TimeLockedAddressEntity {
 	public TimeLockedAddressEntity setLockTime(long lockTime) {
 		this.lockTime = lockTime;
 		return this;
+	}
+
+	public boolean isLocked() {
+		Instant lockedUntil = Instant.ofEpochSecond(getLockTime());
+		return lockedUntil.isAfter(Instant.now());
 	}
 
 	private String toString(NetworkParameters params) {
