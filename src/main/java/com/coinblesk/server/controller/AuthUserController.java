@@ -28,10 +28,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
+
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.params.TestNet3Params;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +45,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -60,6 +65,7 @@ import com.coinblesk.server.entity.UserAccount;
 import com.coinblesk.server.exceptions.AccountNotFoundException;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
+import com.coinblesk.server.exceptions.InvalidAddressException;
 import com.coinblesk.server.exceptions.UserAccountNotFoundException;
 import com.coinblesk.server.service.FeeService;
 import com.coinblesk.server.service.PaymentForkService;
@@ -115,148 +121,222 @@ public class AuthUserController {
 	@RequestMapping(value = "/balance", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public AccountBalanceDTO getTimeLockedAddressesWithBalance() throws BusinessException {
-		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-		if(auth != null && userAccountService.userExists(auth.getName())) {
-			UserAccount user = userAccountService.getByEmail(auth.getName());
-			Account account = user.getAccount();
+		UserAccount user = getAuthenticatedUser();
+		Account account = user.getAccount();
 
-			if(account == null) {
-				throw new AccountNotFoundException();
-			}
-
-			NetworkParameters params = appConfig.getNetworkParameters();
-			Map<String, Long> resultingTlas = new HashMap<>();
-			Long totalBalance = 0L;
-
-			List<TimeLockedAddressEntity> tlaList = account.getTimeLockedAddresses();
-			Map<String, TimeLockedAddressEntity> tlas = new HashMap<>();
-			for(TimeLockedAddressEntity tla : tlaList) {
-				tlas.put(tla.toAddress(params).toString(), tla);
-			}
-
-			Map<Address, Coin> balancesByAddresses = walletService.getBalanceByAddresses();
-			for(Map.Entry<Address, Coin> balance : balancesByAddresses.entrySet()) {
-				String addressString = balance.getKey().toString();
-				if(tlas.keySet().contains(addressString)) {
-					resultingTlas.put(addressString, balance.getValue().longValue());
-					totalBalance += balance.getValue().longValue();
-				}
-			}
-
-			AccountBalanceDTO dto = new AccountBalanceDTO();
-			dto.setTimeLockedAddresses(resultingTlas);
-			dto.setVirtualBalance(account.virtualBalance());
-			dto.setTotalBalance(totalBalance);
-
-			return dto;
-
-		} else {
-			throw new UserAccountNotFoundException();
+		if(account == null) {
+			throw new AccountNotFoundException();
 		}
+
+		NetworkParameters params = appConfig.getNetworkParameters();
+		Map<String, Long> resultingTlas = new HashMap<>();
+		Long totalBalance = 0L;
+
+		List<TimeLockedAddressEntity> tlaList = account.getTimeLockedAddresses();
+		Map<String, TimeLockedAddressEntity> tlas = new HashMap<>();
+		for(TimeLockedAddressEntity tla : tlaList) {
+			tlas.put(tla.toAddress(params).toString(), tla);
+		}
+
+		Map<Address, Coin> balancesByAddresses = walletService.getBalanceByAddresses();
+		for(Map.Entry<Address, Coin> balance : balancesByAddresses.entrySet()) {
+			String addressString = balance.getKey().toString();
+			if(tlas.keySet().contains(addressString)) {
+				resultingTlas.put(addressString, balance.getValue().longValue());
+				totalBalance += balance.getValue().longValue();
+			}
+		}
+
+		AccountBalanceDTO dto = new AccountBalanceDTO();
+		dto.setTimeLockedAddresses(resultingTlas);
+		dto.setVirtualBalance(account.virtualBalance());
+		dto.setTotalBalance(totalBalance);
+
+		return dto;
 	}
 
 	@RequestMapping(value = "/funds", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public FundsDTO getFunds() throws BusinessException {
-		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-		if(auth != null && userAccountService.userExists(auth.getName())) {
-			UserAccount userAccount = userAccountService.getByEmail(auth.getName());
-			Account account = userAccount.getAccount();
+		UserAccount userAccount = getAuthenticatedUser();
+		Account account = userAccount.getAccount();
 
-			if(account == null) {
-				throw new AccountNotFoundException();
-			}
-
-			NetworkParameters params = appConfig.getNetworkParameters();
-			Map<Address, Coin> balances = walletService.getBalanceByAddresses();
-
-			List<TimeLockedAddressEntity> tlaEntities = account.getTimeLockedAddresses();
-			List<TimeLockedAddressDTO> timeLockedAddresses = new ArrayList<>();
-
-			for(TimeLockedAddressEntity tlaEntity : tlaEntities) {
-				String bitcoinAddress = tlaEntity.toAddress(params).toString();
-				String addressUrl = "http://" + (params.getClass().equals(TestNet3Params.class) ? "tbtc." : "") + "blockr.io/address/info/" + tlaEntity.toAddress(params);
-				Date createdAt = Date.from(Instant.ofEpochSecond(tlaEntity.getTimeCreated()));
-				Instant lockedUntilInstant = Instant.ofEpochSecond(tlaEntity.getLockTime());
-				Date lockedUntil = Date.from(lockedUntilInstant);
-				boolean locked = lockedUntilInstant.isAfter(Instant.now());
-
-				Long balance = null;
-				for(Map.Entry<Address, Coin> mapSet : balances.entrySet()) {
-					Address address = mapSet.getKey();
-					Coin coin = mapSet.getValue();
-					if(address.toString().equals(bitcoinAddress)) {
-						balance = coin.longValue();
-						break;
-					}
-				}
-
-				timeLockedAddresses.add(new TimeLockedAddressDTO(bitcoinAddress, addressUrl, createdAt, lockedUntil, locked, balance));
-			}
-
-			String clientPublicKey = SerializeUtils.bytesToHex(account.clientPublicKey());
-			String serverPublicKey = SerializeUtils.bytesToHex(account.serverPublicKey());
-			Long virtualBalance = account.virtualBalance();
-			boolean locked = account.isLocked();
-
-			return new FundsDTO(clientPublicKey, serverPublicKey, virtualBalance, locked, timeLockedAddresses);
-
-		} else {
-			throw new UserAccountNotFoundException();
+		if(account == null) {
+			throw new AccountNotFoundException();
 		}
+
+		NetworkParameters params = appConfig.getNetworkParameters();
+		Map<Address, Coin> balances = walletService.getBalanceByAddresses();
+
+		List<TimeLockedAddressEntity> tlaEntities = account.getTimeLockedAddresses();
+		List<TimeLockedAddressDTO> timeLockedAddresses = new ArrayList<>();
+
+		for(TimeLockedAddressEntity tlaEntity : tlaEntities) {
+			String bitcoinAddress = tlaEntity.toAddress(params).toString();
+			String addressUrl = "http://" + (params.getClass().equals(TestNet3Params.class) ? "tbtc." : "") + "blockr.io/address/info/" + tlaEntity.toAddress(params);
+			Date createdAt = Date.from(Instant.ofEpochSecond(tlaEntity.getTimeCreated()));
+			Instant lockedUntilInstant = Instant.ofEpochSecond(tlaEntity.getLockTime());
+			Date lockedUntil = Date.from(lockedUntilInstant);
+			boolean locked = lockedUntilInstant.isAfter(Instant.now());
+
+			Long balance = null;
+			for(Map.Entry<Address, Coin> mapSet : balances.entrySet()) {
+				Address address = mapSet.getKey();
+				Coin coin = mapSet.getValue();
+				if(address.toString().equals(bitcoinAddress)) {
+					balance = coin.longValue();
+					break;
+				}
+			}
+
+			timeLockedAddresses.add(new TimeLockedAddressDTO(bitcoinAddress, addressUrl, createdAt, lockedUntil, locked, balance));
+		}
+
+		String clientPublicKey = SerializeUtils.bytesToHex(account.clientPublicKey());
+		String serverPublicKey = SerializeUtils.bytesToHex(account.serverPublicKey());
+		Long virtualBalance = account.virtualBalance();
+		boolean locked = account.isLocked();
+
+		return new FundsDTO(clientPublicKey, serverPublicKey, virtualBalance, locked, timeLockedAddresses);
 	}
 
-	@RequestMapping(value = "/encrypted-private-key", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/payment/encrypted-private-key", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
 	public EncryptedClientPrivateKeyDTO getEncryptedPrivateKey() throws BusinessException {
-		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-		if(auth != null && userAccountService.userExists(auth.getName())) {
-			UserAccount user = userAccountService.getByEmail(auth.getName());
-
-			EncryptedClientPrivateKeyDTO dto = new EncryptedClientPrivateKeyDTO();
-			dto.setEncryptedClientPrivateKey(user.getClientPrivateKeyEncrypted());
-			return dto;
-
-		} else {
-			throw new UserAccountNotFoundException();
-		}
+		UserAccount user = getAuthenticatedUser();
+		EncryptedClientPrivateKeyDTO dto = new EncryptedClientPrivateKeyDTO();
+		dto.setEncryptedClientPrivateKey(user.getClientPrivateKeyEncrypted());
+		return dto;
 	}
 
-	@RequestMapping(value = "/payment-requirements", method = POST, produces = APPLICATION_JSON_UTF8_VALUE)
+	@RequestMapping(value = "/payment/requirements", method = POST, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
+	@Deprecated
 	public PaymentRequirementsDTO getPaymentRequirement(@RequestBody PaymentRequirementsRequestDTO requestDTO) throws BusinessException {
+		UserAccount user = getAuthenticatedUser();
+
+		PaymentRequirementsDTO dto = new PaymentRequirementsDTO();
+		dto.setEncryptedClientPrivateKey(user.getClientPrivateKeyEncrypted());
+
+		try {
+			dto.setCurrentTransactionFees(feeService.fee());
+		} catch (IOException e) {
+			throw new CoinbleskInternalError("The fees could not be loaded.");
+		}
+
+		FundsDTO funds = getFunds();
+		long totalLockedAndVirtualBalance = funds.getVirtualBalance();
+		for(TimeLockedAddressDTO tla :funds.getTimeLockedAddresses()) {
+			if(tla.getLocked()) {
+				totalLockedAndVirtualBalance += tla.getBalance();
+			}
+		}
+		dto.setTotalLockedAndVirtualBalance(totalLockedAndVirtualBalance);
+
+		// TODO set previous transactions
+		dto.setPreviousTransactions(new ArrayList<>());
+
+		dto.setPaymentDecisionDTO(paymentForkService.getPaymentDecision(user.getAccount(), requestDTO.getReceiver(), requestDTO.getAmount()));
+
+		return dto;
+	}
+
+	@RequestMapping(value = "/payment/utxo", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@ResponseBody
+	public List<TransactionOutput> getUnspentOutputsOfAddress(@NotNull @Valid @RequestParam("address") String addressString) throws BusinessException {
+		UserAccount user = getAuthenticatedUser();
+
+		if(user.getAccount() == null || user.getAccount().getTimeLockedAddresses().size() == 0) {
+			throw new AccountNotFoundException();
+		}
+
+		TimeLockedAddressEntity foundTLA = null;
+		for(TimeLockedAddressEntity tla : user.getAccount().getTimeLockedAddresses()) {
+			if (addressString.equals(tla.toAddress(appConfig.getNetworkParameters()).toString())) {
+				foundTLA = tla;
+			}
+		}
+		if(foundTLA == null) {
+			throw new InvalidAddressException();
+		}
+
+		return walletService.getUTXOByAddress(foundTLA.toAddress(appConfig.getNetworkParameters()));
+	}
+
+	@RequestMapping(value = "/payment/locked-address", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@ResponseBody
+	public Map<String, String> getCurrentLockedAddress() throws BusinessException {
+		UserAccount user = getAuthenticatedUser();
+
+		if(user.getAccount() == null || user.getAccount().getTimeLockedAddresses().size() == 0) {
+			throw new AccountNotFoundException();
+		}
+
+		TimeLockedAddressEntity lockedAddress = null;
+		for(TimeLockedAddressEntity tla : user.getAccount().getTimeLockedAddresses()) {
+			if(tla.isLocked()) {
+				lockedAddress = tla;
+				break;
+			}
+		}
+
+		Map<String, String> map = new HashMap<>();
+		map.put("bitcoinAddress", (lockedAddress == null) ? null : lockedAddress.toAddress(appConfig.getNetworkParameters()).toString());
+
+		return map;
+	}
+
+	@RequestMapping(value = "/payment/fee", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@ResponseBody
+	public Map<String, Integer> getFees() throws BusinessException {
+		getAuthenticatedUser();
+
+		Map<String, Integer> map = new HashMap<>();
+		try {
+			map.put("fee", feeService.fee());
+		} catch (IOException e) {
+			map.put("fee", null);
+		}
+		return map;
+	}
+
+	@RequestMapping(value = "/payment/channel-transaction", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@ResponseBody
+	public Map<String, String> getChannelTransaction() throws BusinessException {
+		UserAccount user = getAuthenticatedUser();
+		if(user.getAccount() == null) {
+			throw new AccountNotFoundException();
+		}
+		Account account = user.getAccount();
+
+		Map<String, String> map = new HashMap<>();
+		map.put("channelTransaction", (account.getChannelTransaction() == null) ? null : map.put("channelTransaction", SerializeUtils.bytesToHex(account.getChannelTransaction())));
+		return map;
+	}
+
+	@RequestMapping(value = "/payment/server-pot-address", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@ResponseBody
+	public Map<String, String> getServerPotAddress() throws BusinessException {
+		getAuthenticatedUser();
+
+		Address serverPotAddress = appConfig.getMicroPaymentPotPrivKey().toAddress(appConfig.getNetworkParameters());
+		Map<String, String> map = new HashMap<>();
+		map.put("serverPotAddress", serverPotAddress.toString());
+		return map;
+	}
+
+	private UserAccount getAuthenticatedUser() throws UserAccountNotFoundException {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-		if (auth != null && userAccountService.userExists(auth.getName())) {
-			UserAccount user = userAccountService.getByEmail(auth.getName());
-
-			PaymentRequirementsDTO dto = new PaymentRequirementsDTO();
-			dto.setEncryptedClientPrivateKey(user.getClientPrivateKeyEncrypted());
-
-			try {
-				dto.setCurrentTransactionFees(feeService.fee());
-			} catch (IOException e) {
-				throw new CoinbleskInternalError("The fees could not be loaded.");
-			}
-
-			FundsDTO funds = getFunds();
-			long totalLockedAndVirtualBalance = funds.getVirtualBalance();
-			for(TimeLockedAddressDTO tla :funds.getTimeLockedAddresses()) {
-				if(tla.getLocked()) {
-					totalLockedAndVirtualBalance += tla.getBalance();
-				}
-			}
-			dto.setTotalLockedAndVirtualBalance(totalLockedAndVirtualBalance);
-
-			// TODO set previous transactions
-			dto.setPreviousTransactions(new ArrayList<>());
-
-			dto.setPaymentDecisionDTO(paymentForkService.getPaymentDecision(user.getAccount(), requestDTO.getReceiver(), requestDTO.getAmount()));
-
-			return dto;
-
-		} else {
+		if(auth == null || !userAccountService.userExists(auth.getName())) {
 			throw new UserAccountNotFoundException();
 		}
+
+		UserAccount userAccount = userAccountService.getByEmail(auth.getName());
+		if (userAccount.isDeleted() || userAccount.hasUnregisteredToken()) {
+			throw new UserAccountNotFoundException();
+		}
+
+		return userAccount;
 	}
 
 }
