@@ -16,18 +16,23 @@
 package com.coinblesk.server.controller;
 
 import static com.coinblesk.server.config.UserRole.ROLE_USER;
+import static com.coinblesk.util.BitcoinUtils.ONE_BITCOIN_IN_SATOSHI;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
+import javax.transaction.Transactional;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
@@ -40,6 +45,7 @@ import org.bitcoinj.params.TestNet3Params;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -52,9 +58,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.coinblesk.dto.AccountBalanceDTO;
 import com.coinblesk.dto.EncryptedClientPrivateKeyDTO;
 import com.coinblesk.dto.FundsDTO;
+import com.coinblesk.dto.MicroPaymentViaEmailDTO;
 import com.coinblesk.dto.PaymentRequirementsDTO;
 import com.coinblesk.dto.PaymentRequirementsRequestDTO;
 import com.coinblesk.dto.TimeLockedAddressDTO;
+import com.coinblesk.dto.VirtualPaymentViaEmailDTO;
 import com.coinblesk.json.v1.BaseTO;
 import com.coinblesk.json.v1.Type;
 import com.coinblesk.json.v1.UserAccountTO;
@@ -66,11 +74,20 @@ import com.coinblesk.server.exceptions.AccountNotFoundException;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.exceptions.CoinbleskInternalError;
 import com.coinblesk.server.exceptions.InvalidAddressException;
+import com.coinblesk.server.exceptions.InvalidAmountException;
+import com.coinblesk.server.exceptions.InvalidNonceException;
+import com.coinblesk.server.exceptions.InvalidRequestException;
+import com.coinblesk.server.exceptions.PaymentFailedException;
 import com.coinblesk.server.exceptions.UserAccountNotFoundException;
+import com.coinblesk.server.exceptions.UserNotFoundException;
 import com.coinblesk.server.service.FeeService;
+import com.coinblesk.server.service.MailService;
+import com.coinblesk.server.service.MicropaymentService;
 import com.coinblesk.server.service.PaymentForkService;
 import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.server.service.WalletService;
+import com.coinblesk.util.DTOUtils;
+import com.coinblesk.util.InsufficientFunds;
 import com.coinblesk.util.SerializeUtils;
 
 /**
@@ -88,14 +105,20 @@ public class AuthUserController {
 	private final WalletService walletService;
 	private final FeeService feeService;
 	private final PaymentForkService paymentForkService;
+	private final MicropaymentService microPaymentService;
+	private final MessageSource messageSource;
+	private final MailService mailService;
 
 	@Autowired
-	public AuthUserController(AppConfig appConfig, UserAccountService userAccountService, WalletService walletService, FeeService feeService, PaymentForkService paymentForkService) {
+	public AuthUserController(AppConfig appConfig, UserAccountService userAccountService, WalletService walletService, FeeService feeService, PaymentForkService paymentForkService, MicropaymentService microPaymentService, MessageSource messageSource, MailService mailService) {
 		this.appConfig = appConfig;
 		this.userAccountService = userAccountService;
 		this.walletService = walletService;
 		this.feeService = feeService;
 		this.paymentForkService = paymentForkService;
+		this.microPaymentService = microPaymentService;
+		this.messageSource = messageSource;
+		this.mailService = mailService;
 	}
 
 	@RequestMapping(value = "/transfer-p2sh", method = POST, produces = APPLICATION_JSON_UTF8_VALUE)
@@ -323,6 +346,105 @@ public class AuthUserController {
 		Map<String, String> map = new HashMap<>();
 		map.put("serverPotAddress", serverPotAddress.toString());
 		return map;
+	}
+
+	@RequestMapping(value = "/payment/virtual-payment-email", method = POST, produces = APPLICATION_JSON_UTF8_VALUE)
+	@Transactional
+	public void virtualPaymentViaEmail(Locale locale, @RequestBody @Valid VirtualPaymentViaEmailDTO dto) throws BusinessException {
+		final String receiverEmail = dto.getReceiverEmail();
+		final Long amount = dto.getAmount();
+		boolean receiverWasAutoCreated = false;
+
+		UserAccount sender = getAuthenticatedUser();
+		UserAccount receiver = null;
+
+		if (sender.getAccount() == null) {
+			throw new AccountNotFoundException();
+		}
+
+		if (userAccountService.userExists(receiverEmail)) {
+			receiver = userAccountService.getByEmail(receiverEmail);
+		} else {
+			receiverWasAutoCreated = true;
+			receiver = userAccountService.autoCreateWithRegistrationToken(receiverEmail);
+		}
+
+		if (receiver.getAccount() == null) {
+			throw new AccountNotFoundException();
+		}
+
+		ECKey keySender = ECKey.fromPublicOnly(sender.getAccount().clientPublicKey());
+		ECKey keyReceiver = ECKey.fromPublicOnly(receiver.getAccount().clientPublicKey());
+		long requestNonce = Instant.now().toEpochMilli();
+
+		try {
+			microPaymentService.virtualPayment(keySender, keyReceiver, amount, requestNonce);
+		} catch (InvalidNonceException | InvalidAmountException | InsufficientFunds | UserNotFoundException | InvalidRequestException e) {
+			throw new PaymentFailedException();
+		} catch (Throwable e) {
+			throw new CoinbleskInternalError("An internal error occured");
+		}
+
+		if (receiverWasAutoCreated) {
+			sendEmailToUnregisteredUser(receiver.getEmail(), receiver.getUnregisteredToken(), amount, locale);
+		}
+	}
+
+	private void sendEmailToUnregisteredUser(String receiverEmail, String unregisteredToken, Long amount, Locale locale) {
+		LOG.debug("send unregistered email to {}", receiverEmail);
+		String path = "";
+		try {
+			path = "registration/" + URLEncoder.encode(receiverEmail, "UTF-8") + "/" + unregisteredToken;
+		} catch (UnsupportedEncodingException e) {
+			// cannot happen because UTF-8 is hard-coded
+			throw new CoinbleskInternalError("An internal error occurred.");
+		}
+		String btcAmount = (amount / ONE_BITCOIN_IN_SATOSHI) + "";
+		String url = appConfig.getFrontendUrl() + path;
+		mailService.sendUserMail(receiverEmail,
+				messageSource.getMessage("unregistered.email.title", null, locale),
+				messageSource.getMessage("unregistered.email.text", new String[] { btcAmount, url }, locale));
+	}
+
+	@RequestMapping(value = "/payment/micro-payment-email", method = POST, produces = APPLICATION_JSON_UTF8_VALUE)
+	@Transactional
+	public void microPaymentViaEmail(Locale locale, @RequestBody @Valid MicroPaymentViaEmailDTO dto) throws BusinessException {
+		final String receiverEmail = dto.getReceiverEmail();
+		final Long amount = dto.getAmount();
+		final String txHex = dto.getTransaction();
+		boolean receiverWasAutoCreated = false;
+
+		UserAccount sender = getAuthenticatedUser();
+		UserAccount receiver = null;
+
+		if (sender.getAccount() == null) {
+			throw new AccountNotFoundException();
+		}
+
+		if (userAccountService.userExists(receiverEmail)) {
+			receiver = userAccountService.getByEmail(receiverEmail);
+		} else {
+			receiverWasAutoCreated = true;
+			receiver = userAccountService.autoCreateWithRegistrationToken(receiverEmail);
+		}
+
+		ECKey keySender = ECKey.fromPublicOnly(sender.getAccount().clientPublicKey());
+		String hexKeyReceiver = DTOUtils.toHex(receiver.getAccount().clientPublicKey());
+		long requestNonce = Instant.now().toEpochMilli();
+
+		try {
+			microPaymentService.microPayment(keySender, hexKeyReceiver, txHex, amount, requestNonce);
+		} catch (CoinbleskInternalError e) {
+			LOG.error("Error during micropayment: " + e.getMessage());
+			throw e;
+		} catch (Throwable e) {
+			LOG.warn("Bad request for micropayment: " + e.getMessage(), e.getCause());
+			throw new PaymentFailedException();
+		}
+
+		if(receiverWasAutoCreated) {
+			sendEmailToUnregisteredUser(receiver.getEmail(), receiver.getUnregisteredToken(), amount, locale);
+		}
 	}
 
 	private UserAccount getAuthenticatedUser() throws UserAccountNotFoundException {
