@@ -316,7 +316,6 @@ public class AuthUserController {
 	public void virtualPaymentViaEmail(Locale locale, @RequestBody @Valid VirtualPaymentViaEmailDTO dto) throws BusinessException {
 		final String receiverEmail = dto.getReceiverEmail();
 		final Long amount = dto.getAmount();
-		boolean receiverWasAutoCreated = false;
 
 		UserAccount sender = getAuthenticatedUser();
 		UserAccount receiver = null;
@@ -328,7 +327,6 @@ public class AuthUserController {
 		if (userAccountService.userExists(receiverEmail)) {
 			receiver = userAccountService.getByEmail(receiverEmail);
 		} else {
-			receiverWasAutoCreated = true;
 			receiver = userAccountService.autoCreateWithRegistrationToken(receiverEmail);
 		}
 
@@ -348,7 +346,7 @@ public class AuthUserController {
 			throw new CoinbleskInternalError("An internal error occured");
 		}
 
-		if (receiverWasAutoCreated) {
+		if (receiver.hasUnregisteredToken()) {
 			sendEmailToUnregisteredUser(receiver.getEmail(), receiver.getUnregisteredToken(), amount, locale);
 		}
 	}
@@ -375,7 +373,6 @@ public class AuthUserController {
 		final String receiverEmail = dto.getReceiverEmail();
 		final Long amount = dto.getAmount();
 		final String txHex = dto.getTransaction();
-		boolean receiverWasAutoCreated = false;
 
 		UserAccount sender = getAuthenticatedUser();
 		UserAccount receiver = null;
@@ -387,7 +384,6 @@ public class AuthUserController {
 		if (userAccountService.userExists(receiverEmail)) {
 			receiver = userAccountService.getByEmail(receiverEmail);
 		} else {
-			receiverWasAutoCreated = true;
 			receiver = userAccountService.autoCreateWithRegistrationToken(receiverEmail);
 		}
 
@@ -405,7 +401,7 @@ public class AuthUserController {
 			throw new PaymentFailedException();
 		}
 
-		if(receiverWasAutoCreated) {
+		if(receiver.hasUnregisteredToken()) {
 			sendEmailToUnregisteredUser(receiver.getEmail(), receiver.getUnregisteredToken(), amount, locale);
 		}
 	}
