@@ -59,8 +59,6 @@ import com.coinblesk.dto.AccountBalanceDTO;
 import com.coinblesk.dto.EncryptedClientPrivateKeyDTO;
 import com.coinblesk.dto.FundsDTO;
 import com.coinblesk.dto.MicroPaymentViaEmailDTO;
-import com.coinblesk.dto.PaymentRequirementsDTO;
-import com.coinblesk.dto.PaymentRequirementsRequestDTO;
 import com.coinblesk.dto.TimeLockedAddressDTO;
 import com.coinblesk.dto.VirtualPaymentViaEmailDTO;
 import com.coinblesk.json.v1.BaseTO;
@@ -83,7 +81,6 @@ import com.coinblesk.server.exceptions.UserNotFoundException;
 import com.coinblesk.server.service.FeeService;
 import com.coinblesk.server.service.MailService;
 import com.coinblesk.server.service.MicropaymentService;
-import com.coinblesk.server.service.PaymentForkService;
 import com.coinblesk.server.service.UserAccountService;
 import com.coinblesk.server.service.WalletService;
 import com.coinblesk.util.DTOUtils;
@@ -104,18 +101,16 @@ public class AuthUserController {
 	private final UserAccountService userAccountService;
 	private final WalletService walletService;
 	private final FeeService feeService;
-	private final PaymentForkService paymentForkService;
 	private final MicropaymentService microPaymentService;
 	private final MessageSource messageSource;
 	private final MailService mailService;
 
 	@Autowired
-	public AuthUserController(AppConfig appConfig, UserAccountService userAccountService, WalletService walletService, FeeService feeService, PaymentForkService paymentForkService, MicropaymentService microPaymentService, MessageSource messageSource, MailService mailService) {
+	public AuthUserController(AppConfig appConfig, UserAccountService userAccountService, WalletService walletService, FeeService feeService, MicropaymentService microPaymentService, MessageSource messageSource, MailService mailService) {
 		this.appConfig = appConfig;
 		this.userAccountService = userAccountService;
 		this.walletService = walletService;
 		this.feeService = feeService;
-		this.paymentForkService = paymentForkService;
 		this.microPaymentService = microPaymentService;
 		this.messageSource = messageSource;
 		this.mailService = mailService;
@@ -229,38 +224,6 @@ public class AuthUserController {
 		UserAccount user = getAuthenticatedUser();
 		EncryptedClientPrivateKeyDTO dto = new EncryptedClientPrivateKeyDTO();
 		dto.setEncryptedClientPrivateKey(user.getClientPrivateKeyEncrypted());
-		return dto;
-	}
-
-	@RequestMapping(value = "/payment/requirements", method = POST, produces = APPLICATION_JSON_UTF8_VALUE)
-	@ResponseBody
-	@Deprecated
-	public PaymentRequirementsDTO getPaymentRequirement(@RequestBody PaymentRequirementsRequestDTO requestDTO) throws BusinessException {
-		UserAccount user = getAuthenticatedUser();
-
-		PaymentRequirementsDTO dto = new PaymentRequirementsDTO();
-		dto.setEncryptedClientPrivateKey(user.getClientPrivateKeyEncrypted());
-
-		try {
-			dto.setCurrentTransactionFees(feeService.fee());
-		} catch (IOException e) {
-			throw new CoinbleskInternalError("The fees could not be loaded.");
-		}
-
-		FundsDTO funds = getFunds();
-		long totalLockedAndVirtualBalance = funds.getVirtualBalance();
-		for(TimeLockedAddressDTO tla :funds.getTimeLockedAddresses()) {
-			if(tla.getLocked()) {
-				totalLockedAndVirtualBalance += tla.getBalance();
-			}
-		}
-		dto.setTotalLockedAndVirtualBalance(totalLockedAndVirtualBalance);
-
-		// TODO set previous transactions
-		dto.setPreviousTransactions(new ArrayList<>());
-
-		dto.setPaymentDecisionDTO(paymentForkService.getPaymentDecision(user.getAccount(), requestDTO.getReceiver(), requestDTO.getAmount()));
-
 		return dto;
 	}
 
