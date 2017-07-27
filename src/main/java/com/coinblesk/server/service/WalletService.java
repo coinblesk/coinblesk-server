@@ -376,7 +376,7 @@ public class WalletService {
 		List<TransactionOutput> allUTXO = this.getAllSpendCandidates();
 		List<TransactionOutput> utxoOfAddress = new ArrayList<>();
 		for(TransactionOutput utxo : allUTXO) {
-			if (address.toString().equals(utxo.getAddressFromP2PKHScript(params).toString())) {
+			if (address.toString().equals(utxo.getAddressFromP2SH(params).toString())) {
 				utxoOfAddress.add(utxo);
 			}
 		}
