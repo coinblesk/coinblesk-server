@@ -382,6 +382,8 @@ public class UserAccountService {
 		userAccountAdminDTO.setCreationDate(userAccount.getCreationDate());
 		userAccountAdminDTO.setUserRole(userAccount.getUserRole());
 		userAccountAdminDTO.setDeleted(userAccount.isDeleted());
+		userAccountAdminDTO.setActivated(userAccount.isActivationVerified());
+		userAccountAdminDTO.setUnregistered(userAccount.hasUnregisteredToken());
 		if(userAccount.getAccount() != null) {
 			Account account = userAccount.getAccount();
 			userAccountAdminDTO.setAccountPublicKeyClient(SerializeUtils.bytesToHex(account.clientPublicKey()));
