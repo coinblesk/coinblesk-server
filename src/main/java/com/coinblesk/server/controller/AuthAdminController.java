@@ -191,9 +191,10 @@ public class AuthAdminController {
 		Instant createdAt = Instant.ofEpochSecond(tla.getTimeCreated());
 		Instant lockedUntil = Instant.ofEpochSecond(tla.getLockTime());
 		Coin balance = balances.get(tla.toAddress(params));
+		String redeemScript = SerializeUtils.bytesToHex(tla.getRedeemScript());
 		return new TimeLockedAddressDTO(tla.toAddress(params).toString(), "http://" + (params.getClass()
 				.equals(TestNet3Params.class) ? "tbtc." : "") + "blockr.io/address/info/" + tla.toAddress(params),
-				Date.from(createdAt), Date.from(lockedUntil), tla.isLocked(), balance
+				Date.from(createdAt), Date.from(lockedUntil), tla.isLocked(), redeemScript, balance
 				.longValue());
 	}
 

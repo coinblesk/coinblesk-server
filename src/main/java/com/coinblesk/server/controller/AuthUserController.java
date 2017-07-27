@@ -56,10 +56,10 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.coinblesk.dto.AccountBalanceDTO;
-import com.coinblesk.dto.EncryptedClientPrivateKeyDTO;
 import com.coinblesk.dto.FundsDTO;
 import com.coinblesk.dto.MicroPaymentViaEmailDTO;
 import com.coinblesk.dto.TimeLockedAddressDTO;
+import com.coinblesk.dto.UnspentTransactionOutputsDTO;
 import com.coinblesk.dto.VirtualPaymentViaEmailDTO;
 import com.coinblesk.json.v1.BaseTO;
 import com.coinblesk.json.v1.Type;
@@ -196,6 +196,7 @@ public class AuthUserController {
 			Instant lockedUntilInstant = Instant.ofEpochSecond(tlaEntity.getLockTime());
 			Date lockedUntil = Date.from(lockedUntilInstant);
 			boolean locked = lockedUntilInstant.isAfter(Instant.now());
+			String redeemScript = SerializeUtils.bytesToHex(tlaEntity.getRedeemScript());
 
 			Long balance = null;
 			for(Map.Entry<Address, Coin> mapSet : balances.entrySet()) {
@@ -207,7 +208,7 @@ public class AuthUserController {
 				}
 			}
 
-			timeLockedAddresses.add(new TimeLockedAddressDTO(bitcoinAddress, addressUrl, createdAt, lockedUntil, locked, balance));
+			timeLockedAddresses.add(new TimeLockedAddressDTO(bitcoinAddress, addressUrl, createdAt, lockedUntil, locked, redeemScript, balance));
 		}
 
 		String clientPublicKey = SerializeUtils.bytesToHex(account.clientPublicKey());
@@ -220,16 +221,16 @@ public class AuthUserController {
 
 	@RequestMapping(value = "/payment/encrypted-private-key", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
-	public EncryptedClientPrivateKeyDTO getEncryptedPrivateKey() throws BusinessException {
+	public Map<String, String> getEncryptedPrivateKey() throws BusinessException {
 		UserAccount user = getAuthenticatedUser();
-		EncryptedClientPrivateKeyDTO dto = new EncryptedClientPrivateKeyDTO();
-		dto.setEncryptedClientPrivateKey(user.getClientPrivateKeyEncrypted());
-		return dto;
+		Map<String, String> map = new HashMap<>();
+		map.put("encryptedClientPrivateKey", user.getClientPrivateKeyEncrypted());
+		return map;
 	}
 
 	@RequestMapping(value = "/payment/utxo", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
-	public List<TransactionOutput> getUnspentOutputsOfAddress(@NotNull @Valid @RequestParam("address") String addressString) throws BusinessException {
+	public UnspentTransactionOutputsDTO getUnspentOutputsOfAddress(@NotNull @Valid @RequestParam("address") String addressString) throws BusinessException {
 		UserAccount user = getAuthenticatedUser();
 
 		if(user.getAccount() == null || user.getAccount().getTimeLockedAddresses().size() == 0) {
@@ -246,7 +247,18 @@ public class AuthUserController {
 			throw new InvalidAddressException();
 		}
 
-		return walletService.getUTXOByAddress(foundTLA.toAddress(appConfig.getNetworkParameters()));
+		Long sum = 0L;
+		List<TransactionOutput> UTXOs = walletService.getUTXOByAddress(foundTLA.toAddress(appConfig.getNetworkParameters()));
+		List<String> transactionOutputs = new ArrayList<>();
+		for(TransactionOutput utxo : UTXOs) {
+			sum += utxo.getValue().longValue();
+			transactionOutputs.add(SerializeUtils.bytesToHex(utxo.bitcoinSerialize()));
+		}
+
+		UnspentTransactionOutputsDTO dto = new UnspentTransactionOutputsDTO();
+		dto.setSum(sum);
+		dto.setList(transactionOutputs);
+		return dto;
 	}
 
 	@RequestMapping(value = "/payment/locked-address", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
@@ -267,7 +279,18 @@ public class AuthUserController {
 		}
 
 		Map<String, String> map = new HashMap<>();
-		map.put("bitcoinAddress", (lockedAddress == null) ? null : lockedAddress.toAddress(appConfig.getNetworkParameters()).toString());
+		if(lockedAddress == null) {
+			map.put("bitcoinAddress", null);
+			map.put("redeemScript", null);
+		} else {
+			map.put("bitcoinAddress", lockedAddress.toAddress(appConfig.getNetworkParameters()).toString());
+
+			if(lockedAddress.getRedeemScript() == null) {
+				map.put("redeemScript", null);
+			} else {
+				map.put("redeemScript", SerializeUtils.bytesToHex(lockedAddress.getRedeemScript()));
+			}
+		}
 
 		return map;
 	}
