@@ -165,9 +165,13 @@ public class AuthUserController {
 			}
 		}
 
+		long channelTransactionAmount = microPaymentService.getPendingChannelValue(account).longValue();
+		totalBalance -= channelTransactionAmount;
+
 		AccountBalanceDTO dto = new AccountBalanceDTO();
 		dto.setTimeLockedAddresses(resultingTlas);
 		dto.setVirtualBalance(account.virtualBalance());
+		dto.setChannelTransactionAmount(channelTransactionAmount);
 		dto.setTotalBalance(totalBalance);
 
 		return dto;
@@ -188,6 +192,7 @@ public class AuthUserController {
 
 		List<TimeLockedAddressEntity> tlaEntities = account.getTimeLockedAddresses();
 		List<TimeLockedAddressDTO> timeLockedAddresses = new ArrayList<>();
+		long satoshiBalance = 0;
 
 		for(TimeLockedAddressEntity tlaEntity : tlaEntities) {
 			String bitcoinAddress = tlaEntity.toAddress(params).toString();
@@ -207,16 +212,21 @@ public class AuthUserController {
 					break;
 				}
 			}
+			if (balance != null) {
+				satoshiBalance += balance;
+			}
 
 			timeLockedAddresses.add(new TimeLockedAddressDTO(bitcoinAddress, addressUrl, createdAt, lockedUntil, locked, redeemScript, balance));
 		}
 
 		String clientPublicKey = SerializeUtils.bytesToHex(account.clientPublicKey());
 		String serverPublicKey = SerializeUtils.bytesToHex(account.serverPublicKey());
-		Long virtualBalance = account.virtualBalance();
+		long virtualBalance = account.virtualBalance();
+		long channelTransactionAmount = microPaymentService.getPendingChannelValue(account).longValue();
+		long totalBalance = satoshiBalance + virtualBalance - channelTransactionAmount;
 		boolean locked = account.isLocked();
 
-		return new FundsDTO(clientPublicKey, serverPublicKey, virtualBalance, locked, timeLockedAddresses);
+		return new FundsDTO(clientPublicKey, serverPublicKey, virtualBalance, totalBalance, channelTransactionAmount, locked, timeLockedAddresses);
 	}
 
 	@RequestMapping(value = "/payment/encrypted-private-key", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)

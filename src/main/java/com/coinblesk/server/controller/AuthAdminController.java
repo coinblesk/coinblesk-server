@@ -60,6 +60,7 @@ import com.coinblesk.server.exceptions.AccountNotFoundException;
 import com.coinblesk.server.exceptions.BusinessException;
 import com.coinblesk.server.service.AccountService;
 import com.coinblesk.server.service.EventService;
+import com.coinblesk.server.service.MicropaymentService;
 import com.coinblesk.server.service.ServerBalanceService;
 import com.coinblesk.server.service.ServerPotBaselineService;
 import com.coinblesk.server.service.UserAccountService;
@@ -87,11 +88,12 @@ public class AuthAdminController {
 	private final EventService eventService;
 	private final ServerPotBaselineService serverPotBaselineService;
 	private final ServerBalanceService serverBalanceService;
+	private final MicropaymentService microPaymentService;
 
 	@Autowired
 	public AuthAdminController(AppConfig appConfig, WalletService walletService, UserAccountService userAccountService,
 			AccountService accountService, EventService eventService, ServerPotBaselineService serverPotBaselineService,
-			ServerBalanceService serverBalanceService) {
+			ServerBalanceService serverBalanceService, MicropaymentService microPaymentService) {
 		this.appConfig = appConfig;
 		this.walletService = walletService;
 		this.userAccountService = userAccountService;
@@ -99,6 +101,7 @@ public class AuthAdminController {
 		this.eventService = eventService;
 		this.serverPotBaselineService = serverPotBaselineService;
 		this.serverBalanceService = serverBalanceService;
+		this.microPaymentService = microPaymentService;
 	}
 
 	@RequestMapping(value = "/balance", method = GET)
@@ -204,7 +207,8 @@ public class AuthAdminController {
 		String serverPrivateKey = SerializeUtils.bytesToHex(account.serverPrivateKey());
 		Date timeCreated = Date.from(Instant.ofEpochSecond(account.timeCreated()));
 		long virtualBalance = account.virtualBalance();
-		long totalBalance = account.virtualBalance() + satoshiBalance;
+		long channelTransactionAmount = microPaymentService.getPendingChannelValue(account).longValue();
+		long totalBalance = account.virtualBalance() + satoshiBalance - channelTransactionAmount;
 		boolean isLocked = account.isLocked();
 		Date broadcastBefore = account.getBroadcastBefore() == 0 ? null : Date.from(Instant.ofEpochSecond(account.getBroadcastBefore()));
 		Date nonce = account.getNonce() == 0 ? null : Date.from(Instant.ofEpochMilli(account.getNonce()));
@@ -216,7 +220,8 @@ public class AuthAdminController {
 		}
 
 		return new AccountDTO(clientPublicKey, serverPublicKey, serverPrivateKey, timeCreated, virtualBalance,
-				satoshiBalance, totalBalance, isLocked, broadcastBefore, nonce, channelTransaction, userAccountEmail);
+				satoshiBalance, channelTransactionAmount, totalBalance, isLocked, broadcastBefore, nonce,
+				channelTransaction, userAccountEmail);
 	}
 
 	@RequestMapping(value = "/accounts/{client-public-key}", method = GET)
