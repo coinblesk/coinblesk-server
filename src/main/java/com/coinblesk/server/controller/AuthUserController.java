@@ -59,7 +59,7 @@ import com.coinblesk.dto.AccountBalanceDTO;
 import com.coinblesk.dto.FundsDTO;
 import com.coinblesk.dto.MicroPaymentViaEmailDTO;
 import com.coinblesk.dto.TimeLockedAddressDTO;
-import com.coinblesk.dto.UnspentTransactionOutputsDTO;
+import com.coinblesk.dto.UnspentTransactionOutputDTO;
 import com.coinblesk.dto.VirtualPaymentViaEmailDTO;
 import com.coinblesk.json.v1.BaseTO;
 import com.coinblesk.json.v1.Type;
@@ -230,7 +230,7 @@ public class AuthUserController {
 
 	@RequestMapping(value = "/payment/utxo", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
-	public UnspentTransactionOutputsDTO getUnspentOutputsOfAddress(@NotNull @Valid @RequestParam("address") String addressString) throws BusinessException {
+	public List<UnspentTransactionOutputDTO> getUnspentOutputsOfAddress(@NotNull @Valid @RequestParam("address") String addressString) throws BusinessException {
 		UserAccount user = getAuthenticatedUser();
 
 		if(user.getAccount() == null || user.getAccount().getTimeLockedAddresses().size() == 0) {
@@ -247,18 +247,21 @@ public class AuthUserController {
 			throw new InvalidAddressException();
 		}
 
-		Long sum = 0L;
 		List<TransactionOutput> UTXOs = walletService.getUTXOByAddress(foundTLA.toAddress(appConfig.getNetworkParameters()));
-		List<String> transactionOutputs = new ArrayList<>();
+		List<UnspentTransactionOutputDTO> unspentOutputs = new ArrayList<>();
 		for(TransactionOutput utxo : UTXOs) {
-			sum += utxo.getValue().longValue();
-			transactionOutputs.add(SerializeUtils.bytesToHex(utxo.bitcoinSerialize()));
+			if(!utxo.isAvailableForSpending()) {
+				throw new CoinbleskInternalError("The unspent transaction output is not available for spending -> walletService returns wrong transaction outputs.");
+			}
+
+			UnspentTransactionOutputDTO utxoDTO = new UnspentTransactionOutputDTO();
+			utxoDTO.setValue(utxo.getValue().longValue());
+			utxoDTO.setIndex(utxo.getIndex());
+			utxoDTO.setTransactionHash(utxo.getParentTransactionHash().toString());
+			unspentOutputs.add(utxoDTO);
 		}
 
-		UnspentTransactionOutputsDTO dto = new UnspentTransactionOutputsDTO();
-		dto.setSum(sum);
-		dto.setList(transactionOutputs);
-		return dto;
+		return unspentOutputs;
 	}
 
 	@RequestMapping(value = "/payment/locked-address", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
