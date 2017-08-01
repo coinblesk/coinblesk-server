@@ -268,7 +268,7 @@ public class AuthUserController {
 			UnspentTransactionOutputDTO utxoDTO = new UnspentTransactionOutputDTO();
 			utxoDTO.setValue(utxo.getValue().longValue());
 			utxoDTO.setIndex(utxo.getIndex());
-			utxoDTO.setTransactionHash(utxo.getParentTransactionHash().toString());
+			utxoDTO.setTransaction(SerializeUtils.bytesToHex(utxo.getParentTransaction().bitcoinSerialize()));
 			unspentOutputs.add(utxoDTO);
 		}
 
