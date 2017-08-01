@@ -369,14 +369,12 @@ public class WalletService {
 	}
 
 	public List<TransactionOutput> getUTXOByAddress(Address address) {
-		// TODO find out if this actually works^^
-
 		final NetworkParameters params = appConfig.getNetworkParameters();
 
 		List<TransactionOutput> allUTXO = this.getAllSpendCandidates();
 		List<TransactionOutput> utxoOfAddress = new ArrayList<>();
 		for(TransactionOutput utxo : allUTXO) {
-			if (address.toString().equals(utxo.getAddressFromP2SH(params).toString())) {
+			if (utxo.getAddressFromP2SH(params) != null && address.toString().equals(utxo.getAddressFromP2SH(params).toString())) {
 				utxoOfAddress.add(utxo);
 			}
 		}

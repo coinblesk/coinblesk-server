@@ -167,6 +167,7 @@ public class AuthUserController {
 
 		long channelTransactionAmount = microPaymentService.getPendingChannelValue(account).longValue();
 		totalBalance -= channelTransactionAmount;
+		totalBalance += account.virtualBalance();
 
 		AccountBalanceDTO dto = new AccountBalanceDTO();
 		dto.setTimeLockedAddresses(resultingTlas);
@@ -396,7 +397,7 @@ public class AuthUserController {
 			// cannot happen because UTF-8 is hard-coded
 			throw new CoinbleskInternalError("An internal error occurred.");
 		}
-		String btcAmount = (amount / ONE_BITCOIN_IN_SATOSHI) + "";
+		String btcAmount = (amount.doubleValue() / ONE_BITCOIN_IN_SATOSHI) + "";
 		String url = appConfig.getFrontendUrl() + path;
 		mailService.sendUserMail(receiverEmail,
 				messageSource.getMessage("unregistered.email.title", null, locale),
