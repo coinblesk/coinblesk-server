@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import javax.transaction.Transactional;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
@@ -49,6 +48,8 @@ import org.springframework.context.MessageSource;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -349,7 +350,7 @@ public class AuthUserController {
 	}
 
 	@RequestMapping(value = "/payment/virtual-payment-email", method = POST, produces = APPLICATION_JSON_UTF8_VALUE)
-	@Transactional
+	@Transactional(isolation = Isolation.SERIALIZABLE)
 	public void virtualPaymentViaEmail(Locale locale, @RequestBody @Valid VirtualPaymentViaEmailDTO dto) throws BusinessException {
 		final String receiverEmail = dto.getReceiverEmail();
 		final Long amount = dto.getAmount();
@@ -365,6 +366,10 @@ public class AuthUserController {
 			receiver = userAccountService.getByEmail(receiverEmail);
 		} else {
 			receiver = userAccountService.autoCreateWithRegistrationToken(receiverEmail);
+		}
+
+		if (sender.equals(receiver)) {
+			throw new PaymentFailedException();
 		}
 
 		if (receiver.getAccount() == null) {
@@ -405,7 +410,7 @@ public class AuthUserController {
 	}
 
 	@RequestMapping(value = "/payment/micro-payment-email", method = POST, produces = APPLICATION_JSON_UTF8_VALUE)
-	@Transactional
+	@Transactional(isolation = Isolation.SERIALIZABLE)
 	public void microPaymentViaEmail(Locale locale, @RequestBody @Valid MicroPaymentViaEmailDTO dto) throws BusinessException {
 		final String receiverEmail = dto.getReceiverEmail();
 		final Long amount = dto.getAmount();
@@ -422,6 +427,10 @@ public class AuthUserController {
 			receiver = userAccountService.getByEmail(receiverEmail);
 		} else {
 			receiver = userAccountService.autoCreateWithRegistrationToken(receiverEmail);
+		}
+
+		if (sender.equals(receiver)) {
+			throw new PaymentFailedException();
 		}
 
 		ECKey keySender = ECKey.fromPublicOnly(sender.getAccount().clientPublicKey());
