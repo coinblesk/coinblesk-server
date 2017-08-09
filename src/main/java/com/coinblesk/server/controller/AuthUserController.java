@@ -17,12 +17,14 @@ package com.coinblesk.server.controller;
 
 import static com.coinblesk.server.config.UserRole.ROLE_USER;
 import static com.coinblesk.util.BitcoinUtils.ONE_BITCOIN_IN_SATOSHI;
+import static java.math.MathContext.DECIMAL128;
 import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -39,8 +41,11 @@ import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.params.TestNet3Params;
+import org.bitcoinj.script.ScriptBuilder;
+import org.bitcoinj.script.ScriptChunk;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,6 +85,7 @@ import com.coinblesk.server.exceptions.PaymentFailedException;
 import com.coinblesk.server.exceptions.UserAccountNotFoundException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
 import com.coinblesk.server.service.FeeService;
+import com.coinblesk.server.service.ForexBitcoinService;
 import com.coinblesk.server.service.MailService;
 import com.coinblesk.server.service.MicropaymentService;
 import com.coinblesk.server.service.UserAccountService;
@@ -105,9 +111,10 @@ public class AuthUserController {
 	private final MicropaymentService microPaymentService;
 	private final MessageSource messageSource;
 	private final MailService mailService;
+	private final ForexBitcoinService forexService;
 
 	@Autowired
-	public AuthUserController(AppConfig appConfig, UserAccountService userAccountService, WalletService walletService, FeeService feeService, MicropaymentService microPaymentService, MessageSource messageSource, MailService mailService) {
+	public AuthUserController(AppConfig appConfig, UserAccountService userAccountService, WalletService walletService, FeeService feeService, MicropaymentService microPaymentService, MessageSource messageSource, MailService mailService, ForexBitcoinService forexService) {
 		this.appConfig = appConfig;
 		this.userAccountService = userAccountService;
 		this.walletService = walletService;
@@ -115,6 +122,7 @@ public class AuthUserController {
 		this.microPaymentService = microPaymentService;
 		this.messageSource = messageSource;
 		this.mailService = mailService;
+		this.forexService = forexService;
 	}
 
 	@RequestMapping(value = "/transfer-p2sh", method = POST, produces = APPLICATION_JSON_UTF8_VALUE)
@@ -285,13 +293,7 @@ public class AuthUserController {
 			throw new AccountNotFoundException();
 		}
 
-		TimeLockedAddressEntity lockedAddress = null;
-		for(TimeLockedAddressEntity tla : user.getAccount().getTimeLockedAddresses()) {
-			if(tla.isLocked()) {
-				lockedAddress = tla;
-				break;
-			}
-		}
+		TimeLockedAddressEntity lockedAddress = getLockedAddress(user.getAccount());
 
 		Map<String, String> map = new HashMap<>();
 		if(lockedAddress == null) {
@@ -305,6 +307,40 @@ public class AuthUserController {
 			} else {
 				map.put("redeemScript", SerializeUtils.bytesToHex(lockedAddress.getRedeemScript()));
 			}
+		}
+
+		return map;
+	}
+
+	private TimeLockedAddressEntity getLockedAddress(Account account) {
+		TimeLockedAddressEntity lockedAddress = null;
+		for(TimeLockedAddressEntity tla : account.getTimeLockedAddresses()) {
+			if(tla.isLocked()) {
+				lockedAddress = tla;
+				break;
+			}
+		}
+		return lockedAddress;
+	}
+
+	@RequestMapping(value = "/payment/locked-address-of-email", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@ResponseBody
+	public Map<String, String> getLockedAddressOfEmail(@RequestParam("email") String email) throws BusinessException {
+		getAuthenticatedUser();
+
+		Map<String, String> map = new HashMap<>();
+		final String key = "bitcoinAddress";
+
+		if(userAccountService.userExists(email)) {
+			UserAccount user = userAccountService.getByEmail(email);
+			if(user.getAccount() == null || user.hasUnregisteredToken() || getLockedAddress(user.getAccount()) == null) {
+				map.put(key, null);
+			} else {
+				map.put(key, getLockedAddress(user.getAccount()).toAddress(appConfig.getNetworkParameters()).toString());
+			}
+
+		} else {
+			map.put(key, null);
 		}
 
 		return map;
@@ -324,17 +360,53 @@ public class AuthUserController {
 		return map;
 	}
 
+	@RequestMapping(value = "/payment/remaining-channel-amount", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
+	@ResponseBody
+	public Map<String, Long> getMaxmimalAvailableChannelAmount() throws BusinessException {
+		UserAccount user = getAuthenticatedUser();
+
+		if(user.getAccount() == null) {
+			throw new AccountNotFoundException();
+		}
+
+		BigDecimal btc_usd = forexService.getBitstampCurrentRateBTCUSD().getRate();
+		long channelValueSatoshi = microPaymentService.getPendingChannelValue(user.getAccount()).longValue();
+		BigDecimal channelValueBTC = new BigDecimal(channelValueSatoshi, DECIMAL128).divide(new BigDecimal(100000000, DECIMAL128));
+		BigDecimal channelValueUSD = channelValueBTC.multiply(btc_usd, DECIMAL128);
+
+		// 1USD is the buffer between the exchange rate and the max amount
+		BigDecimal availableFundsUSD = new BigDecimal(appConfig.getMaximumChannelAmountUSD(), DECIMAL128)
+				.subtract(channelValueUSD, DECIMAL128)
+				.subtract(new BigDecimal(1, DECIMAL128));
+
+		BigDecimal availableFundsSatoshi = new BigDecimal(0, DECIMAL128);
+
+		if (availableFundsUSD.doubleValue() != 0.0) {
+			BigDecimal availableFundsBTC = availableFundsUSD.divide(btc_usd, DECIMAL128);
+			availableFundsSatoshi = availableFundsBTC.multiply(new BigDecimal(100000000, DECIMAL128), DECIMAL128);
+
+			if(availableFundsSatoshi.doubleValue() < 0) {
+				availableFundsSatoshi = new BigDecimal(0, DECIMAL128);
+			}
+		}
+
+		Map<String, Long> map = new HashMap<>();
+		map.put("amount", availableFundsSatoshi.longValue());
+		return map;
+	}
+
 	@RequestMapping(value = "/payment/channel-transaction", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
 	@ResponseBody
-	public Map<String, String> getChannelTransaction() throws BusinessException {
+	public Map<String, Long> getChannelTransaction() throws BusinessException {
 		UserAccount user = getAuthenticatedUser();
 		if(user.getAccount() == null) {
 			throw new AccountNotFoundException();
 		}
 		Account account = user.getAccount();
 
-		Map<String, String> map = new HashMap<>();
-		map.put("channelTransaction", (account.getChannelTransaction() == null) ? null : map.put("channelTransaction", SerializeUtils.bytesToHex(account.getChannelTransaction())));
+		Map<String, Long> map = new HashMap<>();
+		map.put("amount", microPaymentService.getPendingChannelValue(account).longValue());
+		map.put("fees", microPaymentService.getPendingChannelFees(account).longValue());
 		return map;
 	}
 
@@ -437,8 +509,10 @@ public class AuthUserController {
 		String hexKeyReceiver = DTOUtils.toHex(receiver.getAccount().clientPublicKey());
 		long requestNonce = Instant.now().toEpochMilli();
 
+		String transformedTxHex = transformTransaction(txHex);
+
 		try {
-			microPaymentService.microPayment(keySender, hexKeyReceiver, txHex, amount, requestNonce);
+			microPaymentService.microPayment(keySender, hexKeyReceiver, transformedTxHex, amount, requestNonce);
 		} catch (CoinbleskInternalError e) {
 			LOG.error("Error during micropayment: " + e.getMessage());
 			throw e;
@@ -450,6 +524,43 @@ public class AuthUserController {
 		if(receiver.hasUnregisteredToken()) {
 			sendEmailToUnregisteredUser(receiver.getEmail(), receiver.getUnregisteredToken(), amount, locale);
 		}
+	}
+
+	@RequestMapping(value = "/payment/external-payment", method = POST, produces = APPLICATION_JSON_UTF8_VALUE)
+	@Transactional(isolation = Isolation.SERIALIZABLE)
+	public void externalPayment(@RequestParam("transaction") String transaction) throws BusinessException {
+		UserAccount sender = getAuthenticatedUser();
+
+		if (sender.getAccount() == null) {
+			throw new AccountNotFoundException();
+		}
+
+		ECKey keySender = ECKey.fromPublicOnly(sender.getAccount().clientPublicKey());
+		String tx = transformTransaction(transaction);
+		long nonce = Instant.now().toEpochMilli();
+
+		try {
+			microPaymentService.microPayment(keySender, "", tx, 0L, nonce);
+		} catch (CoinbleskInternalError e) {
+			LOG.error("Error during external payment " + e.getMessage());
+			throw e;
+		} catch (Throwable e) {
+			LOG.warn("Bad request for external payment " + e.getMessage());
+			throw new PaymentFailedException();
+		}
+	}
+
+	private String transformTransaction(String txInHex) throws BusinessException {
+		byte[] txInBytes = DTOUtils.fromHex(txInHex);
+		Transaction tx = new Transaction(appConfig.getNetworkParameters(), txInBytes);
+
+		for (int i = 0; i < tx.getInputs().size(); i++) {
+			List<ScriptChunk> chunks = tx.getInput(i).getScriptSig().getChunks();
+			ScriptChunk relevantChunk = chunks.get(1);
+			tx.getInput(i).setScriptSig(new ScriptBuilder().data(relevantChunk.data).build());
+		}
+
+		return DTOUtils.toHex(tx.bitcoinSerialize());
 	}
 
 	private UserAccount getAuthenticatedUser() throws UserAccountNotFoundException {

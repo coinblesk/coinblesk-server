@@ -487,6 +487,26 @@ public class MicropaymentService {
 			.orElse(Coin.ZERO);
 	}
 
+	public Coin getPendingChannelFees(Account account) {
+		if (account.getChannelTransaction() == null) {
+			return Coin.ZERO;
+		}
+		Transaction tx = new Transaction(appConfig.getNetworkParameters(), account.getChannelTransaction());
+
+		long inputSum = 0L;
+		long outputSum = 0L;
+
+		for(TransactionInput in : tx.getInputs()) {
+			inputSum += walletService.findOutputFor(in).getValue().longValue();
+		}
+
+		for(TransactionOutput out : tx.getOutputs()) {
+			outputSum += out.getValue().longValue();
+		}
+
+		return Coin.valueOf(inputSum - outputSum);
+	}
+
 	public Coin getMicroPaymentPotValue() {
 		return getAllPotOutputs().stream().map(TransactionOutput::getValue).reduce(Coin.ZERO, Coin::add);
 	}
