@@ -18,7 +18,7 @@ fi
 
 for i in "${SERVERS[@]}"
 do
-    echo  scp -r "$PRIV" 'build/libs/coinblesk-*.jar' "$i":/var/lib/coinblesk/coinblesk.jar
+    echo  scp -r "$PRIV"build/libs/coinblesk-*.jar "$i":/var/lib/coinblesk/coinblesk.jar
     scp -r "$PRIV"build/libs/coinblesk-*.jar "$i":/var/lib/coinblesk/coinblesk.jar
     ssh "$PRIV$i" sudo systemctl restart coinblesk.service
 done
