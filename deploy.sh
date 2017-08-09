@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 SERVERS=( "bitcoin2-test.csg.uzh.ch" )
 
@@ -7,7 +7,7 @@ if [ "$#" -eq 1 ]; then
 fi
 
 #Build and install of the frontend
-if ! ./gradlew clean build; then
+if ! ./gradlew clean build -x test; then
     echo "gradle build failed"
     exit 1
 fi
@@ -18,6 +18,7 @@ fi
 
 for i in "${SERVERS[@]}"
 do
-    scp -r "$PRIV" services/backend/build/libs/coinblesk-*-boot.jar "$i":/var/lib/backend/coinblesk.jar
+    echo  scp -r "$PRIV" 'build/libs/coinblesk-*.jar' "$i":/var/lib/coinblesk/coinblesk.jar
+    scp -r "$PRIV"build/libs/coinblesk-*.jar "$i":/var/lib/coinblesk/coinblesk.jar
     ssh "$PRIV$i" sudo systemctl restart coinblesk.service
 done
