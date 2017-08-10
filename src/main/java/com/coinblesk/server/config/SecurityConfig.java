@@ -109,7 +109,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 				CorsConfiguration corsConfig = new CorsConfiguration();
 
 				if(!asList(env.getActiveProfiles()).contains(PROFILE_PROD) && !asList(env.getActiveProfiles()).contains(PROFILE_TEST)) {
-					corsConfig.setAllowedOrigins(asList("localhost", "127.0.0.1"));
+					corsConfig.setAllowedOrigins(asList("http://localhost:9090", "http://127.0.0.1:9090", "http://localhost:7070", "http://127.0.0.1:7070"));
 				} else if (asList(env.getActiveProfiles()).contains(PROFILE_TEST)) {
 					corsConfig.setAllowedOrigins(asList("https://bitcoin2-test.csg.uzh.ch"));
 				} else if (asList(env.getActiveProfiles()).contains(PROFILE_PROD)) {
