@@ -1,6 +1,7 @@
 package com.coinblesk.server.controller;
 
 import static com.coinblesk.server.config.Constants.PROFILE_PROD;
+import static com.coinblesk.server.config.Constants.PROFILE_TEST;
 import static org.springframework.http.MediaType.TEXT_HTML_VALUE;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 
@@ -11,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@Profile("!" + PROFILE_PROD)
+@Profile({"!" + PROFILE_PROD, "!" + PROFILE_TEST})
 @RequestMapping("/debug")
 public class DebugController {
 

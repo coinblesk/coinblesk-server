@@ -1,6 +1,7 @@
 package com.coinblesk.server.controller;
 
 import static com.coinblesk.server.config.Constants.PROFILE_PROD;
+import static com.coinblesk.server.config.Constants.PROFILE_TEST;
 import static java.util.Arrays.asList;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
@@ -79,7 +80,7 @@ public class ExceptionTranslator {
 		result.setPath(request.getRequestURI());
 
 		// mask the reason behind the exception on PROD
-		if(!asList(env.getActiveProfiles()).contains(PROFILE_PROD)) {
+		if(!asList(env.getActiveProfiles()).contains(PROFILE_PROD) && !asList(env.getActiveProfiles()).contains(PROFILE_TEST)) {
 			result.setException(e.getClass().getSimpleName());
 			result.setMessage(message);
 		}

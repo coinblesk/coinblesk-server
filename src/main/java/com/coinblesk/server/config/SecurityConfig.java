@@ -16,6 +16,7 @@
 package com.coinblesk.server.config;
 
 import static com.coinblesk.server.config.Constants.PROFILE_PROD;
+import static com.coinblesk.server.config.Constants.PROFILE_TEST;
 import static java.util.Arrays.asList;
 import static org.springframework.http.HttpMethod.OPTIONS;
 
@@ -107,7 +108,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
 				CorsConfiguration corsConfig = new CorsConfiguration();
 
-				if(!asList(env.getActiveProfiles()).contains(PROFILE_PROD)) {
+				if(!asList(env.getActiveProfiles()).contains(PROFILE_PROD) && !asList(env.getActiveProfiles()).contains(PROFILE_TEST)) {
 					corsConfig.setAllowedOrigins(asList("*"));
 					corsConfig.setAllowedMethods(asList("GET", "PUT", "POST", "DELETE", "OPTIONS"));
 					corsConfig.setAllowedHeaders(asList("*"));
