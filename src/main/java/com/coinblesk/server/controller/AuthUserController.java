@@ -82,6 +82,7 @@ import com.coinblesk.server.exceptions.InvalidAmountException;
 import com.coinblesk.server.exceptions.InvalidNonceException;
 import com.coinblesk.server.exceptions.InvalidRequestException;
 import com.coinblesk.server.exceptions.PaymentFailedException;
+import com.coinblesk.server.exceptions.PaymentFailedNotYetConfirmedException;
 import com.coinblesk.server.exceptions.UserAccountNotFoundException;
 import com.coinblesk.server.exceptions.UserNotFoundException;
 import com.coinblesk.server.service.FeeService;
@@ -489,8 +490,12 @@ public class AuthUserController {
 	}
 
 	@RequestMapping(value = "/payment/micro-payment-email", method = POST, produces = APPLICATION_JSON_UTF8_VALUE)
-	@Transactional(isolation = Isolation.SERIALIZABLE)
 	public void microPaymentViaEmail(Locale locale, @RequestBody @Valid MicroPaymentViaEmailDTO dto) throws BusinessException {
+		microPaymentViaEmailHelper(locale, dto);
+	}
+	// @Transactional cannot be on @RequestMethod function, rollback exception is thrown instead
+	@Transactional(isolation = Isolation.SERIALIZABLE)
+	public void microPaymentViaEmailHelper(Locale locale, MicroPaymentViaEmailDTO dto) throws BusinessException {
 		final String receiverEmail = dto.getReceiverEmail();
 		final Long amount = dto.getAmount();
 		final String txHex = dto.getTransaction();
@@ -525,7 +530,11 @@ public class AuthUserController {
 			throw e;
 		} catch (Throwable e) {
 			LOG.warn("Bad request for micropayment: " + e.getMessage(), e.getCause());
-			throw new PaymentFailedException();
+			if("UTXO must be mined".equals(e.getMessage())) {
+				throw new PaymentFailedNotYetConfirmedException();
+			} else {
+				throw new PaymentFailedException();
+			}
 		}
 
 		if(receiver.hasUnregisteredToken()) {
@@ -534,8 +543,12 @@ public class AuthUserController {
 	}
 
 	@RequestMapping(value = "/payment/external-payment", method = POST, produces = APPLICATION_JSON_UTF8_VALUE)
-	@Transactional(isolation = Isolation.SERIALIZABLE)
 	public void externalPayment(@RequestParam("transaction") String transaction) throws BusinessException {
+		externalPaymentHelper(transaction);
+	}
+	// @Transactional cannot be on @RequestMethod function, rollback exception is thrown instead
+	@Transactional(isolation = Isolation.SERIALIZABLE)
+	public void externalPaymentHelper(String transaction) throws BusinessException {
 		UserAccount sender = getAuthenticatedUser();
 
 		if (sender.getAccount() == null) {
@@ -553,7 +566,11 @@ public class AuthUserController {
 			throw e;
 		} catch (Throwable e) {
 			LOG.warn("Bad request for external payment " + e.getMessage());
-			throw new PaymentFailedException();
+			if("UTXO must be mined".equals(e.getMessage())) {
+				throw new PaymentFailedNotYetConfirmedException();
+			} else {
+				throw new PaymentFailedException();
+			}
 		}
 	}
 
