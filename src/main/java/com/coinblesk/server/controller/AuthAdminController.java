@@ -179,12 +179,16 @@ public class AuthAdminController {
 
 			Account account = accountListEntry.getKey();
 
-			List<TimeLockedAddressDTO> addresses = accountListEntry.getValue().stream().map(tla -> {
-				return mapTimeLockedAddressDTO(tla, balances);
-			}).collect(Collectors.toList());
+			if (account.getTimeLockedAddresses().size() != 0) {
+				List<TimeLockedAddressDTO> addresses = accountListEntry.getValue().stream().map(tla -> {
+					return mapTimeLockedAddressDTO(tla, balances);
+				}).collect(Collectors.toList());
+				long satoshiBalance = addresses.stream().mapToLong(TimeLockedAddressDTO::getBalance).sum();
+				return mapAccountDTO(account, satoshiBalance);
 
-			long satoshiBalance = addresses.stream().mapToLong(TimeLockedAddressDTO::getBalance).sum();
-			return mapAccountDTO(account, satoshiBalance);
+			} else {
+				return mapAccountDTO(account, 0L);
+			}
 
 		}).collect(Collectors.toList());
 	}
