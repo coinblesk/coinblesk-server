@@ -109,11 +109,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 				CorsConfiguration corsConfig = new CorsConfiguration();
 
 				if(!asList(env.getActiveProfiles()).contains(PROFILE_PROD) && !asList(env.getActiveProfiles()).contains(PROFILE_TEST)) {
-					corsConfig.setAllowedOrigins(asList("*"));
-					corsConfig.setAllowedMethods(asList("GET", "PUT", "POST", "DELETE", "OPTIONS"));
-					corsConfig.setAllowedHeaders(asList("*"));
-					corsConfig.setMaxAge(1800L);
+					corsConfig.setAllowedOrigins(asList("localhost", "127.0.0.1"));
+				} else if (asList(env.getActiveProfiles()).contains(PROFILE_PROD)) {
+					corsConfig.setAllowedOrigins(asList("https://bitcoin2-test.csg.uzh.ch"));
+				} else {
+					corsConfig.setAllowedOrigins(asList("https://bitcoin.csg.uzh.ch"));
 				}
+				corsConfig.setAllowedMethods(asList("GET", "PUT", "POST", "DELETE", "OPTIONS"));
+				corsConfig.setAllowedHeaders(asList("*"));
+				corsConfig.setMaxAge(1800L);
 				return corsConfig;
 			}
 		};
