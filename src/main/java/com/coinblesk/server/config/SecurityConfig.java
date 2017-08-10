@@ -15,6 +15,7 @@
  */
 package com.coinblesk.server.config;
 
+import static com.coinblesk.server.config.Constants.PROFILE_DEV;
 import static com.coinblesk.server.config.Constants.PROFILE_PROD;
 import static com.coinblesk.server.config.Constants.PROFILE_TEST;
 import static java.util.Arrays.asList;
@@ -108,7 +109,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
 				CorsConfiguration corsConfig = new CorsConfiguration();
 
-				if(!asList(env.getActiveProfiles()).contains(PROFILE_PROD) && !asList(env.getActiveProfiles()).contains(PROFILE_TEST)) {
+				if(asList(env.getActiveProfiles()).contains(PROFILE_DEV)) {
 					corsConfig.setAllowedOrigins(asList("http://localhost:9090", "http://127.0.0.1:9090", "http://localhost:7070", "http://127.0.0.1:7070"));
 				} else if (asList(env.getActiveProfiles()).contains(PROFILE_TEST)) {
 					corsConfig.setAllowedOrigins(asList("https://bitcoin2-test.csg.uzh.ch"));

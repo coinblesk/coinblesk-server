@@ -1,7 +1,6 @@
 package com.coinblesk.server.config;
 
-import static com.coinblesk.server.config.Constants.PROFILE_PROD;
-import static com.coinblesk.server.config.Constants.PROFILE_TEST;
+import static com.coinblesk.server.config.Constants.PROFILE_DEV;
 import static springfox.documentation.builders.PathSelectors.regex;
 import static springfox.documentation.builders.RequestHandlerSelectors.any;
 import static springfox.documentation.spi.DocumentationType.SWAGGER_2;
@@ -21,7 +20,7 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
 @Configuration
 @EnableSwagger2
-@Profile({"!" + PROFILE_PROD, "!" + PROFILE_TEST})
+@Profile(PROFILE_DEV)
 public class SwaggerConfig {
 
 	@Bean

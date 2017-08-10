@@ -15,8 +15,7 @@
  */
 package com.coinblesk.server.controller;
 
-import static com.coinblesk.server.config.Constants.PROFILE_PROD;
-import static com.coinblesk.server.config.Constants.PROFILE_TEST;
+import static com.coinblesk.server.config.Constants.PROFILE_DEV;
 import static java.util.Arrays.asList;
 
 import java.util.Date;
@@ -74,8 +73,8 @@ public class ErrorController implements org.springframework.boot.autoconfigure.w
 		if (body.get("path") != null) {
 			result.setPath((String) body.get("path"));
 		}
-		// mask the reason behind the exception on PROD
-		if (!asList(env.getActiveProfiles()).contains(PROFILE_PROD) && !asList(env.getActiveProfiles()).contains(PROFILE_TEST)) {
+		// mask the reason behind the exception on !DEV
+		if (asList(env.getActiveProfiles()).contains(PROFILE_DEV)) {
 			if (body.get("message") != null) {
 				result.setMessage((String) body.get("message"));
 			}
