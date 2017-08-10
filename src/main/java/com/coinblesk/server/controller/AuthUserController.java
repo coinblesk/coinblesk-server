@@ -175,13 +175,16 @@ public class AuthUserController {
 		}
 
 		long channelTransactionAmount = microPaymentService.getPendingChannelValue(account).longValue();
+		long channelTransactionFees = microPaymentService.getPendingChannelFees(account).longValue();
 		totalBalance -= channelTransactionAmount;
+		totalBalance -= channelTransactionFees;
 		totalBalance += account.virtualBalance();
 
 		AccountBalanceDTO dto = new AccountBalanceDTO();
 		dto.setTimeLockedAddresses(resultingTlas);
 		dto.setVirtualBalance(account.virtualBalance());
 		dto.setChannelTransactionAmount(channelTransactionAmount);
+		dto.setChannelTransactionFees(channelTransactionFees);
 		dto.setTotalBalance(totalBalance);
 
 		return dto;
@@ -231,12 +234,16 @@ public class AuthUserController {
 
 		String clientPublicKey = SerializeUtils.bytesToHex(account.clientPublicKey());
 		String serverPublicKey = SerializeUtils.bytesToHex(account.serverPublicKey());
-		long virtualBalance = account.virtualBalance();
-		long channelTransactionAmount = microPaymentService.getPendingChannelValue(account).longValue();
-		long totalBalance = satoshiBalance + virtualBalance - channelTransactionAmount;
 		boolean locked = account.isLocked();
 
-		return new FundsDTO(clientPublicKey, serverPublicKey, virtualBalance, totalBalance, channelTransactionAmount, locked, timeLockedAddresses);
+		long channelTransactionAmount = microPaymentService.getPendingChannelValue(account).longValue();
+		long channelTransactionFees = microPaymentService.getPendingChannelFees(account).longValue();
+		long totalChannelTransaction = channelTransactionAmount + channelTransactionFees;
+
+		long virtualBalance = account.virtualBalance();
+		long totalBalance = satoshiBalance + virtualBalance - totalChannelTransaction;
+
+		return new FundsDTO(clientPublicKey, serverPublicKey, virtualBalance, totalBalance, totalChannelTransaction, locked, timeLockedAddresses);
 	}
 
 	@RequestMapping(value = "/payment/encrypted-private-key", method = GET, produces = APPLICATION_JSON_UTF8_VALUE)
