@@ -174,21 +174,17 @@ public class AuthAdminController {
 		// Pre-calculate balances for each address
 		Map<Address, Coin> balances = walletService.getBalanceByAddresses();
 
-		return accountService.allAddresses().stream().collect(Collectors.groupingBy
-				(TimeLockedAddressEntity::getAccount)).entrySet().stream().map(accountListEntry -> {
+		return accountService.allAddresses().stream()
+				.filter(tla -> tla.getAccount() != null)
+				.collect(Collectors.groupingBy(TimeLockedAddressEntity::getAccount)).entrySet().stream()
+				.map(accountListEntry -> {
 
 			Account account = accountListEntry.getKey();
-
-			if (account.getTimeLockedAddresses().size() != 0) {
-				List<TimeLockedAddressDTO> addresses = accountListEntry.getValue().stream().map(tla -> {
-					return mapTimeLockedAddressDTO(tla, balances);
-				}).collect(Collectors.toList());
-				long satoshiBalance = addresses.stream().mapToLong(TimeLockedAddressDTO::getBalance).sum();
-				return mapAccountDTO(account, satoshiBalance);
-
-			} else {
-				return mapAccountDTO(account, 0L);
-			}
+			List<TimeLockedAddressDTO> addresses = accountListEntry.getValue().stream().map(tla -> {
+				return mapTimeLockedAddressDTO(tla, balances);
+			}).collect(Collectors.toList());
+			long satoshiBalance = addresses.stream().mapToLong(TimeLockedAddressDTO::getBalance).sum();
+			return mapAccountDTO(account, satoshiBalance);
 
 		}).collect(Collectors.toList());
 	}
