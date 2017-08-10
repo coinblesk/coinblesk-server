@@ -195,8 +195,8 @@ public class AuthAdminController {
 		Instant lockedUntil = Instant.ofEpochSecond(tla.getLockTime());
 		Coin balance = balances.get(tla.toAddress(params));
 		String redeemScript = SerializeUtils.bytesToHex(tla.getRedeemScript());
-		return new TimeLockedAddressDTO(tla.toAddress(params).toString(), "http://" + (params.getClass()
-				.equals(TestNet3Params.class) ? "tbtc." : "") + "blockr.io/address/info/" + tla.toAddress(params),
+		return new TimeLockedAddressDTO(tla.toAddress(params).toString(), "https://" + (params.getClass()
+				.equals(TestNet3Params.class) ? "testnet.blockexplorer.com/address/" : "blockchain.info/en/address/") + tla.toAddress(params),
 				Date.from(createdAt), Date.from(lockedUntil), tla.isLocked(), redeemScript, balance
 				.longValue());
 	}

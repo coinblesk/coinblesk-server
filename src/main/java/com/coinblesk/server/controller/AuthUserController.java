@@ -209,7 +209,7 @@ public class AuthUserController {
 
 		for(TimeLockedAddressEntity tlaEntity : tlaEntities) {
 			String bitcoinAddress = tlaEntity.toAddress(params).toString();
-			String addressUrl = "http://" + (params.getClass().equals(TestNet3Params.class) ? "tbtc." : "") + "blockr.io/address/info/" + tlaEntity.toAddress(params);
+			String addressUrl = "https://" + (params.getClass().equals(TestNet3Params.class) ? "testnet.blockexplorer.com/address/" : "blockchain.info/en/address/") + tlaEntity.toAddress(params);
 			Date createdAt = Date.from(Instant.ofEpochSecond(tlaEntity.getTimeCreated()));
 			Instant lockedUntilInstant = Instant.ofEpochSecond(tlaEntity.getLockTime());
 			Date lockedUntil = Date.from(lockedUntilInstant);
