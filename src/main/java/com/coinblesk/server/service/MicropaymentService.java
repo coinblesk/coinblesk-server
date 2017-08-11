@@ -511,17 +511,6 @@ public class MicropaymentService {
 		return getAllPotOutputs().stream().map(TransactionOutput::getValue).reduce(Coin.ZERO, Coin::add);
 	}
 
-	/*
-	 * Decides on how an account can make a payment within the Coinblesk network:
-	 * A: receiver is an e-mail address
-	 *   A1: receiver e-mail address is known and can be resolved to a user-account -> account
-	 *   A2: receiver e-mail address is unknown and a new account could be generated, which leads to a known user-account -> account
-	 * B: receiver is a bitcoin address
-	 */
-	public void getPaymentDecision(Account account, String receiver, Long amount) {
-
-	}
-
 	private List<TransactionOutput> getAllPotOutputs() {
 		Address microPaymentPotAddress = appConfig.getMicroPaymentPotPrivKey().toAddress(appConfig.getNetworkParameters());
 
